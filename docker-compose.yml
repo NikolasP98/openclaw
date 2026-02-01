@@ -1,6 +1,9 @@
 services:
   openclaw-gateway:
     image: ${OPENCLAW_IMAGE:-openclaw:local}
+    container_name: openclaw-agent
+    env_file:
+      - .env
     environment:
       HOME: /home/node
       TERM: xterm-256color
@@ -11,6 +14,7 @@ services:
     volumes:
       - ${OPENCLAW_CONFIG_DIR}:/home/node/.openclaw
       - ${OPENCLAW_WORKSPACE_DIR}:/home/node/.openclaw/workspace
+      - ${OPENCLAW_MINIONS_DIR:-/home/nikolas/minions}:/home/node/minions
     ports:
       - "${OPENCLAW_GATEWAY_PORT:-18789}:18789"
       - "${OPENCLAW_BRIDGE_PORT:-18790}:18790"
@@ -29,6 +33,9 @@ services:
 
   openclaw-cli:
     image: ${OPENCLAW_IMAGE:-openclaw:local}
+    container_name: openclaw_cli
+    env_file:
+      - .env
     environment:
       HOME: /home/node
       TERM: xterm-256color
@@ -39,6 +46,7 @@ services:
     volumes:
       - ${OPENCLAW_CONFIG_DIR}:/home/node/.openclaw
       - ${OPENCLAW_WORKSPACE_DIR}:/home/node/.openclaw/workspace
+      - ${OPENCLAW_MINIONS_DIR}:/home/node/minions
     stdin_open: true
     tty: true
     init: true
