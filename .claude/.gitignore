@@ -1,0 +1,6 @@
+# Local settings - do not commit
+settings.local.json
+
+# Session-specific data
+*.session
+*.log
