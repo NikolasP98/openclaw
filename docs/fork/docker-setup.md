@@ -1,6 +1,25 @@
 # Docker Gateway Setup
 
-This guide covers the proper setup for running the OpenClaw gateway in Docker with authentication.
+This guide covers running the OpenClaw gateway in Docker. The image comes pre-configured with sensible defaults - you only need to provide an authentication token.
+
+## Quick Start
+
+```bash
+# Generate a secure token
+export OPENCLAW_GATEWAY_TOKEN=$(openssl rand -hex 32)
+echo "Your token: $OPENCLAW_GATEWAY_TOKEN"
+
+# Run the gateway
+docker run -d \
+  -e OPENCLAW_GATEWAY_TOKEN \
+  -p 18789:18789 \
+  ghcr.io/nikolasp98/openclaw:dev
+
+# Access the UI
+open "http://localhost:18789/?token=$OPENCLAW_GATEWAY_TOKEN"
+```
+
+The gateway starts immediately with the Control UI enabled. No config files or volume mounts required.
 
 ## Gateway Token Authentication
 
@@ -14,9 +33,9 @@ openssl rand -hex 32
 
 Save this token securely - you'll need it for both the Docker container and web UI access.
 
-## Environment File Setup
+## Environment File Setup (Multi-Environment)
 
-Create environment files in the repository root (alongside `docker-compose.yml`):
+For running multiple environments (DEV/PRD), create environment files in the repository root:
 
 ### `.env.dev` (DEV environment)
 
@@ -48,39 +67,7 @@ OPENCLAW_GATEWAY_TOKEN=your-prd-token-here
 
 These files are gitignored (`.env.dev`, `.env.prd`) to prevent committing tokens.
 
-## Initial Configuration
-
-Before the gateway will start, create a config file with required settings:
-
-```bash
-mkdir -p ~/.openclaw-dev
-cat > ~/.openclaw-dev/openclaw.json << 'EOF'
-{
-  "gateway": {
-    "port": 18788,
-    "mode": "local",
-    "bind": "lan",
-    "controlUi": {
-      "enabled": true,
-      "allowInsecureAuth": true,
-      "dangerouslyDisableDeviceAuth": true
-    },
-    "auth": {
-      "mode": "token",
-      "allowTailscale": true
-    },
-    "tailscale": {
-      "mode": "off"
-    },
-    "trustedProxies": ["127.0.0.1", "172.25.0.1", "172.17.0.1", "::1"]
-  }
-}
-EOF
-```
-
-For PRD, use port `18789` in the config.
-
-## Starting Containers
+## Starting with Docker Compose
 
 ### Start DEV Gateway
 
@@ -119,6 +106,50 @@ Access the UI with your token as a query parameter:
 - **DEV:** `http://your-host:18788/?token=your-dev-token`
 - **PRD:** `http://your-host:18789/?token=your-prd-token`
 
+## Pre-baked Configuration
+
+The Docker image includes an entrypoint that populates missing config and directories at startup. This works seamlessly with mounted volumes:
+
+- If you mount an empty volume to `~/.openclaw`, the entrypoint creates all required subdirectories and copies the default config
+- If your mount already has an `openclaw.json`, it's preserved (not overwritten)
+- Missing subdirectories are created automatically
+
+Default configuration includes:
+- Control UI enabled with token authentication
+- LAN binding for container networking
+- Trusted proxies for common Docker networks
+- Reasonable defaults for tools and sessions
+
+### Portainer Setup
+
+In Portainer, configure:
+1. **Image:** `ghcr.io/nikolasp98/openclaw:dev` (or `:prd`)
+2. **Environment variable:** `OPENCLAW_GATEWAY_TOKEN` = your token
+3. **Ports:**
+   - `18789` - Gateway WebSocket and Control UI
+   - `18790` - Bridge port (for external WebSocket connections)
+4. **Volumes (optional):**
+   - `/path/to/.openclaw:/home/node/.openclaw` - config and data
+   - `/path/to/workspace:/home/node/.openclaw/workspace` - workspace files
+   - `/path/to/gogcli:/home/node/.config/gogcli` - Google CLI credentials
+
+The entrypoint handles populating any missing files/directories in your mounted volumes.
+
+### Custom Config
+
+To use your own config, either:
+
+1. Mount a volume and let the entrypoint create the default, then modify it
+2. Mount your config file directly:
+
+```bash
+docker run -d \
+  -e OPENCLAW_GATEWAY_TOKEN \
+  -v /path/to/your/openclaw.json:/home/node/.openclaw/openclaw.json:ro \
+  -p 18789:18789 \
+  ghcr.io/nikolasp98/openclaw:dev
+```
+
 ## Troubleshooting
 
 ### "Disconnected from gateway" Error
@@ -129,15 +160,7 @@ Verify the token is set in the container:
 docker exec openclaw_DEV_gw env | grep TOKEN
 ```
 
-If empty, check that `OPENCLAW_GATEWAY_TOKEN` is set in your `.env.*` file.
-
-### "Missing config" Error
-
-The gateway requires a config file with `gateway.mode=local`. Create it:
-
-```bash
-echo '{"gateway":{"mode":"local"}}' > ~/.openclaw-dev/openclaw.json
-```
+If empty, check that `OPENCLAW_GATEWAY_TOKEN` is set in your `.env.*` file or passed via `-e`.
 
 ### Container Logs
 

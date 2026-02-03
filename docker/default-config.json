@@ -1,0 +1,44 @@
+{
+  "gateway": {
+    "mode": "local",
+    "bind": "lan",
+    "controlUi": {
+      "enabled": true,
+      "allowInsecureAuth": true,
+      "dangerouslyDisableDeviceAuth": true
+    },
+    "auth": {
+      "mode": "token",
+      "allowTailscale": true
+    },
+    "tailscale": {
+      "mode": "off"
+    },
+    "trustedProxies": ["127.0.0.1", "172.25.0.1", "172.17.0.1", "::1"]
+  },
+  "logging": {
+    "level": "info",
+    "redactSensitive": "tools"
+  },
+  "tools": {
+    "exec": {
+      "security": "full",
+      "ask": "off"
+    }
+  },
+  "commands": {
+    "native": "auto",
+    "nativeSkills": "auto"
+  },
+  "approvals": {
+    "exec": {
+      "enabled": false
+    }
+  },
+  "session": {
+    "scope": "per-sender",
+    "dmScope": "per-channel-peer",
+    "resetTriggers": ["/new", "/reset"],
+    "mainKey": "main"
+  }
+}
