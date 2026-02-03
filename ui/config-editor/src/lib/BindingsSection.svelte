@@ -1,13 +1,15 @@
 <script lang="ts">
-  import type { OpenClawConfig, AgentBinding } from '../types';
+  import type { OpenClawConfig } from '../types';
 
-  export let config: OpenClawConfig;
+  let { config }: { config: OpenClawConfig } = $props();
 
-  $: if (!config.bindings) config.bindings = [];
+  $effect(() => {
+    if (!config.bindings) config.bindings = [];
+  });
 
   function addBinding() {
     config.bindings = [
-      ...config.bindings!,
+      ...(config.bindings || []),
       {
         agentId: '',
         match: { channel: '' }
@@ -31,7 +33,7 @@
       <div class="array-item">
         <div class="array-item-header">
           <h3>Binding {index + 1}</h3>
-          <button class="remove-btn" on:click={() => removeBinding(index)}>
+          <button class="remove-btn" onclick={() => removeBinding(index)}>
             Remove
           </button>
         </div>
@@ -109,7 +111,7 @@
     <p>No bindings configured. Add a binding to route messages to agents.</p>
   {/if}
 
-  <button class="add-btn" on:click={addBinding}>
+  <button class="add-btn" onclick={addBinding}>
     + Add Binding
   </button>
 </div>
@@ -149,19 +151,15 @@
     .description {
       color: rgba(0, 0, 0, 0.6);
     }
-
     h3 {
       color: rgba(0, 0, 0, 0.8);
     }
-
     h4 {
       color: rgba(0, 0, 0, 0.7);
     }
-
     p {
       color: rgba(0, 0, 0, 0.5);
     }
-
     small {
       color: rgba(0, 0, 0, 0.5);
     }

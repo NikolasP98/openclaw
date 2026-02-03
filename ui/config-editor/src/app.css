@@ -19,15 +19,15 @@
 
 body {
   margin: 0;
-  display: flex;
   min-width: 320px;
   min-height: 100vh;
 }
 
 #app {
   width: 100%;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 2rem;
 }
 
 @media (prefers-color-scheme: light) {
@@ -42,7 +42,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   padding: 1.5rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .form-group {
@@ -76,10 +76,6 @@ textarea:focus,
 select:focus {
   outline: none;
   border-color: #646cff;
-}
-
-input[type="checkbox"] {
-  margin-right: 0.5rem;
 }
 
 button {
@@ -119,12 +115,13 @@ button:disabled {
 .button-group {
   display: flex;
   gap: 0.5rem;
-  margin-top: 1rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
 }
 
 .error {
   color: #ff6b6b;
-  padding: 0.5rem;
+  padding: 0.75rem;
   border-radius: 4px;
   background: rgba(255, 107, 107, 0.1);
   margin-bottom: 1rem;
@@ -132,7 +129,7 @@ button:disabled {
 
 .success {
   color: #51cf66;
-  padding: 0.5rem;
+  padding: 0.75rem;
   border-radius: 4px;
   background: rgba(81, 207, 102, 0.1);
   margin-bottom: 1rem;
@@ -151,7 +148,7 @@ h1 {
 
 h2 {
   font-size: 1.5rem;
-  margin: 1.5rem 0 1rem 0;
+  margin: 0 0 1rem 0;
 }
 
 .array-item {
@@ -159,8 +156,7 @@ h2 {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 4px;
   padding: 1rem;
-  margin-bottom: 0.5rem;
-  position: relative;
+  margin-bottom: 0.75rem;
 }
 
 .array-item-header {
@@ -184,7 +180,7 @@ h2 {
 .add-btn {
   background: rgba(81, 207, 102, 0.2);
   border: 1px solid rgba(81, 207, 102, 0.3);
-  padding: 0.3rem 0.8rem;
+  padding: 0.4rem 0.9rem;
   font-size: 0.9rem;
 }
 
@@ -208,5 +204,10 @@ h2 {
 
   label {
     color: rgba(0, 0, 0, 0.9);
+  }
+
+  .array-item {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.15);
   }
 }

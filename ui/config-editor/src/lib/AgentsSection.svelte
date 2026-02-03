@@ -1,32 +1,34 @@
 <script lang="ts">
-  import type { OpenClawConfig, AgentConfig } from '../types';
+  import type { OpenClawConfig } from '../types';
 
-  export let config: OpenClawConfig;
+  let { config }: { config: OpenClawConfig } = $props();
 
-  $: if (!config.agents) config.agents = {};
-  $: if (!config.agents.list) config.agents.list = [];
+  $effect(() => {
+    if (!config.agents) config.agents = {};
+    if (!config.agents.list) config.agents.list = [];
+  });
 
   function addAgent() {
-    config.agents.list = [
-      ...config.agents.list!,
+    config.agents!.list = [
+      ...(config.agents!.list || []),
       { id: '', name: '' }
     ];
   }
 
   function removeAgent(index: number) {
-    config.agents.list = config.agents.list!.filter((_, i) => i !== index);
+    config.agents!.list = config.agents!.list!.filter((_, i) => i !== index);
   }
 </script>
 
 <div class="card">
   <h2>Agents</h2>
 
-  {#if config.agents.list && config.agents.list.length > 0}
+  {#if config.agents?.list && config.agents.list.length > 0}
     {#each config.agents.list as agent, index}
       <div class="array-item">
         <div class="array-item-header">
           <h3>Agent {index + 1}</h3>
-          <button class="remove-btn" on:click={() => removeAgent(index)}>
+          <button class="remove-btn" onclick={() => removeAgent(index)}>
             Remove
           </button>
         </div>
@@ -85,7 +87,7 @@
     <p>No agents configured. Add an agent to get started.</p>
   {/if}
 
-  <button class="add-btn" on:click={addAgent}>
+  <button class="add-btn" onclick={addAgent}>
     + Add Agent
   </button>
 </div>
@@ -106,7 +108,6 @@
     h3 {
       color: rgba(0, 0, 0, 0.8);
     }
-
     p {
       color: rgba(0, 0, 0, 0.5);
     }

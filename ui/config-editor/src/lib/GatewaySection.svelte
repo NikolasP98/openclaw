@@ -1,10 +1,12 @@
 <script lang="ts">
   import type { OpenClawConfig } from '../types';
 
-  export let config: OpenClawConfig;
+  let { config }: { config: OpenClawConfig } = $props();
 
-  $: if (!config.gateway) config.gateway = {};
-  $: if (!config.gateway.reload) config.gateway.reload = {};
+  $effect(() => {
+    if (!config.gateway) config.gateway = {};
+    if (!config.gateway.reload) config.gateway.reload = {};
+  });
 </script>
 
 <div class="card">
@@ -13,7 +15,7 @@
   <div class="form-group">
     <label for="gateway-mode">
       Mode
-      <select id="gateway-mode" bind:value={config.gateway.mode}>
+      <select id="gateway-mode" bind:value={config.gateway!.mode}>
         <option value="">Not set</option>
         <option value="local">Local</option>
         <option value="remote">Remote</option>
@@ -26,7 +28,7 @@
   <div class="form-group">
     <label for="reload-mode">
       Reload Mode
-      <select id="reload-mode" bind:value={config.gateway.reload.mode}>
+      <select id="reload-mode" bind:value={config.gateway!.reload!.mode}>
         <option value="">Default (hybrid)</option>
         <option value="off">Off</option>
         <option value="restart">Restart</option>
@@ -43,7 +45,7 @@
       <input
         id="debounce-ms"
         type="number"
-        bind:value={config.gateway.reload.debounceMs}
+        bind:value={config.gateway!.reload!.debounceMs}
         placeholder="300"
         min="0"
         step="50"
@@ -71,7 +73,6 @@
     h3 {
       color: rgba(0, 0, 0, 0.7);
     }
-
     small {
       color: rgba(0, 0, 0, 0.5);
     }

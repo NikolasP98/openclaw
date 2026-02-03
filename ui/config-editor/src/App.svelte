@@ -1,16 +1,16 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import type { OpenClawConfig } from './types';
-  import GatewaySection from './components/GatewaySection.svelte';
-  import AgentsSection from './components/AgentsSection.svelte';
-  import BindingsSection from './components/BindingsSection.svelte';
+  import GatewaySection from './lib/GatewaySection.svelte';
+  import AgentsSection from './lib/AgentsSection.svelte';
+  import BindingsSection from './lib/BindingsSection.svelte';
 
-  let config: OpenClawConfig = {};
-  let originalConfig: string = '';
-  let isDirty = false;
-  let loading = false;
-  let error = '';
-  let success = '';
+  let config = $state<OpenClawConfig>({});
+  let originalConfig = $state('');
+  let isDirty = $derived(JSON.stringify(config) !== originalConfig);
+  let loading = $state(false);
+  let error = $state('');
+  let success = $state('');
 
   onMount(async () => {
     await loadConfig();
@@ -27,7 +27,6 @@
       const data = await response.json();
       config = data;
       originalConfig = JSON.stringify(data);
-      isDirty = false;
     } catch (err) {
       error = err instanceof Error ? err.message : 'Failed to load config';
       console.error('Error loading config:', err);
@@ -55,7 +54,6 @@
       }
 
       originalConfig = JSON.stringify(config);
-      isDirty = false;
       success = 'Configuration saved successfully! Changes will be hot-reloaded.';
 
       setTimeout(() => {
@@ -69,18 +67,11 @@
     }
   }
 
-  function handleConfigChange() {
-    isDirty = JSON.stringify(config) !== originalConfig;
-  }
-
   function resetConfig() {
     config = JSON.parse(originalConfig);
-    isDirty = false;
     error = '';
     success = '';
   }
-
-  $: handleConfigChange(), config;
 </script>
 
 <main>
@@ -102,14 +93,14 @@
   {#if loading && !config.gateway}
     <div class="card">Loading configuration...</div>
   {:else}
-    <GatewaySection bind:config />
-    <AgentsSection bind:config />
-    <BindingsSection bind:config />
+    <GatewaySection {config} />
+    <AgentsSection {config} />
+    <BindingsSection {config} />
 
     <div class="button-group">
       <button
         class="primary"
-        on:click={saveConfig}
+        onclick={saveConfig}
         disabled={!isDirty || loading}
       >
         {loading ? 'Saving...' : 'Save Configuration'}
@@ -117,7 +108,7 @@
 
       <button
         class="secondary"
-        on:click={resetConfig}
+        onclick={resetConfig}
         disabled={!isDirty || loading}
       >
         Reset Changes
@@ -125,7 +116,7 @@
 
       <button
         class="secondary"
-        on:click={loadConfig}
+        onclick={loadConfig}
         disabled={loading}
       >
         Reload from File
@@ -140,5 +131,6 @@
     align-items: center;
     gap: 1rem;
     margin-bottom: 2rem;
+    flex-wrap: wrap;
   }
 </style>
