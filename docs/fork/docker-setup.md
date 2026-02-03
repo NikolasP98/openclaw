@@ -14,105 +14,139 @@ openssl rand -hex 32
 
 Save this token securely - you'll need it for both the Docker container and web UI access.
 
-## Docker Compose Configuration
+## Environment File Setup
 
-### PRD Environment (Port 18789)
+Create environment files in the repository root (alongside `docker-compose.yml`):
 
-```yaml
-services:
-  openclaw-gateway:
-    image: ghcr.io/nikolasp98/openclaw:prd
-    container_name: openclaw_PRD_gw
-    environment:
-      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN_PRD}  # Required for auth
-    volumes:
-      - ~/.openclaw-prd:/home/node/.openclaw
-    network_mode: host
-    command: ["node", "dist/index.js", "gateway", "--bind", "lan", "--port", "18789"]
+### `.env.dev` (DEV environment)
+
+```bash
+# DEV environment configuration
+OPENCLAW_IMAGE=ghcr.io/nikolasp98/openclaw:dev
+OPENCLAW_GATEWAY_CONTAINER_NAME=openclaw_DEV_gw
+OPENCLAW_CLI_CONTAINER_NAME=openclaw_DEV_cli
+OPENCLAW_CONFIG_DIR=/path/to/.openclaw-dev
+OPENCLAW_WORKSPACE_DIR=/path/to/.openclaw-dev/workspace
+OPENCLAW_GATEWAY_PORT=18788
+OPENCLAW_BRIDGE_PORT=18791
+OPENCLAW_GATEWAY_TOKEN=your-dev-token-here
 ```
 
-### DEV Environment (Port 18788)
+### `.env.prd` (PRD environment)
 
-```yaml
-services:
-  openclaw-gateway:
-    image: ghcr.io/nikolasp98/openclaw:dev
-    container_name: openclaw_DEV_gw
-    environment:
-      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN_DEV}  # Required for auth
-    volumes:
-      - ~/.openclaw-dev:/home/node/.openclaw
-    network_mode: host
-    command: ["node", "dist/index.js", "gateway", "--bind", "lan", "--port", "18788"]
+```bash
+# PRD environment configuration
+OPENCLAW_IMAGE=ghcr.io/nikolasp98/openclaw:prd
+OPENCLAW_GATEWAY_CONTAINER_NAME=openclaw_PRD_gw
+OPENCLAW_CLI_CONTAINER_NAME=openclaw_PRD_cli
+OPENCLAW_CONFIG_DIR=/path/to/.openclaw-prd
+OPENCLAW_WORKSPACE_DIR=/path/to/.openclaw-prd/workspace
+OPENCLAW_GATEWAY_PORT=18789
+OPENCLAW_BRIDGE_PORT=18790
+OPENCLAW_GATEWAY_TOKEN=your-prd-token-here
+```
+
+These files are gitignored (`.env.dev`, `.env.prd`) to prevent committing tokens.
+
+## Initial Configuration
+
+Before the gateway will start, create a config file with required settings:
+
+```bash
+mkdir -p ~/.openclaw-dev
+cat > ~/.openclaw-dev/openclaw.json << 'EOF'
+{
+  "gateway": {
+    "port": 18788,
+    "mode": "local",
+    "bind": "lan",
+    "controlUi": {
+      "enabled": true,
+      "allowInsecureAuth": true,
+      "dangerouslyDisableDeviceAuth": true
+    },
+    "auth": {
+      "mode": "token",
+      "allowTailscale": true
+    },
+    "tailscale": {
+      "mode": "off"
+    },
+    "trustedProxies": ["127.0.0.1", "172.25.0.1", "172.17.0.1", "::1"]
+  }
+}
+EOF
+```
+
+For PRD, use port `18789` in the config.
+
+## Starting Containers
+
+### Start DEV Gateway
+
+```bash
+docker compose --env-file .env.dev up -d openclaw-gateway
+```
+
+### Start PRD Gateway
+
+```bash
+docker compose --env-file .env.prd up -d openclaw-gateway
 ```
 
 ### Running Both Environments
 
-To run DEV and PRD side by side, use different ports (18788 for DEV, 18789 for PRD) and separate tokens.
-
-### Environment File
-
-Create a `.env` file alongside your `docker-compose.yml`:
+Run DEV and PRD simultaneously using different env files:
 
 ```bash
-# Use separate tokens for each environment
-OPENCLAW_GATEWAY_TOKEN_PRD=your-prd-token-here
-OPENCLAW_GATEWAY_TOKEN_DEV=your-dev-token-here
+# Terminal 1: Start DEV
+docker compose --env-file .env.dev up -d openclaw-gateway
+
+# Terminal 2: Start PRD
+docker compose --env-file .env.prd up -d openclaw-gateway
 ```
 
-Alternatively, export the variables in your shell before running `docker compose up`.
+Each uses different:
+- Container names (`openclaw_DEV_gw` vs `openclaw_PRD_gw`)
+- Ports (18788 for DEV, 18789 for PRD)
+- Config directories (`~/.openclaw-dev` vs `~/.openclaw-prd`)
+- Tokens
 
-## Setup Steps
+## Access the Web UI
 
-1. **Generate tokens for each environment:**
-   ```bash
-   export OPENCLAW_GATEWAY_TOKEN_PRD=$(openssl rand -hex 32)
-   export OPENCLAW_GATEWAY_TOKEN_DEV=$(openssl rand -hex 32)
-   echo "PRD token: $OPENCLAW_GATEWAY_TOKEN_PRD"
-   echo "DEV token: $OPENCLAW_GATEWAY_TOKEN_DEV"
-   ```
+Access the UI with your token as a query parameter:
 
-2. **Create your docker-compose.yml** with the token environment variables (see examples above)
-
-3. **Start the containers:**
-   ```bash
-   docker compose up -d
-   ```
-
-4. **Access the web UI** with the token as a query parameter:
-   - **PRD:** `http://your-host:18789/?token=your-prd-token`
-   - **DEV:** `http://your-host:18788/?token=your-dev-token`
+- **DEV:** `http://your-host:18788/?token=your-dev-token`
+- **PRD:** `http://your-host:18789/?token=your-prd-token`
 
 ## Troubleshooting
 
 ### "Disconnected from gateway" Error
 
-This error means the token is not being passed to the container correctly.
+Verify the token is set in the container:
 
-**Verify the token is set in the container:**
 ```bash
-docker exec <container-name> env | grep TOKEN
+docker exec openclaw_DEV_gw env | grep TOKEN
 ```
 
-If empty, check that:
-- The `OPENCLAW_GATEWAY_TOKEN` variable is exported in your shell or defined in `.env`
-- The `docker-compose.yml` includes `OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}`
+If empty, check that `OPENCLAW_GATEWAY_TOKEN` is set in your `.env.*` file.
 
-### Token Mismatch
+### "Missing config" Error
 
-Ensure you're using the same token in:
-1. The container's `OPENCLAW_GATEWAY_TOKEN` environment variable
-2. The `?token=` query parameter when accessing the web UI
+The gateway requires a config file with `gateway.mode=local`. Create it:
+
+```bash
+echo '{"gateway":{"mode":"local"}}' > ~/.openclaw-dev/openclaw.json
+```
 
 ### Container Logs
 
-Check the gateway logs for authentication errors:
 ```bash
-docker logs <container-name> | grep -i auth
+docker logs openclaw_DEV_gw
 ```
 
 ## Security Notes
 
-- Never commit your token to version control
-- Use environment variables or secrets management for production deployments
-- The token should be treated like a password
+- Never commit tokens to version control
+- `.env.dev` and `.env.prd` are gitignored
+- Use absolute paths in env files (not `~`)

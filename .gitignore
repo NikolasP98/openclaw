@@ -71,3 +71,7 @@ USER.md
 
 # local tooling
 .serena/
+
+# Environment files with tokens
+.env.dev
+.env.prd
