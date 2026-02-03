@@ -11,6 +11,12 @@ Docs: https://docs.openclaw.ai
 - Docs: add zh-CN landing notice + AI-translated image. (#7303) Thanks @joshp123.
 - Docs: fix typo - clawdbot is the compatibility shim, not openclaw. (#7415) Thanks @lailoo.
 - Config: allow setting a default subagent thinking level via `agents.defaults.subagents.thinking` (and per-agent `agents.list[].subagents.thinking`). (#7372) Thanks @tyler6204.
+- Gateway: add agent provisioning API with dual-key authentication system for automated agent creation.
+- Gateway: add AI provider provisioning system for auto-provisioning API keys (OpenAI support ready, Anthropic/Gemini placeholders).
+- Gateway: add `POST /api/v1/agents/create` endpoint with auto-provisioning support.
+- Gateway: add provisioning key management with rate limiting, audit logging, and constant-time validation.
+- Config: add `gateway.provisioning` configuration section for API enablement and rate limits.
+- Agents: extract reusable agent creation service from CLI for programmatic use.
 
 ### Fixes
 

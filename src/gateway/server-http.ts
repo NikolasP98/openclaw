@@ -14,6 +14,7 @@ import { handleA2uiHttpRequest } from "../canvas-host/a2ui.js";
 import { loadConfig } from "../config/config.js";
 import { handleSlackHttpRequest } from "../slack/http/index.js";
 import { handleControlUiAvatarRequest, handleControlUiHttpRequest } from "./control-ui.js";
+import { handleAgentsApiRequest } from "./api/router.js";
 import { applyHookMappings } from "./hooks-mapping.js";
 import {
   extractHookToken,
@@ -287,6 +288,15 @@ export function createGatewayHttpServer(opts: {
         if (await canvasHost.handleHttpRequest(req, res)) {
           return;
         }
+      }
+      // Handle agents provisioning API
+      if (
+        await handleAgentsApiRequest(req, res, {
+          auth: resolvedAuth,
+          trustedProxies: configSnapshot.gateway?.trustedProxies,
+        })
+      ) {
+        return;
       }
       if (controlUiEnabled) {
         if (

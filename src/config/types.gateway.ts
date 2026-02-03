@@ -171,6 +171,19 @@ export type GatewayHttpResponsesPdfConfig = {
   minTextChars?: number;
 };
 
+export type GatewayProvisioningConfig = {
+  /** Enable provisioning API (default: false) */
+  enabled?: boolean;
+  /** Base path for provisioning API (default: /api/v1) */
+  basePath?: string;
+  /** Max agents per provisioning key (default: unlimited) */
+  maxAgentsPerKey?: number;
+  /** Rate limit: max requests per minute per key (default: 10) */
+  rateLimitPerMinute?: number;
+  /** Allow agent deletion via API (default: false for safety) */
+  allowDelete?: boolean;
+};
+
 export type GatewayHttpResponsesImagesConfig = {
   /** Allow URL fetches for input_image. Default: true. */
   allowUrl?: boolean;
@@ -235,6 +248,7 @@ export type GatewayConfig = {
   tls?: GatewayTlsConfig;
   http?: GatewayHttpConfig;
   nodes?: GatewayNodesConfig;
+  provisioning?: GatewayProvisioningConfig;
   /**
    * IPs of trusted reverse proxies (e.g. Traefik, nginx). When a connection
    * arrives from one of these IPs, the Gateway trusts `x-forwarded-for` (or
