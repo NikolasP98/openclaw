@@ -30,6 +30,7 @@ import {
 import { handleOpenAiHttpRequest } from "./openai-http.js";
 import { handleOpenResponsesHttpRequest } from "./openresponses-http.js";
 import { handleToolsInvokeHttpRequest } from "./tools-invoke-http.js";
+import { handleConfigApiRequest } from "./config-api.js";
 
 type SubsystemLogger = ReturnType<typeof createSubsystemLogger>;
 
@@ -279,6 +280,9 @@ export function createGatewayHttpServer(opts: {
         ) {
           return;
         }
+      }
+      if (await handleConfigApiRequest(req, res)) {
+        return;
       }
       if (canvasHost) {
         if (await handleA2uiHttpRequest(req, res)) {

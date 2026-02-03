@@ -1,0 +1,19 @@
+{
+  "name": "openclaw-config-editor",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^5.0.2",
+    "@tsconfig/svelte": "^6.0.0",
+    "svelte": "^5.17.0",
+    "svelte-check": "^4.0.0",
+    "typescript": "^5.7.2",
+    "vite": "^7.3.1"
+  }
+}
