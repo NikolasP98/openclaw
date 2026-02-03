@@ -13,6 +13,10 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { ResolvedGatewayAuth } from "../auth.js";
 import { loadConfig } from "../../config/config.js";
 import { handleAgentsCreateRequest } from "./agents-create.js";
+import { handleAgentsListRequest } from "./agents-list.js";
+import { handleAgentsStatusRequest } from "./agents-status.js";
+import { handleAgentsDeleteRequest } from "./agents-delete.js";
+import { handleAgentsOnboardRequest } from "./agents-onboard.js";
 
 /**
  * Send JSON response
@@ -64,27 +68,36 @@ export async function handleAgentsApiRequest(
 		});
 	}
 
-	// TODO: Add more handlers (list, status, delete, onboard)
-	// if (req.method === "GET" && url.pathname === "/api/v1/agents") {
-	//   return handleAgentsListRequest(req, res, opts);
-	// }
-	//
-	// const agentIdMatch = url.pathname.match(/^\/api\/v1\/agents\/([^/]+)$/);
-	// if (agentIdMatch) {
-	//   const agentId = agentIdMatch[1];
-	//   if (req.method === "GET") {
-	//     return handleAgentsStatusRequest(req, res, { ...opts, agentId });
-	//   }
-	//   if (req.method === "DELETE") {
-	//     return handleAgentsDeleteRequest(req, res, { ...opts, agentId });
-	//   }
-	// }
-	//
-	// const onboardMatch = url.pathname.match(/^\/api\/v1\/agents\/([^/]+)\/onboard$/);
-	// if (onboardMatch && req.method === "POST") {
-	//   const agentId = onboardMatch[1];
-	//   return handleAgentsOnboardRequest(req, res, { ...opts, agentId });
-	// }
+	if (req.method === "GET" && url.pathname === "/api/v1/agents") {
+		return handleAgentsListRequest(req, res, opts);
+	}
+
+	// Match /api/v1/agents/:id
+	const agentIdMatch = url.pathname.match(/^\/api\/v1\/agents\/([^/]+)$/);
+	if (agentIdMatch) {
+		const agentId = agentIdMatch[1];
+		if (req.method === "GET") {
+			return handleAgentsStatusRequest(req, res, { ...opts, agentId });
+		}
+		if (req.method === "DELETE") {
+			return handleAgentsDeleteRequest(req, res, {
+				...opts,
+				rateLimitPerMinute,
+				agentId,
+			});
+		}
+	}
+
+	// Match /api/v1/agents/:id/onboard
+	const onboardMatch = url.pathname.match(/^\/api\/v1\/agents\/([^/]+)\/onboard$/);
+	if (onboardMatch && req.method === "POST") {
+		const agentId = onboardMatch[1];
+		return handleAgentsOnboardRequest(req, res, {
+			...opts,
+			rateLimitPerMinute,
+			agentId,
+		});
+	}
 
 	sendJson(res, 404, { error: "Not found" });
 	return true;

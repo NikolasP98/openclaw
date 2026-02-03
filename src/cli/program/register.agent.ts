@@ -7,6 +7,15 @@ import {
   agentsListCommand,
   agentsSetIdentityCommand,
 } from "../../commands/agents.js";
+import {
+  aiProvidersAddCommand,
+  aiProvidersListCommand,
+  aiProvidersRevokeCommand,
+  agentKeysCreateCommand,
+  agentKeysListCommand,
+  agentKeysRevokeCommand,
+  agentKeysRotateCommand,
+} from "../../commands/provisioning.js";
 import { setVerbose } from "../../globals.js";
 import { defaultRuntime } from "../../runtime.js";
 import { formatDocsLink } from "../../terminal/links.js";
@@ -210,4 +219,122 @@ ${formatHelpExamples([
       await agentsListCommand({}, defaultRuntime);
     });
   });
+
+  // Provisioning commands
+  const provisioning = program
+    .command("provisioning")
+    .description("Manage provisioning keys for automated agent creation")
+    .addHelpText(
+      "after",
+      () =>
+        `\n${theme.muted("Docs:")} ${formatDocsLink("/cli/provisioning", "docs.openclaw.ai/cli/provisioning")}\n`,
+    );
+
+  // AI Provider provisioning keys
+  const aiProviders = provisioning
+    .command("ai-providers")
+    .description("Manage AI provider provisioning keys (master keys for creating agent API keys)");
+
+  aiProviders
+    .command("add")
+    .description("Add a master AI provider key for provisioning")
+    .requiredOption("--provider <name>", "AI provider: anthropic | openai | gemini")
+    .requiredOption("--key <key>", "Master API key")
+    .option("--name <name>", "Human-readable label for this key")
+    .option("--expires <duration>", "Expiration duration (e.g., 30d, 1y)")
+    .option(
+      "--quotas-per-agent <quotas>",
+      "Per-agent quotas (e.g., maxTokensPerMonth=1000000,maxRequestsPerDay=1000)",
+    )
+    .action(async (opts) => {
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await aiProvidersAddCommand(
+          {
+            provider: opts.provider as "anthropic" | "openai" | "gemini",
+            key: opts.key as string,
+            name: opts.name as string | undefined,
+            expires: opts.expires as string | undefined,
+            quotasPerAgent: opts.quotasPerAgent as string | undefined,
+          },
+          defaultRuntime,
+        );
+      });
+    });
+
+  aiProviders
+    .command("list")
+    .description("List configured AI provider keys")
+    .option("--json", "Output JSON instead of text", false)
+    .action(async (opts) => {
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await aiProvidersListCommand({ json: Boolean(opts.json) }, defaultRuntime);
+      });
+    });
+
+  aiProviders
+    .command("revoke <key-id>")
+    .description("Revoke an AI provider key")
+    .action(async (keyId) => {
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await aiProvidersRevokeCommand({ keyId: String(keyId) }, defaultRuntime);
+      });
+    });
+
+  // Agent provisioning keys
+  const agentKeys = provisioning
+    .command("agent-keys")
+    .description("Manage agent provisioning keys (authorize agent creation operations)");
+
+  agentKeys
+    .command("create")
+    .description("Create a new agent provisioning key")
+    .requiredOption("--scopes <scopes>", "Comma-separated scopes (agents:create,agents:delete,agents:configure,agents:onboard)")
+    .option("--name <name>", "Human-readable label for this key")
+    .option("--ai-provider-key <id>", "Link to AI provider key for auto-provisioning")
+    .option("--expires <duration>", "Expiration duration (e.g., 30d, 1y)")
+    .option("--max-uses <number>", "Maximum number of uses (default: unlimited)")
+    .option("--output-key-only", "Output only the key (no additional text)", false)
+    .action(async (opts) => {
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await agentKeysCreateCommand(
+          {
+            scopes: opts.scopes as string,
+            name: opts.name as string | undefined,
+            aiProviderKey: opts.aiProviderKey as string | undefined,
+            expires: opts.expires as string | undefined,
+            maxUses: opts.maxUses ? parseInt(opts.maxUses as string, 10) : undefined,
+            outputKeyOnly: Boolean(opts.outputKeyOnly),
+          },
+          defaultRuntime,
+        );
+      });
+    });
+
+  agentKeys
+    .command("list")
+    .description("List configured agent provisioning keys")
+    .option("--json", "Output JSON instead of text", false)
+    .action(async (opts) => {
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await agentKeysListCommand({ json: Boolean(opts.json) }, defaultRuntime);
+      });
+    });
+
+  agentKeys
+    .command("revoke <key-id>")
+    .description("Revoke an agent provisioning key")
+    .action(async (keyId) => {
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await agentKeysRevokeCommand({ keyId: String(keyId) }, defaultRuntime);
+      });
+    });
+
+  agentKeys
+    .command("rotate <key-id>")
+    .description("Rotate an agent provisioning key (generates new key value)")
+    .action(async (keyId) => {
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await agentKeysRotateCommand({ keyId: String(keyId) }, defaultRuntime);
+      });
+    });
 }
