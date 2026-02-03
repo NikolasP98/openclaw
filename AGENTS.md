@@ -55,11 +55,12 @@ This fork maintains separate `docker-compose.yml` files per branch (main, DEV, P
 - **Never commit directly to `main`, `DEV`, or `PRD` branches** unless explicitly requested
 - Create feature branches for all work: `git checkout -b feature/<name> <base-branch>`
 - Base branches:
-  - `main` for upstream-related work
-  - `DEV` for development features
-  - `PRD` for production fixes
+  - `main` for upstream-related work (syncs with upstream)
+  - `DEV` for development features (all changes funnel through here)
+  - `PRD` for production (merges from DEV only)
+- **Branch flow:** `main` ← upstream sync | `DEV` ← all feature work | `PRD` ← merges from `DEV` only
 - Only merge to protected branches when explicitly instructed
-- If asked to "push" without branch specification, ask which branch
+- If asked to "push" without branch specification, **always ask** whether to push to `DEV` or `PRD`
 
 ## Docs Linking (Mintlify)
 
