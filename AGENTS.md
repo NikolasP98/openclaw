@@ -50,6 +50,24 @@ This fork maintains separate `docker-compose.yml` files per branch (main, DEV, P
 - Commands and entrypoints
 - All other service configuration
 
+## GitHub Actions Workflow Management
+
+When pushing to `DEV` or `PRD` branches, cancel any in-progress or queued workflow runs for that branch before pushing. Multiple rapid pushes (e.g., 6 pushes in a 6-minute window) would otherwise queue 6 Docker image builds when only the latest matters.
+
+**Cancel workflow runs before pushing:**
+```bash
+# Cancel in-progress and queued runs for DEV branch
+gh run list --branch DEV --status in_progress --status queued --json databaseId -q '.[].databaseId' | xargs -I {} gh run cancel {}
+
+# Cancel in-progress and queued runs for PRD branch
+gh run list --branch PRD --status in_progress --status queued --json databaseId -q '.[].databaseId' | xargs -I {} gh run cancel {}
+```
+
+Or as a one-liner before push:
+```bash
+gh run list --branch DEV --status in_progress --status queued --json databaseId -q '.[].databaseId' | xargs -I {} gh run cancel {} 2>/dev/null; git push origin DEV
+```
+
 ## Branch Protection (Agent Guidelines)
 
 - **Never commit directly to `main`, `DEV`, or `PRD` branches** unless explicitly requested
