@@ -5,6 +5,7 @@ This directory contains documentation for features specific to this fork that di
 ## Fork-Specific Features
 
 - [Docker Environment Naming](./docker-environments.md) - Multi-environment container naming support
+- [Docker Gateway Setup](./docker-setup.md) - Gateway authentication and configuration
 
 ## Maintenance Notes
 

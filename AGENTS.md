@@ -50,6 +50,17 @@ This fork maintains separate `docker-compose.yml` files per branch (main, DEV, P
 - Commands and entrypoints
 - All other service configuration
 
+## Branch Protection (Agent Guidelines)
+
+- **Never commit directly to `main`, `DEV`, or `PRD` branches** unless explicitly requested
+- Create feature branches for all work: `git checkout -b feature/<name> <base-branch>`
+- Base branches:
+  - `main` for upstream-related work
+  - `DEV` for development features
+  - `PRD` for production fixes
+- Only merge to protected branches when explicitly instructed
+- If asked to "push" without branch specification, ask which branch
+
 ## Docs Linking (Mintlify)
 
 - Docs are hosted on Mintlify (docs.openclaw.ai).
