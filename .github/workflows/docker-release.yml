@@ -1,9 +1,10 @@
 name: Docker Release
 
 on:
+  workflow_dispatch:
   push:
     branches:
-      - main
+      - DEV
     tags:
       - "v*"
 
@@ -25,6 +26,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Determine Docker tags
+        id: tags
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/DEV" ]]; then
+            echo "branch_tag=dev" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/PRD" ]]; then
+            echo "branch_tag=prd" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "branch_tag=main" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            # Extract version from tag (e.g., v2026.1.30 -> 2026.1.30)
+            VERSION=${GITHUB_REF#refs/tags/v}
+            echo "branch_tag=${VERSION}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -41,12 +57,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=semver,pattern={{version}},suffix=-amd64
-            type=semver,pattern={{version}},suffix=-arm64
-            type=ref,event=branch,suffix=-amd64
-            type=ref,event=branch,suffix=-arm64
+            type=raw,value=${{ steps.tags.outputs.branch_tag }}
+            type=raw,value=${{ steps.tags.outputs.branch_tag }}-amd64
 
       - name: Build and push amd64 image
         id: build
@@ -54,6 +66,8 @@ jobs:
         with:
           context: .
           platforms: linux/amd64
+          build-args: |
+            OPENCLAW_DOCKER_APT_PACKAGES=sqlite3 jq ffmpeg
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha
@@ -74,6 +88,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Determine Docker tags
+        id: tags
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/DEV" ]]; then
+            echo "branch_tag=dev" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/PRD" ]]; then
+            echo "branch_tag=prd" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "branch_tag=main" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            # Extract version from tag (e.g., v2026.1.30 -> 2026.1.30)
+            VERSION=${GITHUB_REF#refs/tags/v}
+            echo "branch_tag=${VERSION}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -90,12 +119,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=semver,pattern={{version}},suffix=-amd64
-            type=semver,pattern={{version}},suffix=-arm64
-            type=ref,event=branch,suffix=-amd64
-            type=ref,event=branch,suffix=-arm64
+            type=raw,value=${{ steps.tags.outputs.branch_tag }}
+            type=raw,value=${{ steps.tags.outputs.branch_tag }}-arm64
 
       - name: Build and push arm64 image
         id: build
@@ -103,6 +128,8 @@ jobs:
         with:
           context: .
           platforms: linux/arm64
+          build-args: |
+            OPENCLAW_DOCKER_APT_PACKAGES=sqlite3 jq ffmpeg
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha
@@ -125,14 +152,28 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Determine Docker tags
+        id: tags
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/DEV" ]]; then
+            echo "branch_tag=dev" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/PRD" ]]; then
+            echo "branch_tag=prd" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "branch_tag=main" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            # Extract version from tag (e.g., v2026.1.30 -> 2026.1.30)
+            VERSION=${GITHUB_REF#refs/tags/v}
+            echo "branch_tag=${VERSION}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Extract metadata for manifest
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
+            type=raw,value=${{ steps.tags.outputs.branch_tag }}
 
       - name: Create and push manifest
         run: |

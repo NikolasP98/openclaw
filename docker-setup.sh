@@ -23,12 +23,15 @@ fi
 
 OPENCLAW_CONFIG_DIR="${OPENCLAW_CONFIG_DIR:-$HOME/.openclaw}"
 OPENCLAW_WORKSPACE_DIR="${OPENCLAW_WORKSPACE_DIR:-$HOME/.openclaw/workspace}"
+OPENCLAW_GOG_CONFIG_DIR="${OPENCLAW_GOG_CONFIG_DIR:-$HOME/.config/gogcli}"
 
 mkdir -p "$OPENCLAW_CONFIG_DIR"
 mkdir -p "$OPENCLAW_WORKSPACE_DIR"
+mkdir -p "$OPENCLAW_GOG_CONFIG_DIR"
 
 export OPENCLAW_CONFIG_DIR
 export OPENCLAW_WORKSPACE_DIR
+export OPENCLAW_GOG_CONFIG_DIR
 export OPENCLAW_GATEWAY_PORT="${OPENCLAW_GATEWAY_PORT:-18789}"
 export OPENCLAW_BRIDGE_PORT="${OPENCLAW_BRIDGE_PORT:-18790}"
 export OPENCLAW_GATEWAY_BIND="${OPENCLAW_GATEWAY_BIND:-lan}"
@@ -36,6 +39,9 @@ export OPENCLAW_IMAGE="$IMAGE_NAME"
 export OPENCLAW_DOCKER_APT_PACKAGES="${OPENCLAW_DOCKER_APT_PACKAGES:-}"
 export OPENCLAW_EXTRA_MOUNTS="$EXTRA_MOUNTS"
 export OPENCLAW_HOME_VOLUME="$HOME_VOLUME_NAME"
+export OPENCLAW_ENV="${OPENCLAW_ENV:-DEV}"
+export OPENCLAW_GATEWAY_CONTAINER_NAME="${OPENCLAW_GATEWAY_CONTAINER_NAME:-openclaw_${OPENCLAW_ENV}_gw}"
+export OPENCLAW_CLI_CONTAINER_NAME="${OPENCLAW_CLI_CONTAINER_NAME:-openclaw_${OPENCLAW_ENV}_cli}"
 
 if [[ -z "${OPENCLAW_GATEWAY_TOKEN:-}" ]]; then
   if command -v openssl >/dev/null 2>&1; then
@@ -84,6 +90,7 @@ YAML
     printf '      - %s:/home/node\n' "$home_volume" >>"$EXTRA_COMPOSE_FILE"
     printf '      - %s:/home/node/.openclaw\n' "$OPENCLAW_CONFIG_DIR" >>"$EXTRA_COMPOSE_FILE"
     printf '      - %s:/home/node/.openclaw/workspace\n' "$OPENCLAW_WORKSPACE_DIR" >>"$EXTRA_COMPOSE_FILE"
+    printf '      - %s:/home/node/.config/gogcli\n' "$OPENCLAW_GOG_CONFIG_DIR" >>"$EXTRA_COMPOSE_FILE"
   fi
 
   for mount in "${mounts[@]}"; do
@@ -161,6 +168,7 @@ upsert_env() {
 upsert_env "$ENV_FILE" \
   OPENCLAW_CONFIG_DIR \
   OPENCLAW_WORKSPACE_DIR \
+  OPENCLAW_GOG_CONFIG_DIR \
   OPENCLAW_GATEWAY_PORT \
   OPENCLAW_BRIDGE_PORT \
   OPENCLAW_GATEWAY_BIND \
@@ -168,7 +176,10 @@ upsert_env "$ENV_FILE" \
   OPENCLAW_IMAGE \
   OPENCLAW_EXTRA_MOUNTS \
   OPENCLAW_HOME_VOLUME \
-  OPENCLAW_DOCKER_APT_PACKAGES
+  OPENCLAW_DOCKER_APT_PACKAGES \
+  OPENCLAW_ENV \
+  OPENCLAW_GATEWAY_CONTAINER_NAME \
+  OPENCLAW_CLI_CONTAINER_NAME
 
 echo "==> Building Docker image: $IMAGE_NAME"
 docker build \
@@ -209,6 +220,6 @@ echo "Config: $OPENCLAW_CONFIG_DIR"
 echo "Workspace: $OPENCLAW_WORKSPACE_DIR"
 echo "Token: $OPENCLAW_GATEWAY_TOKEN"
 echo ""
-echo "Commands:"
+echo "Commands (service: 'openclaw-gateway', container: '${OPENCLAW_GATEWAY_CONTAINER_NAME}'):"
 echo "  ${COMPOSE_HINT} logs -f openclaw-gateway"
 echo "  ${COMPOSE_HINT} exec openclaw-gateway node dist/index.js health --token \"$OPENCLAW_GATEWAY_TOKEN\""

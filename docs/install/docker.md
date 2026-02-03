@@ -65,6 +65,22 @@ It writes config/workspace on the host:
 
 Running on a VPS? See [Hetzner (Docker VPS)](/platforms/hetzner).
 
+### GOG credentials for Gmail hooks (optional)
+
+If using Gmail Pub/Sub webhooks, mount GOG credentials:
+
+```bash
+export OPENCLAW_GOG_CONFIG_DIR="$HOME/.config/gogcli"
+./docker-setup.sh
+```
+
+Authenticate GOG on the host before starting containers:
+```bash
+gog auth login
+```
+
+The credentials at `~/.config/gogcli/credentials.json` will be accessible to the container.
+
 ### Manual flow (compose)
 
 ```bash

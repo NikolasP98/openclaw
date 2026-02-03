@@ -17,6 +17,39 @@
   - Extensions (channel plugins): `extensions/*` (e.g. `extensions/msteams`, `extensions/matrix`, `extensions/zalo`, `extensions/zalouser`, `extensions/voice-call`)
 - When adding channels/extensions/apps/docs, review `.github/labeler.yml` for label coverage.
 
+## Docker Compose Sync Across Branches
+
+This fork maintains separate `docker-compose.yml` files per branch (main, DEV, PRD) with environment-specific defaults. When updating the Docker configuration, sync changes across all branches:
+
+**Sync Checklist:**
+1. Make changes on the main branch (or current branch)
+2. Commit the changes: `git add docker-compose.yml && git commit -m "Docker: <description>"`
+3. Switch to DEV branch: `git switch DEV`
+4. Cherry-pick the commit: `git cherry-pick <commit-sha>`
+5. Verify DEV-specific defaults are preserved (container names: `openclaw_DEV_gw`, image: `ghcr.io/nikolasp98/openclaw:dev`)
+6. Commit if needed: `git add docker-compose.yml && git commit --amend --no-edit` or create a fix commit
+7. Switch to PRD branch: `git switch PRD`
+8. Cherry-pick the commit: `git cherry-pick <commit-sha>`
+9. Verify PRD-specific defaults are preserved (container names: `openclaw_PRD_gw`, image: `ghcr.io/nikolasp98/openclaw:prd`)
+10. Commit if needed: `git add docker-compose.yml && git commit --amend --no-edit` or create a fix commit
+11. Verify only environment-specific lines differ:
+    ```bash
+    git diff DEV:docker-compose.yml PRD:docker-compose.yml
+    git diff main:docker-compose.yml DEV:docker-compose.yml
+    ```
+
+**Environment-Specific Defaults (keep these per branch):**
+- **main**: `image: ghcr.io/nikolasp98/openclaw:main` (no container_name)
+- **DEV**: `image: ghcr.io/nikolasp98/openclaw:dev`, `container_name: openclaw_DEV_gw/cli`
+- **PRD**: `image: ghcr.io/nikolasp98/openclaw:prd`, `container_name: openclaw_PRD_gw/cli`
+
+**Common Configuration (should be identical across branches):**
+- Volume mounts
+- Port mappings
+- Environment variables
+- Commands and entrypoints
+- All other service configuration
+
 ## Docs Linking (Mintlify)
 
 - Docs are hosted on Mintlify (docs.openclaw.ai).
