@@ -30,6 +30,7 @@ done
 # Copy default config only if it doesn't exist
 if [ ! -f "$OPENCLAW_HOME/openclaw.json" ]; then
   cp "$DEFAULT_CONFIG" "$OPENCLAW_HOME/openclaw.json"
+  chmod 644 "$OPENCLAW_HOME/openclaw.json"  # Make writable
   echo "Created default config: $OPENCLAW_HOME/openclaw.json"
 else
   echo "Config exists, preserving: $OPENCLAW_HOME/openclaw.json"

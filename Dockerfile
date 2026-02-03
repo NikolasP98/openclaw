@@ -18,6 +18,46 @@ RUN if [ -n "$OPENCLAW_DOCKER_APT_PACKAGES" ]; then \
       rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*; \
     fi
 
+# Install GitHub CLI (gh) from official GitHub apt repo
+# Note: Debian native package is outdated; use official repo for latest version
+RUN mkdir -p -m 755 /etc/apt/keyrings && \
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /etc/apt/keyrings/githubcli-archive-keyring.gpg && \
+    chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends gh && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install Homebrew (required for obsidian-cli)
+ENV HOMEBREW_PREFIX="/home/linuxbrew/.linuxbrew"
+ENV HOMEBREW_CELLAR="${HOMEBREW_PREFIX}/Cellar"
+ENV HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}/Homebrew"
+ENV PATH="${HOMEBREW_PREFIX}/bin:${HOMEBREW_PREFIX}/sbin:${PATH}"
+RUN useradd -m -s /bin/bash linuxbrew && \
+    mkdir -p "${HOMEBREW_PREFIX}" && \
+    chown -R linuxbrew:linuxbrew "$(dirname "${HOMEBREW_PREFIX}")" && \
+    su - linuxbrew -c "NONINTERACTIVE=1 CI=1 /bin/bash -c 'curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | bash'" && \
+    ln -sf "${HOMEBREW_PREFIX}/bin/brew" /usr/local/bin/brew
+
+# Install obsidian-cli via Homebrew (run as linuxbrew user who owns Homebrew)
+# Use explicit path to avoid shell profile issues
+RUN su linuxbrew -c "${HOMEBREW_PREFIX}/bin/brew install yakitrak/yakitrak/obsidian-cli" && \
+    ln -sf "${HOMEBREW_PREFIX}/bin/obsidian-cli" /usr/local/bin/obsidian-cli
+
+# Install uv (Python package manager)
+# UV_INSTALL_DIR sets install location; binaries go directly there (not in bin subdir)
+ENV UV_INSTALL_DIR="/usr/local/bin"
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    ls -la /usr/local/bin/uv
+
+# Install nano-pdf via uv (use env vars for tool/bin directories)
+ENV UV_TOOL_DIR="/usr/local/share/uv-tools"
+ENV UV_TOOL_BIN_DIR="/usr/local/bin"
+RUN /usr/local/bin/uv tool install nano-pdf
+
+# Install mcporter globally via bun
+RUN bun install -g mcporter
+
 # Install QMD globally (optional memory search backend)
 # Users opt-in via config: memory.backend = "qmd"
 # Falls back to builtin SQLite if QMD fails
