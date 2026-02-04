@@ -1,6 +1,10 @@
 node_modules
 **/node_modules/
 .env
+.env.local
+.env.dev
+.env.prd
+.env.*.local
 docker-compose.extra.yml
 dist
 *.bun-build
