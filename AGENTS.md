@@ -73,11 +73,12 @@ gh run list --branch DEV --status in_progress --status queued --json databaseId 
 - **Never commit directly to `main`, `DEV`, or `PRD` branches** unless explicitly requested
 - Create feature branches for all work: `git checkout -b feature/<name> <base-branch>`
 - Base branches:
-  - `main` for upstream-related work
-  - `DEV` for development features
-  - `PRD` for production fixes
+  - `main` for upstream-related work (syncs with upstream)
+  - `DEV` for development features (all changes funnel through here)
+  - `PRD` for production (merges from DEV only)
+- **Branch flow:** `main` ← upstream sync | `DEV` ← all feature work | `PRD` ← merges from `DEV` only
 - Only merge to protected branches when explicitly instructed
-- If asked to "push" without branch specification, ask which branch
+- If asked to "push" without branch specification, **always ask** whether to push to `DEV` or `PRD`
 
 ## Docs Linking (Mintlify)
 
@@ -89,6 +90,14 @@ gh run list --branch DEV --status in_progress --status queued --json databaseId 
 - When you touch docs, end the reply with the `https://docs.openclaw.ai/...` URLs you referenced.
 - README (GitHub): keep absolute docs URLs (`https://docs.openclaw.ai/...`) so links work on GitHub.
 - Docs content must be generic: no personal device names/hostnames/paths; use placeholders like `user@gateway-host` and “gateway host”.
+
+## Docs i18n (zh-CN)
+
+- `docs/zh-CN/**` is generated; do not edit unless the user explicitly asks.
+- Pipeline: update English docs → adjust glossary (`docs/.i18n/glossary.zh-CN.json`) → run `scripts/docs-i18n` → apply targeted fixes only if instructed.
+- Translation memory: `docs/.i18n/zh-CN.tm.jsonl` (generated).
+- See `docs/.i18n/README.md`.
+- The pipeline can be slow/inefficient; if it’s dragging, ping @jospalmbier on Discord instead of hacking around it.
 
 ## exe.dev VM ops (general)
 
