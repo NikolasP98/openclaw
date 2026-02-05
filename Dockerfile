@@ -27,9 +27,15 @@ RUN OPENCLAW_A2UI_SKIP_MISSING=1 pnpm build
 ENV OPENCLAW_PREFER_PNPM=1
 RUN pnpm ui:build
 
+# Preserve ui/dist before pruning (pnpm prune removes dev workspaces)
+RUN mv ui/dist /tmp/ui-dist
+
 # Prune dev dependencies for smaller production image
 # CI=true prevents interactive prompts in non-TTY environment
 RUN CI=true pnpm prune --prod
+
+# Restore ui/dist after pruning
+RUN mkdir -p ui && mv /tmp/ui-dist ui/dist
 
 # =============================================================================
 # Stage 2: Tools - Download static binaries for CLI tools
