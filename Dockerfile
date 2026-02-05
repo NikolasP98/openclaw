@@ -9,7 +9,7 @@ RUN corepack enable
 
 WORKDIR /app
 
-# Install runtime packages
+# Install runtime packages and clean up in single layer
 # - sqlite3: for cookie/session database queries
 # - jq: for JSON processing in scripts
 # - ffmpeg: for video-frames skill (optional but commonly used)
@@ -23,40 +23,34 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
 
-# Install GitHub CLI from GitHub releases (instead of apt repo)
+# Install CLI tools from GitHub releases (consolidated into single layer)
+# - gh: GitHub CLI
+# - obsidian-cli: Obsidian vault management
+# - gogcli: Google services CLI (Gmail/GCal/GDrive)
 ARG GH_CLI_VERSION=2.64.0
+ARG OBSIDIAN_CLI_VERSION=0.2.3
+ARG GOGCLI_VERSION=0.9.0
 ARG TARGETARCH
 RUN curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_CLI_VERSION}/gh_${GH_CLI_VERSION}_linux_${TARGETARCH}.tar.gz" | \
     tar -xzf - --strip-components=2 -C /usr/local/bin "gh_${GH_CLI_VERSION}_linux_${TARGETARCH}/bin/gh" && \
-    chmod +x /usr/local/bin/gh
-
-# Install obsidian-cli from GitHub releases (instead of Homebrew)
-ARG OBSIDIAN_CLI_VERSION=0.2.3
-RUN curl -fsSL "https://github.com/yakitrak/obsidian-cli/releases/download/v${OBSIDIAN_CLI_VERSION}/obsidian-cli_${OBSIDIAN_CLI_VERSION}_linux_${TARGETARCH}.tar.gz" | \
+    curl -fsSL "https://github.com/yakitrak/obsidian-cli/releases/download/v${OBSIDIAN_CLI_VERSION}/obsidian-cli_${OBSIDIAN_CLI_VERSION}_linux_${TARGETARCH}.tar.gz" | \
     tar -xzf - -C /usr/local/bin obsidian-cli && \
-    chmod +x /usr/local/bin/obsidian-cli
-
-# Install gogcli from GitHub releases (instead of Homebrew)
-ARG GOGCLI_VERSION=0.9.0
-RUN curl -fsSL "https://github.com/steipete/gogcli/releases/download/v${GOGCLI_VERSION}/gogcli_${GOGCLI_VERSION}_linux_${TARGETARCH}.tar.gz" | \
+    curl -fsSL "https://github.com/steipete/gogcli/releases/download/v${GOGCLI_VERSION}/gogcli_${GOGCLI_VERSION}_linux_${TARGETARCH}.tar.gz" | \
     tar -xzf - -C /usr/local/bin gog && \
-    chmod +x /usr/local/bin/gog
+    chmod +x /usr/local/bin/gh /usr/local/bin/obsidian-cli /usr/local/bin/gog
 
-# Install uv (Python package manager)
+# Install uv (Python package manager) and nano-pdf
 ENV UV_INSTALL_DIR="/usr/local/bin"
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Install nano-pdf via uv
 ENV UV_TOOL_DIR="/usr/local/share/uv-tools"
 ENV UV_TOOL_BIN_DIR="/usr/local/bin"
-RUN /usr/local/bin/uv tool install nano-pdf
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    /usr/local/bin/uv tool install nano-pdf
 
-# Install mcporter globally via bun
-RUN bun install -g mcporter
-
-# Install QMD globally (optional memory search backend)
-# Users opt-in via config: memory.backend = "qmd"
-RUN bun install -g github:tobi/qmd
+# Install bun global packages
+# - mcporter: Model Context Protocol tools
+# - qmd: Optional memory search backend (users opt-in via config: memory.backend = "qmd")
+RUN bun install -g mcporter && \
+    bun install -g github:tobi/qmd
 
 # Copy dependency manifests first for better layer caching
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
@@ -66,6 +60,7 @@ COPY scripts ./scripts
 
 RUN pnpm install --frozen-lockfile
 
+# Copy source and build
 COPY . .
 RUN OPENCLAW_A2UI_SKIP_MISSING=1 pnpm build
 
@@ -75,16 +70,15 @@ RUN pnpm ui:build
 
 ENV NODE_ENV=production
 
-# Allow non-root user to write temp files during runtime/tests.
-RUN chown -R node:node /app
+# Copy entrypoint and default config, set permissions (before switching to non-root)
+COPY docker/entrypoint.sh /app/docker/entrypoint.sh
+COPY docker/default-config.json /app/docker/default-config.json
+RUN chmod +x /app/docker/entrypoint.sh && \
+    chown -R node:node /app
 
 # Security hardening: Run as non-root user
 # The node:22-bookworm image includes a 'node' user (uid 1000)
 USER node
-
-# Entrypoint populates missing config/dirs at runtime (respects mounted volumes)
-COPY --chown=node:node docker/entrypoint.sh /app/docker/entrypoint.sh
-RUN chmod +x /app/docker/entrypoint.sh
 
 ENTRYPOINT ["/app/docker/entrypoint.sh"]
 
