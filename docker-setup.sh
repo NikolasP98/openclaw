@@ -29,6 +29,9 @@ mkdir -p "$OPENCLAW_CONFIG_DIR"
 mkdir -p "$OPENCLAW_WORKSPACE_DIR"
 mkdir -p "$OPENCLAW_GOG_CONFIG_DIR"
 
+# Note: Container entrypoint will automatically fix ownership when starting
+# No need to manually chown these directories
+
 export OPENCLAW_CONFIG_DIR
 export OPENCLAW_WORKSPACE_DIR
 export OPENCLAW_GOG_CONFIG_DIR

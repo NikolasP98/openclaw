@@ -30,6 +30,13 @@ for dir in "${dirs[@]}"; do
     mkdir -p "$dir"
     log "Created directory: $dir"
   fi
+
+  # Fix ownership if not already owned by node user (uid 1000)
+  current_owner=$(stat -c '%u' "$dir" 2>/dev/null || stat -f '%u' "$dir" 2>/dev/null || echo "unknown")
+  if [ "$current_owner" != "1000" ] && [ "$current_owner" != "unknown" ]; then
+    log "Fixing ownership of $dir (was uid $current_owner, setting to 1000:1000)"
+    chown -R 1000:1000 "$dir"
+  fi
 done
 
 # Copy default config only if it doesn't exist
@@ -45,5 +52,6 @@ else
   log "Warning: Default config not found at $DEFAULT_CONFIG"
 fi
 
-# Execute the main command
-exec "$@"
+# Drop privileges to node user and execute the main command
+log "Dropping privileges to node user (uid 1000)"
+exec gosu node "$@"
