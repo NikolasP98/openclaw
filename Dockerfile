@@ -28,7 +28,8 @@ ENV OPENCLAW_PREFER_PNPM=1
 RUN pnpm ui:build
 
 # Prune dev dependencies for smaller production image
-RUN pnpm prune --prod
+# CI=true prevents interactive prompts in non-TTY environment
+RUN CI=true pnpm prune --prod
 
 # =============================================================================
 # Stage 2: Tools - Download static binaries for CLI tools
