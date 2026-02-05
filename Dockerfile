@@ -70,11 +70,13 @@ RUN curl -fsSL "https://github.com/steipete/gogcli/releases/download/v${GOGCLI_V
 FROM node:22-bookworm-slim AS runtime
 
 # Install runtime dependencies
+# - unzip: required for Bun installer
 # - ca-certificates, curl: for network operations
 # - sqlite3: for cookie/session database queries
 # - jq: for JSON processing in scripts
 # - ffmpeg: for video-frames skill (optional but commonly used)
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    unzip \
     ca-certificates \
     curl \
     sqlite3 \
