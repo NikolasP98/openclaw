@@ -51,4 +51,6 @@ services:
     stdin_open: true
     tty: true
     init: true
-    entrypoint: ["node", "dist/index.js"]
+    # Use command instead of entrypoint to ensure entrypoint.sh runs first
+    # This ensures consistent initialization (directory creation, default config)
+    command: ["node", "dist/index.js"]

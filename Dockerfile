@@ -1,56 +1,97 @@
-FROM node:22-bookworm
+# =============================================================================
+# Stage 1: Builder - Install dependencies and build the application
+# =============================================================================
+FROM node:22-bookworm AS builder
 
-# Install Bun globally (for all users including runtime node user)
-# BUN_INSTALL=/usr/local ensures bun binary goes to /usr/local/bin
+# Install Bun globally
 ENV BUN_INSTALL=/usr/local
 RUN curl -fsSL https://bun.sh/install | bash
-ENV PATH="/usr/local/bin:${PATH}"
 
 RUN corepack enable
 
 WORKDIR /app
 
-ARG OPENCLAW_DOCKER_APT_PACKAGES=""
-RUN if [ -n "$OPENCLAW_DOCKER_APT_PACKAGES" ]; then \
-      apt-get update && \
-      DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends $OPENCLAW_DOCKER_APT_PACKAGES && \
-      apt-get clean && \
-      rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*; \
-    fi
+# Copy dependency manifests first for better layer caching
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY ui/package.json ./ui/package.json
+COPY patches ./patches
+COPY scripts ./scripts
 
-# Install GitHub CLI (gh) from official GitHub apt repo
-# Note: Debian native package is outdated; use official repo for latest version
-RUN mkdir -p -m 755 /etc/apt/keyrings && \
-    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /etc/apt/keyrings/githubcli-archive-keyring.gpg && \
-    chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg && \
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends gh && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN pnpm install --frozen-lockfile
 
-# Install Homebrew (required for obsidian-cli)
-ENV HOMEBREW_PREFIX="/home/linuxbrew/.linuxbrew"
-ENV HOMEBREW_CELLAR="${HOMEBREW_PREFIX}/Cellar"
-ENV HOMEBREW_REPOSITORY="${HOMEBREW_PREFIX}/Homebrew"
-ENV PATH="${HOMEBREW_PREFIX}/bin:${HOMEBREW_PREFIX}/sbin:${PATH}"
-RUN useradd -m -s /bin/bash linuxbrew && \
-    mkdir -p "${HOMEBREW_PREFIX}" && \
-    chown -R linuxbrew:linuxbrew "$(dirname "${HOMEBREW_PREFIX}")" && \
-    su - linuxbrew -c "NONINTERACTIVE=1 CI=1 /bin/bash -c 'curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | bash'" && \
-    ln -sf "${HOMEBREW_PREFIX}/bin/brew" /usr/local/bin/brew
+# Copy source code and build
+COPY . .
+RUN OPENCLAW_A2UI_SKIP_MISSING=1 pnpm build
 
-# Install obsidian-cli via Homebrew (run as linuxbrew user who owns Homebrew)
-# Use explicit path to avoid shell profile issues
-RUN su linuxbrew -c "${HOMEBREW_PREFIX}/bin/brew install yakitrak/yakitrak/obsidian-cli" && \
-    ln -sf "${HOMEBREW_PREFIX}/bin/obsidian-cli" /usr/local/bin/obsidian-cli
+# Force pnpm for UI build (Bun may fail on ARM/Synology architectures)
+ENV OPENCLAW_PREFER_PNPM=1
+RUN pnpm ui:build
 
-# Install uv (Python package manager)
-# UV_INSTALL_DIR sets install location; binaries go directly there (not in bin subdir)
+# Prune dev dependencies for smaller production image
+RUN pnpm prune --prod
+
+# =============================================================================
+# Stage 2: Tools - Download static binaries for CLI tools
+# =============================================================================
+FROM debian:bookworm-slim AS tools
+
+ARG TARGETARCH
+
+# Tool versions - update these as needed
+ARG GH_CLI_VERSION=2.64.0
+ARG OBSIDIAN_CLI_VERSION=0.2.3
+ARG GOGCLI_VERSION=0.9.0
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /tools
+
+# GitHub CLI - download from official releases
+RUN curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_CLI_VERSION}/gh_${GH_CLI_VERSION}_linux_${TARGETARCH}.tar.gz" | \
+    tar -xzf - --strip-components=2 -C /tools "gh_${GH_CLI_VERSION}_linux_${TARGETARCH}/bin/gh" && \
+    chmod +x /tools/gh
+
+# obsidian-cli - download from GitHub releases (replaces Homebrew install)
+RUN curl -fsSL "https://github.com/yakitrak/obsidian-cli/releases/download/v${OBSIDIAN_CLI_VERSION}/obsidian-cli_${OBSIDIAN_CLI_VERSION}_linux_${TARGETARCH}.tar.gz" | \
+    tar -xzf - -C /tools obsidian-cli && \
+    chmod +x /tools/obsidian-cli
+
+# gogcli - download from GitHub releases (replaces Homebrew install)
+RUN curl -fsSL "https://github.com/steipete/gogcli/releases/download/v${GOGCLI_VERSION}/gogcli_${GOGCLI_VERSION}_linux_${TARGETARCH}.tar.gz" | \
+    tar -xzf - -C /tools gog && \
+    chmod +x /tools/gog
+
+# =============================================================================
+# Stage 3: Runtime - Minimal production image
+# =============================================================================
+FROM node:22-bookworm-slim AS runtime
+
+# Install runtime dependencies
+# - ca-certificates, curl: for network operations
+# - sqlite3: for cookie/session database queries
+# - jq: for JSON processing in scripts
+# - ffmpeg: for video-frames skill (optional but commonly used)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    sqlite3 \
+    jq \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Bun globally (needed for some runtime tools like mcporter, qmd)
+ENV BUN_INSTALL=/usr/local
+RUN curl -fsSL https://bun.sh/install | bash
+ENV PATH="/usr/local/bin:${PATH}"
+
+# Install uv (Python package manager) for nano-pdf
 ENV UV_INSTALL_DIR="/usr/local/bin"
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    ls -la /usr/local/bin/uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Install nano-pdf via uv (use env vars for tool/bin directories)
+# Install nano-pdf via uv
 ENV UV_TOOL_DIR="/usr/local/share/uv-tools"
 ENV UV_TOOL_BIN_DIR="/usr/local/bin"
 RUN /usr/local/bin/uv tool install nano-pdf
@@ -60,49 +101,37 @@ RUN bun install -g mcporter
 
 # Install QMD globally (optional memory search backend)
 # Users opt-in via config: memory.backend = "qmd"
-# Falls back to builtin SQLite if QMD fails
 RUN bun install -g github:tobi/qmd
 
-# Install gogcli (Google CLI for Gmail/GCal/GDrive) from GitHub releases
-# Download pre-built binary for the target architecture
-ARG GOGCLI_VERSION=0.9.0
-ARG TARGETARCH
-RUN curl -fsSL "https://github.com/steipete/gogcli/releases/download/v${GOGCLI_VERSION}/gogcli_${GOGCLI_VERSION}_linux_${TARGETARCH}.tar.gz" \
-    -o /tmp/gogcli.tar.gz && \
-    tar -xzf /tmp/gogcli.tar.gz -C /tmp && \
-    mv /tmp/gog /usr/local/bin/gog && \
-    chmod +x /usr/local/bin/gog && \
-    rm -rf /tmp/gogcli.tar.gz /tmp/gog* && \
-    gog --version
+# Copy static binary tools from tools stage
+COPY --from=tools /tools/gh /usr/local/bin/gh
+COPY --from=tools /tools/obsidian-cli /usr/local/bin/obsidian-cli
+COPY --from=tools /tools/gog /usr/local/bin/gog
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
-COPY ui/package.json ./ui/package.json
-COPY patches ./patches
-COPY scripts ./scripts
+WORKDIR /app
 
-RUN pnpm install --frozen-lockfile
+# Copy built application from builder stage
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/ui/dist ./ui/dist
 
-COPY . .
-RUN OPENCLAW_A2UI_SKIP_MISSING=1 pnpm build
-# Force pnpm for UI build (Bun may fail on ARM/Synology architectures)
-ENV OPENCLAW_PREFER_PNPM=1
-RUN pnpm ui:build
+# Copy entrypoint and default config
+COPY --chown=node:node docker/entrypoint.sh /app/docker/entrypoint.sh
+COPY --chown=node:node docker/default-config.json /app/docker/default-config.json
+RUN chmod +x /app/docker/entrypoint.sh
 
 ENV NODE_ENV=production
 
-# Allow non-root user to write temp files during runtime/tests.
-RUN chown -R node:node /app
+# Create directories and set ownership for non-root user
+RUN mkdir -p /home/node/.openclaw /home/node/.config/gogcli && \
+    chown -R node:node /home/node /app
 
 # Security hardening: Run as non-root user
-# The node:22-bookworm image includes a 'node' user (uid 1000)
-# This reduces the attack surface by preventing container escape via root privileges
+# The node:22-bookworm-slim image includes a 'node' user (uid 1000)
 USER node
 
 # Entrypoint populates missing config/dirs at runtime (respects mounted volumes)
-# Default config template stays in /app/docker for entrypoint to copy from
-COPY --chown=node:node docker/entrypoint.sh /app/docker/entrypoint.sh
-RUN chmod +x /app/docker/entrypoint.sh
-
 ENTRYPOINT ["/app/docker/entrypoint.sh"]
 
 # Start gateway server with pre-baked config.

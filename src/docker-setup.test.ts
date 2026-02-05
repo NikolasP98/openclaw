@@ -82,7 +82,10 @@ describe("docker-setup.sh", () => {
     expect(envFile).toContain("OPENCLAW_HOME_VOLUME=");
   });
 
-  it("plumbs OPENCLAW_DOCKER_APT_PACKAGES into .env and docker build args", async () => {
+  it("plumbs OPENCLAW_DOCKER_APT_PACKAGES into .env (legacy, ignored by Dockerfile)", async () => {
+    // Note: OPENCLAW_DOCKER_APT_PACKAGES is kept for backwards compatibility in docker-setup.sh
+    // but the new multi-stage Dockerfile bakes runtime packages (sqlite3, jq, ffmpeg) directly.
+    // This test verifies the setup script still passes the env var for any custom builds.
     const assocCheck = spawnSync("bash", ["-c", "declare -A _t=()"], {
       encoding: "utf8",
     });
@@ -126,15 +129,24 @@ describe("docker-setup.sh", () => {
 
     expect(result.status).toBe(0);
 
+    // Env var is still written to .env for backwards compatibility
     const envFile = await readFile(join(rootDir, ".env"), "utf8");
-    expect(envFile).toContain("OPENCLAW_DOCKER_APT_PACKAGES=ffmpeg build-essential");
+    expect(envFile).toContain(
+      "OPENCLAW_DOCKER_APT_PACKAGES=ffmpeg build-essential",
+    );
 
+    // Build arg is still passed (but ignored by the new Dockerfile which bakes packages in)
     const log = await readFile(logPath, "utf8");
-    expect(log).toContain("--build-arg OPENCLAW_DOCKER_APT_PACKAGES=ffmpeg build-essential");
+    expect(log).toContain(
+      "--build-arg OPENCLAW_DOCKER_APT_PACKAGES=ffmpeg build-essential",
+    );
   });
 
   it("keeps docker-compose gateway command in sync", async () => {
-    const compose = await readFile(join(repoRoot, "docker-compose.yml"), "utf8");
+    const compose = await readFile(
+      join(repoRoot, "docker-compose.yml"),
+      "utf8",
+    );
     expect(compose).not.toContain("gateway-daemon");
     expect(compose).toContain('"gateway"');
   });
@@ -158,7 +170,10 @@ describe("docker-setup.sh", () => {
     await writeFile(scriptPath, script, { mode: 0o755 });
     await writeFile(dockerfilePath, "FROM scratch\n");
 
-    const compose = await readFile(join(repoRoot, "docker-compose.yml"), "utf8");
+    const compose = await readFile(
+      join(repoRoot, "docker-compose.yml"),
+      "utf8",
+    );
     await writeFile(composePath, compose);
     await writeDockerStub(binDir, logPath);
 
@@ -184,7 +199,9 @@ describe("docker-setup.sh", () => {
 
     const envFile = await readFile(join(rootDir, ".env"), "utf8");
     expect(envFile).toContain("OPENCLAW_ENV=test");
-    expect(envFile).toContain("OPENCLAW_GATEWAY_CONTAINER_NAME=openclaw_test_gw");
+    expect(envFile).toContain(
+      "OPENCLAW_GATEWAY_CONTAINER_NAME=openclaw_test_gw",
+    );
     expect(envFile).toContain("OPENCLAW_CLI_CONTAINER_NAME=openclaw_test_cli");
   });
 });
