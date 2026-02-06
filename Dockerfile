@@ -13,12 +13,14 @@ WORKDIR /app
 # - sqlite3: for cookie/session database queries
 # - jq: for JSON processing in scripts
 # - ffmpeg: for video-frames skill (optional but commonly used)
+# - gosu: for privilege dropping in entrypoint
 ARG OPENCLAW_DOCKER_APT_PACKAGES=""
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     sqlite3 \
     jq \
     ffmpeg \
+    gosu \
     $OPENCLAW_DOCKER_APT_PACKAGES && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
@@ -76,9 +78,8 @@ COPY docker/default-config.json /app/docker/default-config.json
 RUN chmod +x /app/docker/entrypoint.sh && \
     chown -R node:node /app
 
-# Security hardening: Run as non-root user
-# The node:22-bookworm image includes a 'node' user (uid 1000)
-USER node
+# Note: Container starts as root to allow entrypoint to fix mounted directory permissions
+# The entrypoint script will drop privileges to 'node' user (uid 1000) before running the app
 
 ENTRYPOINT ["/app/docker/entrypoint.sh"]
 

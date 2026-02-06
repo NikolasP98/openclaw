@@ -63,7 +63,7 @@ It writes config/workspace on the host:
 - `~/.openclaw/`
 - `~/.openclaw/workspace`
 
-Running on a VPS? See [Hetzner (Docker VPS)](/platforms/hetzner).
+Running on a VPS? See [Hetzner (Docker VPS)](/install/hetzner).
 
 ### GOG credentials for Gmail hooks (optional)
 
@@ -224,16 +224,29 @@ If you need Playwright to install system deps, rebuild the image with
 
 ### Permissions + EACCES
 
-The image runs as `node` (uid 1000). If you see permission errors on
-`/home/node/.openclaw`, make sure your host bind mounts are owned by uid 1000.
+The image automatically fixes ownership of mounted directories when the container starts. The entrypoint runs as root, sets ownership to uid 1000 (node user), then drops privileges before running the application.
 
-Example (Linux host):
+**How it works:**
+- Entrypoint checks `/home/node/.openclaw`, `/home/node/.config/gogcli`, and workspace directories
+- If owned by root or another user, automatically runs `chown -R 1000:1000`
+- Drops to `node` user before starting the app
+- App runs as non-root for security
 
+**No manual intervention needed** - just `docker compose up` and the container handles permissions automatically.
+
+**Manual verification** (if needed):
+
+Check ownership inside container:
 ```bash
-sudo chown -R 1000:1000 /path/to/openclaw-config /path/to/openclaw-workspace
+docker compose exec openclaw-gateway stat -c '%U:%G' /home/node/.openclaw /home/node/.config/gogcli
+# Should show: node:node
 ```
 
-If you choose to run as root for convenience, you accept the security tradeoff.
+Verify app runs as node user:
+```bash
+docker compose exec openclaw-gateway whoami
+# Should output: node
+```
 
 ### Faster rebuilds (recommended)
 
