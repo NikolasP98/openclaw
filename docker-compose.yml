@@ -6,18 +6,11 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        # Optional: Add Chromium for web automation/testing/screenshots
-        # Uncomment one of the options below based on your needs:
-
-        # Option 1: Minimal (headless Chromium only, ~300MB)
-        # OPENCLAW_DOCKER_APT_PACKAGES: "chromium"
-
-        # Option 2: Standard (Chromium + fonts for better rendering, ~320MB)
-        # OPENCLAW_DOCKER_APT_PACKAGES: "chromium fonts-liberation fonts-noto-color-emoji"
-
-        # Option 3: Full (Chromium + VNC stack for remote viewing, ~400MB+)
-        # OPENCLAW_DOCKER_APT_PACKAGES: "chromium fonts-liberation fonts-noto-color-emoji xvfb x11vnc novnc websockify socat"
-        OPENCLAW_DOCKER_APT_PACKAGES: "${OPENCLAW_DOCKER_APT_PACKAGES:-}"
+        # Browser support: Chromium is installed by default (Standard: ~320MB)
+        # To disable: set OPENCLAW_DOCKER_APT_PACKAGES="" in your environment
+        # To use minimal (no fonts): OPENCLAW_DOCKER_APT_PACKAGES="chromium"
+        # To use full (with VNC): OPENCLAW_DOCKER_APT_PACKAGES="chromium fonts-liberation fonts-noto-color-emoji xvfb x11vnc novnc websockify socat"
+        OPENCLAW_DOCKER_APT_PACKAGES: "${OPENCLAW_DOCKER_APT_PACKAGES:-chromium fonts-liberation fonts-noto-color-emoji}"
     environment:
       HOME: /home/node
       TERM: xterm-256color
@@ -54,7 +47,8 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        OPENCLAW_DOCKER_APT_PACKAGES: "${OPENCLAW_DOCKER_APT_PACKAGES:-}"
+        # Browser support enabled by default (matches gateway configuration)
+        OPENCLAW_DOCKER_APT_PACKAGES: "${OPENCLAW_DOCKER_APT_PACKAGES:-chromium fonts-liberation fonts-noto-color-emoji}"
     environment:
       HOME: /home/node
       TERM: xterm-256color

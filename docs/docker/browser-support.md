@@ -1,15 +1,18 @@
 ---
-summary: "Optional Chromium browser support for Docker deployments"
+summary: "Chromium browser support for Docker deployments"
 read_when:
   - You need web automation or screenshot capabilities
   - You want to run Playwright or Puppeteer in Docker
   - You are validating browser-based workflows
+  - You want to disable browser support to reduce image size
 title: "Browser Support"
 ---
 
-# Browser Support (Optional)
+# Browser Support
 
-OpenClaw's Docker image can optionally include Chromium browser support for web automation, screenshot capture, PDF generation, and testing. Browser support is **opt-in** to keep the base image lightweight.
+OpenClaw's Docker image includes Chromium browser by default for web automation, screenshot capture, PDF generation, and testing. The **Standard configuration** (Chromium + fonts, ~320MB) provides the best balance of size and functionality.
+
+**Want to opt-out?** See [Disabling Browser Support](#disabling-browser-support) to remove Chromium and reduce image size.
 
 ## Use Cases
 
@@ -19,101 +22,132 @@ OpenClaw's Docker image can optionally include Chromium browser support for web 
 - **E2E Testing**: Browser-based integration tests
 - **Browser Automation**: Playwright, Puppeteer, or direct CDP access
 
-## Installation Options
+## Default Configuration
 
-Three tiers are available, each balancing size vs functionality:
+By default, OpenClaw includes:
 
-### Option 1: Minimal (~300MB)
+- **Chromium** (headless browser)
+- **fonts-liberation** (common web fonts)
+- **fonts-noto-color-emoji** (emoji support)
 
-Headless Chromium only. Smallest footprint for basic automation.
+This adds approximately **320MB** to the image size.
+
+## Disabling Browser Support
+
+If you don't need browser support, disable it to save ~320MB:
+
+### Via Environment Variable
+
+```bash
+export OPENCLAW_DOCKER_APT_PACKAGES=""
+./docker-setup.sh
+```
+
+### Via docker-compose.yml
+
+Edit `docker-compose.yml` and set an empty value:
+
+```yaml
+build:
+  args:
+    OPENCLAW_DOCKER_APT_PACKAGES: ""
+```
+
+### Via docker build directly
+
+```bash
+docker build --build-arg OPENCLAW_DOCKER_APT_PACKAGES="" -t openclaw:no-browser .
+```
+
+## Alternative Configurations
+
+### Minimal (~300MB)
+
+Chromium only, without fonts. Smaller footprint but may have rendering issues:
 
 ```bash
 export OPENCLAW_DOCKER_APT_PACKAGES="chromium"
 ./docker-setup.sh
 ```
 
-Or via docker-compose.yml (uncomment the minimal option):
+Or via docker-compose.yml:
 ```yaml
 build:
   args:
     OPENCLAW_DOCKER_APT_PACKAGES: "chromium"
 ```
 
-### Option 2: Standard (~320MB) - Recommended
+### Full (~400MB+)
 
-Chromium plus fonts for better rendering quality. Best for most use cases.
-
-```bash
-export OPENCLAW_DOCKER_APT_PACKAGES="chromium fonts-liberation fonts-noto-color-emoji"
-./docker-setup.sh
-```
-
-Or via docker-compose.yml (uncomment the standard option):
-```yaml
-build:
-  args:
-    OPENCLAW_DOCKER_APT_PACKAGES: "chromium fonts-liberation fonts-noto-color-emoji"
-```
-
-### Option 3: Full (~400MB+)
-
-Chromium, fonts, and VNC stack for remote viewing. Useful for debugging and visual verification.
+Chromium, fonts, and VNC stack for remote viewing and debugging:
 
 ```bash
 export OPENCLAW_DOCKER_APT_PACKAGES="chromium fonts-liberation fonts-noto-color-emoji xvfb x11vnc novnc websockify socat"
 ./docker-setup.sh
 ```
 
-Or via docker-compose.yml (uncomment the full option):
+Or via docker-compose.yml:
 ```yaml
 build:
   args:
     OPENCLAW_DOCKER_APT_PACKAGES: "chromium fonts-liberation fonts-noto-color-emoji xvfb x11vnc novnc websockify socat"
 ```
 
-## Size Comparison
+## Configuration Comparison
 
-| Configuration | Packages | Approx. Size Increase | Use When |
-|---------------|----------|----------------------|----------|
-| Base | None | 0MB | No browser needed |
+| Configuration | Packages | Size Increase | Use When |
+|---------------|----------|---------------|----------|
+| Disabled | None | 0MB | No browser needed |
 | Minimal | chromium | ~300MB | Basic automation, CI/CD |
-| Standard | chromium + fonts | ~320MB | Production automation |
+| **Standard (default)** | chromium + fonts | **~320MB** | **Most use cases** |
 | Full (VNC) | chromium + fonts + VNC | ~400MB+ | Debugging, visual verification |
 
 ## Build Methods
 
 ### Via docker-compose (recommended)
 
-1. Edit `docker-compose.yml` and uncomment your desired option
-2. Build the image:
-   ```bash
-   docker compose build gateway
-   ```
+The default configuration includes browser support. To build:
+
+```bash
+docker compose build gateway
+```
+
+To customize, edit `docker-compose.yml` or set `OPENCLAW_DOCKER_APT_PACKAGES` environment variable before building.
 
 ### Via docker build directly
 
 ```bash
-# Minimal
-docker build --build-arg OPENCLAW_DOCKER_APT_PACKAGES="chromium" -t openclaw:browser .
+# Default (Standard)
+docker build -t openclaw:local .
 
-# Standard
-docker build --build-arg OPENCLAW_DOCKER_APT_PACKAGES="chromium fonts-liberation fonts-noto-color-emoji" -t openclaw:browser .
+# Disabled
+docker build --build-arg OPENCLAW_DOCKER_APT_PACKAGES="" -t openclaw:no-browser .
+
+# Minimal
+docker build --build-arg OPENCLAW_DOCKER_APT_PACKAGES="chromium" -t openclaw:minimal .
 
 # Full (VNC)
-docker build --build-arg OPENCLAW_DOCKER_APT_PACKAGES="chromium fonts-liberation fonts-noto-color-emoji xvfb x11vnc novnc websockify socat" -t openclaw:browser .
+docker build --build-arg OPENCLAW_DOCKER_APT_PACKAGES="chromium fonts-liberation fonts-noto-color-emoji xvfb x11vnc novnc websockify socat" -t openclaw:full .
 ```
 
 ### Via docker-setup.sh
 
 ```bash
-# Set the environment variable before running setup
-export OPENCLAW_DOCKER_APT_PACKAGES="chromium fonts-liberation fonts-noto-color-emoji"
+# Default (Standard) - browser included
+./docker-setup.sh
+
+# Disabled - no browser
+export OPENCLAW_DOCKER_APT_PACKAGES=""
+./docker-setup.sh
+
+# Full (VNC) - with remote viewing
+export OPENCLAW_DOCKER_APT_PACKAGES="chromium fonts-liberation fonts-noto-color-emoji xvfb x11vnc novnc websockify socat"
 ./docker-setup.sh
 ```
 
-## VNC Access (Full Option Only)
+## VNC Access (Full Configuration Only)
 
-When using the Full option with VNC stack, you can remotely view the browser:
+When using the Full configuration with VNC stack, you can remotely view the browser:
 
 ### Expose VNC Ports
 
@@ -127,7 +161,7 @@ ports:
 
 Or with docker run:
 ```bash
-docker run -p 5900:5900 -p 9222:9222 openclaw:browser
+docker run -p 5900:5900 -p 9222:9222 openclaw:full
 ```
 
 ### Connect to VNC
@@ -213,7 +247,7 @@ chromium --remote-debugging-port=9222 --remote-debugging-address=0.0.0.0
 docker compose run --rm openclaw-cli chromium --version
 
 # Via docker run
-docker run --rm openclaw:browser chromium --version
+docker run --rm openclaw:local chromium --version
 ```
 
 Expected output:
@@ -232,7 +266,7 @@ ls -lh /tmp/test.png
 '
 ```
 
-### Test VNC (Full Option)
+### Test VNC (Full Configuration)
 
 ```bash
 # Start container with VNC
@@ -246,7 +280,11 @@ docker compose exec openclaw-gateway x11vnc -version
 
 ### "chromium: command not found"
 
-The browser packages were not installed. Verify `OPENCLAW_DOCKER_APT_PACKAGES` is set correctly and rebuild:
+The browser packages were not installed. This happens if:
+- You explicitly set `OPENCLAW_DOCKER_APT_PACKAGES=""`
+- You're using a pre-built image without browser support
+
+**Solution**: Rebuild with browser support enabled (default) or set `OPENCLAW_DOCKER_APT_PACKAGES` to include Chromium:
 
 ```bash
 docker compose build --no-cache gateway
@@ -258,7 +296,7 @@ Add `--no-sandbox` flag or run as root (not recommended for production).
 
 ### Font Rendering Issues
 
-Use the Standard or Full option to include font packages. Verify fonts are installed:
+If using Minimal configuration, upgrade to Standard (default) to include font packages. Verify fonts are installed:
 
 ```bash
 docker compose run --rm openclaw-cli fc-list
@@ -266,7 +304,7 @@ docker compose run --rm openclaw-cli fc-list
 
 ### VNC Connection Refused
 
-Verify VNC is running and ports are exposed:
+Verify VNC is running and ports are exposed (Full configuration only):
 
 ```bash
 docker compose exec openclaw-gateway ps aux | grep vnc
@@ -283,6 +321,15 @@ deploy:
     limits:
       cpus: '2.0'
       memory: 4G
+```
+
+### Build is Too Large
+
+If the ~320MB increase is too much for your use case, disable browser support:
+
+```bash
+export OPENCLAW_DOCKER_APT_PACKAGES=""
+docker compose build gateway
 ```
 
 ## Security Considerations
@@ -346,7 +393,7 @@ volumes:
 
 ### Headless vs Headful
 
-Full option supports both modes:
+Full configuration supports both modes:
 
 ```bash
 # Headless (default)
@@ -365,9 +412,10 @@ DISPLAY=:99 chromium --no-sandbox https://example.com
 
 ## Notes
 
-- Browser support is **optional** to minimize base image size
+- Browser support is **enabled by default** (Standard configuration)
+- Adds ~320MB to image size (Chromium + fonts)
+- To disable: set `OPENCLAW_DOCKER_APT_PACKAGES=""`
 - The existing `Dockerfile` already supports this via `OPENCLAW_DOCKER_APT_PACKAGES`
-- No changes to the Dockerfile itself are needed
 - The `Dockerfile.sandbox-browser` demonstrates this approach works well
-- For production workloads, recommend the **Standard** option (fonts included)
+- For production workloads, the default **Standard** configuration is recommended
 - Persistent browser state requires volume mounts for `/home/node/.config/chromium`
