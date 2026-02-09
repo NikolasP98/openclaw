@@ -142,14 +142,13 @@ jobs:
 
       - name: Health check for ${{ matrix.server.tenant }}
         run: |
-          ssh -p ${{ matrix.server.port }} ${{ matrix.server.user }}@${{ matrix.server.host }} << 'ENDSSH'
-            set -e
+          ssh -o LogLevel=ERROR -p ${{ matrix.server.port }} ${{ matrix.server.user }}@${{ matrix.server.host }} << 'ENDSSH'
             cd ${{ matrix.server.deployment_path }}
 
             CONTAINER_NAME="${{ matrix.server.container_prefix }}_openclaw_gw"
 
-            # Check container status
-            if ! docker compose ps | grep -q "$CONTAINER_NAME.*Up"; then
+            # Check container status (suppress docker-compose warnings)
+            if ! docker compose ps 2>/dev/null | grep -q "$CONTAINER_NAME.*Up"; then
               echo "❌ ERROR: Gateway container is not running!"
               exit 1
             fi
