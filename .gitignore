@@ -68,7 +68,6 @@ apps/ios/*.mobileprovision
 
 # Local untracked files
 .local/
-.vscode/
 IDENTITY.md
 USER.md
 .tgz
@@ -77,6 +76,7 @@ USER.md
 .serena/
 
 # Agent credentials and memory (NEVER COMMIT)
-memory/
+/memory/
 .agent/*.json
 !.agent/workflows/
+local/
