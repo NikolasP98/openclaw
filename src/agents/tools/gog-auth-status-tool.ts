@@ -7,7 +7,7 @@ import type { AnyAgentTool } from "./common.js";
 import { jsonResult } from "./common.js";
 import { getValidCredentials } from "../../hooks/gog-credentials.js";
 import type { OAuthStatusResult } from "../../hooks/gog-oauth-types.js";
-import { getSessionStore } from "../../config/sessions.js";
+import { loadSessionStore } from "../../config/sessions.js";
 
 const GogAuthStatusSchema = Type.Object({});
 
@@ -29,7 +29,7 @@ export function createGogAuthStatusTool(opts?: {
 			}
 
 			// Check for pending auth flow
-			const sessionStore = await getSessionStore(opts.agentId);
+			const sessionStore = await loadSessionStore(opts.agentId);
 			const session = sessionStore[opts.sessionKey];
 			const hasPendingAuth = !!session?.gogAuthPending;
 

@@ -4,7 +4,7 @@
 
 import type { FollowupRun } from "../auto-reply/reply/queue/types.js";
 import { enqueueFollowupRun } from "../auto-reply/reply/queue/enqueue.ts";
-import { getSessionStore } from "../config/sessions.js";
+import { loadSessionStore } from "../config/sessions.js";
 import type { SessionEntry } from "../config/sessions.js";
 
 /**
@@ -30,7 +30,7 @@ async function enqueueOAuthNotification(
 	notification: OAuthNotification,
 ): Promise<void> {
 	// Load session entry to get routing information
-	const sessionStore = await getSessionStore(notification.agentId);
+	const sessionStore = await loadSessionStore(notification.agentId);
 	const sessionEntry = sessionStore[notification.sessionKey];
 
 	if (!sessionEntry) {
