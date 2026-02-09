@@ -8,6 +8,13 @@ on:
       - PRD
     tags:
       - "v*"
+    paths-ignore:
+      - '.github/servers/**'
+      - '.github/workflows/deploy-*.yml'
+      - 'docs/**'
+      - '*.md'
+      - 'README.md'
+      - 'CHANGELOG.md'
 
 env:
   REGISTRY: ghcr.io

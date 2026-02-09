@@ -1,12 +1,10 @@
 name: Deploy to Production (Multi-Server)
 
 on:
-  workflow_run:
-    workflows: ["Docker Release"]
-    types:
-      - completed
+  push:
     branches:
       - PRD
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -16,7 +14,6 @@ jobs:
   prepare:
     name: Load server registry
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     outputs:
       servers: ${{ steps.load-servers.outputs.servers }}
     steps:
