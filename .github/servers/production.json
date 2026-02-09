@@ -1,15 +1,15 @@
 {
   "servers": [
     {
-      "id": "prd-tenant-primary",
+      "id": "prd-tenant-faces",
       "host": "100.105.147.99",
       "user": "deploy",
       "port": 22,
-      "deployment_path": "/home/deploy/openclaw-prd-primary",
-      "container_prefix": "primary",
+      "deployment_path": "/home/deploy/openclaw-prd-faces",
+      "container_prefix": "faces",
       "gateway_port": 18789,
       "bridge_port": 18790,
-      "tenant": "primary",
+      "tenant": "faces",
       "region": "us-east"
     }
   ]
