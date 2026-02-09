@@ -1,17 +1,29 @@
-# OpenClaw Documentation Expert Skill
+# OpenClaw Documentation Expert & Code Review Skill
 
-A comprehensive skill for navigating OpenClaw documentation, interpreting changelogs, and analyzing upstream changes.
+A comprehensive skill for code review, best practice guidance, documentation navigation, and upstream change analysis.
 
 ## Overview
 
 This skill provides expert-level assistance with:
+- **Code Review**: Review code against OpenClaw conventions and suggest improvements
+- **Best Practice Guidance**: Answer "Is this good practice?" and "Is there a better way?"
+- **Pattern Discovery**: Find existing implementations and recommend reusable utilities
+- **Issue Search**: Check GitHub issues for known problems and solutions
 - **Documentation Navigation**: Quickly find and explain OpenClaw features
 - **Changelog Interpretation**: Parse and contextualize changes with real-world examples
 - **Upstream Analysis**: Analyze recent commits from openclaw/openclaw repository
 - **Impact Assessment**: Categorize changes by severity and functional impact
-- **Practical Examples**: Provide configuration snippets and use case scenarios
 
 ## Features
+
+### 🔍 Code Review & Best Practices
+- Reviews code against OpenClaw conventions
+- Answers "Is this good practice?" questions
+- Finds existing implementations and patterns in the codebase
+- Searches GitHub issues for known solutions
+- Recommends reusable utilities and helpers
+- Identifies anti-patterns and suggests corrections
+- Explains why patterns are better with concrete examples
 
 ### 🗂️ Documentation Indexing
 - Knows the complete `docs/` structure
@@ -52,8 +64,31 @@ Or mention keywords that trigger the skill:
 - "explain recent changes"
 - "how does openclaw [feature] work"
 - "openclaw changelog"
+- "is this good practice"
+- "is there a better way"
+- "code review"
+- "openclaw convention"
 
 ### Example Questions
+
+#### Code Review
+```
+Q: Is it okay to directly query the database in my command handler?
+A: ⚠️ Not Recommended - OpenClaw uses dependency injection pattern.
+   Shows: src/cli/commands/config.ts:23 (correct pattern)
+
+Q: I'm manually parsing CLI flags. Is there a better way?
+A: ✅ Yes - Use @clack/prompts and src/cli/options.ts utilities
+   Example: src/cli/commands/send.ts:89
+
+Q: Should I use process.env directly or is there a config abstraction?
+A: ✅ Use config abstraction (documented in docs/gateway/configuration.md)
+   Shows: src/gateway/config.ts:45 (type-safe approach)
+
+Q: My channel handler isn't receiving messages. Known issue?
+A: ✅ Fixed in GitHub issue #8432 (v2026.2.3)
+   PR: #8445, Test: src/channels/router.test.ts:67
+```
 
 #### Documentation Navigation
 ```
