@@ -45,6 +45,28 @@ Docs: https://docs.openclaw.ai
 - Tests: harden flaky hotspots by removing timer sleeps, consolidating onboarding provider-auth coverage, and improving memory test realism. (#11598) Thanks @gumadeiras.
 - macOS: honor Nix-managed defaults suite (`ai.openclaw.mac`) for nixMode to prevent onboarding from reappearing after bundle-id churn. (#12205) Thanks @joshp123.
 
+### OpenClaw Fork - DEV Branch
+
+This fork maintains enhanced Docker infrastructure and additional tooling while staying synchronized with upstream releases.
+
+#### Fork-Specific Features
+
+- Docker: Enhanced multi-stage build with comprehensive tooling (gh CLI, gog, obsidian-cli, uv, nano-pdf, mcporter, qmd)
+- Docker: Comprehensive .env.example documentation (371 lines) with detailed configuration guidance
+- Docker: Multi-environment docker-compose support (DEV/PRD) for flexible deployment scenarios
+- Docker: GOG/Tailscale integration for Google Calendar access and secure networking
+- Skills: fork-sync skill for maintaining upstream synchronization
+- Skills: openclaw-docs expert for documentation navigation and changelog interpretation
+- UI: Svelte-based config editor for graphical configuration management
+- Docs: Fork workflow and deployment documentation
+
+#### Sync History
+
+- **2026-02-09**: Synced 22 commits from upstream/main (2026.2.6-4 release)
+  - Integrated all upstream improvements via cherry-pick strategy
+  - Preserved DEV Docker architecture and enhancements
+  - No conflicts; clean integration of critical fixes and features
+
 ## 2026.2.6
 
 ### Changes
