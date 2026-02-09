@@ -1,0 +1,16 @@
+{
+  "servers": [
+    {
+      "id": "prd-tenant-acme",
+      "host": "100.105.147.99",
+      "user": "deploy",
+      "port": 22,
+      "deployment_path": "/home/deploy/openclaw-prd-acme",
+      "container_prefix": "acme",
+      "gateway_port": 18789,
+      "bridge_port": 18790,
+      "tenant": "acme-corp",
+      "region": "us-east"
+    }
+  ]
+}
