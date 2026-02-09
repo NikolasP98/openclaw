@@ -76,23 +76,22 @@ jobs:
       - name: Check if deployment needed
         id: check-deploy
         run: |
-          NEEDS_DEPLOY=$(ssh -p ${{ matrix.server.port }} ${{ matrix.server.user }}@${{ matrix.server.host }} << 'ENDSSH'
-            set -e
+          NEEDS_DEPLOY=$(ssh -o LogLevel=ERROR -p ${{ matrix.server.port }} ${{ matrix.server.user }}@${{ matrix.server.host }} << 'ENDSSH' | tail -1
             cd ${{ matrix.server.deployment_path }}
 
             # Get current running image digest
             CONTAINER_NAME="${{ matrix.server.container_prefix }}_openclaw_gw"
-            CURRENT_DIGEST=$(docker inspect $CONTAINER_NAME --format='{{index .Image}}' 2>/dev/null || echo "none")
+            CURRENT_DIGEST=$(docker inspect $CONTAINER_NAME --format='{{.Image}}' 2>/dev/null || echo "none")
 
-            # Get latest available image digest from registry
-            docker compose pull -q openclaw-gateway 2>/dev/null || true
-            LATEST_DIGEST=$(docker inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:prd --format='{{index .Id}}' 2>/dev/null || echo "unknown")
+            # Pull latest image and get its digest
+            docker compose pull -q openclaw-gateway 2>&1 >/dev/null || true
+            LATEST_DIGEST=$(docker compose images -q openclaw-gateway 2>/dev/null | head -1)
 
-            if [[ "$CURRENT_DIGEST" == "$LATEST_DIGEST" ]] && [[ "$CURRENT_DIGEST" != "none" ]]; then
-              echo "✅ Server already running latest image (${LATEST_DIGEST:0:12})"
+            if [[ -n "$LATEST_DIGEST" ]] && [[ "$CURRENT_DIGEST" == "sha256:$LATEST_DIGEST" ]]; then
+              echo "✅ Server already running latest image (${LATEST_DIGEST:0:12})" >&2
               echo "false"
             else
-              echo "🔄 Update needed: current=${CURRENT_DIGEST:0:12}, latest=${LATEST_DIGEST:0:12}"
+              echo "🔄 Update needed: current=${CURRENT_DIGEST:0:12}, latest=${LATEST_DIGEST:0:12}" >&2
               echo "true"
             fi
           ENDSSH
