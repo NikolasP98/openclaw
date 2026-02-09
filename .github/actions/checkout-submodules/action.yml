@@ -1,0 +1,29 @@
+name: Checkout submodules with retry
+description: >
+  Syncs and updates git submodules with retry logic.
+  Fail-safe: retries up to N times with linear backoff.
+inputs:
+  retries:
+    description: Number of retry attempts
+    required: false
+    default: "5"
+  depth:
+    description: Submodule clone depth (0 = full)
+    required: false
+    default: "1"
+runs:
+  using: composite
+  steps:
+    - name: Checkout submodules (retry)
+      shell: bash
+      run: |
+        set -euo pipefail
+        git submodule sync --recursive
+        for attempt in $(seq 1 ${{ inputs.retries }}); do
+          if git -c protocol.version=2 submodule update --init --force --depth=${{ inputs.depth }} --recursive; then
+            exit 0
+          fi
+          echo "Submodule update failed (attempt $attempt/${{ inputs.retries }}). Retrying…"
+          sleep $((attempt * 10))
+        done
+        exit 1

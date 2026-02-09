@@ -130,48 +130,10 @@ jobs:
           submodules: false
 
       - name: Checkout submodules (retry)
-        run: |
-          set -euo pipefail
-          git submodule sync --recursive
-          for attempt in 1 2 3 4 5; do
-            if git -c protocol.version=2 submodule update --init --force --depth=1 --recursive; then
-              exit 0
-            fi
-            echo "Submodule update failed (attempt $attempt/5). Retrying…"
-            sleep $((attempt * 10))
-          done
-          exit 1
+        uses: ./.github/actions/checkout-submodules
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22.x
-          check-latest: true
-
-      - name: Setup pnpm + cache store
-        uses: ./.github/actions/setup-pnpm-store-cache
-        with:
-          pnpm-version: "10.23.0"
-          cache-key-suffix: "node22"
-
-      - name: Runtime versions
-        run: |
-          node -v
-          npm -v
-          pnpm -v
-
-      - name: Capture node path
-        run: echo "NODE_BIN=$(dirname \"$(node -p \"process.execPath\")\")" >> "$GITHUB_ENV"
-
-      - name: Install dependencies (frozen)
-        env:
-          CI: true
-        run: |
-          export PATH="$NODE_BIN:$PATH"
-          which node
-          node -v
-          pnpm -v
-          pnpm install --frozen-lockfile --ignore-scripts=false --config.engine-strict=false --config.enable-pre-post-scripts=true
+      - name: Setup Node environment
+        uses: ./.github/actions/setup-node-env
 
       - name: Build dist
         run: pnpm build
@@ -194,48 +156,10 @@ jobs:
           submodules: false
 
       - name: Checkout submodules (retry)
-        run: |
-          set -euo pipefail
-          git submodule sync --recursive
-          for attempt in 1 2 3 4 5; do
-            if git -c protocol.version=2 submodule update --init --force --depth=1 --recursive; then
-              exit 0
-            fi
-            echo "Submodule update failed (attempt $attempt/5). Retrying…"
-            sleep $((attempt * 10))
-          done
-          exit 1
+        uses: ./.github/actions/checkout-submodules
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22.x
-          check-latest: true
-
-      - name: Setup pnpm + cache store
-        uses: ./.github/actions/setup-pnpm-store-cache
-        with:
-          pnpm-version: "10.23.0"
-          cache-key-suffix: "node22"
-
-      - name: Runtime versions
-        run: |
-          node -v
-          npm -v
-          pnpm -v
-
-      - name: Capture node path
-        run: echo "NODE_BIN=$(dirname \"$(node -p \"process.execPath\")\")" >> "$GITHUB_ENV"
-
-      - name: Install dependencies (frozen)
-        env:
-          CI: true
-        run: |
-          export PATH="$NODE_BIN:$PATH"
-          which node
-          node -v
-          pnpm -v
-          pnpm install --frozen-lockfile --ignore-scripts=false --config.engine-strict=false --config.enable-pre-post-scripts=true
+      - name: Setup Node environment
+        uses: ./.github/actions/setup-node-env
 
   checks:
     needs: [docs-scope, changed-scope]
@@ -264,54 +188,15 @@ jobs:
           submodules: false
 
       - name: Checkout submodules (retry)
-        run: |
-          set -euo pipefail
-          git submodule sync --recursive
-          for attempt in 1 2 3 4 5; do
-            if git -c protocol.version=2 submodule update --init --force --depth=1 --recursive; then
-              exit 0
-            fi
-            echo "Submodule update failed (attempt $attempt/5). Retrying…"
-            sleep $((attempt * 10))
-          done
-          exit 1
+        uses: ./.github/actions/checkout-submodules
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22.x
-          check-latest: true
-
-      - name: Setup pnpm + cache store
-        uses: ./.github/actions/setup-pnpm-store-cache
-        with:
-          pnpm-version: "10.23.0"
-          cache-key-suffix: "node22"
+      - name: Setup Node environment
+        uses: ./.github/actions/setup-node-env
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-
-      - name: Runtime versions
-        run: |
-          node -v
-          npm -v
-          bun -v
-          pnpm -v
-
-      - name: Capture node path
-        run: echo "NODE_BIN=$(dirname \"$(node -p \"process.execPath\")\")" >> "$GITHUB_ENV"
-
-      - name: Install dependencies
-        env:
-          CI: true
-        run: |
-          export PATH="$NODE_BIN:$PATH"
-          which node
-          node -v
-          pnpm -v
-          pnpm install --frozen-lockfile --ignore-scripts=false --config.engine-strict=false --config.enable-pre-post-scripts=true || pnpm install --frozen-lockfile --ignore-scripts=false --config.engine-strict=false --config.enable-pre-post-scripts=true
 
       - name: Run ${{ matrix.task }} (${{ matrix.runtime }})
         run: ${{ matrix.command }}
@@ -334,54 +219,15 @@ jobs:
           submodules: false
 
       - name: Checkout submodules (retry)
-        run: |
-          set -euo pipefail
-          git submodule sync --recursive
-          for attempt in 1 2 3 4 5; do
-            if git -c protocol.version=2 submodule update --init --force --depth=1 --recursive; then
-              exit 0
-            fi
-            echo "Submodule update failed (attempt $attempt/5). Retrying…"
-            sleep $((attempt * 10))
-          done
-          exit 1
+        uses: ./.github/actions/checkout-submodules
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22.x
-          check-latest: true
-
-      - name: Setup pnpm + cache store
-        uses: ./.github/actions/setup-pnpm-store-cache
-        with:
-          pnpm-version: "10.23.0"
-          cache-key-suffix: "node22"
+      - name: Setup Node environment
+        uses: ./.github/actions/setup-node-env
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-
-      - name: Runtime versions
-        run: |
-          node -v
-          npm -v
-          bun -v
-          pnpm -v
-
-      - name: Capture node path
-        run: echo "NODE_BIN=$(dirname \"$(node -p \"process.execPath\")\")" >> "$GITHUB_ENV"
-
-      - name: Install dependencies
-        env:
-          CI: true
-        run: |
-          export PATH="$NODE_BIN:$PATH"
-          which node
-          node -v
-          pnpm -v
-          pnpm install --frozen-lockfile --ignore-scripts=false --config.engine-strict=false --config.enable-pre-post-scripts=true || pnpm install --frozen-lockfile --ignore-scripts=false --config.engine-strict=false --config.enable-pre-post-scripts=true
 
       - name: Run ${{ matrix.task }}
         run: ${{ matrix.command }}
@@ -462,17 +308,7 @@ jobs:
           }
 
       - name: Checkout submodules (retry)
-        run: |
-          set -euo pipefail
-          git submodule sync --recursive
-          for attempt in 1 2 3 4 5; do
-            if git -c protocol.version=2 submodule update --init --force --depth=1 --recursive; then
-              exit 0
-            fi
-            echo "Submodule update failed (attempt $attempt/5). Retrying…"
-            sleep $((attempt * 10))
-          done
-          exit 1
+        uses: ./.github/actions/checkout-submodules
 
       - name: Download dist artifact (lint lane)
         if: matrix.task == 'lint'
@@ -488,42 +324,13 @@ jobs:
           test -s dist/index.js
           test -s dist/plugin-sdk/index.js
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22.x
-          check-latest: true
-
-      - name: Setup pnpm + cache store
-        uses: ./.github/actions/setup-pnpm-store-cache
-        with:
-          pnpm-version: "10.23.0"
-          cache-key-suffix: "node22"
+      - name: Setup Node environment
+        uses: ./.github/actions/setup-node-env
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-
-      - name: Runtime versions
-        run: |
-          node -v
-          npm -v
-          bun -v
-          pnpm -v
-
-      - name: Capture node path
-        run: echo "NODE_BIN=$(dirname \"$(node -p \"process.execPath\")\")" >> "$GITHUB_ENV"
-
-      - name: Install dependencies
-        env:
-          CI: true
-        run: |
-          export PATH="$NODE_BIN:$PATH"
-          which node
-          node -v
-          pnpm -v
-          pnpm install --frozen-lockfile --ignore-scripts=false --config.engine-strict=false --config.enable-pre-post-scripts=true || pnpm install --frozen-lockfile --ignore-scripts=false --config.engine-strict=false --config.enable-pre-post-scripts=true
 
       - name: Run ${{ matrix.task }} (${{ matrix.runtime }})
         run: ${{ matrix.command }}
@@ -543,49 +350,11 @@ jobs:
           submodules: false
 
       - name: Checkout submodules (retry)
-        run: |
-          set -euo pipefail
-          git submodule sync --recursive
-          for attempt in 1 2 3 4 5; do
-            if git -c protocol.version=2 submodule update --init --force --depth=1 --recursive; then
-              exit 0
-            fi
-            echo "Submodule update failed (attempt $attempt/5). Retrying…"
-            sleep $((attempt * 10))
-          done
-          exit 1
+        uses: ./.github/actions/checkout-submodules
 
       # --- Node/pnpm setup (for TS tests) ---
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22.x
-          check-latest: true
-
-      - name: Setup pnpm + cache store
-        uses: ./.github/actions/setup-pnpm-store-cache
-        with:
-          pnpm-version: "10.23.0"
-          cache-key-suffix: "node22"
-
-      - name: Runtime versions
-        run: |
-          node -v
-          npm -v
-          pnpm -v
-
-      - name: Capture node path
-        run: echo "NODE_BIN=$(dirname \"$(node -p \"process.execPath\")\")" >> "$GITHUB_ENV"
-
-      - name: Install dependencies
-        env:
-          CI: true
-        run: |
-          export PATH="$NODE_BIN:$PATH"
-          which node
-          node -v
-          pnpm -v
-          pnpm install --frozen-lockfile --ignore-scripts=false --config.engine-strict=false --config.enable-pre-post-scripts=true || pnpm install --frozen-lockfile --ignore-scripts=false --config.engine-strict=false --config.enable-pre-post-scripts=true
+      - name: Setup Node environment
+        uses: ./.github/actions/setup-node-env
 
       # --- Run all checks sequentially (fast gates first) ---
       - name: TS tests (macOS)
@@ -647,17 +416,7 @@ jobs:
           submodules: false
 
       - name: Checkout submodules (retry)
-        run: |
-          set -euo pipefail
-          git submodule sync --recursive
-          for attempt in 1 2 3 4 5; do
-            if git -c protocol.version=2 submodule update --init --force --depth=1 --recursive; then
-              exit 0
-            fi
-            echo "Submodule update failed (attempt $attempt/5). Retrying…"
-            sleep $((attempt * 10))
-          done
-          exit 1
+        uses: ./.github/actions/checkout-submodules
 
       - name: Select Xcode 26.1
         run: |
@@ -829,17 +588,7 @@ jobs:
           submodules: false
 
       - name: Checkout submodules (retry)
-        run: |
-          set -euo pipefail
-          git submodule sync --recursive
-          for attempt in 1 2 3 4 5; do
-            if git -c protocol.version=2 submodule update --init --force --depth=1 --recursive; then
-              exit 0
-            fi
-            echo "Submodule update failed (attempt $attempt/5). Retrying…"
-            sleep $((attempt * 10))
-          done
-          exit 1
+        uses: ./.github/actions/checkout-submodules
 
       - name: Setup Java
         uses: actions/setup-java@v4

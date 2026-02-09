@@ -1,0 +1,22 @@
+name: Determine Docker tag from ref
+description: Maps git ref (branch/tag) to a Docker image tag.
+outputs:
+  branch_tag:
+    description: The Docker tag derived from the current git ref
+    value: ${{ steps.resolve.outputs.branch_tag }}
+runs:
+  using: composite
+  steps:
+    - name: Resolve tag from ref
+      id: resolve
+      shell: bash
+      run: |
+        REF="${{ github.ref }}"
+        case "$REF" in
+          refs/heads/DEV)  TAG="dev" ;;
+          refs/heads/PRD)  TAG="prd" ;;
+          refs/heads/main) TAG="main" ;;
+          refs/tags/v*)    TAG="${REF#refs/tags/v}" ;;
+          *)               TAG="unknown" ;;
+        esac
+        echo "branch_tag=$TAG" >> "$GITHUB_OUTPUT"
