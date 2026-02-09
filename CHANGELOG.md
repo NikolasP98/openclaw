@@ -49,6 +49,46 @@ Docs: https://docs.openclaw.ai
 
 This fork maintains enhanced Docker infrastructure and additional tooling while staying synchronized with upstream releases.
 
+#### 2026.2.9 - Automatic Multi-Tenant Production Deployment
+
+**Added:**
+- GitHub Actions workflow for automatic deployment to production servers when PRD branch is updated (#deploy-prd)
+- Multi-server deployment support with JSON-based server registry (#deploy-prd-multi)
+- Server provisioning automation script (`scripts/deployment/setup-server.sh`)
+- Automatic backup script for production data (`scripts/deployment/backup-openclaw.sh`)
+- Health checks and automatic rollback on deployment failures
+- Comprehensive deployment documentation (`docs/deployment/AUTO-DEPLOY-SETUP.md`, `docs/deployment/QUICK-REFERENCE.md`)
+- Server registry configuration (`.github/servers/production.json`)
+
+**Features:**
+- **Phase 1 (Single Server)**: Automatic deployment to single production server with health checks and rollback
+- **Phase 2 (Multi-Server)**: Parallel deployment to 2-20 servers with per-tenant isolation
+- **Zero-downtime deployments**: Graceful container stops and health validation
+- **Multi-tenant architecture**: Each tenant gets isolated containers, configs, and credentials
+- **Easy scaling**: Add/remove tenants by editing JSON registry and pushing to PRD branch
+- **Security**: SSH key-based authentication, deploy user isolation, optional firewall hardening
+
+**Infrastructure:**
+- Automated server setup with deploy user creation and SSH key configuration
+- Production `.env` template generation with secure gateway token
+- Directory structure creation for persistent data
+- Docker Compose orchestration for gateway and CLI containers
+- Image cleanup to prevent disk space issues
+- Backup and restore procedures
+
+**Deployment Flow:**
+1. Push to PRD branch → Docker Release workflow builds multi-arch images
+2. Deploy workflow triggers automatically on successful build
+3. Copies docker-compose.yml to server(s)
+4. Tags current image for rollback capability
+5. Pulls latest image from GHCR
+6. Gracefully stops and starts containers
+7. Runs health checks on gateway endpoint
+8. Automatically rolls back on failure
+9. Cleans up old images
+
+See `docs/deployment/AUTO-DEPLOY-SETUP.md` for complete setup guide.
+
 #### Fork-Specific Features
 
 - Docker: Enhanced multi-stage build with comprehensive tooling (gh CLI, gog, obsidian-cli, uv, nano-pdf, mcporter, qmd)

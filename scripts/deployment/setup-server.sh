@@ -1,94 +1,126 @@
 #!/bin/bash
-#
 # OpenClaw Production Server Setup Script
+# This script prepares a server for automatic OpenClaw deployment
 #
-# This script prepares a production server for automatic deployment.
-# Run this on the server as root or with sudo privileges.
+# Usage: ./setup-server.sh <server-ip> [ssh-port]
 #
-# Usage:
-#   ./setup-server.sh [tenant-name] [public-key-path]
-#
-# Example:
-#   ./setup-server.sh acme-corp ~/.ssh/openclaw_deploy_key.pub
-#
+# Example: ./setup-server.sh 100.105.147.99 22
 
 set -e
 
-# Check if running as root
-if [[ $EUID -ne 0 ]]; then
-   echo "This script must be run as root or with sudo"
-   exit 1
-fi
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
 
-# Parse arguments
-TENANT_NAME="${1:-default}"
-PUBLIC_KEY_PATH="${2}"
+# Configuration
+SERVER_IP=${1:-}
+SSH_PORT=${2:-22}
+DEPLOY_USER="deploy"
+DEPLOYMENT_DIR="/home/deploy/openclaw-prd"
 
-if [[ -z "$PUBLIC_KEY_PATH" ]]; then
-    echo "Usage: $0 <tenant-name> <public-key-path>"
-    echo "Example: $0 acme-corp ~/.ssh/openclaw_deploy_key.pub"
+# Validate arguments
+if [ -z "$SERVER_IP" ]; then
+    echo -e "${RED}Error: Server IP address required${NC}"
+    echo "Usage: $0 <server-ip> [ssh-port]"
+    echo "Example: $0 100.105.147.99 22"
     exit 1
 fi
 
-if [[ ! -f "$PUBLIC_KEY_PATH" ]]; then
-    echo "Error: Public key file not found: $PUBLIC_KEY_PATH"
-    exit 1
-fi
-
-echo "=== OpenClaw Production Server Setup ==="
-echo "Tenant: $TENANT_NAME"
-echo "Public Key: $PUBLIC_KEY_PATH"
+echo -e "${GREEN}=== OpenClaw Production Server Setup ===${NC}"
+echo "Server: $SERVER_IP:$SSH_PORT"
+echo "Deploy user: $DEPLOY_USER"
+echo "Deployment directory: $DEPLOYMENT_DIR"
 echo ""
 
-# 1. Create deploy user
-echo "[1/7] Creating deploy user..."
-if id "deploy" &>/dev/null; then
-    echo "User 'deploy' already exists, skipping..."
+# Check if SSH key exists
+SSH_KEY_DIR="$HOME/.ssh/openclaw"
+SSH_KEY_PATH="$SSH_KEY_DIR/openclaw_deploy_key"
+
+if [ ! -f "$SSH_KEY_PATH" ]; then
+    echo -e "${YELLOW}SSH key not found. Generating new deployment key...${NC}"
+    mkdir -p "$SSH_KEY_DIR"
+    ssh-keygen -t ed25519 -C "github-actions-openclaw-deploy" -f "$SSH_KEY_PATH" -N ""
+    echo -e "${GREEN}✓ SSH key generated: $SSH_KEY_PATH${NC}"
+    echo -e "${YELLOW}! Save the public key for GitHub Secrets:${NC}"
+    cat "$SSH_KEY_PATH"
+    echo ""
 else
-    useradd -m -s /bin/bash deploy
-    echo "User 'deploy' created"
+    echo -e "${GREEN}✓ Using existing SSH key: $SSH_KEY_PATH${NC}"
 fi
 
-# 2. Add deploy user to docker group
-echo "[2/7] Adding deploy user to docker group..."
-usermod -aG docker deploy
-echo "Deploy user added to docker group"
+# Function to run commands on remote server as root
+run_as_root() {
+    ssh -p "$SSH_PORT" "root@$SERVER_IP" "$@"
+}
 
-# 3. Setup SSH directory and authorized_keys
-echo "[3/7] Setting up SSH directory..."
-su - deploy -c "mkdir -p ~/.ssh && chmod 700 ~/.ssh"
+# Function to run commands on remote server as deploy user
+run_as_deploy() {
+    ssh -p "$SSH_PORT" "$DEPLOY_USER@$SERVER_IP" "$@"
+}
 
-if su - deploy -c "test -f ~/.ssh/authorized_keys"; then
-    echo "authorized_keys already exists"
+echo -e "${YELLOW}Connecting to server as root...${NC}"
+
+# Step 1: Create deploy user
+echo -e "${YELLOW}Step 1/6: Creating deploy user...${NC}"
+run_as_root << 'REMOTE_SCRIPT'
+    if id -u deploy >/dev/null 2>&1; then
+        echo "Deploy user already exists"
+    else
+        useradd -m -s /bin/bash deploy
+        echo "Deploy user created"
+    fi
+    
+    # Add to docker group
+    if groups deploy | grep -q docker; then
+        echo "Deploy user already in docker group"
+    else
+        usermod -aG docker deploy
+        echo "Deploy user added to docker group"
+    fi
+REMOTE_SCRIPT
+echo -e "${GREEN}✓ Deploy user configured${NC}"
+
+# Step 2: Setup SSH keys
+echo -e "${YELLOW}Step 2/6: Setting up SSH keys...${NC}"
+cat "$SSH_KEY_PATH.pub" | run_as_root "su - deploy -c 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys && echo \"SSH key added\"'"
+echo -e "${GREEN}✓ SSH key authorized${NC}"
+
+# Test SSH connection as deploy user
+echo -e "${YELLOW}Testing SSH connection as deploy user...${NC}"
+if ssh -i "$SSH_KEY_PATH" -p "$SSH_PORT" -o StrictHostKeyChecking=no "$DEPLOY_USER@$SERVER_IP" "echo 'SSH connection successful'"; then
+    echo -e "${GREEN}✓ SSH connection verified${NC}"
 else
-    su - deploy -c "touch ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+    echo -e "${RED}✗ SSH connection failed${NC}"
+    exit 1
 fi
 
-# 4. Add public key
-echo "[4/7] Adding public key to authorized_keys..."
-cat "$PUBLIC_KEY_PATH" | su - deploy -c "cat >> ~/.ssh/authorized_keys"
-echo "Public key added"
-
-# 5. Create deployment directory structure
-echo "[5/7] Creating deployment directory structure..."
-su - deploy << 'EOSCRIPT'
+# Step 3: Create directory structure
+echo -e "${YELLOW}Step 3/6: Creating directory structure...${NC}"
+ssh -i "$SSH_KEY_PATH" -p "$SSH_PORT" "$DEPLOY_USER@$SERVER_IP" << 'REMOTE_SCRIPT'
+    # Create deployment directory
     mkdir -p ~/openclaw-prd
+    
+    # Create persistent data directories
     mkdir -p ~/.openclaw-prd/{workspace,agents,canvas,credentials,devices,identity,media,memory,cron,sessions}
     mkdir -p ~/.config/gogcli
-    echo "Deployment directories created"
-EOSCRIPT
+    
+    echo "Directory structure created"
+REMOTE_SCRIPT
+echo -e "${GREEN}✓ Directories created${NC}"
 
-# 6. Create template .env file
-echo "[6/7] Creating template .env file..."
-su - deploy << 'EOSCRIPT'
-cat > ~/openclaw-prd/.env <<'EOF'
+# Step 4: Create production .env file template
+echo -e "${YELLOW}Step 4/6: Creating production .env template...${NC}"
+ssh -i "$SSH_KEY_PATH" -p "$SSH_PORT" "$DEPLOY_USER@$SERVER_IP" << 'REMOTE_SCRIPT'
+cat > ~/openclaw-prd/.env << 'EOF'
 # Docker Configuration
 OPENCLAW_IMAGE=ghcr.io/nikolasp98/openclaw:prd
 OPENCLAW_GATEWAY_CONTAINER_NAME=openclaw_PRD_gw
 OPENCLAW_CLI_CONTAINER_NAME=openclaw_PRD_cli
 OPENCLAW_ENV=PRD
 
-# Paths (using deploy user's home)
+# Paths
 OPENCLAW_CONFIG_DIR=/home/deploy/.openclaw-prd
 OPENCLAW_WORKSPACE_DIR=/home/deploy/.openclaw-prd/workspace
 OPENCLAW_GOG_CONFIG_DIR=/home/deploy/.config/gogcli
@@ -110,45 +142,3 @@ OPENCLAW_DOCKER_APT_PACKAGES=chromium fonts-liberation fonts-noto-color-emoji
 # Tailscale (if using)
 TAILSCALE_SOCKET=/var/run/tailscale/tailscaled.sock
 TAILSCALE_BINARY=/usr/bin/tailscale
-EOF
-
-echo "Template .env file created at ~/openclaw-prd/.env"
-EOSCRIPT
-
-# 7. Generate secure gateway token
-echo "[7/7] Generating secure gateway token..."
-SECURE_TOKEN=$(openssl rand -base64 32)
-su - deploy -c "sed -i 's/REPLACE_WITH_SECURE_TOKEN/$SECURE_TOKEN/g' ~/openclaw-prd/.env"
-echo "Secure gateway token generated and added to .env"
-
-echo ""
-echo "=== Setup Complete ==="
-echo ""
-echo "✅ Deploy user created: deploy"
-echo "✅ SSH access configured"
-echo "✅ Deployment directory: /home/deploy/openclaw-prd"
-echo "✅ Config directory: /home/deploy/.openclaw-prd"
-echo "✅ Template .env file created"
-echo "✅ Secure gateway token generated"
-echo ""
-echo "⚠️  NEXT STEPS:"
-echo "1. Edit /home/deploy/openclaw-prd/.env and add your Claude credentials:"
-echo "   - CLAUDE_AI_SESSION_KEY"
-echo "   - CLAUDE_WEB_SESSION_KEY"
-echo "   - CLAUDE_WEB_COOKIE"
-echo ""
-echo "2. Copy docker-compose.yml from repository:"
-echo "   scp docker-compose.yml deploy@$(hostname -I | awk '{print $1}'):/home/deploy/openclaw-prd/"
-echo ""
-echo "3. Test manual deployment:"
-echo "   ssh deploy@$(hostname -I | awk '{print $1}') 'cd openclaw-prd && docker compose pull && docker compose up -d'"
-echo ""
-echo "4. Add GitHub Secrets (if not already done):"
-echo "   - SSH_PRIVATE_KEY: Your private key"
-echo "   - SSH_HOST: $(hostname -I | awk '{print $1}')"
-echo "   - SSH_USER: deploy"
-echo "   - DEPLOYMENT_PATH: /home/deploy/openclaw-prd"
-echo ""
-echo "5. Test automatic deployment:"
-echo "   git checkout PRD && git commit --allow-empty -m 'test: trigger deployment' && git push"
-echo ""
