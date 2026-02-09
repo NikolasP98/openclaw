@@ -1,4 +1,4 @@
-name: Deploy to Production
+name: Deploy to Production (Multi-Server)
 
 on:
   workflow_run:
@@ -13,11 +13,40 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  deploy:
-    name: Deploy to Production Server
+  prepare:
+    name: Load server registry
     runs-on: ubuntu-latest
-    # Only run if Docker Release workflow succeeded
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    outputs:
+      servers: ${{ steps.load-servers.outputs.servers }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: PRD
+
+      - name: Load server registry
+        id: load-servers
+        run: |
+          # Load servers from JSON and convert to GitHub Actions matrix format
+          SERVERS=$(jq -c '.servers' .github/servers/production.json)
+          echo "servers=$SERVERS" >> $GITHUB_OUTPUT
+
+          # Print server count for visibility
+          COUNT=$(echo "$SERVERS" | jq 'length')
+          echo "📡 Found $COUNT production servers to deploy"
+
+  deploy:
+    name: Deploy to ${{ matrix.server.id }}
+    runs-on: ubuntu-latest
+    needs: prepare
+    strategy:
+      # Deploy to all servers in parallel (set to false for sequential)
+      max-parallel: 10
+      # Don't cancel other deployments if one fails
+      fail-fast: false
+      matrix:
+        server: ${{ fromJson(needs.prepare.outputs.servers) }}
 
     steps:
       - name: Checkout repository
@@ -33,25 +62,27 @@ jobs:
       - name: Add server to known hosts
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ matrix.server.host }} -p ${{ matrix.server.port }} >> ~/.ssh/known_hosts
 
       - name: Copy docker-compose.yml to server
         run: |
-          scp docker-compose.yml ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOYMENT_PATH }}/
+          scp -P ${{ matrix.server.port }} docker-compose.yml \
+            ${{ matrix.server.user }}@${{ matrix.server.host }}:${{ matrix.server.deployment_path }}/
 
-      - name: Deploy to production
+      - name: Deploy to ${{ matrix.server.tenant }}
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'ENDSSH'
+          ssh -p ${{ matrix.server.port }} ${{ matrix.server.user }}@${{ matrix.server.host }} << 'ENDSSH'
             set -e
-            cd ${{ secrets.DEPLOYMENT_PATH }}
+            cd ${{ matrix.server.deployment_path }}
 
-            echo "=== Starting deployment ==="
+            echo "=== Deploying to ${{ matrix.server.tenant }} (${{ matrix.server.region }}) ==="
 
-            # Tag current running image as rollback (if exists)
-            CURRENT_IMAGE=$(docker inspect openclaw_PRD_gw --format='{{.Image}}' 2>/dev/null || echo "none")
+            # Tag current running image as rollback
+            CONTAINER_NAME="${{ matrix.server.container_prefix }}_openclaw_gw"
+            CURRENT_IMAGE=$(docker inspect $CONTAINER_NAME --format='{{.Image}}' 2>/dev/null || echo "none")
             if [[ "$CURRENT_IMAGE" != "none" ]]; then
-              echo "Tagging current image for rollback: $CURRENT_IMAGE"
-              docker tag $CURRENT_IMAGE ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:prd-rollback || true
+              echo "Tagging current image for rollback"
+              docker tag $CURRENT_IMAGE ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:prd-rollback-${{ matrix.server.container_prefix }} || true
             fi
 
             # Pull new image
@@ -67,80 +98,80 @@ jobs:
             docker compose up -d
 
             # Wait for services to start
-            echo "Waiting for services to initialize (15 seconds)..."
+            echo "Waiting for services to initialize..."
             sleep 15
 
-            echo "=== Deployment complete ==="
+            echo "=== Deployment complete for ${{ matrix.server.tenant }} ==="
           ENDSSH
 
-      - name: Health check
+      - name: Health check for ${{ matrix.server.tenant }}
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'ENDSSH'
+          ssh -p ${{ matrix.server.port }} ${{ matrix.server.user }}@${{ matrix.server.host }} << 'ENDSSH'
             set -e
-            cd ${{ secrets.DEPLOYMENT_PATH }}
+            cd ${{ matrix.server.deployment_path }}
+
+            CONTAINER_NAME="${{ matrix.server.container_prefix }}_openclaw_gw"
 
             # Check container status
-            if ! docker compose ps | grep -q "openclaw_PRD_gw.*Up"; then
-              echo "ERROR: Gateway container is not running!"
+            if ! docker compose ps | grep -q "$CONTAINER_NAME.*Up"; then
+              echo "❌ ERROR: Gateway container is not running!"
               exit 1
             fi
 
-            echo "Container is running. Testing health endpoint..."
-
-            # Test health endpoint (retry 3 times)
+            # Test health endpoint
             for i in {1..3}; do
-              if docker compose exec -T openclaw-gateway wget -q -O- http://localhost:18789/health >/dev/null 2>&1; then
-                echo "✅ Health check passed"
+              if docker compose exec -T openclaw-gateway wget -q -O- http://localhost:${{ matrix.server.gateway_port }}/health >/dev/null 2>&1; then
+                echo "✅ Health check passed for ${{ matrix.server.tenant }}"
                 exit 0
               fi
-              echo "Health check attempt $i failed, retrying in 5s..."
+              echo "Health check attempt $i failed, retrying..."
               sleep 5
             done
 
-            echo "❌ Health check failed after 3 attempts"
+            echo "❌ Health check failed for ${{ matrix.server.tenant }}"
             exit 1
           ENDSSH
 
-      - name: Rollback on failure
+      - name: Rollback on failure for ${{ matrix.server.tenant }}
         if: failure()
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'ENDSSH'
-            cd ${{ secrets.DEPLOYMENT_PATH }}
+          ssh -p ${{ matrix.server.port }} ${{ matrix.server.user }}@${{ matrix.server.host }} << 'ENDSSH'
+            cd ${{ matrix.server.deployment_path }}
 
-            echo "=== Rolling back to previous image ==="
+            echo "=== Rolling back ${{ matrix.server.tenant }} ==="
 
             # Update .env to use rollback tag
-            sed -i 's/:prd/:prd-rollback/g' .env
+            sed -i 's/:prd/:prd-rollback-${{ matrix.server.container_prefix }}/g' .env
 
-            # Restart with old image
             docker compose down
             docker compose up -d
 
             # Restore .env
-            sed -i 's/:prd-rollback/:prd/g' .env
+            sed -i 's/:prd-rollback-${{ matrix.server.container_prefix }}/:prd/g' .env
 
             echo "=== Rollback complete ==="
           ENDSSH
 
-      - name: Cleanup old images
-        if: success()
+  summary:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [prepare, deploy]
+    if: always()
+    steps:
+      - name: Generate deployment report
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'ENDSSH'
-            # Remove dangling images
-            docker image prune -f
+          echo "## 🚀 Multi-Server Deployment Summary"
+          echo ""
 
-            # Keep only last 3 openclaw images
-            docker images ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} --format "{{.ID}} {{.CreatedAt}}" | \
-              tail -n +4 | \
-              awk '{print $1}' | \
-              xargs -r docker rmi 2>/dev/null || true
-          ENDSSH
+          TOTAL=$(echo '${{ needs.prepare.outputs.servers }}' | jq 'length')
+          echo "📊 **Total servers**: $TOTAL"
 
-      - name: Deployment summary
-        if: always()
-        run: |
-          if [[ "${{ job.status }}" == "success" ]]; then
-            echo "✅ Deployment successful!"
+          if [[ "${{ needs.deploy.result }}" == "success" ]]; then
+            echo "✅ **Status**: All deployments successful"
           else
-            echo "❌ Deployment failed! Check logs above."
+            echo "⚠️ **Status**: Some deployments failed (check individual job logs)"
           fi
+
+          echo ""
+          echo "### Server Details"
+          echo '${{ needs.prepare.outputs.servers }}' | jq -r '.[] | "- **\(.tenant)** (\(.region)): \(.host)"'
