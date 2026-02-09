@@ -87,11 +87,15 @@ jobs:
             docker compose pull -q openclaw-gateway 2>&1 >/dev/null || true
             LATEST_DIGEST=$(docker compose images -q openclaw-gateway 2>/dev/null | head -1)
 
-            if [[ -n "$LATEST_DIGEST" ]] && [[ "$CURRENT_DIGEST" == "sha256:$LATEST_DIGEST" ]]; then
-              echo "✅ Server already running latest image (${LATEST_DIGEST:0:12})" >&2
+            # Strip sha256: prefix from both for comparison
+            CURRENT_SHORT="${CURRENT_DIGEST#sha256:}"
+            LATEST_SHORT="${LATEST_DIGEST#sha256:}"
+
+            if [[ -n "$LATEST_SHORT" ]] && [[ "$CURRENT_SHORT" == "$LATEST_SHORT" ]]; then
+              echo "✅ Server already running latest image (${LATEST_SHORT:0:12})" >&2
               echo "false"
             else
-              echo "🔄 Update needed: current=${CURRENT_DIGEST:0:12}, latest=${LATEST_DIGEST:0:12}" >&2
+              echo "🔄 Update needed: current=${CURRENT_SHORT:0:12}, latest=${LATEST_SHORT:0:12}" >&2
               echo "true"
             fi
           ENDSSH
