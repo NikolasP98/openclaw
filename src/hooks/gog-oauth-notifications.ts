@@ -6,6 +6,8 @@ import type { FollowupRun } from "../auto-reply/reply/queue/types.js";
 import { enqueueFollowupRun } from "../auto-reply/reply/queue/enqueue.ts";
 import { loadSessionStore } from "../config/sessions.js";
 import type { SessionEntry } from "../config/sessions.js";
+import { loadConfig } from "../config/config.js";
+import { resolveAgentDir, resolveAgentWorkspaceDir } from "../agents/agent-scope.js";
 
 /**
  * Notification types
@@ -40,6 +42,11 @@ async function enqueueOAuthNotification(
 		return;
 	}
 
+	// Load config and resolve agent paths
+	const config = loadConfig();
+	const agentDir = resolveAgentDir(config, notification.agentId);
+	const workspaceDir = resolveAgentWorkspaceDir(config, notification.agentId);
+
 	// Build followup run from session entry
 	const followupRun: FollowupRun = {
 		prompt: notification.message,
@@ -49,17 +56,17 @@ async function enqueueOAuthNotification(
 		originatingTo: sessionEntry.lastTo,
 		originatingAccountId: sessionEntry.lastAccountId,
 		originatingThreadId: sessionEntry.lastThreadId,
-		originatingChatType: sessionEntry.lastChatType,
+		originatingChatType: sessionEntry.chatType,
 		run: {
 			agentId: notification.agentId,
-			agentDir: sessionEntry.agentDir || "",
+			agentDir,
 			sessionId: sessionEntry.sessionId || notification.sessionKey,
 			sessionKey: notification.sessionKey,
 			messageProvider: sessionEntry.lastChannel,
 			sessionFile: sessionEntry.sessionFile || "",
-			workspaceDir: sessionEntry.workspaceDir || process.cwd(),
-			config: {} as any, // Will be populated by queue processor
-			provider: sessionEntry.provider || "anthropic",
+			workspaceDir,
+			config,
+			provider: sessionEntry.modelProvider || "anthropic",
 			model: sessionEntry.model || "claude-sonnet-4-5-20250929",
 			timeoutMs: 300000, // 5 minutes
 			blockReplyBreak: "message_end",
