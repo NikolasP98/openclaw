@@ -73,7 +73,35 @@ jobs:
           scp -P ${{ matrix.server.port }} docker-compose.yml \
             ${{ matrix.server.user }}@${{ matrix.server.host }}:${{ matrix.server.deployment_path }}/
 
+      - name: Check if deployment needed
+        id: check-deploy
+        run: |
+          NEEDS_DEPLOY=$(ssh -p ${{ matrix.server.port }} ${{ matrix.server.user }}@${{ matrix.server.host }} << 'ENDSSH'
+            set -e
+            cd ${{ matrix.server.deployment_path }}
+
+            # Get current running image digest
+            CONTAINER_NAME="${{ matrix.server.container_prefix }}_openclaw_gw"
+            CURRENT_DIGEST=$(docker inspect $CONTAINER_NAME --format='{{index .Image}}' 2>/dev/null || echo "none")
+
+            # Get latest available image digest from registry
+            docker compose pull -q openclaw-gateway 2>/dev/null || true
+            LATEST_DIGEST=$(docker inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:prd --format='{{index .Id}}' 2>/dev/null || echo "unknown")
+
+            if [[ "$CURRENT_DIGEST" == "$LATEST_DIGEST" ]] && [[ "$CURRENT_DIGEST" != "none" ]]; then
+              echo "✅ Server already running latest image (${LATEST_DIGEST:0:12})"
+              echo "false"
+            else
+              echo "🔄 Update needed: current=${CURRENT_DIGEST:0:12}, latest=${LATEST_DIGEST:0:12}"
+              echo "true"
+            fi
+          ENDSSH
+          )
+          echo "needs_deploy=$NEEDS_DEPLOY" >> $GITHUB_OUTPUT
+          echo "Deployment needed: $NEEDS_DEPLOY"
+
       - name: Deploy to ${{ matrix.server.tenant }}
+        if: steps.check-deploy.outputs.needs_deploy == 'true'
         run: |
           ssh -p ${{ matrix.server.port }} ${{ matrix.server.user }}@${{ matrix.server.host }} << 'ENDSSH'
             set -e
@@ -107,6 +135,11 @@ jobs:
 
             echo "=== Deployment complete for ${{ matrix.server.tenant }} ==="
           ENDSSH
+
+      - name: Skip deployment (already up-to-date)
+        if: steps.check-deploy.outputs.needs_deploy == 'false'
+        run: |
+          echo "⏭️ Skipping deployment for ${{ matrix.server.tenant }} - already running latest image"
 
       - name: Health check for ${{ matrix.server.tenant }}
         run: |
