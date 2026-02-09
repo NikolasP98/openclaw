@@ -21,6 +21,7 @@ RUN apt-get update && \
     jq \
     ffmpeg \
     gosu \
+    poppler-utils \
     $OPENCLAW_DOCKER_APT_PACKAGES && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
