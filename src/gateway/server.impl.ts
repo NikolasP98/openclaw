@@ -546,7 +546,8 @@ export async function startGatewayServer(
   });
 
   let browserControl: Awaited<ReturnType<typeof startBrowserControlServerIfEnabled>> = null;
-  ({ browserControl, pluginServices } = await startGatewaySidecars({
+  let gogOAuthServer: { stop: () => Promise<void> } | null = null;
+  ({ browserControl, pluginServices, gogOAuthServer } = await startGatewaySidecars({
     cfg: cfgAtStart,
     pluginRegistry,
     defaultWorkspaceDir,
@@ -604,6 +605,7 @@ export async function startGatewayServer(
     canvasHostServer,
     stopChannel,
     pluginServices,
+    gogOAuthServer,
     cron,
     heartbeatRunner,
     nodePresenceTimers,

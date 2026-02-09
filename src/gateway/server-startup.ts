@@ -46,6 +46,21 @@ export async function startGatewaySidecars(params: {
     params.logBrowser.error(`server failed to start: ${String(err)}`);
   }
 
+  // Start Google OAuth callback server if enabled (hooks.gogOAuth).
+  let gogOAuthServer: { stop: () => Promise<void> } | null = null;
+  if (params.cfg.hooks?.gogOAuth?.enabled !== false && !isTruthyEnvValue(process.env.OPENCLAW_SKIP_GOG_OAUTH)) {
+    try {
+      const { startGogOAuthServer } = await import("../hooks/gog-oauth-server.js");
+      gogOAuthServer = await startGogOAuthServer(
+        params.cfg.hooks?.gogOAuth || {},
+        params.defaultWorkspaceDir,
+      );
+      params.logHooks.info("google oauth server started");
+    } catch (err) {
+      params.logHooks.error(`google oauth server failed to start: ${String(err)}`);
+    }
+  }
+
   // Start Gmail watcher if configured (hooks.gmail.account).
   if (!isTruthyEnvValue(process.env.OPENCLAW_SKIP_GMAIL_WATCHER)) {
     try {
@@ -156,5 +171,5 @@ export async function startGatewaySidecars(params: {
     }, 750);
   }
 
-  return { browserControl, pluginServices };
+  return { browserControl, pluginServices, gogOAuthServer };
 }

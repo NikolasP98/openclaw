@@ -359,6 +359,8 @@ export async function runGmailService(opts: GmailRunOptions) {
 function spawnGogServe(cfg: GmailHookRuntimeConfig) {
   const args = buildGogWatchServeArgs(cfg);
   defaultRuntime.log(`Starting gog ${args.join(" ")}`);
+  // Note: Gmail watch uses the account from cfg.account (global setup)
+  // For session-isolated credentials, use executeGogCommand from gog-command-exec.ts
   return spawn("gog", args, { stdio: "inherit" });
 }
 

@@ -18,6 +18,9 @@ import { createSessionsSendTool } from "./tools/sessions-send-tool.js";
 import { createSessionsSpawnTool } from "./tools/sessions-spawn-tool.js";
 import { createTtsTool } from "./tools/tts-tool.js";
 import { createWebFetchTool, createWebSearchTool } from "./tools/web-tools.js";
+import { createGogAuthStartTool } from "./tools/gog-auth-start-tool.js";
+import { createGogAuthStatusTool } from "./tools/gog-auth-status-tool.js";
+import { createGogAuthRevokeTool } from "./tools/gog-auth-revoke-tool.js";
 
 export function createOpenClawTools(options?: {
   sandboxBrowserBridgeUrl?: string;
@@ -142,6 +145,35 @@ export function createOpenClawTools(options?: {
     createSessionStatusTool({
       agentSessionKey: options?.agentSessionKey,
       config: options?.config,
+    }),
+    createGogAuthStartTool({
+      agentId: options?.agentDir?.trim()
+        ? resolveSessionAgentId({
+            sessionKey: options?.agentSessionKey,
+            config: options?.config,
+          })
+        : undefined,
+      agentDir: options?.agentDir,
+      sessionKey: options?.agentSessionKey,
+    }),
+    createGogAuthStatusTool({
+      agentId: options?.agentDir?.trim()
+        ? resolveSessionAgentId({
+            sessionKey: options?.agentSessionKey,
+            config: options?.config,
+          })
+        : undefined,
+      sessionKey: options?.agentSessionKey,
+    }),
+    createGogAuthRevokeTool({
+      agentId: options?.agentDir?.trim()
+        ? resolveSessionAgentId({
+            sessionKey: options?.agentSessionKey,
+            config: options?.config,
+          })
+        : undefined,
+      agentDir: options?.agentDir,
+      sessionKey: options?.agentSessionKey,
     }),
     ...(webSearchTool ? [webSearchTool] : []),
     ...(webFetchTool ? [webFetchTool] : []),

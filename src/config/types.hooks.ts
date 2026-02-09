@@ -110,6 +110,19 @@ export type InternalHooksConfig = {
   installs?: Record<string, HookInstallRecord>;
 };
 
+export type HooksGogOAuthConfig = {
+  /** Whether OAuth callback server is enabled (default: true) */
+  enabled?: boolean;
+  /** Port to bind OAuth callback server (default: 51234) */
+  port?: number;
+  /** Host to bind OAuth callback server (default: "127.0.0.1") */
+  bind?: string;
+  /** OAuth callback endpoint path (default: "/oauth-callback") */
+  callbackPath?: string;
+  /** Timeout in minutes for pending OAuth flows (default: 5) */
+  timeoutMinutes?: number;
+};
+
 export type HooksConfig = {
   enabled?: boolean;
   path?: string;
@@ -121,4 +134,6 @@ export type HooksConfig = {
   gmail?: HooksGmailConfig;
   /** Internal agent event hooks */
   internal?: InternalHooksConfig;
+  /** Google OAuth non-blocking authentication */
+  gogOAuth?: HooksGogOAuthConfig;
 };

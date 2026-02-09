@@ -93,6 +93,23 @@ export type SessionEntry = {
   lastThreadId?: string | number;
   skillsSnapshot?: SessionSkillSnapshot;
   systemPromptReport?: SessionSystemPromptReport;
+  /** Path to Google OAuth credentials file for this session */
+  gogCredentialsFile?: string;
+  /** Associated Google account email */
+  gogAuthEmail?: string;
+  /** Pending Google OAuth authentication flow */
+  gogAuthPending?: {
+    /** CSRF state token */
+    state: string;
+    /** Timestamp when auth was requested */
+    requestedAt: number;
+    /** Timestamp when auth expires (5 minutes) */
+    expiresAt: number;
+    /** Target Google account email */
+    email: string;
+    /** Requested Google services */
+    services: string[];
+  };
 };
 
 export function mergeSessionEntry(
