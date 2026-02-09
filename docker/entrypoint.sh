@@ -54,4 +54,16 @@ fi
 
 # Drop privileges to node user and execute the main command
 log "Dropping privileges to node user (uid 1000)"
-exec gosu node "$@"
+
+# Auto-prepend node dist/index.js for OpenClaw commands
+# Allow system commands (node, bash, sh, etc.) to pass through unchanged
+case "$1" in
+  node|bash|sh|/bin/*|/usr/bin/*|"")
+    # System command or empty - execute as-is
+    exec gosu node "$@"
+    ;;
+  *)
+    # OpenClaw CLI command - prepend node dist/index.js
+    exec gosu node node dist/index.js "$@"
+    ;;
+esac
