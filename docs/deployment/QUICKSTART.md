@@ -9,9 +9,30 @@ This guide will get you from zero to automatic production deployment in ~30 minu
 - [ ] GitHub repository access (ability to add secrets)
 - [ ] Local machine with SSH client
 
-## Step 1: Generate SSH Keys (2 minutes)
+## Step 1: Setup SSH Keys (2 minutes)
 
-On your **local machine**:
+On your **LOCAL machine**:
+
+### Option A: Use Existing Keys
+
+If you already have SSH keys (e.g., exported from 1Password):
+
+```bash
+# Verify keys exist
+ls -la ~/.ssh/openclaw/openclaw_deploy_key*
+
+# Should show:
+# - ~/.ssh/openclaw/openclaw_deploy_key (private key)
+# - ~/.ssh/openclaw/openclaw_deploy_key.pub (public key)
+
+# Ensure correct permissions
+chmod 600 ~/.ssh/openclaw/openclaw_deploy_key
+chmod 644 ~/.ssh/openclaw/openclaw_deploy_key.pub
+```
+
+### Option B: Generate New Keys
+
+If you don't have keys yet:
 
 ```bash
 cd /path/to/openclaw/scripts/deployment
@@ -26,32 +47,35 @@ cd /path/to/openclaw/scripts/deployment
 
 ## Step 2: Setup Production Server (5 minutes)
 
-Copy setup script to server:
+Run the setup script from your **LOCAL machine** (in the openclaw repository):
 
 ```bash
-# From your local machine
-scp scripts/deployment/setup-server.sh root@100.105.147.99:/tmp/
+cd /path/to/openclaw
 
-# SSH to server and run setup
-ssh root@100.105.147.99
-
-cd /tmp
-chmod +x setup-server.sh
-./setup-server.sh default ~/.ssh/openclaw/openclaw_deploy_key.pub
+# Run setup script - it will handle everything remotely
+./scripts/deployment/setup-server.sh 100.105.147.99
 ```
 
-The setup script will:
-- ✅ Create `deploy` user with Docker access
-- ✅ Setup SSH access with your public key
-- ✅ Create deployment directory structure
-- ✅ Generate secure credentials
-- ✅ Create template `.env` file
+**What this script does**:
+- Connects to your server as root (using root SSH access)
+- Automatically finds your SSH keys in `~/.ssh/openclaw/`
+- Creates `deploy` user with Docker access
+- Copies your SSH public key to the server
+- Sets up deployment directory structure (`/home/deploy/openclaw-prd/`)
+- Generates secure credentials (including `OPENCLAW_GATEWAY_TOKEN`)
+- Creates template `.env` file
+- Copies `docker-compose.yml` to the server
+
+**Note**: Replace `100.105.147.99` with your actual server IP address.
 
 ## Step 3: Configure Production Environment (3 minutes)
 
-Still on the **server**:
+On the **SERVER** (SSH to the server after setup-server.sh completes):
 
 ```bash
+# SSH to server
+ssh root@100.105.147.99
+
 # Switch to deploy user
 su - deploy
 
@@ -66,24 +90,34 @@ nano ~/openclaw-prd/.env
 # Save and exit (Ctrl+X, Y, Enter)
 ```
 
-## Step 4: Copy docker-compose.yml (1 minute)
+**Note**: The setup script already created the `.env` file with secure default values. You only need to add your Claude API credentials.
 
-From your **local machine**:
+## Step 4: Verify Setup (1 minute)
 
-```bash
-cd /path/to/openclaw
+The setup script (Step 2) already copied `docker-compose.yml` to the server. Let's verify everything is in place.
 
-# Copy docker-compose.yml to server
-scp docker-compose.yml deploy@100.105.147.99:~/openclaw-prd/
-```
-
-## Step 5: Test Manual Deployment (5 minutes)
-
-From your **local machine**:
+On your **LOCAL machine**:
 
 ```bash
 # SSH to server as deploy user
 ssh -i ~/.ssh/openclaw/openclaw_deploy_key deploy@100.105.147.99
+
+# Verify files exist
+ls -la ~/openclaw-prd/
+
+# Should show:
+# - docker-compose.yml
+# - .env
+# - data/ (directory for persistent storage)
+```
+
+## Step 5: Test Manual Deployment (5 minutes)
+
+On the **SERVER** (continue from previous step or SSH if disconnected):
+
+```bash
+# If not already on server, SSH as deploy user
+# ssh -i ~/.ssh/openclaw/openclaw_deploy_key deploy@100.105.147.99
 
 # Navigate to deployment directory
 cd ~/openclaw-prd
@@ -111,7 +145,7 @@ docker compose logs -f openclaw-gateway
 
 ## Step 6: Configure GitHub Secrets (3 minutes)
 
-Go to GitHub repository: `Settings → Secrets and variables → Actions → New repository secret`
+On your **LOCAL machine**, go to GitHub repository: `Settings → Secrets and variables → Actions → New repository secret`
 
 Add these secrets:
 
@@ -127,7 +161,7 @@ Add these secrets:
 
 ## Step 7: Test Automatic Deployment (5 minutes)
 
-From your **local machine**:
+On your **LOCAL machine**:
 
 ```bash
 cd /path/to/openclaw
@@ -151,7 +185,7 @@ git push origin PRD
 
 ## Step 8: Verify Automatic Deployment (2 minutes)
 
-From your **local machine**:
+On your **LOCAL machine**:
 
 ```bash
 # SSH to server
