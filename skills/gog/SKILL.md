@@ -26,11 +26,27 @@ metadata:
 
 Use `gog` for Gmail/Calendar/Drive/Contacts/Sheets/Docs. Requires OAuth setup.
 
-Setup (once)
+## Authentication
+
+OpenClaw provides **non-blocking OAuth authentication** via agent tools. When you need to access Google services, the agent will:
+
+1. Use `gog_auth_start` to initiate OAuth (provides a clickable link)
+2. Remain responsive while you authorize in your browser
+3. Receive automatic notification when authentication completes
+
+**Tools available:**
+
+- `gog_auth_start` - Start OAuth flow (non-blocking)
+- `gog_auth_status` - Check authentication status
+- `gog_auth_revoke` - Revoke credentials
+
+**Traditional manual setup** (still supported):
 
 - `gog auth credentials /path/to/client_secret.json`
 - `gog auth add you@gmail.com --services gmail,calendar,drive,contacts,docs,sheets`
 - `gog auth list`
+
+Note: Session credentials are isolated per chat session. Each user/session maintains separate OAuth credentials stored in `~/.openclaw/agents/{agentId}/gog-credentials/`.
 
 Common commands
 
@@ -114,3 +130,29 @@ Notes
 - Docs supports export/cat/copy. In-place edits require a Docs API client (not in gog).
 - Confirm before sending mail or creating events.
 - `gog gmail search` returns one row per thread; use `gog gmail messages search` when you need every individual email returned separately.
+
+## OAuth Configuration
+
+The OAuth callback server runs automatically with the gateway and listens on `localhost:51234` by default. Configure via `config.yaml`:
+
+```yaml
+hooks:
+  gogOAuth:
+    enabled: true # default
+    port: 51234 # default
+    bind: "127.0.0.1" # default (localhost only for security)
+    timeoutMinutes: 5 # default
+```
+
+**Environment variables:**
+
+- `GOOGLE_CLIENT_ID` - OAuth client ID (required)
+- `GOOGLE_CLIENT_SECRET` - OAuth client secret (required)
+- `OPENCLAW_SKIP_GOG_OAUTH=1` - Disable OAuth server
+
+**Security:**
+
+- Server binds to localhost only (never exposed publicly)
+- Cryptographic state tokens prevent CSRF attacks
+- Credentials stored with 0600 file permissions
+- One-time use state tokens with 5-minute expiry
