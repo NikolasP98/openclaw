@@ -16,6 +16,7 @@ Docs: https://docs.openclaw.ai
 - Agents: include runtime shell in agent envelopes. (#1835) Thanks @Takhoffman.
 - Agents: auto-select `zai/glm-4.6v` for image understanding when ZAI is primary provider. (#10267) Thanks @liuy.
 - Paths: add `OPENCLAW_HOME` for overriding the home directory used by internal path resolution. (#12091) Thanks @sebslight.
+- Onboarding: add Custom Provider flow for OpenAI and Anthropic-compatible endpoints. (#11106) Thanks @MackDing.
 
 ### Fixes
 
@@ -31,6 +32,7 @@ Docs: https://docs.openclaw.ai
 - Telegram: truncate command registration to 100 entries to avoid `BOT_COMMANDS_TOO_MUCH` failures on startup. (#12356) Thanks @arosstale.
 - Telegram: match DM `allowFrom` against sender user id (fallback to chat id) and clarify pairing logs. (#12779) Thanks @liuxiaopai-ai.
 - Onboarding: QuickStart now auto-installs shell completion (prompt only in Manual).
+- Docker: make `docker-setup.sh` compatible with macOS Bash 3.2 and empty extra mounts. (#9441) Thanks @mateusz-michalik.
 - Auth: strip embedded line breaks from pasted API keys and tokens before storing/resolving credentials.
 - Web UI: make chat refresh smoothly scroll to the latest messages and suppress new-messages badge flash during manual refresh.
 - Tools/web_search: include provider-specific settings in the web search cache key, and pass `inlineCitations` for Grok. (#12419) Thanks @tmchow.
@@ -72,6 +74,7 @@ This fork maintains enhanced Docker infrastructure and additional tooling while 
 #### 2026.2.9 - Automatic Multi-Tenant Production Deployment
 
 **Added:**
+
 - GitHub Actions workflow for automatic deployment to production servers when PRD branch is updated (#deploy-prd)
 - Multi-server deployment support with JSON-based server registry (#deploy-prd-multi)
 - Server provisioning automation script (`scripts/deployment/setup-server.sh`)
@@ -81,6 +84,7 @@ This fork maintains enhanced Docker infrastructure and additional tooling while 
 - Server registry configuration (`.github/servers/production.json`)
 
 **Features:**
+
 - **Phase 1 (Single Server)**: Automatic deployment to single production server with health checks and rollback
 - **Phase 2 (Multi-Server)**: Parallel deployment to 2-20 servers with per-tenant isolation
 - **Zero-downtime deployments**: Graceful container stops and health validation
@@ -89,6 +93,7 @@ This fork maintains enhanced Docker infrastructure and additional tooling while 
 - **Security**: SSH key-based authentication, deploy user isolation, optional firewall hardening
 
 **Infrastructure:**
+
 - Automated server setup with deploy user creation and SSH key configuration
 - Production `.env` template generation with secure gateway token
 - Directory structure creation for persistent data
@@ -97,6 +102,7 @@ This fork maintains enhanced Docker infrastructure and additional tooling while 
 - Backup and restore procedures
 
 **Deployment Flow:**
+
 1. Push to PRD branch → Docker Release workflow builds multi-arch images
 2. Deploy workflow triggers automatically on successful build
 3. Copies docker-compose.yml to server(s)
