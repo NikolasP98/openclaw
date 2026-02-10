@@ -118,8 +118,7 @@ export async function acquireSessionWriteLock(params: {
   release: () => Promise<void>;
 }> {
   registerCleanupHandlers();
-  const timeoutMs =
-    params.timeoutMs ?? Number(process.env.OPENCLAW_LOCK_TIMEOUT_MS) || 30_000;
+  const timeoutMs = params.timeoutMs ?? (Number(process.env.OPENCLAW_LOCK_TIMEOUT_MS) || 30_000);
   const staleMs = params.staleMs ?? 30 * 60 * 1000;
   const sessionFile = path.resolve(params.sessionFile);
   const sessionDir = path.dirname(sessionFile);
