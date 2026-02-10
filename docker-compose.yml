@@ -34,7 +34,7 @@ services:
     command:
       [
         "node",
-        "dist/index.js",
+        "openclaw.mjs",
         "gateway",
         "--bind",
         "${OPENCLAW_GATEWAY_BIND:-lan}",
@@ -72,4 +72,4 @@ services:
     init: true
     # Use command instead of entrypoint to ensure entrypoint.sh runs first
     # This ensures consistent initialization (directory creation, default config)
-    command: ["node", "dist/index.js"]
+    command: ["node", "openclaw.mjs"]
