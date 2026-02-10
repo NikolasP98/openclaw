@@ -1,9 +1,10 @@
 name: Deploy to Production (Multi-Server)
 
 on:
-  push:
-    branches:
-      - PRD
+  workflow_run:
+    workflows: ["Docker Release"]
+    types: [completed]
+    branches: [PRD]
   workflow_dispatch:
 
 env:
@@ -13,6 +14,8 @@ env:
 jobs:
   prepare:
     name: Load server registry
+    # Skip if Docker Release failed/cancelled (workflow_dispatch always runs)
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     outputs:
       servers: ${{ steps.load-servers.outputs.servers }}
