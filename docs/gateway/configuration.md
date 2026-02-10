@@ -990,6 +990,10 @@ Controls how chat commands are enabled across connectors.
     config: false, // allow /config (writes to disk)
     debug: false, // allow /debug (runtime-only overrides)
     restart: false, // allow /restart + gateway restart tool
+    allowFrom: {
+      "*": ["user1"], // optional per-provider command allowlist
+      discord: ["user:123"],
+    },
     useAccessGroups: true, // enforce access-group allowlists/policies for commands
   },
 }
@@ -1008,9 +1012,14 @@ Notes:
 - `channels.<provider>.configWrites` gates config mutations initiated by that channel (default: true). This applies to `/config set|unset` plus provider-specific auto-migrations (Telegram supergroup ID changes, Slack channel ID changes).
 - `commands.debug: true` enables `/debug` (runtime-only overrides).
 - `commands.restart: true` enables `/restart` and the gateway tool restart action.
-- `commands.useAccessGroups: false` allows commands to bypass access-group allowlists/policies.
-- Slash commands and directives are only honored for **authorized senders**. Authorization is derived from
-  channel allowlists/pairing plus `commands.useAccessGroups`.
+- `commands.allowFrom` sets a per-provider allowlist for command execution. When configured, it is the **only**
+  authorization source for commands and directives (channel allowlists/pairing and `commands.useAccessGroups` are ignored).
+  Use `"*"` for a global default; provider-specific keys (for example `discord`) override it.
+- `commands.useAccessGroups: false` allows commands to bypass access-group allowlists/policies when `commands.allowFrom`
+  is not set.
+- Slash commands and directives are only honored for **authorized senders**. If `commands.allowFrom` is set,
+  authorization comes solely from that list; otherwise it is derived from channel allowlists/pairing plus
+  `commands.useAccessGroups`.
 
 ### `web` (WhatsApp web channel runtime)
 
@@ -2827,7 +2836,7 @@ Fields:
   bundled skills are eligible (managed/workspace skills unaffected).
 - `load.extraDirs`: additional skill directories to scan (lowest precedence).
 - `install.preferBrew`: prefer brew installers when available (default: true).
-- `install.nodeManager`: node installer preference (`npm` | `pnpm` | `yarn`, default: npm).
+- `install.nodeManager`: node installer preference (`npm` | `pnpm` | `yarn` | `bun`, default: pnpm).
 - `entries.<skillKey>`: per-skill config overrides.
 
 Per-skill fields:

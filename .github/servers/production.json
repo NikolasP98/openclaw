@@ -5,7 +5,7 @@
       "host": "100.105.147.99",
       "user": "deploy",
       "port": 22,
-      "deployment_path": "/home/deploy/openclaw-prd-faces",
+      "deployment_path": "/home/deploy/openclaw",
       "platform": "linux/amd64",
       "gateway_port": 18789,
       "bridge_port": 18790,

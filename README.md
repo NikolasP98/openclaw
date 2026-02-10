@@ -27,7 +27,7 @@ If you want a personal, single-user assistant that feels local, fast, and always
 
 Preferred setup: run the onboarding wizard (`openclaw onboard`) in your terminal.
 The wizard guides you step by step through setting up the gateway, workspace, channels, and skills. The CLI wizard is the recommended path and works on **macOS, Linux, and Windows (via WSL2; strongly recommended)**.
-Works with npm, pnpm, or bun.
+Preferred package manager: **pnpm**. npm and bun are also supported.
 New install? Start here: [Getting started](https://docs.openclaw.ai/start/getting-started)
 
 **Subscriptions (OAuth):**
@@ -47,8 +47,8 @@ Model note: while any model is supported, I strongly recommend **Anthropic Pro/M
 Runtime: **Node ≥22**.
 
 ```bash
-npm install -g openclaw@latest
-# or: pnpm add -g openclaw@latest
+pnpm add -g openclaw@latest
+# or: npm install -g openclaw@latest
 
 openclaw onboard --install-daemon
 ```
@@ -86,7 +86,7 @@ Details: [Development channels](https://docs.openclaw.ai/install/development-cha
 
 ## From source (development)
 
-Prefer `pnpm` for builds from source. Bun is optional for running TypeScript directly.
+Use `pnpm` for builds from source (required). Bun is optional for running TypeScript directly.
 
 ```bash
 git clone https://github.com/openclaw/openclaw.git

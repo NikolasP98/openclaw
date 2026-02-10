@@ -284,9 +284,9 @@ export function resolveNodeManagerOptions(): Array<{
   label: string;
 }> {
   return [
+    { value: "pnpm", label: "pnpm (recommended)" },
     { value: "npm", label: "npm" },
-    { value: "pnpm", label: "pnpm" },
-    { value: "bun", label: "bun" },
+    { value: "bun", label: "bun (not recommended for Gateway)" },
   ];
 }
 

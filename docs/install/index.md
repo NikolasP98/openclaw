@@ -15,7 +15,7 @@ Already followed [Getting Started](/start/getting-started)? You're all set — t
 
 - **[Node 22+](/install/node)** (the [installer script](#install-methods) will install it if missing)
 - macOS, Linux, or Windows
-- `pnpm` only if you build from source
+- `pnpm` (recommended package manager; npm also works)
 
 <Note>
 On Windows, we strongly recommend running OpenClaw under [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install).
@@ -65,10 +65,21 @@ The **installer script** is the recommended way to install OpenClaw. It handles 
 
   </Accordion>
 
-  <Accordion title="npm / pnpm" icon="package">
+  <Accordion title="pnpm / npm" icon="package">
     If you already have Node 22+ and prefer to manage the install yourself:
 
     <Tabs>
+      <Tab title="pnpm (recommended)">
+        ```bash
+        pnpm add -g openclaw@latest
+        pnpm approve-builds -g        # approve openclaw, node-llama-cpp, sharp, etc.
+        openclaw onboard --install-daemon
+        ```
+
+        <Note>
+        pnpm requires explicit approval for packages with build scripts. After the first install shows the "Ignored build scripts" warning, run `pnpm approve-builds -g` and select the listed packages.
+        </Note>
+      </Tab>
       <Tab title="npm">
         ```bash
         npm install -g openclaw@latest
@@ -84,17 +95,6 @@ The **installer script** is the recommended way to install OpenClaw. It handles 
 
           If you see `sharp: Please add node-gyp to your dependencies`, either install build tooling (macOS: Xcode CLT + `npm install -g node-gyp`) or use the env var above.
         </Accordion>
-      </Tab>
-      <Tab title="pnpm">
-        ```bash
-        pnpm add -g openclaw@latest
-        pnpm approve-builds -g        # approve openclaw, node-llama-cpp, sharp, etc.
-        openclaw onboard --install-daemon
-        ```
-
-        <Note>
-        pnpm requires explicit approval for packages with build scripts. After the first install shows the "Ignored build scripts" warning, run `pnpm approve-builds -g` and select the listed packages.
-        </Note>
       </Tab>
     </Tabs>
 
