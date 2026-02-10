@@ -7,7 +7,7 @@ import type { AnyAgentTool } from "./common.js";
 import { jsonResult, readStringParam } from "./common.js";
 import { revokeCredentials } from "../../hooks/gog-credentials.js";
 import type { OAuthRevokeResult } from "../../hooks/gog-oauth-types.js";
-import { updateSessionStore } from "../../config/sessions.js";
+import { updateSessionStore, resolveDefaultSessionStorePath } from "../../config/sessions.js";
 
 const GogAuthRevokeSchema = Type.Object({
 	email: Type.Optional(
@@ -44,7 +44,8 @@ export function createGogAuthRevokeTool(opts?: {
 				await revokeCredentials(opts.agentId, opts.sessionKey, email);
 
 				// Update session entry
-				await updateSessionStore(opts.agentDir, (store) => {
+				const storePath = resolveDefaultSessionStorePath(opts.agentId);
+				await updateSessionStore(storePath, (store) => {
 					const session = store[opts.sessionKey!];
 					if (session) {
 						delete session.gogCredentialsFile;

@@ -19,7 +19,7 @@ import {
 	notifyAuthError,
 	notifyAuthTimeout,
 } from "./gog-oauth-notifications.js";
-import { updateSessionStore } from "../config/sessions.js";
+import { updateSessionStore, resolveDefaultSessionStorePath } from "../config/sessions.js";
 
 /**
  * Default OAuth server configuration
@@ -219,7 +219,8 @@ async function handleCallback(
 		const credPath = await saveSessionCredentials(credentials);
 
 		// Update session entry
-		await updateSessionStore(agentDir, (store) => {
+		const storePath = resolveDefaultSessionStorePath(flow.agentId);
+		await updateSessionStore(storePath, (store) => {
 			const session = store[flow.sessionKey];
 			if (session) {
 				session.gogCredentialsFile = credPath;
