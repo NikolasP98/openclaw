@@ -379,9 +379,9 @@ export const registerTelegramNativeCommands = ({
   // Clear stale commands before registering new ones to prevent
   // leftover commands from deleted skills persisting across restarts (#5717).
   // Chain delete → set so a late-resolving delete cannot wipe newly registered commands.
-  const registerCommands = () => {
+  const registerCommands = async () => {
     if (allCommands.length > 0) {
-      withTelegramApiErrorLogging({
+      await withTelegramApiErrorLogging({
         operation: "setMyCommands",
         runtime,
         fn: () => bot.api.setMyCommands(allCommands),
@@ -394,11 +394,22 @@ export const registerTelegramNativeCommands = ({
       runtime,
       fn: () => bot.api.deleteMyCommands(),
     })
-      .catch(() => {})
-      .then(registerCommands)
-      .catch(() => {});
+      .then(async () => {
+        // Add small delay to ensure Telegram processes the delete before registration
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        await registerCommands();
+      })
+      .catch(async (err) => {
+        // Delete failed, but still attempt registration in case commands can be replaced
+        runtime.error?.(
+          danger(
+            `telegram: deleteMyCommands failed (${String(err)}), attempting registration anyway`,
+          ),
+        );
+        await registerCommands();
+      });
   } else {
-    registerCommands();
+    registerCommands().catch(() => {});
   }
 
   if (allCommands.length > 0) {
