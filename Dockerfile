@@ -65,8 +65,7 @@ RUN pnpm install --frozen-lockfile
 
 # Copy source and build
 COPY . .
-RUN OPENCLAW_A2UI_SKIP_MISSING=1 pnpm build
-
+RUN pnpm build
 # Force pnpm for UI build (Bun may fail on ARM/Synology architectures)
 ENV OPENCLAW_PREFER_PNPM=1
 RUN pnpm ui:build
@@ -86,4 +85,4 @@ ENTRYPOINT ["/app/docker/entrypoint.sh"]
 
 # Start gateway server with pre-baked config.
 # Binds to LAN (0.0.0.0) - auth is enforced via OPENCLAW_GATEWAY_TOKEN env var.
-CMD ["node", "dist/index.js", "gateway", "--bind", "lan", "--port", "18789"]
+CMD ["node", "openclaw.mjs", "gateway", "--bind", "lan", "--port", "18789"]
