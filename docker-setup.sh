@@ -72,7 +72,6 @@ COMPOSE_ARGS=()
 write_extra_compose() {
   local home_volume="$1"
   shift
-  local -a mounts=("$@")
   local mount
 
   cat >"$EXTRA_COMPOSE_FILE" <<'YAML'
@@ -87,7 +86,7 @@ YAML
     printf '      - %s:/home/node/.openclaw/workspace\n' "$OPENCLAW_WORKSPACE_DIR" >>"$EXTRA_COMPOSE_FILE"
   fi
 
-  for mount in "${mounts[@]}"; do
+  for mount in "$@"; do
     printf '      - %s\n' "$mount" >>"$EXTRA_COMPOSE_FILE"
   done
 
@@ -103,7 +102,7 @@ YAML
     printf '      - %s:/home/node/.config/gogcli\n' "$OPENCLAW_GOG_CONFIG_DIR" >>"$EXTRA_COMPOSE_FILE"
   fi
 
-  for mount in "${mounts[@]}"; do
+  for mount in "$@"; do
     printf '      - %s\n' "$mount" >>"$EXTRA_COMPOSE_FILE"
   done
 
@@ -128,7 +127,12 @@ if [[ -n "$EXTRA_MOUNTS" ]]; then
 fi
 
 if [[ -n "$HOME_VOLUME_NAME" || ${#VALID_MOUNTS[@]} -gt 0 ]]; then
-  write_extra_compose "$HOME_VOLUME_NAME" "${VALID_MOUNTS[@]}"
+  # Bash 3.2 + nounset treats "${array[@]}" on an empty array as unbound.
+  if [[ ${#VALID_MOUNTS[@]} -gt 0 ]]; then
+    write_extra_compose "$HOME_VOLUME_NAME" "${VALID_MOUNTS[@]}"
+  else
+    write_extra_compose "$HOME_VOLUME_NAME"
+  fi
   COMPOSE_FILES+=("$EXTRA_COMPOSE_FILE")
 fi
 for compose_file in "${COMPOSE_FILES[@]}"; do
@@ -146,7 +150,9 @@ upsert_env() {
   local -a keys=("$@")
   local tmp
   tmp="$(mktemp)"
-  declare -A seen=()
+  # Use a delimited string instead of an associative array so the script
+  # works with Bash 3.2 (macOS default) which lacks `declare -A`.
+  local seen=" "
 
   if [[ -f "$file" ]]; then
     while IFS= read -r line || [[ -n "$line" ]]; do
@@ -155,7 +161,7 @@ upsert_env() {
       for k in "${keys[@]}"; do
         if [[ "$key" == "$k" ]]; then
           printf '%s=%s\n' "$k" "${!k-}" >>"$tmp"
-          seen["$k"]=1
+          seen="$seen$k "
           replaced=true
           break
         fi
@@ -167,7 +173,7 @@ upsert_env() {
   fi
 
   for k in "${keys[@]}"; do
-    if [[ -z "${seen[$k]:-}" ]]; then
+    if [[ "$seen" != *" $k "* ]]; then
       printf '%s=%s\n' "$k" "${!k-}" >>"$tmp"
     fi
   done
