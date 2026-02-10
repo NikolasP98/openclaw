@@ -217,6 +217,12 @@ async function saveSessionStoreUnlocked(
         err && typeof err === "object" && "code" in err
           ? String((err as { code?: unknown }).code)
           : null;
+      if (code === "EISDIR") {
+        // Target path is a directory, not a file. Remove it and retry.
+        await fs.promises.rm(storePath, { recursive: true, force: true });
+        await fs.promises.writeFile(storePath, json, "utf-8");
+        return;
+      }
       if (code === "ENOENT") {
         return;
       }
@@ -236,6 +242,18 @@ async function saveSessionStoreUnlocked(
       err && typeof err === "object" && "code" in err
         ? String((err as { code?: unknown }).code)
         : null;
+
+    if (code === "EISDIR") {
+      // Target path is a directory, not a file. Remove it and retry.
+      try {
+        await fs.promises.rm(storePath, { recursive: true, force: true });
+        await fs.promises.rename(tmp, storePath);
+        await fs.promises.chmod(storePath, 0o600);
+        return;
+      } catch (retryErr) {
+        throw retryErr;
+      }
+    }
 
     if (code === "ENOENT") {
       // In tests the temp session-store directory may be deleted while writes are in-flight.
