@@ -12,7 +12,10 @@ on:
       - ".github/servers/**"
       - ".github/workflows/deploy-*.yml"
       - "docs/**"
-      - "*.md"
+      - "**/*.md"
+      - "**/*.mdx"
+      - ".agents/**"
+      - "skills/**"
 
 env:
   REGISTRY: ghcr.io
