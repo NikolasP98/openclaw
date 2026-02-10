@@ -201,7 +201,7 @@ export async function acquireSessionWriteLock(params: {
   const owner = payload?.pid ? `pid=${payload.pid}` : "unknown";
 
   // Log diagnostic information before throwing
-  logWarn("Session lock timeout diagnostics", {
+  const diagnostics = {
     sessionFile: normalizedSessionFile,
     lockPath,
     lockHolder: payload,
@@ -209,7 +209,8 @@ export async function acquireSessionWriteLock(params: {
     attemptsCount: attempt,
     processStillAlive: payload?.pid ? isAlive(payload.pid) : false,
     configuredTimeoutMs: timeoutMs,
-  });
+  };
+  logWarn(`Session lock timeout diagnostics: ${JSON.stringify(diagnostics, null, 2)}`);
 
   throw new Error(`session file locked (timeout ${timeoutMs}ms): ${owner} ${lockPath}`);
 }
