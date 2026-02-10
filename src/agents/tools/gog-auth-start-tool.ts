@@ -15,7 +15,7 @@ import type {
 	OAuthStartResult,
 } from "../../hooks/gog-oauth-types.js";
 import { getScopesForServices } from "../../hooks/gog-oauth-types.js";
-import { updateSessionStore } from "../../config/sessions.js";
+import { updateSessionStore, resolveDefaultSessionStorePath } from "../../config/sessions.js";
 
 const GogAuthStartSchema = Type.Object({
 	email: Type.String({
@@ -128,7 +128,8 @@ export function createGogAuthStartTool(opts?: {
 			addPendingFlow(flow);
 
 			// Update session entry with pending auth
-			await updateSessionStore(opts.agentDir, (store) => {
+			const storePath = resolveDefaultSessionStorePath(opts.agentId);
+			await updateSessionStore(storePath, (store) => {
 				const session = store[opts.sessionKey!];
 				if (session) {
 					session.gogAuthPending = {
