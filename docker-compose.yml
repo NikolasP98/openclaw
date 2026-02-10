@@ -1,5 +1,6 @@
 services:
   openclaw-gateway:
+    platform: ${OPENCLAW_DOCKER_PLATFORM:-linux/amd64}
     container_name: ${OPENCLAW_GATEWAY_CONTAINER_NAME:-openclaw_gateway}
     image: ${OPENCLAW_IMAGE:-openclaw:local}
     build:
@@ -41,6 +42,7 @@ services:
       ]
 
   openclaw-cli:
+    platform: ${OPENCLAW_DOCKER_PLATFORM:-linux/amd64}
     container_name: ${OPENCLAW_CLI_CONTAINER_NAME:-openclaw_cli}
     image: ${OPENCLAW_IMAGE:-openclaw:local}
     build:

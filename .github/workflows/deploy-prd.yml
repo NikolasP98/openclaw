@@ -124,6 +124,15 @@ jobs:
             echo "Pulling latest image..."
             docker compose pull openclaw-gateway openclaw-cli
 
+            # Verify pulled image matches host architecture
+            PULLED_ARCH=$(docker image inspect $(docker compose images -q openclaw-gateway | head -1) --format='{{.Architecture}}' 2>/dev/null)
+            HOST_ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+            if [[ -n "$PULLED_ARCH" && "$PULLED_ARCH" != "$HOST_ARCH" ]]; then
+              echo "FATAL: Pulled image is $PULLED_ARCH but host is $HOST_ARCH"
+              exit 1
+            fi
+            echo "Architecture verified: $PULLED_ARCH matches host $HOST_ARCH"
+
             # Stop containers gracefully
             echo "Stopping containers..."
             docker compose stop
@@ -171,6 +180,14 @@ jobs:
             exit 1
           ENDSSH
 
+      - name: Cleanup old images on ${{ matrix.server.tenant }}
+        if: success()
+        run: |
+          ssh -o LogLevel=ERROR -p ${{ matrix.server.port }} ${{ matrix.server.user }}@${{ matrix.server.host }} << 'ENDSSH'
+            docker image prune -f
+            echo "🧹 Old images cleaned up"
+          ENDSSH
+
       - name: Rollback on failure for ${{ matrix.server.tenant }}
         if: failure()
         run: |
@@ -179,16 +196,17 @@ jobs:
 
             echo "=== Rolling back ${{ matrix.server.tenant }} ==="
 
-            # Update .env to use rollback tag
-            sed -i 's/:prd/:prd-rollback-${{ matrix.server.container_prefix }}/g' .env
+            # Use env var override instead of modifying .env
+            ROLLBACK_TAG="prd-rollback-${{ matrix.server.container_prefix }}"
+            ROLLBACK_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${ROLLBACK_TAG}"
 
-            docker compose down
-            docker compose up -d
-
-            # Restore .env
-            sed -i 's/:prd-rollback-${{ matrix.server.container_prefix }}/:prd/g' .env
-
-            echo "=== Rollback complete ==="
+            if docker image inspect "$ROLLBACK_IMAGE" >/dev/null 2>&1; then
+              OPENCLAW_IMAGE="$ROLLBACK_IMAGE" docker compose down
+              OPENCLAW_IMAGE="$ROLLBACK_IMAGE" docker compose up -d
+              echo "=== Rollback complete (using $ROLLBACK_TAG) ==="
+            else
+              echo "=== No rollback image available — skipping ==="
+            fi
           ENDSSH
 
   summary:
