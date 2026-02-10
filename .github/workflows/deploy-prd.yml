@@ -71,13 +71,17 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H ${{ matrix.server.host }} -p ${{ matrix.server.port }} >> ~/.ssh/known_hosts
 
+      # === GHCR mode: copy docker-compose.yml to server ===
       - name: Copy docker-compose.yml to server
+        if: matrix.server.local_build != true
         run: |
           scp -P ${{ matrix.server.port }} docker-compose.yml \
             ${{ matrix.server.user }}@${{ matrix.server.host }}:${{ matrix.server.deployment_path }}/
 
-      - name: Check if deployment needed
-        id: check-deploy
+      # === GHCR mode: check if deploy needed (image digest comparison) ===
+      - name: Check if deployment needed (GHCR)
+        if: matrix.server.local_build != true
+        id: check-deploy-ghcr
         run: |
           NEEDS_DEPLOY=$(ssh -o LogLevel=ERROR -p ${{ matrix.server.port }} ${{ matrix.server.user }}@${{ matrix.server.host }} << 'ENDSSH' | tail -1
             cd ${{ matrix.server.deployment_path }}
@@ -106,14 +110,50 @@ jobs:
           echo "needs_deploy=$NEEDS_DEPLOY" >> $GITHUB_OUTPUT
           echo "Deployment needed: $NEEDS_DEPLOY"
 
-      - name: Deploy to ${{ matrix.server.tenant }}
-        if: steps.check-deploy.outputs.needs_deploy == 'true'
+      # === Local build mode: check if deploy needed (git SHA comparison) ===
+      - name: Check if deployment needed (local build)
+        if: matrix.server.local_build == true
+        id: check-deploy-local
+        run: |
+          NEEDS_DEPLOY=$(ssh -o LogLevel=ERROR -p ${{ matrix.server.port }} ${{ matrix.server.user }}@${{ matrix.server.host }} << 'ENDSSH' | tail -1
+            cd ${{ matrix.server.deployment_path }}
+
+            git fetch origin PRD 2>/dev/null
+
+            LOCAL_SHA=$(git rev-parse HEAD 2>/dev/null || echo "none")
+            REMOTE_SHA=$(git rev-parse origin/PRD 2>/dev/null || echo "unknown")
+
+            if [[ "$LOCAL_SHA" == "$REMOTE_SHA" ]]; then
+              echo "✅ Already at latest commit (${LOCAL_SHA:0:12})" >&2
+              echo "false"
+            else
+              echo "🔄 Update needed: local=${LOCAL_SHA:0:12}, remote=${REMOTE_SHA:0:12}" >&2
+              echo "true"
+            fi
+          ENDSSH
+          )
+          echo "needs_deploy=$NEEDS_DEPLOY" >> $GITHUB_OUTPUT
+          echo "Deployment needed: $NEEDS_DEPLOY"
+
+      # === Resolve needs_deploy from whichever check ran ===
+      - name: Resolve deployment decision
+        id: check-deploy
+        run: |
+          if [[ "${{ matrix.server.local_build }}" == "true" ]]; then
+            echo "needs_deploy=${{ steps.check-deploy-local.outputs.needs_deploy }}" >> $GITHUB_OUTPUT
+          else
+            echo "needs_deploy=${{ steps.check-deploy-ghcr.outputs.needs_deploy }}" >> $GITHUB_OUTPUT
+          fi
+
+      # === GHCR mode: deploy via image pull ===
+      - name: Deploy to ${{ matrix.server.tenant }} (GHCR)
+        if: steps.check-deploy.outputs.needs_deploy == 'true' && matrix.server.local_build != true
         run: |
           ssh -p ${{ matrix.server.port }} ${{ matrix.server.user }}@${{ matrix.server.host }} << 'ENDSSH'
             set -e
             cd ${{ matrix.server.deployment_path }}
 
-            echo "=== Deploying to ${{ matrix.server.tenant }} (${{ matrix.server.region }}) ==="
+            echo "=== Deploying to ${{ matrix.server.tenant }} (${{ matrix.server.region }}) via GHCR ==="
 
             # Tag current running image as rollback
             CONTAINER_NAME="openclaw_prd_${{ matrix.server.tenant }}_gw"
@@ -151,10 +191,53 @@ jobs:
             echo "=== Deployment complete for ${{ matrix.server.tenant }} ==="
           ENDSSH
 
+      # === Local build mode: deploy via git pull + docker compose build ===
+      - name: Deploy to ${{ matrix.server.tenant }} (local build)
+        if: steps.check-deploy.outputs.needs_deploy == 'true' && matrix.server.local_build == true
+        run: |
+          ssh -p ${{ matrix.server.port }} ${{ matrix.server.user }}@${{ matrix.server.host }} << 'ENDSSH'
+            set -e
+            cd ${{ matrix.server.deployment_path }}
+
+            echo "=== Deploying to ${{ matrix.server.tenant }} (${{ matrix.server.region }}) via local build ==="
+
+            # Tag current running image as rollback
+            ROLLBACK_TAG="openclaw:rollback-${{ matrix.server.tenant }}"
+            CONTAINER_NAME="openclaw_prd_${{ matrix.server.tenant }}_gw"
+            CURRENT_IMAGE=$(docker inspect $CONTAINER_NAME --format='{{.Image}}' 2>/dev/null || echo "none")
+            if [[ "$CURRENT_IMAGE" != "none" ]]; then
+              echo "Tagging current image for rollback"
+              docker tag $CURRENT_IMAGE $ROLLBACK_TAG || true
+            fi
+
+            # Pull latest code
+            echo "Pulling latest code from PRD..."
+            git fetch origin PRD
+            git reset --hard origin/PRD
+
+            # Build image locally
+            echo "Building image locally..."
+            docker compose build openclaw-gateway
+
+            # Stop containers gracefully
+            echo "Stopping containers..."
+            docker compose stop
+
+            # Start with new image
+            echo "Starting new containers..."
+            docker compose up -d
+
+            # Wait for services to start
+            echo "Waiting for services to initialize..."
+            sleep 15
+
+            echo "=== Deployment complete for ${{ matrix.server.tenant }} ==="
+          ENDSSH
+
       - name: Skip deployment (already up-to-date)
         if: steps.check-deploy.outputs.needs_deploy == 'false'
         run: |
-          echo "⏭️ Skipping deployment for ${{ matrix.server.tenant }} - already running latest image"
+          echo "⏭️ Skipping deployment for ${{ matrix.server.tenant }} - already up-to-date"
 
       - name: Health check for ${{ matrix.server.tenant }}
         run: |
@@ -199,14 +282,18 @@ jobs:
 
             echo "=== Rolling back ${{ matrix.server.tenant }} ==="
 
-            # Use env var override instead of modifying .env
-            ROLLBACK_TAG="prd-rollback-${{ matrix.server.tenant }}"
-            ROLLBACK_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${ROLLBACK_TAG}"
+            if [[ "${{ matrix.server.local_build }}" == "true" ]]; then
+              # Local build rollback: use locally tagged rollback image
+              ROLLBACK_IMAGE="openclaw:rollback-${{ matrix.server.tenant }}"
+            else
+              # GHCR rollback: use registry-tagged rollback image
+              ROLLBACK_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:prd-rollback-${{ matrix.server.tenant }}"
+            fi
 
             if docker image inspect "$ROLLBACK_IMAGE" >/dev/null 2>&1; then
               OPENCLAW_IMAGE="$ROLLBACK_IMAGE" docker compose down
               OPENCLAW_IMAGE="$ROLLBACK_IMAGE" docker compose up -d
-              echo "=== Rollback complete (using $ROLLBACK_TAG) ==="
+              echo "=== Rollback complete (using $ROLLBACK_IMAGE) ==="
             else
               echo "=== No rollback image available — skipping ==="
             fi
@@ -234,4 +321,4 @@ jobs:
 
           echo ""
           echo "### Server Details"
-          echo '${{ needs.prepare.outputs.servers }}' | jq -r '.[] | "- **\(.tenant)** (\(.region)): \(.host)"'
+          echo '${{ needs.prepare.outputs.servers }}' | jq -r '.[] | "- **\(.tenant)** (\(.region)): \(.host) [mode: \(if .local_build then "local_build" else "ghcr" end)]"'

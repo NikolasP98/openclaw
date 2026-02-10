@@ -10,7 +10,8 @@
       "gateway_port": 18789,
       "bridge_port": 18790,
       "tenant": "faces",
-      "region": "us-east"
+      "region": "us-east",
+      "local_build": true
     }
   ]
 }
