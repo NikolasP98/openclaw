@@ -45,14 +45,16 @@ Notes:
 
 ## Update (global install)
 
-Global install (pick one):
-
-```bash
-npm i -g openclaw@latest
-```
+Global install (recommended):
 
 ```bash
 pnpm add -g openclaw@latest
+```
+
+Alternatively, you can use npm:
+
+```bash
+npm i -g openclaw@latest
 ```
 
 We do **not** recommend Bun for the Gateway runtime (WhatsApp/Telegram bugs).

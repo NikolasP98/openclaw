@@ -942,7 +942,7 @@ export async function updateCommand(opts: UpdateCommandOptions): Promise<void> {
       );
       defaultRuntime.log(
         theme.muted(
-          `Examples: \`${replaceCliName("npm i -g openclaw@latest", CLI_NAME)}\` or \`${replaceCliName("pnpm add -g openclaw@latest", CLI_NAME)}\``,
+          `Examples: \`${replaceCliName("pnpm add -g openclaw@latest", CLI_NAME)}\` or \`${replaceCliName("npm i -g openclaw@latest", CLI_NAME)}\``,
         ),
       );
     }

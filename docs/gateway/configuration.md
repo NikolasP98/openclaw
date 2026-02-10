@@ -2836,7 +2836,7 @@ Fields:
   bundled skills are eligible (managed/workspace skills unaffected).
 - `load.extraDirs`: additional skill directories to scan (lowest precedence).
 - `install.preferBrew`: prefer brew installers when available (default: true).
-- `install.nodeManager`: node installer preference (`npm` | `pnpm` | `yarn`, default: npm).
+- `install.nodeManager`: node installer preference (`npm` | `pnpm` | `yarn` | `bun`, default: pnpm).
 - `entries.<skillKey>`: per-skill config overrides.
 
 Per-skill fields:

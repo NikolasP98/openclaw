@@ -41,6 +41,6 @@ export function resolveSkillsInstallPreferences(config?: OpenClawConfig): Skills
   const nodeManager: SkillsInstallPreferences["nodeManager"] =
     manager === "pnpm" || manager === "yarn" || manager === "bun" || manager === "npm"
       ? manager
-      : "npm";
+      : "pnpm";
   return { preferBrew, nodeManager };
 }
