@@ -75,10 +75,10 @@ cat << EOF
   "user": "deploy",
   "port": ${SSH_PORT},
   "deployment_path": "/home/deploy/openclaw-prd-${TENANT}",
-  "container_prefix": "${TENANT}",
+  "platform": "linux/amd64",
   "gateway_port": 18789,
   "bridge_port": 18790,
-  "tenant": "${TENANT_NAME}",
+  "tenant": "${TENANT}",
   "region": "${REGION}"
 }
 EOF

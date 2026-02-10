@@ -4,7 +4,15 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMPOSE_FILE="$ROOT_DIR/docker-compose.yml"
 EXTRA_COMPOSE_FILE="$ROOT_DIR/docker-compose.extra.yml"
-IMAGE_NAME="${OPENCLAW_IMAGE:-openclaw:local}"
+
+# Set local-build default BEFORE sourcing the library (which defaults to registry image)
+OPENCLAW_IMAGE="${OPENCLAW_IMAGE:-openclaw:local}"
+
+# Source shared derivation library (derives container names, config dirs, etc.)
+# shellcheck source=scripts/lib/openclaw-env.sh
+source "$ROOT_DIR/scripts/lib/openclaw-env.sh"
+
+IMAGE_NAME="$OPENCLAW_IMAGE"
 EXTRA_MOUNTS="${OPENCLAW_EXTRA_MOUNTS:-}"
 HOME_VOLUME_NAME="${OPENCLAW_HOME_VOLUME:-}"
 
@@ -21,8 +29,6 @@ if ! docker compose version >/dev/null 2>&1; then
   exit 1
 fi
 
-OPENCLAW_CONFIG_DIR="${OPENCLAW_CONFIG_DIR:-$HOME/.openclaw}"
-OPENCLAW_WORKSPACE_DIR="${OPENCLAW_WORKSPACE_DIR:-$HOME/.openclaw/workspace}"
 OPENCLAW_GOG_CONFIG_DIR="${OPENCLAW_GOG_CONFIG_DIR:-$HOME/.config/gogcli}"
 
 mkdir -p "$OPENCLAW_CONFIG_DIR"
@@ -42,9 +48,10 @@ export OPENCLAW_IMAGE="$IMAGE_NAME"
 export OPENCLAW_DOCKER_APT_PACKAGES="${OPENCLAW_DOCKER_APT_PACKAGES:-}"
 export OPENCLAW_EXTRA_MOUNTS="$EXTRA_MOUNTS"
 export OPENCLAW_HOME_VOLUME="$HOME_VOLUME_NAME"
-export OPENCLAW_ENV="${OPENCLAW_ENV:-DEV}"
-export OPENCLAW_GATEWAY_CONTAINER_NAME="${OPENCLAW_GATEWAY_CONTAINER_NAME:-openclaw_${OPENCLAW_ENV}_gw}"
-export OPENCLAW_CLI_CONTAINER_NAME="${OPENCLAW_CLI_CONTAINER_NAME:-openclaw_${OPENCLAW_ENV}_cli}"
+export OPENCLAW_ENV
+export OPENCLAW_TENANT
+export OPENCLAW_GATEWAY_CONTAINER_NAME
+export OPENCLAW_CLI_CONTAINER_NAME
 
 if [[ -z "${OPENCLAW_GATEWAY_TOKEN:-}" ]]; then
   if command -v openssl >/dev/null 2>&1; then
@@ -169,6 +176,8 @@ upsert_env() {
 }
 
 upsert_env "$ENV_FILE" \
+  OPENCLAW_ENV \
+  OPENCLAW_TENANT \
   OPENCLAW_CONFIG_DIR \
   OPENCLAW_WORKSPACE_DIR \
   OPENCLAW_GOG_CONFIG_DIR \
@@ -180,7 +189,6 @@ upsert_env "$ENV_FILE" \
   OPENCLAW_EXTRA_MOUNTS \
   OPENCLAW_HOME_VOLUME \
   OPENCLAW_DOCKER_APT_PACKAGES \
-  OPENCLAW_ENV \
   OPENCLAW_GATEWAY_CONTAINER_NAME \
   OPENCLAW_CLI_CONTAINER_NAME
 

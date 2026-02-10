@@ -55,8 +55,23 @@ done
 
 # Configuration
 DEPLOY_USER="deploy"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# Source shared derivation library to compute paths from env+tenant.
+# Temporarily set HOME to the remote deploy user's home so derived paths
+# (OPENCLAW_CONFIG_DIR, OPENCLAW_WORKSPACE_DIR) target the server.
+_SAVED_HOME="$HOME"
+export OPENCLAW_ENV="prd"
+export OPENCLAW_TENANT="$TENANT"
+export HOME="/home/deploy"
+# shellcheck source=../../scripts/lib/openclaw-env.sh
+source "$REPO_ROOT/scripts/lib/openclaw-env.sh"
+export HOME="$_SAVED_HOME"
+unset _SAVED_HOME
+
 DEPLOYMENT_DIR="/home/deploy/openclaw-prd-${TENANT}"
-CONFIG_DIR="/home/deploy/.openclaw-prd-${TENANT}"
+CONFIG_DIR="$OPENCLAW_CONFIG_DIR"
 
 # Validate arguments
 if [ -z "$SERVER_IP" ]; then
@@ -219,20 +234,21 @@ else
 if [ -f "$DEPLOYMENT_DIR/.env" ]; then
     echo "  .env already exists — skipping (will not overwrite)"
 else
-    cat > "$DEPLOYMENT_DIR/.env" << 'ENVEOF'
-# Docker Configuration
-OPENCLAW_IMAGE=ghcr.io/nikolasp98/openclaw:prd
-OPENCLAW_GATEWAY_CONTAINER_NAME=${TENANT}_openclaw_gw
-OPENCLAW_CLI_CONTAINER_NAME=${TENANT}_openclaw_cli
-OPENCLAW_ENV=PRD
+    cat > "$DEPLOYMENT_DIR/.env" << ENVEOF
+# Core (all other values derived from these two)
+OPENCLAW_ENV=$OPENCLAW_ENV
+OPENCLAW_TENANT=$OPENCLAW_TENANT
+
+# Derived — override only for non-standard setups
+OPENCLAW_IMAGE=$OPENCLAW_IMAGE
+OPENCLAW_GATEWAY_CONTAINER_NAME=$OPENCLAW_GATEWAY_CONTAINER_NAME
+OPENCLAW_CLI_CONTAINER_NAME=$OPENCLAW_CLI_CONTAINER_NAME
+OPENCLAW_CONFIG_DIR=$OPENCLAW_CONFIG_DIR
+OPENCLAW_WORKSPACE_DIR=$OPENCLAW_WORKSPACE_DIR
+OPENCLAW_GOG_CONFIG_DIR=/home/deploy/.config/gogcli
 
 # Platform constraint (prevents wrong architecture pulls)
 OPENCLAW_DOCKER_PLATFORM=linux/amd64
-
-# Paths
-OPENCLAW_CONFIG_DIR=$CONFIG_DIR
-OPENCLAW_WORKSPACE_DIR=$CONFIG_DIR/workspace
-OPENCLAW_GOG_CONFIG_DIR=/home/deploy/.config/gogcli
 
 # Network Configuration
 OPENCLAW_GATEWAY_PORT=18789
@@ -265,9 +281,6 @@ echo -e "${GREEN}✓ Phase 4 complete${NC}"
 # =========================================================================
 echo ""
 echo -e "${BLUE}Phase 5/7: Copying docker-compose.yml...${NC}"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-
 if [ -f "$REPO_ROOT/docker-compose.yml" ]; then
     scp -i "$SSH_KEY_PATH" -P "$SSH_PORT" "$REPO_ROOT/docker-compose.yml" "$DEPLOY_USER@$SERVER_IP:$DEPLOYMENT_DIR/"
     echo -e "${GREEN}✓ docker-compose.yml copied (always latest from repo)${NC}"
@@ -322,7 +335,7 @@ run_as_deploy << REMOTE_SCRIPT
     sleep 15
 
     # Health check
-    CONTAINER_NAME="${TENANT}_openclaw_gw"
+    CONTAINER_NAME="$OPENCLAW_GATEWAY_CONTAINER_NAME"
     if docker compose ps 2>/dev/null | grep -q "\${CONTAINER_NAME}.*Up"; then
         echo "  Gateway container is running"
     else

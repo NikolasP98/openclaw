@@ -80,7 +80,7 @@ jobs:
             cd ${{ matrix.server.deployment_path }}
 
             # Get current running image digest
-            CONTAINER_NAME="${{ matrix.server.container_prefix }}_openclaw_gw"
+            CONTAINER_NAME="openclaw_prd_${{ matrix.server.tenant }}_gw"
             CURRENT_DIGEST=$(docker inspect $CONTAINER_NAME --format='{{.Image}}' 2>/dev/null || echo "none")
 
             # Pull latest image and get its digest
@@ -113,11 +113,11 @@ jobs:
             echo "=== Deploying to ${{ matrix.server.tenant }} (${{ matrix.server.region }}) ==="
 
             # Tag current running image as rollback
-            CONTAINER_NAME="${{ matrix.server.container_prefix }}_openclaw_gw"
+            CONTAINER_NAME="openclaw_prd_${{ matrix.server.tenant }}_gw"
             CURRENT_IMAGE=$(docker inspect $CONTAINER_NAME --format='{{.Image}}' 2>/dev/null || echo "none")
             if [[ "$CURRENT_IMAGE" != "none" ]]; then
               echo "Tagging current image for rollback"
-              docker tag $CURRENT_IMAGE ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:prd-rollback-${{ matrix.server.container_prefix }} || true
+              docker tag $CURRENT_IMAGE ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:prd-rollback-${{ matrix.server.tenant }} || true
             fi
 
             # Pull new image
@@ -158,7 +158,7 @@ jobs:
           ssh -o LogLevel=ERROR -p ${{ matrix.server.port }} ${{ matrix.server.user }}@${{ matrix.server.host }} << 'ENDSSH'
             cd ${{ matrix.server.deployment_path }}
 
-            CONTAINER_NAME="${{ matrix.server.container_prefix }}_openclaw_gw"
+            CONTAINER_NAME="openclaw_prd_${{ matrix.server.tenant }}_gw"
 
             # Check container status (suppress docker-compose warnings)
             if ! docker compose ps 2>/dev/null | grep -q "$CONTAINER_NAME.*Up"; then
@@ -197,7 +197,7 @@ jobs:
             echo "=== Rolling back ${{ matrix.server.tenant }} ==="
 
             # Use env var override instead of modifying .env
-            ROLLBACK_TAG="prd-rollback-${{ matrix.server.container_prefix }}"
+            ROLLBACK_TAG="prd-rollback-${{ matrix.server.tenant }}"
             ROLLBACK_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${ROLLBACK_TAG}"
 
             if docker image inspect "$ROLLBACK_IMAGE" >/dev/null 2>&1; then

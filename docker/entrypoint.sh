@@ -39,6 +39,16 @@ for dir in "${dirs[@]}"; do
   fi
 done
 
+# Validate OPENCLAW_ENV (soft warning — never fatal to avoid breaking existing deploys)
+if [[ -n "${OPENCLAW_ENV:-}" ]]; then
+  _ENV_LOWER="$(echo "$OPENCLAW_ENV" | tr '[:upper:]' '[:lower:]')"
+  if [[ "$_ENV_LOWER" != "$OPENCLAW_ENV" ]]; then
+    log "WARNING: OPENCLAW_ENV should be lowercase ('$_ENV_LOWER'), got '$OPENCLAW_ENV'"
+  fi
+  log "Environment: OPENCLAW_ENV=$OPENCLAW_ENV"
+  unset _ENV_LOWER
+fi
+
 # Copy default config only if it doesn't exist
 if [ -f "$DEFAULT_CONFIG" ]; then
   if [ ! -f "$OPENCLAW_HOME/openclaw.json" ]; then
