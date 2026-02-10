@@ -46,7 +46,7 @@ git push --force-with-lease origin main
 
 ## Branch Structure
 
-This fork maintains a specific branch hierarchy:
+This fork maintains a simplified branch hierarchy:
 
 ```
 upstream/main (source of truth)
@@ -54,15 +54,16 @@ upstream/main (source of truth)
 main (clean mirror - NO custom commits)
     ↓
 DEV (integration branch: main + all custom work)
-    ↓
-PRD (production-ready: mirrors DEV after validation)
 ```
+
+**Note**: Feature branches (if any) and PRD are user-managed, not auto-synced by this skill.
 
 ### Branch Purposes
 
 - **main**: Clean mirror of upstream/main, NEVER contains custom work
-- **DEV**: Integration branch containing all custom features, used for testing
-- **PRD**: Production-ready branch, mirrors DEV after validation
+- **DEV**: Integration branch containing all custom features and work
+- **PRD** (manual): Production-ready branch, update manually when needed
+- **Feature branches** (manual): Update manually by rebasing or merging from DEV
 
 ## Core Workflow
 
@@ -110,7 +111,7 @@ git push origin main
 
 ### Phase 2: Update DEV Branch
 
-**Goal**: Merge updated main into DEV (bringing in upstream changes)
+**Goal**: Merge updated main into DEV to bring in upstream changes
 
 ```bash
 git checkout DEV
@@ -123,23 +124,9 @@ git merge main -m "Merge upstream changes from main"
 git push origin DEV
 ```
 
-**Expected**: Clean merge or minor conflicts (DEV has custom commits + upstream changes)
+**Expected**: Clean merge or conflicts requiring manual resolution
 
-### Phase 3: Update PRD Branch
-
-**Goal**: Sync PRD with DEV (after validation)
-
-```bash
-git checkout PRD
-
-# Merge updated DEV
-git merge DEV -m "Sync PRD with DEV"
-
-# Push to origin
-git push origin PRD
-```
-
-**Expected**: Clean merge, PRD mirrors DEV
+**Note**: This is the final automated phase. Feature branches and PRD are not auto-synced.
 
 ## Safety Checks
 
@@ -166,9 +153,6 @@ git log --oneline --graph --all --decorate -20
 
 # Verify DEV contains main's commits
 git merge-base --is-ancestor main DEV && echo "✓ DEV contains main" || echo "✗ DEV missing main commits"
-
-# Verify PRD contains DEV's commits
-git merge-base --is-ancestor DEV PRD && echo "✓ PRD contains DEV" || echo "✗ PRD missing DEV commits"
 ```
 
 ### Post-Sync Checklist
@@ -176,9 +160,10 @@ git merge-base --is-ancestor DEV PRD && echo "✓ PRD contains DEV" || echo "✗
 - [ ] `main` matches `upstream/main` (no divergence)
 - [ ] `main` pushed to `origin/main`
 - [ ] `DEV` merged main successfully
-- [ ] `PRD` merged DEV successfully
-- [ ] All branches pushed to remote
-- [ ] Docker workflows still functional (images building successfully)
+- [ ] `DEV` pushed to remote
+- [ ] Docker workflows still functional (optional: verify builds)
+
+**Note**: Feature branches and PRD are not synced automatically. Update them manually when needed.
 
 ## Conflict Resolution
 
@@ -189,6 +174,7 @@ git merge-base --is-ancestor DEV PRD && echo "✓ PRD contains DEV" || echo "✗
 **Root Cause**: Main contains custom commits (violates clean mirror principle)
 
 **Solution**:
+
 1. Verify custom commits exist on DEV/PRD: `git log --oneline DEV | head`
 2. Reset main to upstream: `git reset --hard upstream/main`
 3. Force push: `git push --force-with-lease origin main`
@@ -201,7 +187,7 @@ If conflicts occur when merging main into DEV:
 1. **Identify conflicts**: `git status` shows conflicted files
 2. **Common conflict areas**:
    - Docker configurations (if upstream changed docker-compose.yml)
-   - Workflow files (if upstream changed .github/workflows/*)
+   - Workflow files (if upstream changed .github/workflows/\*)
    - Core files modified by both upstream and custom work
 
 3. **Resolve manually**:
@@ -241,8 +227,9 @@ When upstream has new commits and you want to pull them in:
 1. **Phase 0**: Check if main is clean (should be)
 2. **Phase 1**: Merge upstream/main → main (fast-forward)
 3. **Phase 2**: Merge main → DEV
-4. **Phase 3**: Merge DEV → PRD
-5. **Time**: ~5-10 minutes
+4. **Time**: ~3-5 minutes
+
+**Note**: Feature branches and PRD are not auto-synced. Update manually when needed.
 
 ### Scenario 2: Main Has Diverged
 
@@ -287,13 +274,8 @@ git checkout DEV
 git merge main -m "Merge upstream changes from main"
 git push origin DEV
 
-# Phase 3: Update PRD
-echo "🚀 Phase 3: Updating PRD branch..."
-git checkout PRD
-git merge DEV -m "Sync PRD with DEV"
-git push origin PRD
-
 echo "✅ Fork sync complete!"
+echo "💡 Feature branches and PRD are not auto-synced. Update them manually when needed."
 git log --oneline --graph --all --decorate -10
 ```
 
@@ -320,6 +302,7 @@ git log --oneline --graph --all --decorate -10
 **Cause**: Uncommitted changes in working directory
 
 **Fix**:
+
 ```bash
 git status  # Review changes
 git stash   # Temporarily save changes
@@ -332,6 +315,7 @@ git stash pop  # Restore changes after sync
 **Cause**: Remote branch has commits not in local branch
 
 **Fix**:
+
 ```bash
 git pull --rebase origin <branch-name>
 # Resolve conflicts if any
@@ -356,12 +340,10 @@ git push origin <branch-name>
 │                              git merge main                 │
 │                              git push origin DEV            │
 ├─────────────────────────────────────────────────────────────┤
-│ 3. Update PRD             → git checkout PRD                │
-│                              git merge DEV                  │
-│                              git push origin PRD            │
-├─────────────────────────────────────────────────────────────┤
 │ Verify:                   → git log main..upstream/main     │
 │                              (should be empty)              │
+├─────────────────────────────────────────────────────────────┤
+│ Note: Feature branches and PRD are user-managed (manual)   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
