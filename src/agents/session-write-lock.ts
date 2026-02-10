@@ -1,6 +1,7 @@
 import fsSync from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { logWarn } from "../logger.js";
 
 type LockFilePayload = {
   pid: number;
@@ -117,7 +118,7 @@ export async function acquireSessionWriteLock(params: {
   release: () => Promise<void>;
 }> {
   registerCleanupHandlers();
-  const timeoutMs = params.timeoutMs ?? 10_000;
+  const timeoutMs = params.timeoutMs ?? (Number(process.env.OPENCLAW_LOCK_TIMEOUT_MS) || 30_000);
   const staleMs = params.staleMs ?? 30 * 60 * 1000;
   const sessionFile = path.resolve(params.sessionFile);
   const sessionDir = path.dirname(sessionFile);
@@ -198,6 +199,18 @@ export async function acquireSessionWriteLock(params: {
 
   const payload = await readLockPayload(lockPath);
   const owner = payload?.pid ? `pid=${payload.pid}` : "unknown";
+
+  // Log diagnostic information before throwing
+  logWarn("Session lock timeout diagnostics", {
+    sessionFile: normalizedSessionFile,
+    lockPath,
+    lockHolder: payload,
+    waitedMs: Date.now() - startedAt,
+    attemptsCount: attempt,
+    processStillAlive: payload?.pid ? isAlive(payload.pid) : false,
+    configuredTimeoutMs: timeoutMs,
+  });
+
   throw new Error(`session file locked (timeout ${timeoutMs}ms): ${owner} ${lockPath}`);
 }
 
