@@ -12,6 +12,19 @@
       "tenant": "faces",
       "region": "us-east",
       "local_build": true
+    },
+    {
+      "id": "prd-tenant-bernibites",
+      "host": "bernibites",
+      "user": "deploy",
+      "port": 22,
+      "deployment_path": "/home/deploy/openclaw-prd-bernibites",
+      "platform": "linux/amd64",
+      "gateway_port": 18789,
+      "bridge_port": 18790,
+      "tenant": "bernibites",
+      "region": "us-east",
+      "local_build": true
     }
   ]
 }
