@@ -16,6 +16,7 @@ git sync-upstream
 ```
 
 **This does**:
+
 - Fetches latest from upstream
 - Fast-forwards main to upstream/main
 - Merges main into DEV
@@ -23,11 +24,22 @@ git sync-upstream
 - Leaves you on DEV ready to work
 
 **This does NOT**:
-- Touch PRD (production stays stable)
+
+- Touch feature branches or PRD (manually managed)
 - Overwrite your custom Docker code (merge protects it)
 - Delete anything
 
-### When Ready for Production
+### Manual Branch Updates
+
+**Update feature branches when needed:**
+
+```bash
+git checkout feature/your-feature
+git rebase DEV  # or git merge DEV
+git push -f
+```
+
+**Update PRD when ready for production:**
 
 ```bash
 # Test DEV thoroughly first!
@@ -67,44 +79,52 @@ git push origin DEV
 **Reality**: Git merge is smart! Here's what happens:
 
 **Scenario 1: No overlap (99% of syncs)**
+
 - Upstream changes: `src/gateway/*.ts`, `docs/*.md`
 - You changed: `Dockerfile`, `docker-compose.yml`, `entrypoint.sh`
 - **Result**: ✅ Both sets automatically preserved
 
 **Scenario 2: Conflicts (rare)**
+
 - Upstream changed: `Dockerfile` line 10
 - You changed: `Dockerfile` line 10
 - **Result**: ⚠️ Git STOPS and asks you to resolve (YOUR CHOICE)
 
 **Scenario 3: Same file, different lines**
+
 - Upstream changed: `Dockerfile` line 10
 - You changed: `Dockerfile` line 50
 - **Result**: ✅ Both changes merged in same file
 
 ### Why Merge > Cherry-Pick
 
-| Merge (✅ Use This) | Cherry-Pick (❌ Avoid) |
-|---------------------|------------------------|
+| Merge (✅ Use This)            | Cherry-Pick (❌ Avoid)      |
+| ------------------------------ | --------------------------- |
 | Automatic - brings all commits | Manual - select each commit |
-| Preserves relationships | Creates duplicate commits |
-| Idempotent - safe to repeat | Easy to lose track |
-| Self-documenting | Tedious and error-prone |
+| Preserves relationships        | Creates duplicate commits   |
+| Idempotent - safe to repeat    | Easy to lose track          |
+| Self-documenting               | Tedious and error-prone     |
 
 ## Branch Strategy
 
 ```
 upstream/main (openclaw/openclaw)
-    ↓ git sync-upstream
+    ↓ git sync-upstream (automated)
 main (clean mirror)
-    ↓ git sync-upstream
+    ↓ git sync-upstream (automated)
 DEV (development + custom Docker work)
-    ↓ manual when ready
-PRD (production releases)
+
+───────────────────────────────────
+Manual (update when needed):
+───────────────────────────────────
+feature/* branches → rebase/merge from DEV
+PRD → merge from DEV
 ```
 
 ## Next Steps
 
 1. **Test the workflow**:
+
    ```bash
    git sync-upstream
    ```

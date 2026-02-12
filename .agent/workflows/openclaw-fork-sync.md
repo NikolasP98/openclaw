@@ -6,7 +6,7 @@
 
 **Strategy**: Merge-based workflow to preserve history and protect custom code
 
-**Branch Flow**: `upstream/main` → `main` → `DEV` → (manual) → `PRD`
+**Branch Flow**: `upstream/main` → `main` → `DEV`
 
 **Key Principle**: Main mirrors upstream; DEV integrates custom work; PRD promotes when stable
 
@@ -17,10 +17,9 @@
 git fetch upstream && \
 git checkout main && git merge --ff-only upstream/main && git push origin main && \
 git checkout DEV && git merge main && git push origin DEV
-
-# Promote to PRD (manual, when ready for production)
-git checkout PRD && git merge DEV && git push origin PRD
 ```
+
+**Note**: Feature branches and PRD are not auto-synced. Update them manually when needed.
 
 ## Understanding Merge Safety
 
@@ -45,12 +44,12 @@ git checkout PRD && git merge DEV && git push origin PRD
 
 ### Why Merge > Cherry-Pick
 
-| Merge | Cherry-Pick |
-|-------|-------------|
-| ✅ Automatic - brings all commits | ❌ Manual - select each commit |
+| Merge                             | Cherry-Pick                                      |
+| --------------------------------- | ------------------------------------------------ |
+| ✅ Automatic - brings all commits | ❌ Manual - select each commit                   |
 | ✅ Preserves commit relationships | ❌ Creates duplicate commits with different SHAs |
-| ✅ Idempotent - safe to repeat | ❌ Easy to lose track of what's synced |
-| ✅ Self-documenting history | ❌ Tedious and error-prone |
+| ✅ Idempotent - safe to repeat    | ❌ Easy to lose track of what's synced           |
+| ✅ Self-documenting history       | ❌ Tedious and error-prone                       |
 
 ## Step-by-Step Workflow
 
@@ -100,13 +99,16 @@ git push origin DEV
 ```
 
 **Expected Result**:
+
 - ✅ DEV contains all upstream changes + your custom Docker work
 - ✅ Your Docker files preserved (Dockerfile, docker-compose.yml, entrypoint.sh)
 - ✅ If conflicts, Git stops and asks you to resolve
 
-**Important**: Do NOT propagate to PRD automatically - PRD is for production, promote manually when ready
+**Note**: This is the final automated phase. Feature branches and PRD are not auto-synced.
 
-### Phase 4: Feature Branch Development (Optional)
+### Manual Branch Management
+
+#### Updating Feature Branches (Optional)
 
 #### Creating a Feature Branch
 
@@ -167,7 +169,7 @@ git branch -d feature/add-xyz
 git push origin --delete feature/add-xyz
 ```
 
-### Phase 5: Production Promotion (Manual, When Ready)
+#### Updating PRD (Manual, When Ready)
 
 ```bash
 # Test DEV thoroughly first!
@@ -234,25 +236,27 @@ git push origin DEV
 
 ### Common Conflict Patterns
 
-| File | Likelihood | Resolution Strategy |
-|------|-----------|---------------------|
-| `docker-compose.yml` | Low | Keep YOUR version (DEV/PRD specific config) |
-| `Dockerfile` | Low | Keep YOUR optimizations, review upstream security updates |
-| `entrypoint.sh` | Very Low | Keep YOUR enhanced version |
-| `docker/preset-enhanced.json` | Zero | Your custom file, upstream doesn't have it |
-| `src/**/*.ts` | Medium | Accept UPSTREAM changes (core functionality) |
-| `docs/**/*.md` | Low | Accept UPSTREAM changes (documentation) |
-| `package.json` | Medium | Merge BOTH (upstream deps + your custom scripts) |
+| File                          | Likelihood | Resolution Strategy                                       |
+| ----------------------------- | ---------- | --------------------------------------------------------- |
+| `docker-compose.yml`          | Low        | Keep YOUR version (DEV/PRD specific config)               |
+| `Dockerfile`                  | Low        | Keep YOUR optimizations, review upstream security updates |
+| `entrypoint.sh`               | Very Low   | Keep YOUR enhanced version                                |
+| `docker/preset-enhanced.json` | Zero       | Your custom file, upstream doesn't have it                |
+| `src/**/*.ts`                 | Medium     | Accept UPSTREAM changes (core functionality)              |
+| `docs/**/*.md`                | Low        | Accept UPSTREAM changes (documentation)                   |
+| `package.json`                | Medium     | Merge BOTH (upstream deps + your custom scripts)          |
 
 ### Best Practices to Minimize Conflicts
 
 ✅ **DO**:
+
 - Keep Docker customizations in Docker-specific files
 - Add new files (e.g., `docker/preset-enhanced.json`) instead of modifying existing
 - Document custom changes in fork-specific docs
 - Use config overrides instead of modifying core files
 
 ❌ **DON'T**:
+
 - Modify `src/**/*.ts` unless absolutely necessary
 - Change upstream documentation (create fork-specific docs instead)
 - Mix custom logic into core OpenClaw files
@@ -275,21 +279,14 @@ origin/main (your fork)
     │ git merge main
     │ (resolve conflicts if any - YOUR CODE PROTECTED)
     ↓
-DEV (development branch)
-    ├──→ feature/add-xyz (rebase onto DEV)
-    ├──→ feature/fix-abc (rebase onto DEV)
-    └──→ feature/improve-def (rebase onto DEV)
-         │
-         │ (test, review, stabilize)
-         │
-         │ (manual promotion when ready)
-         ↓
-PRD (production branch)
-    │
-    │ git push origin PRD
-    │ Deploy to production
-    ↓
-🚀 Production Environment
+DEV (development branch - AUTO-SYNCED)
+
+──────────────────────────────────────────
+Manual Branch Management (not auto-synced):
+──────────────────────────────────────────
+
+feature/* branches → Rebase or merge from DEV when needed
+PRD branch → Merge from DEV when ready for production
 ```
 
 ## Automation
@@ -307,13 +304,12 @@ Add to `~/.gitconfig`:
         git checkout main && \
         git merge --ff-only upstream/main && \
         git push origin main && \
-        echo '→ Propagating to DEV...' && \
+        echo '→ Updating DEV...' && \
         git checkout DEV && \
         git merge main -m 'Merge upstream changes from main' && \
         git push origin DEV && \
-        git checkout DEV && \
         echo '✅ Sync complete! DEV is up to date.' && \
-        echo '⚠️  PRD not updated (manual promotion required)'; \
+        echo '💡 Feature branches and PRD are not auto-synced.'; \
     }; f"
 ```
 
@@ -324,13 +320,15 @@ git sync-upstream
 ```
 
 **This does**:
+
 - ✅ Syncs main with upstream
-- ✅ Propagates to DEV
+- ✅ Updates DEV
 - ✅ Protects your custom code (stops on conflicts)
 - ✅ Keeps you on DEV for continued work
 
 **This does NOT**:
-- ❌ Touch PRD (production stays stable)
+
+- ❌ Touch feature branches or PRD
 - ❌ Overwrite your code (merge respects both histories)
 - ❌ Delete anything
 
@@ -344,9 +342,6 @@ git log --oneline main..upstream/main  # Should be empty
 
 # ✓ DEV contains main
 git merge-base --is-ancestor main DEV && echo "✓ DEV contains main"
-
-# ✓ PRD contains DEV (if recently promoted)
-git merge-base --is-ancestor DEV PRD && echo "✓ PRD contains PRD"
 
 # ✓ View branch structure
 git log --oneline --graph --all --decorate -20
@@ -364,6 +359,7 @@ git diff origin/DEV -- Dockerfile docker-compose.yml entrypoint.sh docker/
 **Solution Options**:
 
 **Option 1: Push local commit to origin** (if commit is valuable)
+
 ```bash
 git checkout main
 git push origin main
@@ -371,6 +367,7 @@ git push origin main
 ```
 
 **Option 2: Move commit to DEV** (keep main clean)
+
 ```bash
 # Cherry-pick the commit to DEV (one-time exception)
 git checkout DEV
@@ -384,6 +381,7 @@ git push origin main -f
 ```
 
 **Option 3: Discard the commit** (if not needed)
+
 ```bash
 git checkout main
 git reset --hard origin/main
@@ -395,6 +393,7 @@ git push origin main -f
 **Cause**: Your custom changes overlap with upstream changes in the same files/lines
 
 **Solution**:
+
 - Keep Docker customizations isolated to Docker-related files
 - Don't modify core source files unless necessary
 - If you must modify core files, document changes for easy re-application
@@ -407,6 +406,7 @@ git push origin main -f
 **Solution**: Always commit to DEV first, then merge to PRD
 
 **Recovery**:
+
 ```bash
 # Option 1: Reset PRD to match DEV (if PRD changes not needed)
 git checkout PRD
@@ -430,6 +430,7 @@ git push origin PRD -f
 **Solution**: Stick to the merge-based workflow - it's self-documenting
 
 **Recovery**: Compare branches to understand current state
+
 ```bash
 # See what DEV has that main doesn't
 git log main..DEV --oneline
@@ -461,12 +462,12 @@ git log --oneline --graph DEV PRD main
 
 This workflow differs from `.agent/workflows/update_clawdbot.md`:
 
-| Feature | update_clawdbot.md | openclaw-fork-sync.md |
-|---------|-------------------|---------------------|
-| **Target** | Clawdbot fork | OpenClaw fork |
-| **Branches** | main only | main → DEV → PRD |
-| **Strategy** | Rebase preferred | Merge preferred |
-| **Rebuild** | macOS/Swift focus | Docker container focus |
-| **Custom Code** | General source | Docker-specific isolation |
+| Feature         | update_clawdbot.md | openclaw-fork-sync.md     |
+| --------------- | ------------------ | ------------------------- |
+| **Target**      | Clawdbot fork      | OpenClaw fork             |
+| **Branches**    | main only          | main → DEV → PRD          |
+| **Strategy**    | Rebase preferred   | Merge preferred           |
+| **Rebuild**     | macOS/Swift focus  | Docker container focus    |
+| **Custom Code** | General source     | Docker-specific isolation |
 
 Both workflows serve different purposes and should be maintained separately.

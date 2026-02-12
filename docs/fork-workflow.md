@@ -6,16 +6,19 @@ This document describes the branch naming conventions and cleanup strategies for
 
 ```
 upstream/main (openclaw/openclaw official)
-    ↓ (fast-forward sync)
+    ↓ (fast-forward sync - automated)
 main (your fork's main, clean mirror of upstream)
-    ↓ (periodic updates to feature branches)
-feature/docker-workflow-automation (persistent custom feature)
-nikolas/custom-setup (persistent custom feature)
-    ↓ (merge into)
-DEV (staging: main + all persistent features + temp features)
-    ↓ (after testing)
-PRD (production: validated DEV state)
+    ↓ (automated sync)
+DEV (integration: main + all custom work)
+
+───────────────────────────────────────────
+Manual branch management (not auto-synced):
+───────────────────────────────────────────
+feature/* branches → Update by rebasing/merging from DEV
+PRD → Update by merging from DEV when ready
 ```
+
+**Note**: The simplified fork-sync skill now only auto-syncs `main` and `DEV`. Feature branches and PRD are managed manually when needed.
 
 ## Remotes
 
@@ -31,6 +34,7 @@ upstream → git@github.com:openclaw/openclaw.git (official repo)
 **Keep the name `main`** - this is standard practice for forks.
 
 **Why not rename to `upstream` or `fork`?**
+
 - ✅ Industry Standard: 99% of forks use `main`
 - ✅ Tool Compatibility: GitHub, CI/CD tools expect `main`
 - ✅ Clear Semantics: The remote names already provide distinction
@@ -38,6 +42,7 @@ upstream → git@github.com:openclaw/openclaw.git (official repo)
 - ❌ Non-standard naming breaks developer expectations
 
 **Terminology:**
+
 - `upstream/main` = Official OpenClaw main branch
 - `origin/main` = Your fork's main branch (mirrors upstream)
 - `main` (local) = Your working copy (tracks origin/main)
@@ -45,6 +50,7 @@ upstream → git@github.com:openclaw/openclaw.git (official repo)
 ### Feature Branch Lifecycle
 
 **Persistent Feature Branches** (KEEP after merging):
+
 - Long-term fork customizations (e.g., `feature/docker-workflow-automation`)
 - Features you'll maintain separately from upstream
 - Personal infrastructure changes
@@ -52,13 +58,17 @@ upstream → git@github.com:openclaw/openclaw.git (official repo)
 
 **Examples:** `feature/docker-workflow-automation`, `nikolas/custom-setup`
 
+**Note**: As of the simplified fork-sync workflow, feature branches are no longer auto-synced. Update them manually when needed.
+
 **Temporary Feature Branches** (DELETE after merging to PRD):
+
 - One-off bug fixes
 - Features that will be upstreamed soon
 - Experimental work
 - Short-term feature work
 
 **Deletion commands:**
+
 ```bash
 git branch -d feature/temporary-feature           # Delete local
 git push origin --delete feature/temporary-feature # Delete remote
@@ -77,6 +87,7 @@ git push origin main
 ```
 
 **If fast-forward fails** (main has diverged):
+
 ```bash
 git reset --hard upstream/main
 git push origin main --force-with-lease
@@ -85,12 +96,14 @@ git push origin main --force-with-lease
 ### Update Persistent Feature Branches
 
 **Recommended frequency:**
+
 - Active development: weekly or bi-weekly
 - Maintenance: monthly
 - Before major releases
 - When relevant upstream changes occur
 
 **Workflow:**
+
 ```bash
 # 1. Update main first (see above)
 
@@ -126,6 +139,7 @@ git push origin PRD
 ### When Conflicts Occur
 
 Conflicts happen when:
+
 - Upstream modified the same files/lines you customized
 - Upstream refactored code your feature depends on
 - Files were moved/deleted upstream but modified in your branch
@@ -139,6 +153,7 @@ git status  # Shows conflicted files
 ```
 
 Output:
+
 ```
 Unmerged paths:
   both modified:   src/some-file.ts
@@ -159,10 +174,12 @@ upstream code here
 #### Step 3: Resolve by Conflict Type
 
 **Type A: Simple Line Conflicts**
+
 - Your feature changed the same lines upstream touched
 - **Resolution:** Keep your changes, integrate necessary upstream updates
 
 Example:
+
 ```typescript
 // Before:
 <<<<<<< HEAD
@@ -176,10 +193,12 @@ await runDockerWorkflow(config, options);
 ```
 
 **Type B: Structural Refactors**
+
 - Upstream refactored/moved code
 - **Resolution:** Adapt your feature to new structure
 
 Example:
+
 ```typescript
 // Before:
 <<<<<<< HEAD
@@ -194,10 +213,12 @@ import { newFunction } from './new-structure/location';
 ```
 
 **Type C: Feature Overlap**
+
 - Upstream added similar functionality
 - **Resolution:** Decide if your customization is still needed
 
 Options:
+
 1. Keep your version if it has unique functionality
 2. Adopt upstream version if it's better/more general
 3. Merge both if they serve different purposes
@@ -239,6 +260,7 @@ pnpm openclaw <your-feature-command>
 ### Emergency Conflict Resolution
 
 **Option 1: Abort and Rebase**
+
 ```bash
 git merge --abort
 git rebase main
@@ -247,6 +269,7 @@ git rebase --continue
 ```
 
 **Option 2: Recreate the Feature Branch**
+
 ```bash
 # Backup current branch
 git branch feature/docker-workflow-automation-backup
@@ -267,6 +290,7 @@ git push origin feature/docker-workflow-automation --force-with-lease
 ```
 
 **Option 3: Cherry-pick Commits**
+
 ```bash
 git checkout main
 git checkout -b feature/docker-workflow-automation-new
@@ -283,15 +307,18 @@ git cherry-pick <commit-hash>
 ## Conflict Prevention Best Practices
 
 ### 1. Keep Feature Branches Focused
+
 - Smaller branches = fewer conflicts
 - Don't modify core files unless necessary
 - Isolate customizations in separate files
 
 ### 2. Sync Regularly
+
 - Weekly syncs = small, manageable conflicts
 - Waiting months = massive, complex conflicts
 
 ### 3. Monitor Upstream Changes
+
 - Watch the openclaw/openclaw repository
 - Review changelogs for breaking changes
 - Sync proactively when relevant changes land
@@ -299,6 +326,7 @@ git cherry-pick <commit-hash>
 ### 4. Document Customizations
 
 Add comments explaining WHY you made changes:
+
 ```typescript
 // CUSTOM: Added Docker workflow automation for deployment pipeline
 // See: feature/docker-workflow-automation branch
@@ -353,6 +381,7 @@ git push origin DEV
 ## Quick Reference
 
 ### Standard Sync (No Conflicts)
+
 ```bash
 # One-liner for main update
 git checkout main && git fetch upstream && git merge --ff-only upstream/main && git push origin main
@@ -362,6 +391,7 @@ git checkout feature/your-feature && git merge main && git push origin feature/y
 ```
 
 ### Conflict Commands
+
 ```bash
 git status                 # See conflicted files
 git diff                   # See conflict details
@@ -370,6 +400,7 @@ git commit                 # Complete merge
 ```
 
 ### Abort Commands
+
 ```bash
 git merge --abort          # Cancel merge
 git rebase --abort         # Cancel rebase

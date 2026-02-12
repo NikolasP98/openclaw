@@ -66,46 +66,16 @@ git push origin main
 echo -e "${GREEN}✓ Main branch synced${NC}"
 echo ""
 
-# Phase 2a: Update docker workflow branch
-echo -e "${BLUE}🐳 Phase 2a: Updating docker workflow branch...${NC}"
-git checkout feature/docker-workflow-automation
-if git merge main --no-edit; then
-  git push origin feature/docker-workflow-automation
-  echo -e "${GREEN}✓ Docker workflow branch updated${NC}"
-else
-  echo -e "${RED}❌ Merge conflict in docker workflow branch. Please resolve manually.${NC}"
-  exit 1
-fi
-echo ""
-
-# Phase 2b: Update custom setup branch
-echo -e "${BLUE}⚙️  Phase 2b: Updating custom setup branch...${NC}"
-git checkout nikolas/custom-setup
-if git merge main --no-edit; then
-  git push origin nikolas/custom-setup
-  echo -e "${GREEN}✓ Custom setup branch updated${NC}"
-else
-  echo -e "${RED}❌ Merge conflict in custom setup branch. Please resolve manually.${NC}"
-  exit 1
-fi
-echo ""
-
-# Phase 3: Update DEV
-echo -e "${BLUE}🔧 Phase 3: Updating DEV branch...${NC}"
+# Phase 2: Update DEV
+echo -e "${BLUE}🔧 Phase 2: Updating DEV branch...${NC}"
 git checkout DEV
-git merge main --no-edit
-git merge feature/docker-workflow-automation --no-edit
-git merge nikolas/custom-setup --no-edit
-git push origin DEV
-echo -e "${GREEN}✓ DEV branch updated${NC}"
-echo ""
-
-# Phase 4: Update PRD
-echo -e "${BLUE}🚀 Phase 4: Updating PRD branch...${NC}"
-git checkout PRD
-git merge DEV --no-edit
-git push origin PRD
-echo -e "${GREEN}✓ PRD branch updated${NC}"
+if git merge main --no-edit; then
+  git push origin DEV
+  echo -e "${GREEN}✓ DEV branch updated${NC}"
+else
+  echo -e "${RED}❌ Merge conflict in DEV branch. Please resolve manually.${NC}"
+  exit 1
+fi
 echo ""
 
 # Return to main
@@ -124,11 +94,12 @@ else
   echo -e "${RED}✗ Out of sync${NC}"
 fi
 
-echo -n "DEV vs PRD: "
-if [[ -z $(git diff DEV PRD) ]]; then
-  echo -e "${GREEN}✓ Identical${NC}"
+echo -n "DEV contains main: "
+if git merge-base --is-ancestor main DEV 2>/dev/null; then
+  echo -e "${GREEN}✓ Yes${NC}"
 else
-  echo -e "${YELLOW}⚠ Different${NC}"
+  echo -e "${RED}✗ No${NC}"
 fi
 echo ""
 echo -e "${YELLOW}💡 Consider running tests: pnpm build && pnpm test${NC}"
+echo -e "${YELLOW}💡 Feature branches and PRD are not auto-synced. Update them manually when needed.${NC}"
