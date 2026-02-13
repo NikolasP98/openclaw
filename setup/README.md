@@ -138,7 +138,7 @@ Resume from any phase with `--start-from=40` or skip phases with `--skip-phase=3
   - `apt` (default): NodeSource repository
   - `nvm`: NVM 0.40.0 + `nvm install 22`
   - `skip`: assumes Node.js is already installed
-- Sets up pnpm via corepack, falls back to `npm install -g pnpm@10.23.0`
+- Sets up pnpm via corepack, falls back to `npm install -g pnpm@10.29.3`
 - Installs gh CLI from the GitHub APT repository
 - Authenticates gh CLI with `GITHUB_PAT` if provided
 - Installs build-essential, git, curl via apt
@@ -588,7 +588,7 @@ All default values for the setup framework. Organized by section:
 | `gateway`   | mode=local, bind=127.0.0.1, port_start=18789                   |
 | `security`  | sandbox_mode=non-main, dm_policy=pairing                       |
 | `channels`  | web=enabled, whatsapp/telegram/discord=disabled                |
-| `system`    | node_install_method=apt, node_version=22, pnpm_version=10.23.0 |
+| `system`    | node_install_method=apt, node_version=22, pnpm_version=10.29.3 |
 | `resources` | memory_limit=2G, cpu_quota=100%                                |
 | `agent`     | model=claude-sonnet-4-5-20250929, temperature=0.7              |
 

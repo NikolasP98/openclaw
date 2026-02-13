@@ -69,12 +69,13 @@ verify_deployment() {
         log_warn "Configuration file has permissions: $config_perms (expected 600)"
     fi
 
-    # Test gateway connectivity with retry loop
+    # Test gateway connectivity with progressive backoff
     log_info "Verifying gateway connectivity on port $gateway_port..."
 
     local max_attempts=5
     local attempt=1
     local health_ok=false
+    local backoff_delays=(1 2 4 5 5)
 
     while [ $attempt -le $max_attempts ]; do
         log_info "Health check attempt $attempt/$max_attempts..."
@@ -91,8 +92,9 @@ verify_deployment() {
             break
         fi
         if [ $attempt -lt $max_attempts ]; then
-            log_debug "Not ready yet, waiting 5s..."
-            sleep 5
+            local delay=${backoff_delays[$((attempt - 1))]}
+            log_debug "Not ready yet, waiting ${delay}s..."
+            sleep "$delay"
         fi
         attempt=$((attempt + 1))
     done
@@ -120,19 +122,22 @@ verify_deployment() {
     echo -e "${GREEN}║${NC} Status: Running"
     echo -e "${GREEN}╠═══════════════════════════════════════════════════════════════╣${NC}"
     echo -e "${GREEN}║ Next Steps:${NC}"
+    local step=1
     if [ "${EXEC_MODE:-local}" = "remote" ]; then
-        echo -e "${GREEN}║${NC} 1. Access web UI via SSH tunnel:"
+        echo -e "${GREEN}║${NC} ${step}. Access web UI via SSH tunnel:"
         echo -e "${GREEN}║${NC}    ssh -L ${gateway_port}:127.0.0.1:${gateway_port} ${exec_user}@${VPS_HOSTNAME:-HOST}"
     else
-        echo -e "${GREEN}║${NC} 1. Access web UI at:"
+        echo -e "${GREEN}║${NC} ${step}. Access web UI at:"
         echo -e "${GREEN}║${NC}    http://127.0.0.1:${gateway_port}"
     fi
+    step=$((step + 1))
     if [ "${ENABLE_WHATSAPP:-false}" = "true" ]; then
-        echo -e "${GREEN}║${NC} 2. Pair WhatsApp:"
+        echo -e "${GREEN}║${NC} ${step}. Pair WhatsApp:"
         echo -e "${GREEN}║${NC}    openclaw channels whatsapp pair"
+        step=$((step + 1))
     fi
     if [ "${DM_POLICY:-pairing}" = "pairing" ]; then
-        echo -e "${GREEN}║${NC} 3. Approve pairing requests:"
+        echo -e "${GREEN}║${NC} ${step}. Approve pairing requests:"
         echo -e "${GREEN}║${NC}    openclaw pairing list"
         echo -e "${GREEN}║${NC}    openclaw pairing approve <channel> <code>"
     fi

@@ -38,7 +38,7 @@ channels:
 system:
   node_install_method: apt # Use NodeSource repository
   node_version: 22 # Node.js version requirement
-  pnpm_version: 10.23.0 # pnpm version for corepack
+  pnpm_version: 10.29.3 # pnpm version for corepack
   log_retention_days: 7 # Keep logs for 7 days by default
   expected_load: low # Conservative default
 

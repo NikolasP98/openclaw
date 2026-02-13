@@ -98,14 +98,14 @@ setup_environment() {
         log_info "Setting up pnpm via corepack..."
         if run_cmd "command -v corepack" &> /dev/null; then
             run_cmd --as root "corepack enable" || run_cmd "corepack enable" || true
-            run_cmd "corepack prepare pnpm@10.23.0 --activate" 2>/dev/null || \
+            run_cmd "corepack prepare pnpm@10.29.3 --activate" 2>/dev/null || \
                 log_warn "corepack prepare failed, trying npm fallback"
         fi
 
         # Verify pnpm or install fallback
         if ! run_cmd "command -v pnpm" &> /dev/null; then
             log_warn "pnpm not available via corepack, installing via npm..."
-            run_cmd --as root "npm install -g pnpm@10.23.0" || run_cmd "npm install -g pnpm@10.23.0"
+            run_cmd --as root "npm install -g pnpm@10.29.3" || run_cmd "npm install -g pnpm@10.29.3"
         fi
 
         pnpm_ver=$(run_cmd "pnpm --version" 2>/dev/null || echo "not found")

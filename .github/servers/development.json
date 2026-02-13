@@ -1,0 +1,18 @@
+{
+  "servers": [
+    {
+      "id": "dev-tenant-faces",
+      "host": "nc-faces",
+      "user": "openclaw-faces-dev",
+      "port": 22,
+      "deployment_path": "/home/openclaw-faces-dev/openclaw",
+      "platform": "linux/amd64",
+      "gateway_port": 28789,
+      "bridge_port": 28790,
+      "tenant": "faces",
+      "region": "us-east",
+      "branch": "DEV",
+      "local_build": true
+    }
+  ]
+}

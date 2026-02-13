@@ -123,34 +123,30 @@ AUTHEOF
     local systemd_dir="${AGENT_HOME_DIR:-$HOME}/.config/systemd/user"
 
     if [ "${EXEC_MODE:-local}" = "remote" ]; then
-        # Remote: SCP files then move into place
+        # Remote: SCP files to staging dir, then place + permission in one batch
         local remote_tmp="/tmp/openclaw-deploy-$$"
+        local agent_auth_dir="${config_dir}/agents/main/agent"
+
         run_cmd --as root "mkdir -p '$remote_tmp'"
 
         copy_file "$temp_dir/openclaw.json" "$remote_tmp/openclaw.json" root
         copy_file "$temp_dir/openclaw-gateway.service" "$remote_tmp/openclaw-gateway.service" root
         copy_file "$temp_dir/SOUL.md" "$remote_tmp/SOUL.md" root
-
-        run_cmd --as root "cp '$remote_tmp/openclaw.json' '${config_dir}/openclaw.json'"
-        run_cmd --as root "cp '$remote_tmp/SOUL.md' '${workspace_dir}/SOUL.md'"
-        run_cmd --as root "cp '$remote_tmp/openclaw-gateway.service' '${systemd_dir}/openclaw-gateway.service'"
-
-        run_cmd --as root "chown ${exec_user}:${exec_user} '${config_dir}/openclaw.json'"
-        run_cmd --as root "chown ${exec_user}:${exec_user} '${workspace_dir}/SOUL.md'"
-        run_cmd --as root "chown ${exec_user}:${exec_user} '${systemd_dir}/openclaw-gateway.service'"
-
-        run_cmd --as root "chmod 600 '${config_dir}/openclaw.json'"
-        run_cmd --as root "chmod 644 '${workspace_dir}/SOUL.md'"
-        run_cmd --as root "chmod 644 '${systemd_dir}/openclaw-gateway.service'"
-
-        local agent_auth_dir="${config_dir}/agents/main/agent"
-        run_cmd --as root "mkdir -p '${agent_auth_dir}'"
         copy_file "$temp_dir/auth-profiles.json" "$remote_tmp/auth-profiles.json" root
-        run_cmd --as root "cp '$remote_tmp/auth-profiles.json' '${agent_auth_dir}/auth-profiles.json'"
-        run_cmd --as root "chown -R ${exec_user}:${exec_user} '${config_dir}/agents'"
-        run_cmd --as root "chmod 600 '${agent_auth_dir}/auth-profiles.json'"
 
-        run_cmd --as root "rm -rf '$remote_tmp'"
+        # Batch all cp/chown/chmod into a single SSH call
+        run_cmd --as root "
+            mkdir -p '${agent_auth_dir}' &&
+            cp '$remote_tmp/openclaw.json' '${config_dir}/openclaw.json' &&
+            cp '$remote_tmp/SOUL.md' '${workspace_dir}/SOUL.md' &&
+            cp '$remote_tmp/openclaw-gateway.service' '${systemd_dir}/openclaw-gateway.service' &&
+            cp '$remote_tmp/auth-profiles.json' '${agent_auth_dir}/auth-profiles.json' &&
+            chown ${exec_user}:${exec_user} '${config_dir}/openclaw.json' '${workspace_dir}/SOUL.md' '${systemd_dir}/openclaw-gateway.service' &&
+            chown -R ${exec_user}:${exec_user} '${config_dir}/agents' &&
+            chmod 600 '${config_dir}/openclaw.json' '${agent_auth_dir}/auth-profiles.json' &&
+            chmod 644 '${workspace_dir}/SOUL.md' '${systemd_dir}/openclaw-gateway.service' &&
+            rm -rf '$remote_tmp'
+        "
     else
         # Local: copy directly
         cp "$temp_dir/openclaw.json" "${config_dir}/openclaw.json"
