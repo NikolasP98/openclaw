@@ -44,6 +44,7 @@ import { startDiagnosticHeartbeat, stopDiagnosticHeartbeat } from "../logging/di
 import { createSubsystemLogger, runtimeForLogger } from "../logging/subsystem.js";
 import { getGlobalHookRunner } from "../plugins/hook-runner-global.js";
 import { runOnboardingWizard } from "../wizard/onboarding.js";
+import { createAuthRateLimiter, type AuthRateLimiter } from "./auth-rate-limit.js";
 import { startGatewayConfigReloader } from "./config-reload.js";
 import { ExecApprovalManager } from "./exec-approval-manager.js";
 import { NodeRegistry } from "./node-registry.js";
@@ -294,6 +295,12 @@ export async function startGatewayServer(
   let hooksConfig = runtimeConfig.hooksConfig;
   const canvasHostEnabled = runtimeConfig.canvasHostEnabled;
 
+  // Create auth rate limiter only when explicitly configured.
+  const rateLimitConfig = cfgAtStart.gateway?.auth?.rateLimit;
+  const authRateLimiter: AuthRateLimiter | undefined = rateLimitConfig
+    ? createAuthRateLimiter(rateLimitConfig)
+    : undefined;
+
   let controlUiRootState: ControlUiRootState | undefined;
   if (controlUiRootOverride) {
     const resolvedOverride = resolveControlUiRootOverrideSync(controlUiRootOverride);
@@ -364,6 +371,7 @@ export async function startGatewayServer(
     openResponsesEnabled,
     openResponsesConfig,
     resolvedAuth,
+    rateLimiter: authRateLimiter,
     gatewayTls,
     hooksConfig: () => hooksConfig,
     pluginRegistry,
@@ -502,6 +510,7 @@ export async function startGatewayServer(
     canvasHostEnabled: Boolean(canvasHost),
     canvasHostServerPort,
     resolvedAuth,
+    rateLimiter: authRateLimiter,
     gatewayMethods,
     events: GATEWAY_EVENTS,
     logGateway: log,
@@ -683,6 +692,7 @@ export async function startGatewayServer(
         skillsRefreshTimer = null;
       }
       skillsChangeUnsub();
+      authRateLimiter?.dispose();
       await close(opts);
     },
   };
