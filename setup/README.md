@@ -295,36 +295,32 @@ Automatically triggered when any phase fails, or run manually via
 Profiles are YAML files that pre-configure deployment variables. They define the
 agent's identity, channels, security posture, and system resources.
 
-#### Built-in Profiles
+All agent profiles are maintained in the
+[minions](https://github.com/NikolasP98/minions) repository for portability and
+independent versioning. See [External Agent Profiles (Minions)](#external-agent-profiles-minions)
+for details.
 
-| Profile              | Channels       | Security                  | Use Case                |
-| -------------------- | -------------- | ------------------------- | ----------------------- |
-| `customer-support`   | WhatsApp + Web | sandbox=all, pairing      | Restaurant customer ops |
-| `personal-assistant` | Telegram + Web | sandbox=non-main, pairing | Personal productivity   |
+#### Using Profiles
 
-Usage with built-in shorthand:
+Reference a profile by full path:
 
 ```bash
+./setup/setup.sh --profile=~/minions/profiles/customer-support.yaml --api-key=sk-ant-xxx
+```
+
+Or copy into `setup/profiles/` for shorthand:
+
+```bash
+cp ~/minions/profiles/customer-support.yaml setup/profiles/customer-support.profile.yaml
 ./setup/setup.sh --profile=customer-support --api-key=sk-ant-xxx
 ```
 
-#### External Profiles
-
-Profiles can be loaded from any path:
-
-```bash
-./setup/setup.sh --profile=/path/to/my-agent.profile.yaml --api-key=sk-ant-xxx
-```
-
-See [External Agent Profiles (Minions)](#external-agent-profiles-minions) for the
-portable profiles repo.
-
 #### Creating Custom Profiles
 
-Copy a built-in profile and edit:
+Copy an existing profile from minions and edit:
 
 ```bash
-cp setup/profiles/personal-assistant.profile.yaml setup/profiles/my-agent.profile.yaml
+cp ~/minions/profiles/personal-assistant.yaml setup/profiles/my-agent.profile.yaml
 ```
 
 Profile YAML sections:
@@ -372,7 +368,7 @@ Resolution order (first match wins):
 
 ## External Agent Profiles (Minions)
 
-Agent profiles are maintained in a separate [minions](https://github.com/NikolasP98/minions)
+All agent profiles are maintained in the [minions](https://github.com/NikolasP98/minions)
 repository for portability and independent versioning.
 
 ### Why Separate?
@@ -381,15 +377,16 @@ repository for portability and independent versioning.
 - **Independent update cycle** — update profiles without touching the orchestrator
 - **Portability** — share profiles across machines, teams, or forks
 
-### Built-in vs External Profiles
+### Available Profiles
 
-|               | Built-in                        | External (Minions)                                   |
-| ------------- | ------------------------------- | ---------------------------------------------------- |
-| **Location**  | `setup/profiles/*.profile.yaml` | `minions/profiles/*.yaml`                            |
-| **Shorthand** | `--profile=customer-support`    | `--profile=~/minions/profiles/customer-support.yaml` |
-| **Updates**   | Tied to OpenClaw repo           | Independent `git pull`                               |
-| **Naming**    | `name.profile.yaml`             | `name.yaml` (cleaner)                                |
-| **Bundled**   | Yes                             | Requires clone                                       |
+| Profile                 | Role         | Channels       | Security                  | Use Case                        |
+| ----------------------- | ------------ | -------------- | ------------------------- | ------------------------------- |
+| `main-orchestrator`     | orchestrator | WhatsApp + Web | sandbox=off, pairing      | Multi-agent task routing        |
+| `customer-support`      | specialist   | WhatsApp + Web | sandbox=all, pairing      | Restaurant customer ops         |
+| `appointment-scheduler` | specialist   | (delegated)    | sandbox=all, pairing      | Booking & calendar management   |
+| `data-analyst`          | specialist   | (delegated)    | sandbox=all, pairing      | Reports & business intelligence |
+| `content-creator`       | specialist   | (delegated)    | sandbox=all, pairing      | Social media & marketing        |
+| `personal-assistant`    | standalone   | Telegram + Web | sandbox=non-main, pairing | Personal productivity           |
 
 ### Usage
 
@@ -405,6 +402,9 @@ git clone https://github.com/NikolasP98/minions.git ~/minions
 cp ~/minions/profiles/customer-support.yaml setup/profiles/customer-support.profile.yaml
 ./setup/setup.sh --profile=customer-support --api-key=sk-ant-xxx
 ```
+
+A full multi-agent gateway configuration example is available at
+[`minions/examples/openclaw.json.example`](https://github.com/NikolasP98/minions/blob/main/examples/openclaw.json.example).
 
 ### Profile Schema
 
@@ -639,9 +639,7 @@ setup/
 │   ├── systemd-user.service.template  # systemd unit file
 │   ├── SOUL.md.template            # Agent personality/guidelines
 │   └── openclaw-wrapper.sh.template   # CLI wrapper script
-├── profiles/
-│   ├── customer-support.profile.yaml  # Restaurant ops (WhatsApp + Web)
-│   └── personal-assistant.profile.yaml  # Productivity (Telegram + Web)
+├── profiles/                       # Local copies (optional, see minions repo)
 ├── utilities/
 │   ├── add-tenant.sh               # Multi-tenant setup helper
 │   ├── backup-openclaw.sh          # Config backup with retention
