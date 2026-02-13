@@ -59,6 +59,22 @@ preflight_checks() {
         return 1
     fi
 
+    # Check Docker availability when sandbox requires it
+    if [ "${SANDBOX_MODE:-non-main}" != "off" ]; then
+        log_info "Checking Docker availability (sandbox mode: ${SANDBOX_MODE})..."
+        if [ "${EXEC_MODE:-local}" = "remote" ]; then
+            if ! run_cmd --as root "command -v docker" &> /dev/null; then
+                log_warn "Docker not found on remote host — sandbox mode '${SANDBOX_MODE}' requires Docker"
+                log_warn "Either install Docker or use --sandbox-mode=off"
+            fi
+        else
+            if ! command -v docker &> /dev/null; then
+                log_warn "Docker not found — sandbox mode '${SANDBOX_MODE}' requires Docker"
+                log_warn "Either install Docker or use --sandbox-mode=off"
+            fi
+        fi
+    fi
+
     # Mode-specific checks
     if [ "${EXEC_MODE:-local}" = "remote" ]; then
         log_info "Testing SSH connection to VPS..."

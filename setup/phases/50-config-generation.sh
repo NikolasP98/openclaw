@@ -100,6 +100,21 @@ generate_configuration() {
         return 1
     fi
 
+    # --- Generate auth-profiles.json for main agent ---
+    log_info "Generating agent auth profile..."
+    cat > "$temp_dir/auth-profiles.json" << AUTHEOF
+{
+  "version": 1,
+  "profiles": {
+    "anthropic:manual": {
+      "type": "token",
+      "provider": "anthropic",
+      "token": "${ANTHROPIC_API_KEY}"
+    }
+  }
+}
+AUTHEOF
+
     # --- Deploy files ---
     log_info "Deploying configuration files..."
 
@@ -128,6 +143,13 @@ generate_configuration() {
         run_cmd --as root "chmod 644 '${workspace_dir}/SOUL.md'"
         run_cmd --as root "chmod 644 '${systemd_dir}/openclaw-gateway.service'"
 
+        local agent_auth_dir="${config_dir}/agents/main/agent"
+        run_cmd --as root "mkdir -p '${agent_auth_dir}'"
+        copy_file "$temp_dir/auth-profiles.json" "$remote_tmp/auth-profiles.json" root
+        run_cmd --as root "cp '$remote_tmp/auth-profiles.json' '${agent_auth_dir}/auth-profiles.json'"
+        run_cmd --as root "chown -R ${exec_user}:${exec_user} '${config_dir}/agents'"
+        run_cmd --as root "chmod 600 '${agent_auth_dir}/auth-profiles.json'"
+
         run_cmd --as root "rm -rf '$remote_tmp'"
     else
         # Local: copy directly
@@ -138,6 +160,11 @@ generate_configuration() {
         chmod 600 "${config_dir}/openclaw.json"
         chmod 644 "${workspace_dir}/SOUL.md"
         chmod 644 "${systemd_dir}/openclaw-gateway.service"
+
+        local agent_auth_dir="${config_dir}/agents/main/agent"
+        mkdir -p "${agent_auth_dir}"
+        cp "$temp_dir/auth-profiles.json" "${agent_auth_dir}/auth-profiles.json"
+        chmod 600 "${agent_auth_dir}/auth-profiles.json"
     fi
 
     # Cleanup local temp

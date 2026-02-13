@@ -146,8 +146,16 @@ derive_system_variables() {
     ENABLE_WEB="${ENABLE_WEB:-true}"
 
     # Gateway defaults
-    GATEWAY_BIND="${GATEWAY_BIND:-lan}"
-    AGENT_MODEL="${AGENT_MODEL:-openrouter/openai/gpt-4o}"
+    GATEWAY_BIND="${GATEWAY_BIND:-loopback}"
+    if [ -z "${AGENT_MODEL:-}" ]; then
+        if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+            AGENT_MODEL="anthropic/claude-sonnet-4-5"
+        elif [ -n "${OPENROUTER_API_KEY:-}" ]; then
+            AGENT_MODEL="openrouter/openai/gpt-4o"
+        else
+            AGENT_MODEL="anthropic/claude-sonnet-4-5"
+        fi
+    fi
 
     # Security defaults
     SANDBOX_MODE="${SANDBOX_MODE:-non-main}"

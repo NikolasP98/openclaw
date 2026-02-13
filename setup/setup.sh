@@ -47,6 +47,7 @@ SKIP_PHASES=()
 START_FROM_PHASE=""
 PROFILE=""
 UPDATE_MODE=false
+DECOMMISSION_MODE=false
 
 # Display usage information
 usage() {
@@ -64,6 +65,7 @@ Source Install:
     --repo=REPO             GitHub repo (default: NikolasP98/openclaw)
     --branch=BRANCH         Git branch to checkout (default: main)
     --update                Pull latest source and rebuild (for existing installs)
+    --decommission          Stop services, free disk space, preserve config (non-destructive)
 
 Configuration:
     --profile=PROFILE       Load configuration from profile file
@@ -71,6 +73,9 @@ Configuration:
     --api-key=KEY           Anthropic API key (required)
     --tailscale-key=KEY     Tailscale auth key
     --github-pat=TOKEN      GitHub Personal Access Token
+    --gateway-port=PORT     Gateway listen port (default: 18789)
+    --gateway-bind=MODE     Bind mode: loopback, lan, tailnet (default: loopback)
+    --gateway-token=TOKEN   Gateway auth token (auto-generated if omitted)
 
 Agent:
     --agent-name=NAME       Agent name
@@ -110,6 +115,9 @@ Examples:
     # Update existing install
     ./setup/setup.sh --update --verbose
 
+    # Decommission (stop services, free disk, preserve config)
+    ./setup/setup.sh --decommission --vps-hostname=server.example.com --agent-name=mybot
+
     # Dry run
     ./setup/setup.sh --dry-run --api-key=sk-ant-test --verbose
 
@@ -138,6 +146,9 @@ parse_args() {
                 ;;
             --update)
                 UPDATE_MODE=true
+                ;;
+            --decommission)
+                DECOMMISSION_MODE=true
                 ;;
             --profile=*)
                 PROFILE="${1#*=}"
@@ -186,6 +197,15 @@ parse_args() {
                 ;;
             --discord-token=*)
                 DISCORD_BOT_TOKEN="${1#*=}"
+                ;;
+            --gateway-port=*)
+                GATEWAY_PORT="${1#*=}"
+                ;;
+            --gateway-bind=*)
+                GATEWAY_BIND="${1#*=}"
+                ;;
+            --gateway-token=*)
+                GATEWAY_AUTH_TOKEN="${1#*=}"
                 ;;
             --node-method=*)
                 NODE_INSTALL_METHOD="${1#*=}"
@@ -304,8 +324,8 @@ export_variables() {
     export AGENT_NAME AGENT_PERSONALITY SANDBOX_MODE DM_POLICY
     export ENABLE_WHATSAPP ENABLE_TELEGRAM ENABLE_DISCORD ENABLE_WEB
     export WHATSAPP_PHONE TELEGRAM_BOT_TOKEN DISCORD_BOT_TOKEN
-    export NODE_INSTALL_METHOD FORCE_REINSTALL UPDATE_MODE
-    export GATEWAY_PORT AGENT_USERNAME GATEWAY_AUTH_TOKEN
+    export NODE_INSTALL_METHOD FORCE_REINSTALL UPDATE_MODE DECOMMISSION_MODE
+    export GATEWAY_PORT GATEWAY_BIND AGENT_MODEL AGENT_USERNAME GATEWAY_AUTH_TOKEN
     export AGENT_HOME_DIR OPENCLAW_CONFIG_DIR WORKSPACE_DIR
     export OPENCLAW_ROOT OPENCLAW_WRAPPER NODE_BIN_PATH
     export GITHUB_REPO GITHUB_BRANCH EXEC_MODE
@@ -350,6 +370,14 @@ BANNER
     export_variables
 
     log_info "Execution mode: $EXEC_MODE"
+
+    # Decommission mode: run only phase 95 and exit
+    if [ "$DECOMMISSION_MODE" = true ]; then
+        log_warn "DECOMMISSION MODE - Stopping services and freeing disk space"
+        execute_phase "${SCRIPT_DIR}/phases/95-decommission.sh"
+        log_success "Decommission completed"
+        return 0
+    fi
 
     if [ "$DRY_RUN" = true ]; then
         log_warn "DRY RUN MODE - No changes will be made"

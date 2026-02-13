@@ -671,13 +671,16 @@ setup/
 
 ### Configuration
 
-| Flag                  | Type        | Default | Description                           |
-| --------------------- | ----------- | ------- | ------------------------------------- |
-| `--profile=PROFILE`   | string/path | —       | Built-in name or path to profile YAML |
-| `--vps-hostname=HOST` | string      | —       | VPS hostname/IP (implies remote mode) |
-| `--api-key=KEY`       | string      | —       | Anthropic API key (**required**)      |
-| `--tailscale-key=KEY` | string      | —       | Tailscale auth key                    |
-| `--github-pat=TOKEN`  | string      | —       | GitHub Personal Access Token          |
+| Flag                    | Type        | Default     | Description                                    |
+| ----------------------- | ----------- | ----------- | ---------------------------------------------- |
+| `--profile=PROFILE`     | string/path | —           | Built-in name or path to profile YAML          |
+| `--vps-hostname=HOST`   | string      | —           | VPS hostname/IP (implies remote mode)          |
+| `--api-key=KEY`         | string      | —           | Anthropic API key (**required**)               |
+| `--tailscale-key=KEY`   | string      | —           | Tailscale auth key                             |
+| `--github-pat=TOKEN`    | string      | —           | GitHub Personal Access Token                   |
+| `--gateway-port=PORT`   | number      | `18789`     | Gateway listen port                            |
+| `--gateway-bind=MODE`   | string      | `loopback`  | Bind mode: loopback, lan, tailnet              |
+| `--gateway-token=TOKEN` | string      | (generated) | Gateway auth token (auto-generated if omitted) |
 
 ### Agent
 
