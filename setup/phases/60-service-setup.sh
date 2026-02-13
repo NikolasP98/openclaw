@@ -79,9 +79,9 @@ setup_service() {
         fi
     fi
 
-    # Wait for service to stabilize
+    # Wait for service to stabilize (gateway builds TypeScript on first start)
     log_info "Waiting for service to stabilize..."
-    sleep 5
+    sleep 15
 
     # Check service status
     log_info "Checking service status..."

@@ -39,72 +39,84 @@ setup_environment() {
     NODE_INSTALL_METHOD="${NODE_INSTALL_METHOD:-apt}"
 
     # --- Node.js ---
-    log_info "Installing Node.js via $NODE_INSTALL_METHOD..."
+    local node_ver
+    node_ver=$(run_cmd "node --version" 2>/dev/null || echo "")
 
-    case "$NODE_INSTALL_METHOD" in
-        "apt")
-            log_info "Adding NodeSource repository for Node.js 22..."
-            run_cmd --as root "curl -fsSL https://deb.nodesource.com/setup_22.x | bash -"
-            run_cmd --as root "apt-get install -y nodejs"
-            ;;
-        "nvm")
-            log_info "Installing via NVM..."
-            if [ "${EXEC_MODE:-local}" = "remote" ]; then
-                run_cmd --as "$AGENT_USERNAME" "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash"
-                run_cmd --as "$AGENT_USERNAME" "source ~/.nvm/nvm.sh && nvm install 22 && nvm use 22"
-            else
-                curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
-                export NVM_DIR="$HOME/.nvm"
-                # shellcheck disable=SC1091
-                [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
-                nvm install 22 && nvm use 22
-            fi
-            ;;
-        "skip")
-            log_warn "Skipping Node.js installation (assuming already installed)"
-            ;;
-        *)
-            log_error "Unknown Node.js install method: $NODE_INSTALL_METHOD"
-            handle_error 1 "Invalid NODE_INSTALL_METHOD" "Environment Setup"
+    if [[ "$node_ver" == v22.* ]]; then
+        log_info "Node.js $node_ver already installed, skipping"
+    else
+        log_info "Installing Node.js via $NODE_INSTALL_METHOD..."
+
+        case "$NODE_INSTALL_METHOD" in
+            "apt")
+                log_info "Adding NodeSource repository for Node.js 22..."
+                run_cmd --as root "curl -fsSL https://deb.nodesource.com/setup_22.x | bash -"
+                run_cmd --as root "apt-get install -y nodejs"
+                ;;
+            "nvm")
+                log_info "Installing via NVM..."
+                if [ "${EXEC_MODE:-local}" = "remote" ]; then
+                    run_cmd --as "$AGENT_USERNAME" "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash"
+                    run_cmd --as "$AGENT_USERNAME" "source ~/.nvm/nvm.sh && nvm install 22 && nvm use 22"
+                else
+                    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
+                    export NVM_DIR="$HOME/.nvm"
+                    # shellcheck disable=SC1091
+                    [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
+                    nvm install 22 && nvm use 22
+                fi
+                ;;
+            "skip")
+                log_warn "Skipping Node.js installation (assuming already installed)"
+                ;;
+            *)
+                log_error "Unknown Node.js install method: $NODE_INSTALL_METHOD"
+                handle_error 1 "Invalid NODE_INSTALL_METHOD" "Environment Setup"
+                return 1
+                ;;
+        esac
+
+        node_ver=$(run_cmd "node --version" 2>/dev/null || echo "not found")
+        if [ "$node_ver" = "not found" ]; then
+            handle_error 1 "Node.js not available after installation" "Environment Setup"
             return 1
-            ;;
-    esac
-
-    log_info "Verifying Node.js installation..."
-    local node_version
-    node_version=$(run_cmd "node --version" 2>/dev/null || echo "not found")
-    if [ "$node_version" = "not found" ]; then
-        handle_error 1 "Node.js not available after installation" "Environment Setup"
-        return 1
+        fi
     fi
-    log_success "Node.js version: $node_version"
+    log_success "Node.js version: $node_ver"
 
     # Update NODE_BIN_PATH
     NODE_BIN_PATH=$(run_cmd "which node")
     export NODE_BIN_PATH
 
     # --- pnpm via corepack ---
-    log_info "Setting up pnpm via corepack..."
-    if run_cmd "command -v corepack" &> /dev/null; then
-        run_cmd --as root "corepack enable" || run_cmd "corepack enable" || true
-        run_cmd "corepack prepare pnpm@10.23.0 --activate" 2>/dev/null || \
-            log_warn "corepack prepare failed, trying npm fallback"
-    fi
+    local pnpm_ver
+    pnpm_ver=$(run_cmd "pnpm --version" 2>/dev/null || echo "")
 
-    # Verify pnpm or install fallback
-    if ! run_cmd "command -v pnpm" &> /dev/null; then
-        log_warn "pnpm not available via corepack, installing via npm..."
-        run_cmd --as root "npm install -g pnpm@10.23.0" || run_cmd "npm install -g pnpm@10.23.0"
-    fi
+    if [ -n "$pnpm_ver" ]; then
+        log_info "pnpm $pnpm_ver already installed, skipping"
+    else
+        log_info "Setting up pnpm via corepack..."
+        if run_cmd "command -v corepack" &> /dev/null; then
+            run_cmd --as root "corepack enable" || run_cmd "corepack enable" || true
+            run_cmd "corepack prepare pnpm@10.23.0 --activate" 2>/dev/null || \
+                log_warn "corepack prepare failed, trying npm fallback"
+        fi
 
-    local pnpm_version
-    pnpm_version=$(run_cmd "pnpm --version" 2>/dev/null || echo "not found")
-    log_success "pnpm version: $pnpm_version"
+        # Verify pnpm or install fallback
+        if ! run_cmd "command -v pnpm" &> /dev/null; then
+            log_warn "pnpm not available via corepack, installing via npm..."
+            run_cmd --as root "npm install -g pnpm@10.23.0" || run_cmd "npm install -g pnpm@10.23.0"
+        fi
+
+        pnpm_ver=$(run_cmd "pnpm --version" 2>/dev/null || echo "not found")
+    fi
+    log_success "pnpm version: $pnpm_ver"
 
     # --- gh CLI ---
-    log_info "Checking gh CLI..."
     if run_cmd "command -v gh" &> /dev/null; then
-        log_info "gh CLI already installed"
+        local gh_ver
+        gh_ver=$(run_cmd "gh --version" 2>/dev/null | head -1 || echo "")
+        log_info "gh CLI already installed ($gh_ver), skipping"
     else
         log_info "Installing gh CLI..."
         run_cmd --as root "type -p curl >/dev/null || apt-get install curl -y"
@@ -126,9 +138,13 @@ setup_environment() {
     fi
 
     # --- Build tools ---
-    log_info "Ensuring build tools are available..."
-    run_cmd --as root "apt-get install -y build-essential git curl" 2>/dev/null || \
-        log_warn "Could not install build tools via apt (may not have root access or not Debian-based)"
+    if run_cmd "dpkg -s build-essential" &> /dev/null; then
+        log_info "build-essential already installed, skipping"
+    else
+        log_info "Installing build tools..."
+        run_cmd --as root "apt-get install -y build-essential git curl" 2>/dev/null || \
+            log_warn "Could not install build tools via apt (may not have root access or not Debian-based)"
+    fi
 
     phase_end "Environment Setup" "success"
     save_checkpoint "30-environment-setup"

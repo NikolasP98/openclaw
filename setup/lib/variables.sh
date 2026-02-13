@@ -42,6 +42,8 @@ INFERABLE_FROM_CONVERSATION=(
 # System-derived variables (automatically generated)
 SYSTEM_DERIVED=(
     "GATEWAY_PORT"
+    "GATEWAY_BIND"
+    "AGENT_MODEL"
     "AGENT_USERNAME"
     "GATEWAY_AUTH_TOKEN"
     "AGENT_HOME_DIR"

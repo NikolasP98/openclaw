@@ -69,30 +69,36 @@ verify_deployment() {
         log_warn "Configuration file has permissions: $config_perms (expected 600)"
     fi
 
-    # Test gateway connectivity
+    # Test gateway connectivity with retry loop
     log_info "Verifying gateway connectivity on port $gateway_port..."
-    local gateway_host="127.0.0.1"
 
-    if [ "${EXEC_MODE:-local}" = "remote" ]; then
-        # Test via SSH
+    local max_attempts=5
+    local attempt=1
+    local health_ok=false
+
+    while [ $attempt -le $max_attempts ]; do
+        log_info "Health check attempt $attempt/$max_attempts..."
         local health_response
-        health_response=$(run_cmd --as "$exec_user" "curl -s --max-time 10 http://127.0.0.1:${gateway_port}/health" 2>/dev/null || echo "")
-        if [ -n "$health_response" ]; then
-            log_success "Gateway health endpoint responding"
-            log_debug "Response: $health_response"
+        if [ "${EXEC_MODE:-local}" = "remote" ]; then
+            health_response=$(run_cmd --as "$exec_user" "curl -s --max-time 5 http://127.0.0.1:${gateway_port}/health" 2>/dev/null || echo "")
         else
-            log_warn "Gateway health endpoint not responding yet (may need more time to start)"
+            health_response=$(curl -s --max-time 5 "http://127.0.0.1:${gateway_port}/health" 2>/dev/null || echo "")
         fi
-    else
-        # Test locally
-        local health_response
-        health_response=$(curl -s --max-time 10 "http://127.0.0.1:${gateway_port}/health" 2>/dev/null || echo "")
         if [ -n "$health_response" ]; then
-            log_success "Gateway health endpoint responding"
+            log_success "Gateway responding on port $gateway_port"
             log_debug "Response: $health_response"
-        else
-            log_warn "Gateway health endpoint not responding yet (may need more time to start)"
+            health_ok=true
+            break
         fi
+        if [ $attempt -lt $max_attempts ]; then
+            log_debug "Not ready yet, waiting 5s..."
+            sleep 5
+        fi
+        attempt=$((attempt + 1))
+    done
+
+    if [ "$health_ok" != "true" ]; then
+        log_warn "Gateway not responding after $max_attempts attempts (may need more time)"
     fi
 
     # Check enabled channels
