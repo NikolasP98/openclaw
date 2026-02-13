@@ -33,10 +33,11 @@ render_template() {
     variables=$(echo "$content" | grep -oP '\{\{[A-Z_]+\}\}' | sort -u | sed 's/[{}]//g')
 
     for var in $variables; do
-        local value="${!var:-}"
-        if [ -z "$value" ]; then
+        # Distinguish between unset (warn+skip) and empty string (replace)
+        if [ -z "${!var+x}" ]; then
             log_warn "Variable $var not set, leaving placeholder"
         else
+            local value="${!var}"
             # Escape special characters for sed
             local escaped_value
             escaped_value=$(printf '%s\n' "$value" | sed 's/[[\.*^$/]/\\&/g')

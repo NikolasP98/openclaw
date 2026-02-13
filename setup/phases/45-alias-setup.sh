@@ -29,6 +29,9 @@ source "${SCRIPT_DIR}/../lib/variables.sh"
 source "${SCRIPT_DIR}/../lib/network.sh"
 source "${SCRIPT_DIR}/../lib/templates.sh"
 
+# Ensure derived variables are populated (idempotent)
+derive_system_variables
+
 setup_alias() {
     phase_start "Alias Setup" "45"
 

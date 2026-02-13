@@ -1,72 +1,94 @@
 {
+  "logging": {
+    "level": "info",
+    "redactSensitive": "tools"
+  },
+  "tools": {
+    "exec": {
+      "security": "full",
+      "ask": "off"
+    }
+  },
+  "commands": {
+    "native": "auto",
+    "nativeSkills": "auto"
+  },
+  "approvals": {
+    "exec": {
+      "enabled": false
+    }
+  },
+  "session": {
+    "scope": "per-sender",
+    "dmScope": "per-channel-peer",
+    "resetTriggers": ["/new", "/reset"],
+    "mainKey": "main"
+  },
   "gateway": {
     "mode": "local",
     "port": {{GATEWAY_PORT}},
-    "bind": "127.0.0.1",
+    "bind": "{{GATEWAY_BIND}}",
+    "controlUi": {
+      "enabled": true,
+      "allowInsecureAuth": true
+    },
     "auth": {
-      "token": "{{GATEWAY_AUTH_TOKEN}}"
+      "mode": "token",
+      "token": "{{GATEWAY_AUTH_TOKEN}}",
+      "allowTailscale": true
+    },
+    "tailscale": {
+      "mode": "off",
+      "resetOnExit": false
     }
+  },
+  "agents": {
+    "defaults": {
+      "workspace": "{{WORKSPACE_DIR}}",
+      "model": {
+        "primary": "{{AGENT_MODEL}}"
+      }
+    },
+    "list": [
+      {
+        "id": "{{AGENT_NAME}}",
+        "default": true,
+        "sandbox": {
+          "mode": "{{SANDBOX_MODE}}"
+        }
+      }
+    ]
+  },
+  "messages": {
+    "ackReactionScope": "group-mentions"
   },
   "channels": {
     "whatsapp": {
-      "enabled": {{ENABLE_WHATSAPP}},
-      "dmPolicy": "{{DM_POLICY}}",
-      "phone": "{{WHATSAPP_PHONE}}",
-      "credentialsPath": "{{OPENCLAW_CONFIG_DIR}}/credentials/whatsapp"
+      "dmPolicy": "{{DM_POLICY}}"
     },
     "telegram": {
-      "enabled": {{ENABLE_TELEGRAM}},
-      "dmPolicy": "{{DM_POLICY}}",
-      "botToken": "{{TELEGRAM_BOT_TOKEN}}",
-      "allowFrom": []
+      "dmPolicy": "{{DM_POLICY}}"
     },
     "discord": {
-      "enabled": {{ENABLE_DISCORD}},
-      "dmPolicy": "{{DM_POLICY}}",
-      "botToken": "{{DISCORD_BOT_TOKEN}}",
-      "allowFrom": []
-    },
-    "web": {
-      "enabled": {{ENABLE_WEB}},
-      "dashboardPort": {{GATEWAY_PORT}}
-    }
-  },
-  "agents": [
-    {
-      "name": "{{AGENT_NAME}}",
-      "workspace": "{{WORKSPACE_DIR}}",
-      "systemPrompt": "You are {{AGENT_NAME}}, {{AGENT_PERSONALITY}}",
-      "sandbox": {
-        "mode": "{{SANDBOX_MODE}}",
-        "allowedPaths": [
-          "{{WORKSPACE_DIR}}",
-          "/tmp/{{AGENT_USERNAME}}"
-        ]
-      },
-      "model": {
-        "provider": "anthropic",
-        "model": "claude-sonnet-4-5-20250929",
-        "apiKey": "{{ANTHROPIC_API_KEY}}"
-      },
-      "features": {
-        "memory": true,
-        "tools": true,
-        "fileOperations": true,
-        "browserControl": false
+      "dm": {
+        "policy": "{{DM_POLICY}}"
       }
     }
-  ],
-  "logging": {
-    "level": "info",
-    "file": "/tmp/openclaw/{{AGENT_USERNAME}}.log",
-    "maxSize": "10M",
-    "maxFiles": 7
   },
-  "security": {
-    "allowedHosts": ["127.0.0.1", "localhost"],
-    "rateLimiting": {
+  "hooks": {
+    "internal": {
       "enabled": true,
-      "maxRequestsPerMinute": 60
+      "entries": {
+        "boot-md": {
+          "enabled": true
+        },
+        "command-logger": {
+          "enabled": true
+        },
+        "session-memory": {
+          "enabled": true
+        }
+      }
     }
   }
 }

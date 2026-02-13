@@ -29,6 +29,9 @@ source "${SCRIPT_DIR}/../lib/logging.sh"
 source "${SCRIPT_DIR}/../lib/variables.sh"
 source "${SCRIPT_DIR}/../lib/network.sh"
 
+# Ensure derived variables are populated (idempotent)
+derive_system_variables
+
 create_agent_user() {
     phase_start "User Creation" "20"
 

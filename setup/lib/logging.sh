@@ -52,21 +52,23 @@ log() {
     echo "[$timestamp] [$level] $message" >> "$LOG_FILE"
 
     # Write to stdout based on level
+    # All log output goes to stderr to avoid polluting stdout (which may be
+    # captured in command substitutions like $(run_cmd ...))
     case "$level" in
         "DEBUG")
-            [ "$CURRENT_LOG_LEVEL" -le "$LOG_LEVEL_DEBUG" ] && echo -e "${CYAN}[DEBUG]${NC} $message"
+            [ "$CURRENT_LOG_LEVEL" -le "$LOG_LEVEL_DEBUG" ] && echo -e "${CYAN}[DEBUG]${NC} $message" >&2
             ;;
         "INFO")
-            [ "$CURRENT_LOG_LEVEL" -le "$LOG_LEVEL_INFO" ] && echo -e "${BLUE}[INFO]${NC} $message"
+            [ "$CURRENT_LOG_LEVEL" -le "$LOG_LEVEL_INFO" ] && echo -e "${BLUE}[INFO]${NC} $message" >&2
             ;;
         "WARN")
-            [ "$CURRENT_LOG_LEVEL" -le "$LOG_LEVEL_WARN" ] && echo -e "${YELLOW}[WARN]${NC} $message"
+            [ "$CURRENT_LOG_LEVEL" -le "$LOG_LEVEL_WARN" ] && echo -e "${YELLOW}[WARN]${NC} $message" >&2
             ;;
         "ERROR")
             [ "$CURRENT_LOG_LEVEL" -le "$LOG_LEVEL_ERROR" ] && echo -e "${RED}[ERROR]${NC} $message" >&2
             ;;
         "SUCCESS")
-            [ "$CURRENT_LOG_LEVEL" -le "$LOG_LEVEL_INFO" ] && echo -e "${GREEN}[SUCCESS]${NC} $message"
+            [ "$CURRENT_LOG_LEVEL" -le "$LOG_LEVEL_INFO" ] && echo -e "${GREEN}[SUCCESS]${NC} $message" >&2
             ;;
     esac
 }

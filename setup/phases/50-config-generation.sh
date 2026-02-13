@@ -30,6 +30,9 @@ source "${SCRIPT_DIR}/../lib/variables.sh"
 source "${SCRIPT_DIR}/../lib/templates.sh"
 source "${SCRIPT_DIR}/../lib/network.sh"
 
+# Ensure derived variables are populated (idempotent)
+derive_system_variables
+
 generate_configuration() {
     phase_start "Configuration Generation" "50"
 

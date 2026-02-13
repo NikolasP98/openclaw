@@ -27,6 +27,9 @@ source "${SCRIPT_DIR}/../lib/logging.sh"
 source "${SCRIPT_DIR}/../lib/variables.sh"
 source "${SCRIPT_DIR}/../lib/network.sh"
 
+# Ensure derived variables are populated (idempotent)
+derive_system_variables
+
 setup_service() {
     phase_start "Service Setup" "60"
 

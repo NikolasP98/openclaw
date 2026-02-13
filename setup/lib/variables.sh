@@ -145,6 +145,10 @@ derive_system_variables() {
     ENABLE_DISCORD="${ENABLE_DISCORD:-false}"
     ENABLE_WEB="${ENABLE_WEB:-true}"
 
+    # Gateway defaults
+    GATEWAY_BIND="${GATEWAY_BIND:-lan}"
+    AGENT_MODEL="${AGENT_MODEL:-openrouter/openai/gpt-4o}"
+
     # Security defaults
     SANDBOX_MODE="${SANDBOX_MODE:-non-main}"
     DM_POLICY="${DM_POLICY:-pairing}"
