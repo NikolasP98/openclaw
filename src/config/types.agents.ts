@@ -63,6 +63,19 @@ export type AgentConfig = {
     prune?: SandboxPruneSettings;
   };
   tools?: AgentToolsConfig;
+  /** Optional agent capabilities metadata for delegation and discovery. */
+  capabilities?: {
+    /** Role type of this agent (orchestrator delegates, specialist executes). */
+    role?: "orchestrator" | "specialist";
+    /** Human-readable description of what this agent does. */
+    description?: string;
+    /** Keywords that identify tasks suitable for this agent. */
+    keywords?: string[];
+    /** Types of tasks this agent handles. */
+    taskTypes?: string[];
+    /** Estimated time for typical tasks. */
+    estimatedTime?: string;
+  };
 };
 
 export type AgentsConfig = {

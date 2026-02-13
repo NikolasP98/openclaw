@@ -3,11 +3,15 @@ import type { GatewayMessageChannel } from "../utils/message-channel.js";
 import type { AnyAgentTool } from "./tools/common.js";
 import { resolvePluginTools } from "../plugins/tools.js";
 import { resolveSessionAgentId } from "./agent-scope.js";
+import { createAgentsCapabilitiesTool } from "./tools/agents-capabilities-tool.js";
 import { createAgentsListTool } from "./tools/agents-list-tool.js";
 import { createBrowserTool } from "./tools/browser-tool.js";
 import { createCanvasTool } from "./tools/canvas-tool.js";
 import { createCronTool } from "./tools/cron-tool.js";
 import { createGatewayTool } from "./tools/gateway-tool.js";
+import { createGogAuthRevokeTool } from "./tools/gog-auth-revoke-tool.js";
+import { createGogAuthStartTool } from "./tools/gog-auth-start-tool.js";
+import { createGogAuthStatusTool } from "./tools/gog-auth-status-tool.js";
 import { createImageTool } from "./tools/image-tool.js";
 import { createMessageTool } from "./tools/message-tool.js";
 import { createNodesTool } from "./tools/nodes-tool.js";
@@ -18,9 +22,6 @@ import { createSessionsSendTool } from "./tools/sessions-send-tool.js";
 import { createSessionsSpawnTool } from "./tools/sessions-spawn-tool.js";
 import { createTtsTool } from "./tools/tts-tool.js";
 import { createWebFetchTool, createWebSearchTool } from "./tools/web-tools.js";
-import { createGogAuthStartTool } from "./tools/gog-auth-start-tool.js";
-import { createGogAuthStatusTool } from "./tools/gog-auth-status-tool.js";
-import { createGogAuthRevokeTool } from "./tools/gog-auth-revoke-tool.js";
 
 export function createOpenClawTools(options?: {
   sandboxBrowserBridgeUrl?: string;
@@ -114,6 +115,10 @@ export function createOpenClawTools(options?: {
       config: options?.config,
     }),
     createAgentsListTool({
+      agentSessionKey: options?.agentSessionKey,
+      requesterAgentIdOverride: options?.requesterAgentIdOverride,
+    }),
+    createAgentsCapabilitiesTool({
       agentSessionKey: options?.agentSessionKey,
       requesterAgentIdOverride: options?.requesterAgentIdOverride,
     }),

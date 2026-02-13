@@ -17,6 +17,7 @@ import { nodeHandlers } from "./server-methods/nodes.js";
 import { sendHandlers } from "./server-methods/send.js";
 import { sessionsHandlers } from "./server-methods/sessions.js";
 import { skillsHandlers } from "./server-methods/skills.js";
+import { specialistsHandlers } from "./server-methods/specialists.js";
 import { systemHandlers } from "./server-methods/system.js";
 import { talkHandlers } from "./server-methods/talk.js";
 import { ttsHandlers } from "./server-methods/tts.js";
@@ -60,6 +61,7 @@ const READ_METHODS = new Set([
   "models.list",
   "agents.list",
   "agent.identity.get",
+  "specialists.status",
   "skills.status",
   "voicewake.get",
   "sessions.list",
@@ -187,6 +189,7 @@ export const coreGatewayHandlers: GatewayRequestHandlers = {
   ...usageHandlers,
   ...agentHandlers,
   ...agentsHandlers,
+  ...specialistsHandlers,
   ...browserHandlers,
 };
 

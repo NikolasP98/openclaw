@@ -471,6 +471,16 @@ export const AgentEntrySchema = z
       .optional(),
     sandbox: AgentSandboxSchema,
     tools: AgentToolsSchema,
+    capabilities: z
+      .object({
+        role: z.union([z.literal("orchestrator"), z.literal("specialist")]).optional(),
+        description: z.string().optional(),
+        keywords: z.array(z.string()).optional(),
+        taskTypes: z.array(z.string()).optional(),
+        estimatedTime: z.string().optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 

@@ -1,7 +1,9 @@
 import { loadConfig } from "../config/config.js";
 import { callGateway } from "../gateway/call.js";
 import { onAgentEvent } from "../infra/agent-events.js";
+import { parseAgentSessionKey } from "../routing/session-key.js";
 import { type DeliveryContext, normalizeDeliveryContext } from "../utils/delivery-context.js";
+import { trackSpecialistSpawn, trackSpecialistComplete } from "./specialist-tracker.js";
 import { runSubagentAnnounceFlow, type SubagentRunOutcome } from "./subagent-announce.js";
 import {
   loadSubagentRegistryFromDisk,
@@ -219,6 +221,14 @@ function ensureListener() {
     } else {
       entry.outcome = { status: "ok" };
     }
+
+    // Track specialist completion for metrics (lifecycle listener fallback)
+    const parsed = parseAgentSessionKey(entry.childSessionKey);
+    if (parsed?.agentId) {
+      const success = phase !== "error";
+      trackSpecialistComplete(evt.runId, success);
+    }
+
     persistSubagentRuns();
 
     if (!beginSubagentCleanup(evt.runId)) {
@@ -317,6 +327,13 @@ export function registerSubagentRun(params: {
   if (archiveAfterMs) {
     startSweeper();
   }
+
+  // Track specialist spawn for metrics
+  const parsed = parseAgentSessionKey(params.childSessionKey);
+  if (parsed?.agentId) {
+    trackSpecialistSpawn(params.runId, parsed.agentId);
+  }
+
   // Wait for subagent completion via gateway RPC (cross-process).
   // The in-process lifecycle listener is a fallback for embedded runs.
   void waitForSubagentCompletion(params.runId, waitTimeoutMs);
@@ -366,6 +383,14 @@ async function waitForSubagentCompletion(runId: string, waitTimeoutMs: number) {
           ? { status: "timeout" }
           : { status: "ok" };
     mutated = true;
+
+    // Track specialist completion for metrics
+    const parsed = parseAgentSessionKey(entry.childSessionKey);
+    if (parsed?.agentId) {
+      const success = wait.status === "ok";
+      trackSpecialistComplete(runId, success);
+    }
+
     if (mutated) {
       persistSubagentRuns();
     }
