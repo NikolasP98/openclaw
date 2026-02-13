@@ -129,6 +129,10 @@ export const GroupPolicySchema = z.enum(["open", "disabled", "allowlist"]);
 
 export const DmPolicySchema = z.enum(["pairing", "allowlist", "open", "disabled"]);
 
+// ResponseModeSchema: controls how a bot decides whether to respond in a group.
+// "mention" (default): only respond on @mention; "relevant": keyword-based relevance; "all": respond to everything.
+export const ResponseModeSchema = z.enum(["mention", "relevant", "all"]);
+
 export const BlockStreamingCoalesceSchema = z
   .object({
     minChars: z.number().int().positive().optional(),

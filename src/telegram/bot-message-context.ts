@@ -3,6 +3,7 @@ import type { MsgContext } from "../auto-reply/templating.js";
 import type { OpenClawConfig } from "../config/config.js";
 import type { DmPolicy, TelegramGroupConfig, TelegramTopicConfig } from "../config/types.js";
 import type { StickerMetadata, TelegramContext } from "./bot/types.js";
+import { resolveAgentConfig } from "../agents/agent-scope.js";
 import { resolveAckReaction } from "../agents/identity.js";
 import {
   findModelInCatalog,
@@ -25,6 +26,7 @@ import { resolveControlCommandGate } from "../channels/command-gating.js";
 import { formatLocationText, toLocationContext } from "../channels/location.js";
 import { logInboundDrop } from "../channels/logging.js";
 import { resolveMentionGatingWithBypass } from "../channels/mention-gating.js";
+import { resolveRelevanceGate } from "../channels/relevance-gate.js";
 import { recordInboundSession } from "../channels/session.js";
 import { loadConfig } from "../config/config.js";
 import { readSessionUpdatedAt, resolveStorePath } from "../config/sessions.js";
@@ -212,12 +214,19 @@ export const buildTelegramMessageContext = async ({
     agentId: route.agentId,
   });
   const baseRequireMention = resolveGroupRequireMention(chatId);
-  const requireMention = firstDefined(
-    activationOverride,
-    topicConfig?.requireMention,
-    groupConfig?.requireMention,
-    baseRequireMention,
-  );
+  // responseMode supersedes requireMention when set (topic → group → undefined)
+  const responseMode = topicConfig?.responseMode ?? groupConfig?.responseMode;
+  const requireMention =
+    responseMode === "all"
+      ? false
+      : responseMode === "mention"
+        ? true
+        : firstDefined(
+            activationOverride,
+            topicConfig?.requireMention,
+            groupConfig?.requireMention,
+            baseRequireMention,
+          );
 
   const sendTyping = async () => {
     await withTelegramApiErrorLogging({
@@ -471,21 +480,40 @@ export const buildTelegramMessageContext = async ({
   const effectiveWasMentioned = mentionGate.effectiveWasMentioned;
   if (isGroup && requireMention && canDetectMention) {
     if (mentionGate.shouldSkip) {
-      logger.info({ chatId, reason: "no-mention" }, "skipping group message");
-      recordPendingHistoryEntryIfEnabled({
-        historyMap: groupHistories,
-        historyKey: historyKey ?? "",
-        limit: historyLimit,
-        entry: historyKey
-          ? {
-              sender: buildSenderLabel(msg, senderId || chatId),
-              body: rawBody,
-              timestamp: msg.date ? msg.date * 1000 : undefined,
-              messageId: typeof msg.message_id === "number" ? String(msg.message_id) : undefined,
-            }
-          : null,
-      });
-      return null;
+      // In "relevant" mode, give the relevance gate a chance before skipping
+      const relevanceOverride =
+        responseMode === "relevant"
+          ? resolveRelevanceGate({
+              text: rawBody,
+              keywords: resolveAgentConfig(cfg, route.agentId)?.capabilities?.keywords ?? [],
+              isFromBot: msg.from?.is_bot === true,
+              wasMentioned: effectiveWasMentioned,
+            })
+          : undefined;
+
+      if (relevanceOverride?.shouldRespond) {
+        logger.info(
+          { chatId, reason: relevanceOverride.reason },
+          "group message relevant (overriding mention gate)",
+        );
+      } else {
+        const reason = relevanceOverride ? `relevance-${relevanceOverride.reason}` : "no-mention";
+        logger.info({ chatId, reason }, "skipping group message");
+        recordPendingHistoryEntryIfEnabled({
+          historyMap: groupHistories,
+          historyKey: historyKey ?? "",
+          limit: historyLimit,
+          entry: historyKey
+            ? {
+                sender: buildSenderLabel(msg, senderId || chatId),
+                body: rawBody,
+                timestamp: msg.date ? msg.date * 1000 : undefined,
+                messageId: typeof msg.message_id === "number" ? String(msg.message_id) : undefined,
+              }
+            : null,
+        });
+        return null;
+      }
     }
   }
 

@@ -7,6 +7,13 @@ export type DmScope = "main" | "per-peer" | "per-channel-peer" | "per-account-ch
 export type ReplyToMode = "off" | "first" | "all";
 export type GroupPolicy = "open" | "disabled" | "allowlist";
 export type DmPolicy = "pairing" | "allowlist" | "open" | "disabled";
+/**
+ * Controls how a bot decides whether to respond in a group:
+ * - "mention": only respond when explicitly @mentioned (default, same as requireMention: true)
+ * - "relevant": respond when message keywords match agent capabilities; skip bot messages unless @mentioned
+ * - "all": respond to all messages (same as requireMention: false)
+ */
+export type ResponseMode = "mention" | "relevant" | "all";
 
 export type OutboundRetryConfig = {
   /** Max retry attempts for outbound requests (default: 3). */

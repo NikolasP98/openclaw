@@ -17,6 +17,7 @@ import {
   MSTeamsReplyStyleSchema,
   ProviderCommandsSchema,
   ReplyToModeSchema,
+  ResponseModeSchema,
   RetryConfigSchema,
   requireOpenAllowFrom,
 } from "./zod-schema.core.js";
@@ -38,6 +39,7 @@ const TelegramCapabilitiesSchema = z.union([
 export const TelegramTopicSchema = z
   .object({
     requireMention: z.boolean().optional(),
+    responseMode: ResponseModeSchema.optional(),
     groupPolicy: GroupPolicySchema.optional(),
     skills: z.array(z.string()).optional(),
     enabled: z.boolean().optional(),
@@ -49,6 +51,7 @@ export const TelegramTopicSchema = z
 export const TelegramGroupSchema = z
   .object({
     requireMention: z.boolean().optional(),
+    responseMode: ResponseModeSchema.optional(),
     groupPolicy: GroupPolicySchema.optional(),
     tools: ToolPolicySchema,
     toolsBySender: ToolPolicyBySenderSchema,
