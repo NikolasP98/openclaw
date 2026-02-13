@@ -18,7 +18,7 @@
       "host": "bernibites",
       "user": "deploy",
       "port": 22,
-      "deployment_path": "/home/deploy/openclaw-prd-bernibites",
+      "deployment_path": "/home/deploy/openclaw",
       "platform": "linux/amd64",
       "gateway_port": 18789,
       "bridge_port": 18790,
