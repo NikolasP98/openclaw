@@ -22,6 +22,7 @@
 This fork maintains separate `docker-compose.yml` files per branch (main, DEV, PRD) with environment-specific defaults. When updating the Docker configuration, sync changes across all branches:
 
 **Sync Checklist:**
+
 1. Make changes on the main branch (or current branch)
 2. Commit the changes: `git add docker-compose.yml && git commit -m "Docker: <description>"`
 3. Switch to DEV branch: `git switch DEV`
@@ -39,11 +40,13 @@ This fork maintains separate `docker-compose.yml` files per branch (main, DEV, P
     ```
 
 **Environment-Specific Defaults (keep these per branch):**
+
 - **main**: `image: ghcr.io/nikolasp98/openclaw:main` (no container_name)
 - **DEV**: `image: ghcr.io/nikolasp98/openclaw:dev`, `container_name: openclaw_DEV_gw/cli`
 - **PRD**: `image: ghcr.io/nikolasp98/openclaw:prd`, `container_name: openclaw_PRD_gw/cli`
 
 **Common Configuration (should be identical across branches):**
+
 - Volume mounts
 - Port mappings
 - Environment variables
@@ -55,6 +58,7 @@ This fork maintains separate `docker-compose.yml` files per branch (main, DEV, P
 When pushing to `DEV` or `PRD` branches, cancel any in-progress or queued workflow runs for that branch before pushing. Multiple rapid pushes (e.g., 6 pushes in a 6-minute window) would otherwise queue 6 Docker image builds when only the latest matters.
 
 **Cancel workflow runs before pushing:**
+
 ```bash
 # Cancel in-progress and queued runs for DEV branch
 gh run list --branch DEV --status in_progress --status queued --json databaseId -q '.[].databaseId' | xargs -I {} gh run cancel {}
@@ -64,6 +68,7 @@ gh run list --branch PRD --status in_progress --status queued --json databaseId 
 ```
 
 Or as a one-liner before push:
+
 ```bash
 gh run list --branch DEV --status in_progress --status queued --json databaseId -q '.[].databaseId' | xargs -I {} gh run cancel {} 2>/dev/null; git push origin DEV
 ```
@@ -181,6 +186,7 @@ gh run list --branch DEV --status in_progress --status queued --json databaseId 
 
 - Vocabulary: "makeup" = "mac app".
 - Never edit `node_modules` (global/Homebrew/npm/git installs too). Updates overwrite. Skill notes go in `tools.md` or `AGENTS.md`.
+- Setup framework improvements: tracked in `setup/IMPROVEMENTS.md` — agents can propose and check off enhancements.
 - When adding a new `AGENTS.md` anywhere in the repo, also add a `CLAUDE.md` symlink pointing to it (example: `ln -s AGENTS.md CLAUDE.md`).
 - Signal: "update fly" => `fly ssh console -a flawd-bot -C "bash -lc 'cd /data/clawd/openclaw && git pull --rebase origin main'"` then `fly machines restart e825232f34d058 -a flawd-bot`.
 - When working on a GitHub Issue or PR, print the full URL at the end of the task.
