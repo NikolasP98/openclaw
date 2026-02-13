@@ -136,6 +136,7 @@ Before starting the sync workflow:
 
 - [ ] Working directory is clean (`git status`)
 - [ ] No uncommitted changes that could conflict
+- [ ] WIP changes stashed or committed (`git stash` if needed) — avoids partial-staging complexity during sync
 - [ ] Upstream remote is configured (`git remote -v | grep upstream`)
 - [ ] Latest upstream fetched (`git fetch upstream`)
 - [ ] Main is clean mirror (no divergence from upstream)
@@ -190,10 +191,15 @@ If conflicts occur when merging main into DEV:
    - Workflow files (if upstream changed .github/workflows/\*)
    - Core files modified by both upstream and custom work
 
-3. **Resolve manually**:
-   - Keep custom Docker configurations from DEV
-   - Integrate upstream improvements
-   - Test after resolving
+3. **Evaluate upstream vs fork for each conflict**:
+
+   Do NOT default to keeping fork changes. For each conflicted hunk, ask:
+   - **Is the upstream change an architectural improvement?** (e.g. new type field, refactored API, better pattern) — If yes, adopt upstream and adapt fork changes to fit the new structure.
+   - **Does upstream solve the same problem differently?** — Compare both approaches. The upstream solution may be more robust, better tested, or aligned with the project's direction.
+   - **Is the fork change purely additive?** (e.g. new config field, new import) — If yes, keep both: accept upstream's changes AND add the fork-specific additions.
+   - **Are they independent changes to the same region?** — Keep both, adjusting whitespace/ordering as needed.
+
+   **Rule of thumb**: Upstream is the source of truth for architecture. Fork changes should layer on top of upstream, not override it. When in doubt, adopt upstream and re-apply fork additions.
 
 4. **Complete merge**:
    ```bash
@@ -285,9 +291,10 @@ git log --oneline --graph --all --decorate -10
 2. **All custom work on DEV**: Commit custom changes to DEV or feature branches
 3. **Sync regularly**: Weekly or bi-weekly to avoid large merge conflicts
 4. **Clean working directory**: Always start with `git status` showing clean
-5. **Review upstream changes**: Use `git log main..upstream/main` before merging
-6. **Test after sync**: Verify Docker images build successfully
-7. **DEV before PRD**: Always test in DEV before updating PRD
+5. **Stash before sync**: Commit or stash all WIP before starting — avoids partial-staging headaches and stash/pop friction during branch switches
+6. **Review upstream changes**: Use `git log main..upstream/main` before merging
+7. **Test after sync**: Verify Docker images build successfully
+8. **DEV before PRD**: Always test in DEV before updating PRD
 
 ## Troubleshooting
 
@@ -362,6 +369,6 @@ Invoke this skill when:
 
 ---
 
-**Skill Version**: 2.0.0
-**Last Updated**: 2026-02-02
+**Skill Version**: 2.1.0
+**Last Updated**: 2026-02-13
 **Maintained By**: Nikolas P. (NikolasP98)

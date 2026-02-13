@@ -93,3 +93,4 @@ after deployments"), record it in the auto memory for future reference.
 - **Quantify** — "Batched 20 SSH calls into 5" is better than "reduced SSH calls"
 - **Don't over-scope** — Fix what was observed, don't redesign the whole system
 - **Separate concerns** — Keep improvement commits separate from the primary task commit
+- **Design for opt-in** — Gateway features that are off by default should include an env var toggle (`OPENCLAW_*`) from the start, using `isTruthyEnvValue` + `logAcceptedEnvOption` from `src/infra/env.ts`
