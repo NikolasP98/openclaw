@@ -75,11 +75,30 @@ export OPENCLAW_GOG_CONFIG_DIR="$HOME/.config/gogcli"
 ```
 
 Authenticate GOG on the host before starting containers:
+
 ```bash
 gog auth login
 ```
 
 The credentials at `~/.config/gogcli/credentials.json` will be accessible to the container.
+
+### Shell Helpers (optional)
+
+For easier day-to-day Docker management, install `ClawDock`:
+
+```bash
+mkdir -p ~/.clawdock && curl -sL https://raw.githubusercontent.com/openclaw/openclaw/main/scripts/shell-helpers/clawdock-helpers.sh -o ~/.clawdock/clawdock-helpers.sh
+```
+
+**Add to your shell config (zsh):**
+
+```bash
+echo 'source ~/.clawdock/clawdock-helpers.sh' >> ~/.zshrc && source ~/.zshrc
+```
+
+Then use `clawdock-start`, `clawdock-stop`, `clawdock-dashboard`, etc. Run `clawdock-help` for all commands.
+
+See [`ClawDock` Helper README](https://github.com/openclaw/openclaw/blob/main/scripts/shell-helpers/README.md) for details.
 
 ### Manual flow (compose)
 
@@ -227,6 +246,7 @@ If you need Playwright to install system deps, rebuild the image with
 The image automatically fixes ownership of mounted directories when the container starts. The entrypoint runs as root, sets ownership to uid 1000 (node user), then drops privileges before running the application.
 
 **How it works:**
+
 - Entrypoint checks `/home/node/.openclaw`, `/home/node/.config/gogcli`, and workspace directories
 - If owned by root or another user, automatically runs `chown -R 1000:1000`
 - Drops to `node` user before starting the app
@@ -237,12 +257,14 @@ The image automatically fixes ownership of mounted directories when the containe
 **Manual verification** (if needed):
 
 Check ownership inside container:
+
 ```bash
 docker compose exec openclaw-gateway stat -c '%U:%G' /home/node/.openclaw /home/node/.config/gogcli
 # Should show: node:node
 ```
 
 Verify app runs as node user:
+
 ```bash
 docker compose exec openclaw-gateway whoami
 # Should output: node
