@@ -35,6 +35,7 @@ import {
   readChannelAllowFromStore,
   upsertChannelPairingRequest,
 } from "../../pairing/pairing-store.js";
+import { getGlobalHookRunner } from "../../plugins/hook-runner-global.js";
 import { resolveAgentRoute } from "../../routing/resolve-route.js";
 import { normalizeE164 } from "../../utils.js";
 import {
@@ -290,6 +291,29 @@ export function createSignalEventHandler(deps: SignalEventHandlerDeps) {
       if (!last) {
         return;
       }
+
+      // Fire message_inbound hook for each raw entry before any filtering
+      const hookRunner = getGlobalHookRunner();
+      if (hookRunner?.hasHooks("message_inbound")) {
+        for (const entry of entries) {
+          void hookRunner.runMessageInbound(
+            {
+              channel: "signal",
+              accountId: deps.accountId,
+              chatId: entry.isGroup ? (entry.groupId ?? "unknown") : entry.senderPeerId,
+              senderId: entry.senderPeerId,
+              senderName: entry.senderName,
+              isBot: false,
+              isGroup: entry.isGroup,
+              content: entry.bodyText,
+              messageId: entry.messageId,
+              timestamp: entry.timestamp,
+            },
+            { channelId: "signal", accountId: deps.accountId },
+          );
+        }
+      }
+
       if (entries.length === 1) {
         await handleSignalInboundMessage(last);
         return;

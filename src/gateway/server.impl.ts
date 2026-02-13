@@ -26,11 +26,12 @@ import {
   resolveControlUiRootSync,
 } from "../infra/control-ui-assets.js";
 import { isDiagnosticsEnabled } from "../infra/diagnostic-events.js";
-import { logAcceptedEnvOption } from "../infra/env.js";
+import { isTruthyEnvValue, logAcceptedEnvOption } from "../infra/env.js";
 import { createExecApprovalForwarder } from "../infra/exec-approval-forwarder.js";
 import { onHeartbeatEvent } from "../infra/heartbeat-events.js";
 import { startHeartbeatRunner } from "../infra/heartbeat-runner.js";
 import { getMachineDisplayName } from "../infra/machine-name.js";
+import { registerMessageLedgerHooks } from "../infra/message-ledger-hooks.js";
 import { ensureOpenClawCliOnPath } from "../infra/path-env.js";
 import { setGatewaySigusr1RestartPolicy } from "../infra/restart.js";
 import {
@@ -235,6 +236,29 @@ export async function startGatewayServer(
     coreGatewayHandlers,
     baseMethods,
   });
+
+  // Wire message ledger hooks if enabled (config or env var)
+  {
+    const envEnabled = isTruthyEnvValue(process.env.OPENCLAW_MESSAGE_LEDGER);
+    const cfgEnabled = cfgAtStart.gateway?.messageLedger?.enabled === true;
+    if (envEnabled || cfgEnabled) {
+      const ledgerPath =
+        process.env.OPENCLAW_MESSAGE_LEDGER_PATH?.trim() ||
+        cfgAtStart.gateway?.messageLedger?.dbPath ||
+        path.join(defaultWorkspaceDir, "message-ledger.db");
+      registerMessageLedgerHooks(pluginRegistry, ledgerPath);
+      log.info(`message ledger enabled: ${ledgerPath}`);
+    }
+    logAcceptedEnvOption({
+      key: "OPENCLAW_MESSAGE_LEDGER",
+      description: "message ledger (SQLite inbound/outbound logging)",
+    });
+    logAcceptedEnvOption({
+      key: "OPENCLAW_MESSAGE_LEDGER_PATH",
+      description: "message ledger database path override",
+    });
+  }
+
   const channelLogs = Object.fromEntries(
     listChannelPlugins().map((plugin) => [plugin.id, logChannels.child(plugin.id)]),
   ) as Record<ChannelId, ReturnType<typeof createSubsystemLogger>>;

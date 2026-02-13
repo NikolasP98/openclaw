@@ -20,6 +20,7 @@ import type {
   PluginHookGatewayStartEvent,
   PluginHookGatewayStopEvent,
   PluginHookMessageContext,
+  PluginHookMessageInboundEvent,
   PluginHookMessageReceivedEvent,
   PluginHookMessageSendingEvent,
   PluginHookMessageSendingResult,
@@ -44,6 +45,7 @@ export type {
   PluginHookBeforeCompactionEvent,
   PluginHookAfterCompactionEvent,
   PluginHookMessageContext,
+  PluginHookMessageInboundEvent,
   PluginHookMessageReceivedEvent,
   PluginHookMessageSendingEvent,
   PluginHookMessageSendingResult,
@@ -233,6 +235,18 @@ export function createHookRunner(registry: PluginRegistry, options: HookRunnerOp
   // =========================================================================
   // Message Hooks
   // =========================================================================
+
+  /**
+   * Run message_inbound hook.
+   * Fires before any filtering/gating — captures every raw inbound message.
+   * Runs in parallel (fire-and-forget).
+   */
+  async function runMessageInbound(
+    event: PluginHookMessageInboundEvent,
+    ctx: PluginHookMessageContext,
+  ): Promise<void> {
+    return runVoidHook("message_inbound", event, ctx);
+  }
 
   /**
    * Run message_received hook.
@@ -448,6 +462,7 @@ export function createHookRunner(registry: PluginRegistry, options: HookRunnerOp
     runBeforeCompaction,
     runAfterCompaction,
     // Message hooks
+    runMessageInbound,
     runMessageReceived,
     runMessageSending,
     runMessageSent,

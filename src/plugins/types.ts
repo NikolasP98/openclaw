@@ -300,6 +300,7 @@ export type PluginHookName =
   | "agent_end"
   | "before_compaction"
   | "after_compaction"
+  | "message_inbound"
   | "message_received"
   | "message_sending"
   | "message_sent"
@@ -355,6 +356,43 @@ export type PluginHookMessageContext = {
   channelId: string;
   accountId?: string;
   conversationId?: string;
+};
+
+/**
+ * message_inbound hook event.
+ *
+ * Fires at the debouncer flush level in each channel handler, BEFORE any
+ * filtering (mention gating, allowFrom, group policy, DM policy). This
+ * captures every raw inbound message including those that never reach an agent.
+ *
+ * Used by the message ledger (gateway.messageLedger) and available to plugins
+ * via `api.on("message_inbound", handler)`.
+ */
+export type PluginHookMessageInboundEvent = {
+  /** Channel identifier: "telegram", "discord", "signal", "slack", etc. */
+  channel: string;
+  /** Account ID for multi-account channels. */
+  accountId: string;
+  /** Chat/conversation ID (channel-specific format). */
+  chatId: string;
+  /** Sender's channel-specific ID. */
+  senderId?: string;
+  /** Sender's display name. */
+  senderName?: string;
+  /** Sender's username (e.g. Telegram @username). */
+  senderUsername?: string;
+  /** Whether the sender is a bot. */
+  isBot?: boolean;
+  /** Whether this message is from a group conversation. */
+  isGroup: boolean;
+  /** Raw text content (text or caption). */
+  content: string;
+  /** Channel-specific message ID. */
+  messageId?: string;
+  /** Message timestamp in milliseconds since epoch. */
+  timestamp?: number;
+  /** Channel-specific extras. */
+  metadata?: Record<string, unknown>;
 };
 
 // message_received hook
@@ -485,6 +523,10 @@ export type PluginHookHandlerMap = {
   after_compaction: (
     event: PluginHookAfterCompactionEvent,
     ctx: PluginHookAgentContext,
+  ) => Promise<void> | void;
+  message_inbound: (
+    event: PluginHookMessageInboundEvent,
+    ctx: PluginHookMessageContext,
   ) => Promise<void> | void;
   message_received: (
     event: PluginHookMessageReceivedEvent,

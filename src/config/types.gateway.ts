@@ -260,4 +260,15 @@ export type GatewayConfig = {
    * `x-real-ip`) to determine the client IP for local pairing and HTTP checks.
    */
   trustedProxies?: string[];
+  /**
+   * SQLite log of all inbound/outbound messages for learning and analysis.
+   * Opt-in: disabled by default. Enable via config or OPENCLAW_MESSAGE_LEDGER=1 env var.
+   * Database path can be overridden with OPENCLAW_MESSAGE_LEDGER_PATH env var.
+   */
+  messageLedger?: {
+    /** Enable message ledger. Also toggleable via OPENCLAW_MESSAGE_LEDGER=1 env var. */
+    enabled?: boolean;
+    /** Path to SQLite database file. Default: {workspaceDir}/message-ledger.db */
+    dbPath?: string;
+  };
 };

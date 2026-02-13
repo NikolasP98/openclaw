@@ -6,6 +6,7 @@ import {
   createInboundDebouncer,
   resolveInboundDebounceMs,
 } from "../../auto-reply/inbound-debounce.js";
+import { getGlobalHookRunner } from "../../plugins/hook-runner-global.js";
 import { stripSlackMentionsForCommandDetection } from "./commands.js";
 import { dispatchPreparedSlackMessage } from "./message-handler/dispatch.js";
 import { prepareSlackMessage } from "./message-handler/prepare.js";
@@ -59,6 +60,31 @@ export function createSlackMessageHandler(params: {
       if (!last) {
         return;
       }
+
+      // Fire message_inbound hook for each raw entry before any filtering
+      const hookRunner = getGlobalHookRunner();
+      if (hookRunner?.hasHooks("message_inbound")) {
+        for (const entry of entries) {
+          const msg = entry.message;
+          void hookRunner.runMessageInbound(
+            {
+              channel: "slack",
+              accountId: ctx.accountId,
+              chatId: msg.channel,
+              senderId: msg.user ?? msg.bot_id,
+              senderName: msg.username,
+              senderUsername: msg.username,
+              isBot: msg.bot_id != null,
+              isGroup: msg.channel_type === "group" || msg.channel_type === "channel",
+              content: msg.text ?? "",
+              messageId: msg.ts,
+              timestamp: msg.ts ? Math.floor(Number(msg.ts) * 1000) : undefined,
+            },
+            { channelId: "slack", accountId: ctx.accountId },
+          );
+        }
+      }
+
       const combinedText =
         entries.length === 1
           ? (last.message.text ?? "")

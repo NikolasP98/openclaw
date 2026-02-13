@@ -10,6 +10,7 @@ import {
   resolveInboundDebounceMs,
 } from "../../auto-reply/inbound-debounce.js";
 import { danger } from "../../globals.js";
+import { getGlobalHookRunner } from "../../plugins/hook-runner-global.js";
 import { preflightDiscordMessage } from "./message-handler.preflight.js";
 import { processDiscordMessage } from "./message-handler.process.js";
 import { resolveDiscordMessageText } from "./message-utils.js";
@@ -74,6 +75,36 @@ export function createDiscordMessageHandler(params: {
       if (!last) {
         return;
       }
+
+      // Fire message_inbound hook for each raw entry before any filtering
+      const hookRunner = getGlobalHookRunner();
+      if (hookRunner?.hasHooks("message_inbound")) {
+        for (const entry of entries) {
+          const message = entry.data.message;
+          const author = entry.data.author;
+          if (!message) {
+            continue;
+          }
+          const baseText = resolveDiscordMessageText(message, { includeForwarded: false });
+          void hookRunner.runMessageInbound(
+            {
+              channel: "discord",
+              accountId: params.accountId,
+              chatId: message.channelId ?? "",
+              senderId: author?.id,
+              senderName: author?.username,
+              senderUsername: author?.username,
+              isBot: author?.bot === true,
+              isGroup: message.guildId != null,
+              content: baseText,
+              messageId: message.id,
+              timestamp: message.timestamp ? new Date(message.timestamp).getTime() : undefined,
+            },
+            { channelId: "discord", accountId: params.accountId },
+          );
+        }
+      }
+
       if (entries.length === 1) {
         const ctx = await preflightDiscordMessage({
           ...params,

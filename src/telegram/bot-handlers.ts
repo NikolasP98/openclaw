@@ -18,6 +18,7 @@ import { writeConfigFile } from "../config/io.js";
 import { loadSessionStore, resolveStorePath } from "../config/sessions.js";
 import { danger, logVerbose, warn } from "../globals.js";
 import { readChannelAllowFromStore } from "../pairing/pairing-store.js";
+import { getGlobalHookRunner } from "../plugins/hook-runner-global.js";
 import { resolveAgentRoute } from "../routing/resolve-route.js";
 import { resolveThreadSessionKeys } from "../routing/session-key.js";
 import { withTelegramApiErrorLogging } from "./api-logging.js";
@@ -101,6 +102,32 @@ export const registerTelegramHandlers = ({
       if (!last) {
         return;
       }
+
+      // Fire message_inbound hook for each raw entry before any filtering
+      const hookRunner = getGlobalHookRunner();
+      if (hookRunner?.hasHooks("message_inbound")) {
+        for (const entry of entries) {
+          const msg = entry.msg;
+          void hookRunner.runMessageInbound(
+            {
+              channel: "telegram",
+              accountId: accountId ?? "default",
+              chatId: String(msg.chat.id),
+              senderId: msg.from?.id != null ? String(msg.from.id) : undefined,
+              senderName:
+                [msg.from?.first_name, msg.from?.last_name].filter(Boolean).join(" ") || undefined,
+              senderUsername: msg.from?.username,
+              isBot: msg.from?.is_bot,
+              isGroup: msg.chat.type === "group" || msg.chat.type === "supergroup",
+              content: msg.text ?? msg.caption ?? "",
+              messageId: String(msg.message_id),
+              timestamp: msg.date ? msg.date * 1000 : undefined,
+            },
+            { channelId: "telegram", accountId: accountId ?? "default" },
+          );
+        }
+      }
+
       if (entries.length === 1) {
         await processMessage(last.ctx, last.allMedia, last.storeAllowFrom);
         return;

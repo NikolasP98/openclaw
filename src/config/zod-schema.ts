@@ -517,6 +517,13 @@ export const OpenClawSchema = z
           })
           .strict()
           .optional(),
+        messageLedger: z
+          .object({
+            enabled: z.boolean().optional(),
+            dbPath: z.string().optional(),
+          })
+          .strict()
+          .optional(),
       })
       .strict()
       .optional(),
