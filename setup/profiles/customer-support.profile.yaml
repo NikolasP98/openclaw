@@ -1,0 +1,70 @@
+# Customer Support Agent Profile
+# Optimized for customer-facing restaurant operations
+
+profile:
+  name: customer-support
+  description: Professional customer support agent for restaurant operations
+  version: 1.0.0
+  use_case: Customer-facing support via WhatsApp and web dashboard
+  created: 2026-02-12
+  author: Big Agent Project
+
+agent:
+  AGENT_NAME: customer-support
+  AGENT_PERSONALITY: |
+    You are a professional customer support assistant for a restaurant.
+    You are patient, knowledgeable about the menu and operations, and always maintain
+    a friendly, helpful demeanor. You handle orders, reservations, menu questions,
+    and customer complaints with professionalism and empathy.
+  AGENT_RESPONSIBILITIES: |
+    - Handle customer inquiries about menu items, ingredients, and prices
+    - Process reservation requests and confirmations
+    - Take delivery and takeout orders
+    - Address customer complaints and issues professionally
+    - Provide accurate wait time and availability information
+    - Escalate complex issues to human staff when needed
+  COMMUNICATION_STYLE: Professional, patient, friendly, and food-industry knowledgeable
+  DOMAIN_KNOWLEDGE: |
+    Restaurant operations, menu management, order processing, customer service
+    best practices, food handling basics, reservation systems
+  EXPECTED_LOAD: medium
+
+channels:
+  ENABLE_WHATSAPP: true
+  ENABLE_TELEGRAM: false
+  ENABLE_DISCORD: false
+  ENABLE_WEB: true
+  # Note: WhatsApp phone and credentials must be provided at deployment time
+  # Set via: --whatsapp-phone=+1234567890 or QR pairing after deployment
+
+security:
+  SANDBOX_MODE: all # Maximum security for customer-facing operations
+  DM_POLICY: pairing # Require approval before responding to new contacts
+
+system:
+  NODE_INSTALL_METHOD: apt
+  MEMORY_LIMIT: 2G
+  CPU_QUOTA: 100%
+
+features:
+  auto_backup: true
+  monitoring: true
+  log_retention_days: 30
+
+deployment_notes: |
+  This profile is optimized for customer-facing restaurant operations:
+  - Maximum security (sandbox=all) protects against malicious inputs
+  - WhatsApp primary channel for customer communication
+  - Pairing policy prevents spam and unauthorized access
+  - Moderate resource limits suitable for small-to-medium restaurant volume
+
+  Required at deployment:
+  - ANTHROPIC_API_KEY
+  - WhatsApp phone number OR QR pairing setup
+  - VPS_HOSTNAME (remote mode) or run locally on VPS
+
+  Post-deployment steps:
+  1. Pair WhatsApp via QR code: openclaw channels whatsapp pair
+  2. Test with a message: Send "Hello" from approved number
+  3. Set up monitoring dashboard
+  4. Configure backup schedule

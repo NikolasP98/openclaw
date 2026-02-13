@@ -1,0 +1,31 @@
+[Unit]
+Description=OpenClaw Gateway - {{AGENT_NAME}}
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory={{OPENCLAW_ROOT}}
+ExecStart={{NODE_BIN_PATH}} {{OPENCLAW_ROOT}}/scripts/run-node.mjs gateway --port {{GATEWAY_PORT}}
+Restart=always
+RestartSec=10
+StandardOutput=append:/tmp/openclaw/{{AGENT_USERNAME}}-service.log
+StandardError=append:/tmp/openclaw/{{AGENT_USERNAME}}-service-error.log
+
+# Environment
+Environment=NODE_ENV=production
+Environment=HOME={{AGENT_HOME_DIR}}
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths={{OPENCLAW_CONFIG_DIR}} {{OPENCLAW_ROOT}} /tmp/openclaw
+
+# Resource limits
+MemoryMax={{MEMORY_LIMIT}}
+CPUQuota={{CPU_QUOTA}}
+
+[Install]
+WantedBy=default.target

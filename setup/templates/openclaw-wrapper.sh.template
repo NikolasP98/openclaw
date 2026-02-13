@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# OpenClaw CLI - auto-rebuilds when source changes
+OPENCLAW_ROOT="{{OPENCLAW_ROOT}}"
+cd "${OPENCLAW_ROOT}" && exec node scripts/run-node.mjs "$@"

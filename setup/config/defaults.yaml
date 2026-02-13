@@ -1,0 +1,180 @@
+# OpenClaw Setup Framework - Default Configuration
+# These values are used when not specified in profiles or command-line arguments
+
+# Install method
+install:
+  method: source # git clone + pnpm install + pnpm build
+  repository: NikolasP98/openclaw
+  branch: main
+
+# Gateway configuration
+gateway:
+  mode: local # Bind to 127.0.0.1 (loopback only)
+  bind: 127.0.0.1
+  port_start: 18789 # Starting port for first agent
+  port_increment: 1 # Increment for each additional agent
+
+# Security defaults
+security:
+  sandbox_mode: non-main # Moderate security by default
+  dm_policy: pairing # Require approval by default
+  config_permissions: 600 # Owner read/write only
+  credentials_permissions: 700 # Owner access only
+
+# Channel defaults
+channels:
+  default_enabled:
+    - web # Always enable web UI by default
+  whatsapp:
+    enabled: false
+    pairing_method: qr # QR code pairing by default
+  telegram:
+    enabled: false
+    polling_interval: 5 # Long-polling interval in seconds
+  discord:
+    enabled: false
+
+# System configuration
+system:
+  node_install_method: apt # Use NodeSource repository
+  node_version: 22 # Node.js version requirement
+  pnpm_version: 10.23.0 # pnpm version for corepack
+  log_retention_days: 7 # Keep logs for 7 days by default
+  expected_load: low # Conservative default
+
+# Resource limits
+resources:
+  memory_limit: 2G # 2GB RAM limit per agent
+  cpu_quota: 100% # 1 full CPU core
+  max_log_size: 10M # 10MB per log file
+  max_log_files: 7 # Rotate 7 log files
+
+# Agent defaults
+agent:
+  personality: You are a helpful AI assistant.
+  responsibilities: Assist users with their requests professionally and efficiently.
+  communication_style: Professional, concise, and helpful
+  domain_knowledge: General purpose knowledge and skills
+  model:
+    provider: anthropic
+    model: claude-sonnet-4-5-20250929
+    temperature: 0.7
+    max_tokens: 4096
+
+# Features
+features:
+  auto_backup: false # Disabled by default
+  monitoring: false # Disabled by default
+  analytics: false # Disabled by default
+  rate_limiting:
+    enabled: true
+    max_requests_per_minute: 60
+
+# Deployment
+deployment:
+  environment: production
+  auto_start: true # Start service after deployment
+  verify_health: true # Run health checks
+  timeout_seconds: 300 # 5 minute timeout for deployment phases
+
+# Networking
+networking:
+  ssh_timeout: 10 # SSH connection timeout in seconds
+  retry_attempts: 3 # Number of retry attempts for network operations
+  retry_delay: 5 # Delay between retries in seconds
+
+# Backup configuration (when enabled)
+backup:
+  target: local # local, s3, or none
+  frequency: daily
+  retention_days: 30
+  include:
+    - config
+    - credentials
+    - workspace
+  exclude:
+    - logs
+    - cache
+    - temp
+
+# Monitoring configuration (when enabled)
+monitoring:
+  metrics_port: 9090
+  health_check_interval: 60 # Seconds between health checks
+  alert_on:
+    - service_down
+    - high_memory_usage
+    - high_error_rate
+  thresholds:
+    memory_usage_percent: 80
+    error_rate_per_minute: 10
+    response_time_ms: 5000
+
+# Logging
+logging:
+  level: info # debug, info, warn, error
+  format: json # json or text
+  destinations:
+    - file
+    - stdout
+  file:
+    path: /tmp/openclaw
+    rotation: daily
+    compression: gzip
+
+# Notifications (for monitoring)
+notifications:
+  enabled: false
+  channels:
+    email: false
+    telegram: false
+    discord: false
+
+# Multi-agent support
+multi_agent:
+  enabled: false
+  max_agents_per_vps: 10
+  port_allocation: sequential # sequential or random
+  shared_resources:
+    node_modules: true # Share node_modules between agents
+    cache: true # Share package cache
+
+# Development options (not for production)
+development:
+  skip_validation: false # Skip input validation (dangerous)
+  mock_deployment: false # Simulate deployment without changes
+  verbose_logging: false # Enable debug-level logging
+  keep_temp_files: false # Don't cleanup temp files after deployment
+
+# Upgrade settings
+upgrade:
+  auto_check: true # Check for OpenClaw updates
+  auto_upgrade: false # Don't auto-upgrade (require manual)
+  backup_before_upgrade: true # Always backup before upgrading
+
+# Tailscale integration
+tailscale:
+  auto_configure: true # Automatically configure Tailscale
+  enable_ssh: true # Enable SSH over Tailscale
+  advertise_routes: false # Don't advertise subnet routes by default
+
+# GitHub integration
+github:
+  repository: NikolasP98/openclaw # Default OpenClaw repository
+  branch: main # Default branch to pull
+  auto_update: false # Don't auto-update from git
+
+# Documentation
+documentation:
+  generate_readme: true # Generate README with deployment info
+  include_examples: true # Include usage examples
+  deployment_report: true # Generate deployment report
+
+---
+# Notes:
+# - All paths are relative to agent home directory unless absolute
+# - Boolean values: true/false (lowercase)
+# - Memory limits: Use K, M, G suffixes (e.g., 512M, 2G)
+# - Time values: Use s, m, h suffixes (e.g., 30s, 5m, 2h)
+# - Ports: Must be > 1024 for non-root users
+# - This file can be overridden by profile files or command-line arguments

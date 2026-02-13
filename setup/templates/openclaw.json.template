@@ -1,0 +1,72 @@
+{
+  "gateway": {
+    "mode": "local",
+    "port": {{GATEWAY_PORT}},
+    "bind": "127.0.0.1",
+    "auth": {
+      "token": "{{GATEWAY_AUTH_TOKEN}}"
+    }
+  },
+  "channels": {
+    "whatsapp": {
+      "enabled": {{ENABLE_WHATSAPP}},
+      "dmPolicy": "{{DM_POLICY}}",
+      "phone": "{{WHATSAPP_PHONE}}",
+      "credentialsPath": "{{OPENCLAW_CONFIG_DIR}}/credentials/whatsapp"
+    },
+    "telegram": {
+      "enabled": {{ENABLE_TELEGRAM}},
+      "dmPolicy": "{{DM_POLICY}}",
+      "botToken": "{{TELEGRAM_BOT_TOKEN}}",
+      "allowFrom": []
+    },
+    "discord": {
+      "enabled": {{ENABLE_DISCORD}},
+      "dmPolicy": "{{DM_POLICY}}",
+      "botToken": "{{DISCORD_BOT_TOKEN}}",
+      "allowFrom": []
+    },
+    "web": {
+      "enabled": {{ENABLE_WEB}},
+      "dashboardPort": {{GATEWAY_PORT}}
+    }
+  },
+  "agents": [
+    {
+      "name": "{{AGENT_NAME}}",
+      "workspace": "{{WORKSPACE_DIR}}",
+      "systemPrompt": "You are {{AGENT_NAME}}, {{AGENT_PERSONALITY}}",
+      "sandbox": {
+        "mode": "{{SANDBOX_MODE}}",
+        "allowedPaths": [
+          "{{WORKSPACE_DIR}}",
+          "/tmp/{{AGENT_USERNAME}}"
+        ]
+      },
+      "model": {
+        "provider": "anthropic",
+        "model": "claude-sonnet-4-5-20250929",
+        "apiKey": "{{ANTHROPIC_API_KEY}}"
+      },
+      "features": {
+        "memory": true,
+        "tools": true,
+        "fileOperations": true,
+        "browserControl": false
+      }
+    }
+  ],
+  "logging": {
+    "level": "info",
+    "file": "/tmp/openclaw/{{AGENT_USERNAME}}.log",
+    "maxSize": "10M",
+    "maxFiles": 7
+  },
+  "security": {
+    "allowedHosts": ["127.0.0.1", "localhost"],
+    "rateLimiting": {
+      "enabled": true,
+      "maxRequestsPerMinute": 60
+    }
+  }
+}
