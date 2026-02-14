@@ -57,7 +57,9 @@ for (const name of dirs) {
     built++;
   } catch (err) {
     const msg =
-      err instanceof Error ? ((err as any).stderr?.toString() ?? err.message) : String(err);
+      err instanceof Error
+        ? ((err as Error & { stderr?: Buffer }).stderr?.toString() ?? err.message)
+        : String(err);
     console.error(`[build-extensions] FAILED ${name}: ${msg.slice(0, 200)}`);
   }
 }
