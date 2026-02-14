@@ -300,6 +300,7 @@ export type PluginHookName =
   | "agent_end"
   | "before_compaction"
   | "after_compaction"
+  | "before_reset"
   | "message_inbound"
   | "message_received"
   | "message_sending"
@@ -356,6 +357,12 @@ export type PluginHookMessageContext = {
   channelId: string;
   accountId?: string;
   conversationId?: string;
+};
+
+export type PluginHookBeforeResetEvent = {
+  sessionFile?: string;
+  messages?: unknown[];
+  reason?: string;
 };
 
 /**
@@ -522,6 +529,10 @@ export type PluginHookHandlerMap = {
   ) => Promise<void> | void;
   after_compaction: (
     event: PluginHookAfterCompactionEvent,
+    ctx: PluginHookAgentContext,
+  ) => Promise<void> | void;
+  before_reset: (
+    event: PluginHookBeforeResetEvent,
     ctx: PluginHookAgentContext,
   ) => Promise<void> | void;
   message_inbound: (
