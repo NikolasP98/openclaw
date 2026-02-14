@@ -50,6 +50,17 @@ create_agent_user() {
             log_success "User $AGENT_USERNAME created successfully"
         fi
 
+        # Add user to docker group when sandbox mode requires Docker
+        if [ "${SANDBOX_MODE:-non-main}" != "off" ]; then
+            if run_cmd --as root "getent group docker" &> /dev/null; then
+                log_info "Adding $AGENT_USERNAME to docker group for sandbox support..."
+                run_cmd --as root "usermod -aG docker $AGENT_USERNAME"
+                log_success "Added $AGENT_USERNAME to docker group"
+            else
+                log_warn "docker group not found — skip group assignment (install Docker first)"
+            fi
+        fi
+
         log_info "Setting up directory structure..."
         run_cmd --as root "mkdir -p ${AGENT_HOME_DIR}/.openclaw/workspace"
         run_cmd --as root "mkdir -p ${AGENT_HOME_DIR}/.openclaw/credentials"
