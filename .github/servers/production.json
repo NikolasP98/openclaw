@@ -2,10 +2,10 @@
   "servers": [
     {
       "id": "prd-tenant-faces",
-      "host": "100.105.147.99",
-      "user": "deploy",
+      "host": "nc-faces",
+      "user": "bot-prd",
       "port": 22,
-      "deployment_path": "/home/deploy/openclaw",
+      "deployment_path": "/home/bot-prd/openclaw",
       "platform": "linux/amd64",
       "gateway_port": 18789,
       "bridge_port": 18790,
