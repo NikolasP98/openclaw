@@ -88,5 +88,10 @@ USER.md
 !.agent/workflows/
 local/
 
+# Pre-compiled extension build artifacts (scripts/build-extensions.ts)
+extensions/**/*.js
+extensions/**/*.cjs
+extensions/**/*.mjs
+
 # Editor directories
 .vscode/

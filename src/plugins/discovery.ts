@@ -11,6 +11,22 @@ import {
 
 const EXTENSION_EXTS = new Set([".ts", ".js", ".mts", ".cts", ".mjs", ".cjs"]);
 
+/**
+ * When a pre-compiled `.js` sibling of a `.ts` entry exists, prefer it.
+ * This lets the build step (`scripts/build-extensions.ts`) produce `index.js`
+ * next to `index.ts`, avoiding jiti/Babel transpilation at runtime.
+ */
+function preferCompiledSource(source: string): string {
+  if (!source.endsWith(".ts")) {
+    return source;
+  }
+  const compiled = source.slice(0, -3) + ".js";
+  if (fs.existsSync(compiled)) {
+    return compiled;
+  }
+  return source;
+}
+
 export type PluginCandidate = {
   idHint: string;
   source: string;
@@ -160,7 +176,7 @@ function discoverInDirectory(params: {
 
     if (extensions.length > 0) {
       for (const extPath of extensions) {
-        const resolved = path.resolve(fullPath, extPath);
+        const resolved = preferCompiledSource(path.resolve(fullPath, extPath));
         addCandidate({
           candidates: params.candidates,
           seen: params.seen,
@@ -180,7 +196,7 @@ function discoverInDirectory(params: {
       continue;
     }
 
-    const indexCandidates = ["index.ts", "index.js", "index.mjs", "index.cjs"];
+    const indexCandidates = ["index.js", "index.ts", "index.mjs", "index.cjs"];
     const indexFile = indexCandidates
       .map((candidate) => path.join(fullPath, candidate))
       .find((candidate) => fs.existsSync(candidate));
@@ -246,7 +262,7 @@ function discoverFromPath(params: {
 
     if (extensions.length > 0) {
       for (const extPath of extensions) {
-        const source = path.resolve(resolved, extPath);
+        const source = preferCompiledSource(path.resolve(resolved, extPath));
         addCandidate({
           candidates: params.candidates,
           seen: params.seen,
@@ -266,7 +282,7 @@ function discoverFromPath(params: {
       return;
     }
 
-    const indexCandidates = ["index.ts", "index.js", "index.mjs", "index.cjs"];
+    const indexCandidates = ["index.js", "index.ts", "index.mjs", "index.cjs"];
     const indexFile = indexCandidates
       .map((candidate) => path.join(resolved, candidate))
       .find((candidate) => fs.existsSync(candidate));
