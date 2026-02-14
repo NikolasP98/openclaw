@@ -1,5 +1,6 @@
 import { createJiti } from "jiti";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { OpenClawConfig } from "../config/config.js";
@@ -211,15 +212,46 @@ export function loadOpenClawPlugins(options: PluginLoadOptions = {}): PluginRegi
   pushDiagnostics(registry.diagnostics, manifestRegistry.diagnostics);
 
   const pluginSdkAlias = resolvePluginSdkAlias();
-  const jiti = createJiti(import.meta.url, {
-    interopDefault: true,
-    extensions: [".ts", ".tsx", ".mts", ".cts", ".mtsx", ".ctsx", ".js", ".mjs", ".cjs", ".json"],
-    ...(pluginSdkAlias
-      ? {
-          alias: { "openclaw/plugin-sdk": pluginSdkAlias },
-        }
-      : {}),
-  });
+
+  // Native require for pre-compiled .js extensions — avoids jiti/Babel overhead.
+  const nativeRequire = createRequire(import.meta.url);
+
+  // jiti is only needed for TypeScript sources that weren't pre-compiled.
+  let _jiti: ReturnType<typeof createJiti> | null = null;
+  const getJiti = () => {
+    if (!_jiti) {
+      _jiti = createJiti(import.meta.url, {
+        interopDefault: true,
+        extensions: [
+          ".ts",
+          ".tsx",
+          ".mts",
+          ".cts",
+          ".mtsx",
+          ".ctsx",
+          ".js",
+          ".mjs",
+          ".cjs",
+          ".json",
+        ],
+        ...(pluginSdkAlias
+          ? {
+              alias: { "openclaw/plugin-sdk": pluginSdkAlias },
+            }
+          : {}),
+      });
+    }
+    return _jiti;
+  };
+
+  /** Use native require for .js/.cjs/.mjs, fall back to jiti for TypeScript. */
+  const loadPluginModule = (source: string): OpenClawPluginModule => {
+    const ext = path.extname(source);
+    if (ext === ".js" || ext === ".cjs" || ext === ".mjs") {
+      return nativeRequire(source) as OpenClawPluginModule;
+    }
+    return getJiti()(source) as OpenClawPluginModule;
+  };
 
   const manifestByRoot = new Map(
     manifestRegistry.plugins.map((record) => [record.rootDir, record]),
@@ -296,7 +328,7 @@ export function loadOpenClawPlugins(options: PluginLoadOptions = {}): PluginRegi
 
     let mod: OpenClawPluginModule | null = null;
     try {
-      mod = jiti(candidate.source) as OpenClawPluginModule;
+      mod = loadPluginModule(candidate.source);
     } catch (err) {
       logger.error(`[plugins] ${record.id} failed to load from ${record.source}: ${String(err)}`);
       record.status = "error";
