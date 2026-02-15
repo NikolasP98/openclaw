@@ -7,8 +7,8 @@ on:
       - DEV
 
 concurrency:
-  group: npm-publish-${{ github.ref_name }}
-  cancel-in-progress: true
+  group: npm-publish
+  cancel-in-progress: false
 
 jobs:
   publish:
