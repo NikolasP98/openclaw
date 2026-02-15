@@ -1,0 +1,41 @@
+name: npm publish
+
+on:
+  push:
+    branches:
+      - main
+      - DEV
+
+concurrency:
+  group: npm-publish-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-node-env
+        with:
+          node-version: "22.x"
+
+      - name: Configure npm auth
+        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
+
+      - name: Set prerelease version (DEV only)
+        if: github.ref_name == 'DEV'
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%d%H%M%S)
+          BASE_VERSION=$(node -p "require('./package.json').version")
+          npm version "${BASE_VERSION}-dev.${TIMESTAMP}" --no-git-tag-version
+
+      - name: Publish (main → latest)
+        if: github.ref_name == 'main'
+        run: pnpm publish --no-git-checks --tag latest
+
+      - name: Publish (DEV → dev)
+        if: github.ref_name == 'DEV'
+        run: pnpm publish --no-git-checks --tag dev

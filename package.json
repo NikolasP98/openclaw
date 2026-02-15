@@ -5,6 +5,10 @@
   "keywords": [],
   "license": "MIT",
   "author": "",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NikolasP98/openclaw.git"
+  },
   "bin": {
     "openclaw": "openclaw.mjs"
   },
@@ -33,6 +37,9 @@
       "default": "./dist/plugin-sdk/account-id.js"
     },
     "./cli-entry": "./openclaw.mjs"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "android:assemble": "cd apps/android && ./gradlew :app:assembleDebug",

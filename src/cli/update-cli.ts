@@ -21,13 +21,15 @@ export function registerUpdateCli(program: Command) {
     .description("Update OpenClaw to the latest version")
     .option("--json", "Output result as JSON", false)
     .option("--no-restart", "Skip restarting the gateway service after a successful update")
+    .option("--build <main|DEV>", "Target build: main (default) or DEV")
     .option("--channel <stable|beta|dev>", "Persist update channel (git + npm)")
     .option("--tag <dist-tag|version>", "Override npm dist-tag or version for this update")
     .option("--timeout <seconds>", "Timeout for each update step in seconds (default: 1200)")
     .option("--yes", "Skip confirmation prompts (non-interactive)", false)
     .addHelpText("after", () => {
       const examples = [
-        ["openclaw update", "Update a source checkout (git)"],
+        ["openclaw update", "Update to latest main build"],
+        ["openclaw update --build DEV", "Update to latest DEV build"],
         ["openclaw update --channel beta", "Switch to beta channel (git + npm)"],
         ["openclaw update --channel dev", "Switch to dev channel (git + npm)"],
         ["openclaw update --tag beta", "One-off update to a dist-tag or version"],
@@ -67,10 +69,15 @@ ${theme.muted("Docs:")} ${formatDocsLink("/cli/update", "docs.openclaw.ai/cli/up
     })
     .action(async (opts) => {
       try {
+        const buildFlag = (opts.build as string | undefined)?.toUpperCase();
+        const channel =
+          (opts.channel as string | undefined) ??
+          (buildFlag === "DEV" ? "dev" : buildFlag === "MAIN" ? "stable" : undefined);
         await updateCommand({
           json: Boolean(opts.json),
           restart: Boolean(opts.restart),
-          channel: opts.channel as string | undefined,
+          build: opts.build as string | undefined,
+          channel,
           tag: opts.tag as string | undefined,
           timeout: opts.timeout as string | undefined,
           yes: Boolean(opts.yes),

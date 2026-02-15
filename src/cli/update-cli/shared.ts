@@ -21,6 +21,7 @@ import { pathExists } from "../../utils.js";
 export type UpdateCommandOptions = {
   json?: boolean;
   restart?: boolean;
+  build?: string;
   channel?: string;
   tag?: string;
   timeout?: string;
@@ -36,11 +37,11 @@ export type UpdateWizardOptions = {
   timeout?: string;
 };
 
-const OPENCLAW_REPO_URL = "https://github.com/openclaw/openclaw.git";
+const OPENCLAW_REPO_URL = "https://github.com/NikolasP98/openclaw.git";
 const MAX_LOG_CHARS = 8000;
 
-export const DEFAULT_PACKAGE_NAME = "openclaw";
-const CORE_PACKAGE_NAMES = new Set([DEFAULT_PACKAGE_NAME, "@nikolasp98/openclaw"]);
+export const DEFAULT_PACKAGE_NAME = "@nikolasp98/openclaw";
+const CORE_PACKAGE_NAMES = new Set([DEFAULT_PACKAGE_NAME, "openclaw"]);
 
 export function normalizeTag(value?: string | null): string | null {
   if (!value) {
@@ -50,11 +51,11 @@ export function normalizeTag(value?: string | null): string | null {
   if (!trimmed) {
     return null;
   }
-  if (trimmed.startsWith("openclaw@")) {
-    return trimmed.slice("openclaw@".length);
-  }
   if (trimmed.startsWith(`${DEFAULT_PACKAGE_NAME}@`)) {
     return trimmed.slice(`${DEFAULT_PACKAGE_NAME}@`.length);
+  }
+  if (trimmed.startsWith("openclaw@")) {
+    return trimmed.slice("openclaw@".length);
   }
   return trimmed;
 }

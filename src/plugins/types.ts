@@ -379,12 +379,6 @@ export type PluginHookMessageContext = {
   conversationId?: string;
 };
 
-export type PluginHookBeforeResetEvent = {
-  sessionFile?: string;
-  messages?: unknown[];
-  reason?: string;
-};
-
 /**
  * message_inbound hook event.
  *
