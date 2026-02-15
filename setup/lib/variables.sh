@@ -51,12 +51,16 @@ SYSTEM_DERIVED=(
     "WORKSPACE_DIR"
     "OPENCLAW_ROOT"
     "OPENCLAW_WRAPPER"
+    "OPENCLAW_BIN"
+    "OPENCLAW_PKG_ROOT"
     "NODE_BIN_PATH"
 )
 
 # Flexible parameters (accept multiple input formats)
 FLEXIBLE_PARAMETERS=(
     "NODE_INSTALL_METHOD"
+    "INSTALL_METHOD"
+    "PACKAGE_MANAGER"
     "SERVICE_MANAGER"
     "BACKUP_TARGET"
     "EXPECTED_LOAD"
@@ -106,6 +110,10 @@ derive_system_variables() {
     # Execution mode
     EXEC_MODE="${EXEC_MODE:-local}"
 
+    # Install method: package (npm registry) or source (git clone + build)
+    INSTALL_METHOD="${INSTALL_METHOD:-package}"
+    PACKAGE_MANAGER="${PACKAGE_MANAGER:-npm}"
+
     # Source install settings
     GITHUB_REPO="${GITHUB_REPO:-NikolasP98/openclaw}"
     GITHUB_BRANCH="${GITHUB_BRANCH:-main}"
@@ -133,8 +141,14 @@ derive_system_variables() {
         AGENT_HOME_DIR="${AGENT_HOME_DIR:-/home/${AGENT_USERNAME}}"
     fi
 
-    OPENCLAW_ROOT="${OPENCLAW_ROOT:-${AGENT_HOME_DIR}/openclaw}"
-    OPENCLAW_WRAPPER="${OPENCLAW_WRAPPER:-${AGENT_HOME_DIR}/.local/bin/openclaw}"
+    if [ "$INSTALL_METHOD" = "source" ]; then
+        OPENCLAW_ROOT="${OPENCLAW_ROOT:-${AGENT_HOME_DIR}/openclaw}"
+        OPENCLAW_WRAPPER="${OPENCLAW_WRAPPER:-${AGENT_HOME_DIR}/.local/bin/openclaw}"
+    else
+        # Package install: OPENCLAW_BIN and OPENCLAW_PKG_ROOT resolved in phase 40
+        OPENCLAW_BIN="${OPENCLAW_BIN:-}"
+        OPENCLAW_PKG_ROOT="${OPENCLAW_PKG_ROOT:-}"
+    fi
     OPENCLAW_CONFIG_DIR="${OPENCLAW_CONFIG_DIR:-${AGENT_HOME_DIR}/.openclaw}"
     WORKSPACE_DIR="${WORKSPACE_DIR:-${OPENCLAW_CONFIG_DIR}/workspace}"
 
@@ -261,10 +275,17 @@ display_config() {
         fi
     done
 
-    echo -e "\n${GREEN}Source Install:${NC}"
-    echo -e "  GITHUB_REPO: ${GITHUB_REPO:-NikolasP98/openclaw}"
-    echo -e "  GITHUB_BRANCH: ${GITHUB_BRANCH:-main}"
-    echo -e "  OPENCLAW_ROOT: ${OPENCLAW_ROOT:-[NOT SET]}"
+    echo -e "\n${GREEN}Install Method:${NC} ${INSTALL_METHOD:-package}"
+    if [ "${INSTALL_METHOD:-package}" = "source" ]; then
+        echo -e "  GITHUB_REPO: ${GITHUB_REPO:-NikolasP98/openclaw}"
+        echo -e "  GITHUB_BRANCH: ${GITHUB_BRANCH:-main}"
+        echo -e "  OPENCLAW_ROOT: ${OPENCLAW_ROOT:-[NOT SET]}"
+    else
+        echo -e "  PACKAGE_MANAGER: ${PACKAGE_MANAGER:-npm}"
+        echo -e "  Package: @nikolasp98/openclaw"
+        echo -e "  OPENCLAW_BIN: ${OPENCLAW_BIN:-[resolved at install]}"
+        echo -e "  OPENCLAW_PKG_ROOT: ${OPENCLAW_PKG_ROOT:-[resolved at install]}"
+    fi
 
     echo -e "\n${GREEN}Inferable Variables:${NC}"
     for var in "${INFERABLE_FROM_CONVERSATION[@]}"; do

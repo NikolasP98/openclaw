@@ -38,6 +38,21 @@ describe("version resolution", () => {
     });
   });
 
+  it("resolves package version for scoped fork package name", async () => {
+    await withTempDir(async (root) => {
+      await fs.mkdir(path.join(root, "dist"), { recursive: true });
+      await fs.writeFile(
+        path.join(root, "package.json"),
+        JSON.stringify({ name: "@nikolasp98/openclaw", version: "2026.2.14" }),
+        "utf-8",
+      );
+
+      const moduleUrl = moduleUrlFrom(root, "dist/index.js");
+      expect(readVersionFromPackageJsonForModuleUrl(moduleUrl)).toBe("2026.2.14");
+      expect(resolveVersionFromModuleUrl(moduleUrl)).toBe("2026.2.14");
+    });
+  });
+
   it("ignores unrelated nearby package.json files", async () => {
     await withTempDir(async (root) => {
       await fs.mkdir(path.join(root, "dist", "plugin-sdk"), { recursive: true });

@@ -88,62 +88,115 @@ setup_environment() {
     NODE_BIN_PATH=$(run_cmd "which node")
     export NODE_BIN_PATH
 
-    # --- pnpm via corepack ---
-    local pnpm_ver
-    pnpm_ver=$(run_cmd "pnpm --version" 2>/dev/null || echo "")
+    # --- Package manager & build tools (install-method-dependent) ---
+    local install_method="${INSTALL_METHOD:-package}"
 
-    if [ -n "$pnpm_ver" ]; then
-        log_info "pnpm $pnpm_ver already installed, skipping"
-    else
-        log_info "Setting up pnpm via corepack..."
-        if run_cmd "command -v corepack" &> /dev/null; then
-            run_cmd --as root "corepack enable" || run_cmd "corepack enable" || true
-            run_cmd "corepack prepare pnpm@10.29.3 --activate" 2>/dev/null || \
-                log_warn "corepack prepare failed, trying npm fallback"
-        fi
+    if [ "$install_method" = "source" ]; then
+        # Source installs need pnpm, gh CLI, and build-essential
 
-        # Verify pnpm or install fallback
-        if ! run_cmd "command -v pnpm" &> /dev/null; then
-            log_warn "pnpm not available via corepack, installing via npm..."
-            run_cmd --as root "npm install -g pnpm@10.29.3" || run_cmd "npm install -g pnpm@10.29.3"
-        fi
+        # --- pnpm via corepack ---
+        local pnpm_ver
+        pnpm_ver=$(run_cmd "pnpm --version" 2>/dev/null || echo "")
 
-        pnpm_ver=$(run_cmd "pnpm --version" 2>/dev/null || echo "not found")
-    fi
-    log_success "pnpm version: $pnpm_ver"
-
-    # --- gh CLI ---
-    if run_cmd "command -v gh" &> /dev/null; then
-        local gh_ver
-        gh_ver=$(run_cmd "gh --version" 2>/dev/null | head -1 || echo "")
-        log_info "gh CLI already installed ($gh_ver), skipping"
-    else
-        log_info "Installing gh CLI..."
-        run_cmd --as root "type -p curl >/dev/null || apt-get install curl -y"
-        run_cmd --as root "curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg 2>/dev/null"
-        run_cmd --as root "chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg"
-        run_cmd --as root "echo 'deb [arch=\$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main' | tee /etc/apt/sources.list.d/github-cli.list > /dev/null"
-        run_cmd --as root "apt-get update && apt-get install gh -y"
-    fi
-
-    # Authenticate gh if PAT is provided
-    if [ -n "${GITHUB_PAT:-}" ]; then
-        log_info "Authenticating gh CLI with PAT..."
-        if [ "${EXEC_MODE:-local}" = "remote" ]; then
-            run_cmd --as "$AGENT_USERNAME" "echo '$GITHUB_PAT' | gh auth login --with-token"
+        if [ -n "$pnpm_ver" ]; then
+            log_info "pnpm $pnpm_ver already installed, skipping"
         else
-            echo "$GITHUB_PAT" | gh auth login --with-token 2>/dev/null || \
-                log_warn "gh auth login failed (may already be authenticated)"
-        fi
-    fi
+            log_info "Setting up pnpm via corepack..."
+            if run_cmd "command -v corepack" &> /dev/null; then
+                run_cmd --as root "corepack enable" || run_cmd "corepack enable" || true
+                run_cmd "corepack prepare pnpm@10.29.3 --activate" 2>/dev/null || \
+                    log_warn "corepack prepare failed, trying npm fallback"
+            fi
 
-    # --- Build tools ---
-    if run_cmd "dpkg -s build-essential" &> /dev/null; then
-        log_info "build-essential already installed, skipping"
+            # Verify pnpm or install fallback
+            if ! run_cmd "command -v pnpm" &> /dev/null; then
+                log_warn "pnpm not available via corepack, installing via npm..."
+                run_cmd --as root "npm install -g pnpm@10.29.3" || run_cmd "npm install -g pnpm@10.29.3"
+            fi
+
+            pnpm_ver=$(run_cmd "pnpm --version" 2>/dev/null || echo "not found")
+        fi
+        log_success "pnpm version: $pnpm_ver"
+
+        # --- gh CLI ---
+        if run_cmd "command -v gh" &> /dev/null; then
+            local gh_ver
+            gh_ver=$(run_cmd "gh --version" 2>/dev/null | head -1 || echo "")
+            log_info "gh CLI already installed ($gh_ver), skipping"
+        else
+            log_info "Installing gh CLI..."
+            run_cmd --as root "type -p curl >/dev/null || apt-get install curl -y"
+            run_cmd --as root "curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg 2>/dev/null"
+            run_cmd --as root "chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg"
+            run_cmd --as root "echo 'deb [arch=\$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main' | tee /etc/apt/sources.list.d/github-cli.list > /dev/null"
+            run_cmd --as root "apt-get update && apt-get install gh -y"
+        fi
+
+        # Authenticate gh if PAT is provided
+        if [ -n "${GITHUB_PAT:-}" ]; then
+            log_info "Authenticating gh CLI with PAT..."
+            if [ "${EXEC_MODE:-local}" = "remote" ]; then
+                run_cmd --as "$AGENT_USERNAME" "echo '$GITHUB_PAT' | gh auth login --with-token"
+            else
+                echo "$GITHUB_PAT" | gh auth login --with-token 2>/dev/null || \
+                    log_warn "gh auth login failed (may already be authenticated)"
+            fi
+        fi
+
+        # --- Build tools ---
+        if run_cmd "dpkg -s build-essential" &> /dev/null; then
+            log_info "build-essential already installed, skipping"
+        else
+            log_info "Installing build tools..."
+            run_cmd --as root "apt-get install -y build-essential git curl" 2>/dev/null || \
+                log_warn "Could not install build tools via apt (may not have root access or not Debian-based)"
+        fi
     else
-        log_info "Installing build tools..."
-        run_cmd --as root "apt-get install -y build-essential git curl" 2>/dev/null || \
-            log_warn "Could not install build tools via apt (may not have root access or not Debian-based)"
+        # Package installs: only need the chosen package manager
+        local pkg_mgr="${PACKAGE_MANAGER:-npm}"
+        log_info "Install method: package (using $pkg_mgr)"
+
+        case "$pkg_mgr" in
+            npm)
+                # npm comes with Node.js, nothing extra needed
+                log_info "npm $(run_cmd 'npm --version' 2>/dev/null || echo 'bundled with Node') ready"
+                ;;
+            pnpm)
+                local pnpm_ver
+                pnpm_ver=$(run_cmd "pnpm --version" 2>/dev/null || echo "")
+                if [ -z "$pnpm_ver" ]; then
+                    log_info "Installing pnpm globally..."
+                    run_cmd --as root "npm install -g pnpm" || run_cmd "npm install -g pnpm"
+                    pnpm_ver=$(run_cmd "pnpm --version" 2>/dev/null || echo "not found")
+                fi
+                log_success "pnpm version: $pnpm_ver"
+                ;;
+            bun)
+                local bun_ver
+                bun_ver=$(run_cmd "bun --version" 2>/dev/null || echo "")
+                if [ -z "$bun_ver" ]; then
+                    log_info "Installing bun..."
+                    run_cmd "curl -fsSL https://bun.sh/install | bash"
+                    # Source bun into current session
+                    export BUN_INSTALL="${AGENT_HOME_DIR:-$HOME}/.bun"
+                    export PATH="$BUN_INSTALL/bin:$PATH"
+                    bun_ver=$(run_cmd "bun --version" 2>/dev/null || echo "not found")
+                fi
+                log_success "bun version: $bun_ver"
+                ;;
+            *)
+                log_error "Unknown package manager: $pkg_mgr (expected npm, pnpm, or bun)"
+                handle_error 1 "Invalid PACKAGE_MANAGER" "Environment Setup"
+                return 1
+                ;;
+        esac
+
+        # Ensure git and curl are available (needed for basic operations)
+        if ! run_cmd "command -v git" &> /dev/null || ! run_cmd "command -v curl" &> /dev/null; then
+            log_info "Installing git and curl..."
+            run_cmd --as root "apt-get install -y git curl" 2>/dev/null || \
+                log_warn "Could not install git/curl via apt"
+        fi
     fi
 
     phase_end "Environment Setup" "success"

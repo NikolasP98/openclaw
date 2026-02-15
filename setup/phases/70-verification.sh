@@ -37,24 +37,36 @@ verify_deployment() {
     local config_dir="${OPENCLAW_CONFIG_DIR:-${AGENT_HOME_DIR:-$HOME}/.openclaw}"
     local gateway_port="${GATEWAY_PORT:-18789}"
 
-    # Test openclaw wrapper
-    log_info "Testing openclaw wrapper command..."
+    # Test openclaw command
+    local install_method="${INSTALL_METHOD:-package}"
+    log_info "Testing openclaw command (install method: $install_method)..."
+
+    # Ensure PATH includes the relevant bin directories
+    if [ "${EXEC_MODE:-local}" = "local" ]; then
+        export PATH="${AGENT_HOME_DIR:-$HOME}/.local/bin:${PATH}"
+        if [ "$install_method" = "package" ]; then
+            case "${PACKAGE_MANAGER:-npm}" in
+                pnpm) export PATH="${PNPM_HOME:-${AGENT_HOME_DIR:-$HOME}/.local/share/pnpm}:${PATH}" ;;
+                bun)  export PATH="${AGENT_HOME_DIR:-$HOME}/.bun/bin:${PATH}" ;;
+            esac
+        fi
+    fi
+
     if [ "${EXEC_MODE:-local}" = "remote" ]; then
         local wrapper_output
-        wrapper_output=$(run_cmd --as "$exec_user" "export PATH=\$HOME/.local/bin:\$PATH && openclaw --version" 2>/dev/null || echo "failed")
+        wrapper_output=$(run_cmd --as "$exec_user" "export PATH=\$HOME/.local/bin:\$HOME/.local/share/pnpm:\$HOME/.bun/bin:\$PATH && openclaw --version" 2>/dev/null || echo "failed")
         if [ "$wrapper_output" != "failed" ]; then
             log_success "openclaw --version: $wrapper_output"
         else
-            log_warn "openclaw wrapper test failed (service may still be running)"
+            log_warn "openclaw command test failed (service may still be running)"
         fi
     else
-        export PATH="${AGENT_HOME_DIR:-$HOME}/.local/bin:${PATH}"
         local wrapper_output
         wrapper_output=$(openclaw --version 2>/dev/null || echo "failed")
         if [ "$wrapper_output" != "failed" ]; then
             log_success "openclaw --version: $wrapper_output"
         else
-            log_warn "openclaw wrapper test failed (service may still be running)"
+            log_warn "openclaw command test failed (service may still be running)"
         fi
     fi
 
@@ -117,7 +129,12 @@ verify_deployment() {
     echo -e "${GREEN}╠═══════════════════════════════════════════════════════════════╣${NC}"
     echo -e "${GREEN}║${NC} Agent: ${AGENT_NAME:-openclaw}"
     echo -e "${GREEN}║${NC} User: ${exec_user}"
-    echo -e "${GREEN}║${NC} Install: ${OPENCLAW_ROOT:-~/openclaw}"
+    echo -e "${GREEN}║${NC} Method: ${install_method}"
+    if [ "$install_method" = "source" ]; then
+        echo -e "${GREEN}║${NC} Install: ${OPENCLAW_ROOT:-~/openclaw}"
+    else
+        echo -e "${GREEN}║${NC} Package: @nikolasp98/openclaw (${PACKAGE_MANAGER:-npm})"
+    fi
     echo -e "${GREEN}║${NC} Gateway Port: $gateway_port"
     echo -e "${GREEN}║${NC} Status: Running"
     echo -e "${GREEN}╠═══════════════════════════════════════════════════════════════╣${NC}"
@@ -143,7 +160,17 @@ verify_deployment() {
     fi
     echo -e "${GREEN}║${NC}"
     echo -e "${GREEN}║${NC} Update later with:"
-    echo -e "${GREEN}║${NC}    $([ "${EXEC_MODE:-local}" = "remote" ] && echo "./setup/setup.sh --update --vps-hostname=${VPS_HOSTNAME:-HOST}" || echo "./setup/setup.sh --update")"
+    if [ "$install_method" = "source" ]; then
+        echo -e "${GREEN}║${NC}    $([ "${EXEC_MODE:-local}" = "remote" ] && echo "./setup/setup.sh --update --vps-hostname=${VPS_HOSTNAME:-HOST}" || echo "./setup/setup.sh --update")"
+    else
+        local update_cmd
+        case "${PACKAGE_MANAGER:-npm}" in
+            npm)  update_cmd="npm update -g @nikolasp98/openclaw" ;;
+            pnpm) update_cmd="pnpm update -g @nikolasp98/openclaw" ;;
+            bun)  update_cmd="bun update -g @nikolasp98/openclaw" ;;
+        esac
+        echo -e "${GREEN}║${NC}    $update_cmd"
+    fi
     echo -e "${GREEN}╚═══════════════════════════════════════════════════════════════╝${NC}"
     echo ""
 

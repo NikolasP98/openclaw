@@ -1,0 +1,28 @@
+[Unit]
+Description=OpenClaw Gateway - {{AGENT_NAME}}
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory={{OPENCLAW_PKG_ROOT}}
+ExecStart={{OPENCLAW_BIN}} gateway
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Environment
+Environment=NODE_ENV=production
+Environment=HOME={{AGENT_HOME_DIR}}
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=full
+
+# Resource limits
+MemoryMax={{MEMORY_LIMIT}}
+CPUQuota={{CPU_QUOTA}}
+
+[Install]
+WantedBy=default.target

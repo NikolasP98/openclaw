@@ -1,6 +1,6 @@
 {
-  "name": "openclaw",
-  "version": "2026.2.13",
+  "name": "@nikolasp98/openclaw",
+  "version": "2026.2.15-1",
   "description": "Multi-channel AI gateway with extensible messaging integrations",
   "keywords": [],
   "license": "MIT",
@@ -112,7 +112,8 @@
     "tui:dev": "OPENCLAW_PROFILE=dev CLAWDBOT_PROFILE=dev node scripts/run-node.mjs --dev tui",
     "ui:build": "node scripts/ui.js build",
     "ui:dev": "node scripts/ui.js dev",
-    "ui:install": "node scripts/ui.js install"
+    "ui:install": "node scripts/ui.js install",
+    "version:stamp": "node --import tsx scripts/stamp-version.ts"
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "0.14.1",

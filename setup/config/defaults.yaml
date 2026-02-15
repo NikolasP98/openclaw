@@ -3,9 +3,11 @@
 
 # Install method
 install:
-  method: source # git clone + pnpm install + pnpm build
-  repository: NikolasP98/openclaw
-  branch: main
+  method: package # npm install -g @nikolasp98/openclaw (fast, no build step)
+  package_name: "@nikolasp98/openclaw"
+  package_manager: npm # npm, pnpm, or bun
+  repository: NikolasP98/openclaw # used when method=source
+  branch: main # used when method=source
 
 # Gateway configuration
 gateway:

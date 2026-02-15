@@ -2,10 +2,11 @@
 # ---
 # name: "OpenClaw Setup Orchestrator"
 # description: >
-#   Single entry-point for deploying OpenClaw from source on a VPS.
-#   Supports two modes: remote (orchestrate VPS via SSH from local machine)
-#   and local (run directly on the VPS). Installs via git clone + pnpm install
-#   + pnpm build, sets up systemd user service, and creates the openclaw CLI alias.
+#   Single entry-point for deploying OpenClaw on a VPS.
+#   Supports two install methods: package (npm install -g @nikolasp98/openclaw)
+#   or source (git clone + pnpm install + pnpm build). Package is default.
+#   Supports two exec modes: remote (orchestrate VPS via SSH from local machine)
+#   and local (run directly on the VPS).
 # when: >
 #   Run this to deploy a new OpenClaw instance or update an existing one.
 #   Use --mode=remote from your local machine, or --mode=local on the VPS itself.
@@ -52,7 +53,7 @@ DECOMMISSION_MODE=false
 # Display usage information
 usage() {
     cat << 'EOF'
-OpenClaw Setup - VPS User-Level Deployment via pnpm
+OpenClaw Setup - VPS Deployment Framework
 
 Usage: setup.sh [OPTIONS]
 
@@ -60,7 +61,13 @@ Modes:
     --mode=MODE             Execution mode: local, remote (auto-detect if omitted)
                             If --vps-hostname is set, defaults to remote; otherwise local.
 
-Source Install:
+Install Method:
+    --install-method=METHOD Install method: package (default), source
+                            package: npm install -g @nikolasp98/openclaw (fast, no build)
+                            source:  git clone + pnpm install + pnpm build
+    --pkg-manager=PM        Package manager for package installs: npm (default), pnpm, bun
+
+Source Install (only with --install-method=source):
     --install-dir=PATH      Where to clone openclaw (default: ~/openclaw)
     --repo=REPO             GitHub repo (default: NikolasP98/openclaw)
     --branch=BRANCH         Git branch to checkout (default: main)
@@ -104,13 +111,18 @@ Execution:
     --help                  Show this help message
 
 Examples:
-    # Local mode (running on the VPS directly)
+    # Package install (default — fast, no build step)
     ./setup/setup.sh --api-key=sk-ant-xxx --agent-name=mybot
+
+    # Package install with pnpm
+    ./setup/setup.sh --api-key=sk-ant-xxx --pkg-manager=pnpm
+
+    # Source install (git clone + build)
+    ./setup/setup.sh --install-method=source --api-key=sk-ant-xxx
 
     # Remote mode (from local machine to VPS via SSH)
     ./setup/setup.sh --vps-hostname=server.example.com \
-       --profile=customer-support --api-key=sk-ant-xxx \
-       --github-pat=ghp_xxx
+       --profile=customer-support --api-key=sk-ant-xxx
 
     # Update existing install
     ./setup/setup.sh --update --verbose
@@ -206,6 +218,12 @@ parse_args() {
                 ;;
             --gateway-token=*)
                 GATEWAY_AUTH_TOKEN="${1#*=}"
+                ;;
+            --install-method=*)
+                INSTALL_METHOD="${1#*=}"
+                ;;
+            --pkg-manager=*)
+                PACKAGE_MANAGER="${1#*=}"
                 ;;
             --node-method=*)
                 NODE_INSTALL_METHOD="${1#*=}"
@@ -324,10 +342,11 @@ export_variables() {
     export AGENT_NAME AGENT_PERSONALITY SANDBOX_MODE DM_POLICY
     export ENABLE_WHATSAPP ENABLE_TELEGRAM ENABLE_DISCORD ENABLE_WEB
     export WHATSAPP_PHONE TELEGRAM_BOT_TOKEN DISCORD_BOT_TOKEN
+    export INSTALL_METHOD PACKAGE_MANAGER
     export NODE_INSTALL_METHOD FORCE_REINSTALL UPDATE_MODE DECOMMISSION_MODE
     export GATEWAY_PORT GATEWAY_BIND AGENT_MODEL AGENT_USERNAME GATEWAY_AUTH_TOKEN
     export AGENT_HOME_DIR OPENCLAW_CONFIG_DIR WORKSPACE_DIR
-    export OPENCLAW_ROOT OPENCLAW_WRAPPER NODE_BIN_PATH
+    export OPENCLAW_ROOT OPENCLAW_WRAPPER OPENCLAW_BIN OPENCLAW_PKG_ROOT NODE_BIN_PATH
     export GITHUB_REPO GITHUB_BRANCH EXEC_MODE
     export MEMORY_LIMIT CPU_QUOTA
     export OPENCLAW_TENANT
@@ -348,7 +367,7 @@ main() {
 ║  ╚██████╔╝██║     ███████╗██║ ╚████║╚██████╗███████╗██║  ██║ ║
 ║   ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝ ╚═════╝╚══════╝╚═╝  ╚═╝║
 ║                                                               ║
-║              VPS Setup Framework (pnpm source)                ║
+║              VPS Setup Framework                              ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
 BANNER

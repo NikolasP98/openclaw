@@ -361,11 +361,11 @@ export const registerTelegramNativeCommands = ({
   // leftover commands from deleted skills persisting across restarts (#5717).
   // Chain delete → set so a late-resolving delete cannot wipe newly registered commands.
   const registerCommands = async () => {
-    if (allCommands.length > 0) {
+    if (commandsToRegister.length > 0) {
       await withTelegramApiErrorLogging({
         operation: "setMyCommands",
         runtime,
-        fn: () => bot.api.setMyCommands(allCommands),
+        fn: () => bot.api.setMyCommands(commandsToRegister),
       }).catch(() => {});
     }
   };

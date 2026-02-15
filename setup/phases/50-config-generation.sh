@@ -87,8 +87,16 @@ generate_configuration() {
     fi
 
     # --- Render systemd service ---
-    log_info "Rendering systemd service file..."
-    if ! render_template "${SCRIPT_DIR}/../templates/systemd-user.service.template" "$temp_dir/openclaw-gateway.service"; then
+    local service_template
+    if [ "${INSTALL_METHOD:-package}" = "source" ]; then
+        service_template="${SCRIPT_DIR}/../templates/systemd-user.service.template"
+    else
+        service_template="${SCRIPT_DIR}/../templates/systemd-npm.service.template"
+        # Ensure package install vars are exported for template rendering
+        export OPENCLAW_BIN OPENCLAW_PKG_ROOT
+    fi
+    log_info "Rendering systemd service file (template: $(basename "$service_template"))..."
+    if ! render_template "$service_template" "$temp_dir/openclaw-gateway.service"; then
         handle_error $? "Failed to render service file" "Configuration Generation"
         return 1
     fi
