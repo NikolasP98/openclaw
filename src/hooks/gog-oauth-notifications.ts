@@ -3,7 +3,6 @@
  */
 
 import type { FollowupRun } from "../auto-reply/reply/queue/types.js";
-import type { SessionEntry } from "../config/sessions.js";
 import { resolveAgentDir, resolveAgentWorkspaceDir } from "../agents/agent-scope.js";
 import { enqueueFollowupRun } from "../auto-reply/reply/queue/enqueue.ts";
 import { loadConfig } from "../config/config.js";
