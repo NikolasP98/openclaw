@@ -4,6 +4,7 @@ import { onAgentEvent } from "../infra/agent-events.js";
 import { parseAgentSessionKey } from "../routing/session-key.js";
 import { type DeliveryContext, normalizeDeliveryContext } from "../utils/delivery-context.js";
 import { trackSpecialistSpawn, trackSpecialistComplete } from "./specialist-tracker.js";
+import { resetAnnounceQueuesForTests } from "./subagent-announce-queue.js";
 import { runSubagentAnnounceFlow, type SubagentRunOutcome } from "./subagent-announce.js";
 import {
   loadSubagentRegistryFromDisk,
@@ -420,9 +421,10 @@ async function waitForSubagentCompletion(runId: string, waitTimeoutMs: number) {
   }
 }
 
-export function resetSubagentRegistryForTests() {
+export function resetSubagentRegistryForTests(opts?: { persist?: boolean }) {
   subagentRuns.clear();
   resumedRuns.clear();
+  resetAnnounceQueuesForTests();
   stopSweeper();
   restoreAttempted = false;
   if (listenerStop) {
@@ -430,7 +432,9 @@ export function resetSubagentRegistryForTests() {
     listenerStop = null;
   }
   listenerStarted = false;
-  persistSubagentRuns();
+  if (opts?.persist !== false) {
+    persistSubagentRuns();
+  }
 }
 
 export function addSubagentRunForTests(entry: SubagentRunRecord) {

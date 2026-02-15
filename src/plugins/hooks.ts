@@ -14,6 +14,7 @@ import type {
   PluginHookBeforeAgentStartEvent,
   PluginHookBeforeAgentStartResult,
   PluginHookBeforeCompactionEvent,
+  PluginHookBeforeResetEvent,
   PluginHookBeforeToolCallEvent,
   PluginHookBeforeToolCallResult,
   PluginHookGatewayContext,
@@ -43,6 +44,7 @@ export type {
   PluginHookBeforeAgentStartResult,
   PluginHookAgentEndEvent,
   PluginHookBeforeCompactionEvent,
+  PluginHookBeforeResetEvent,
   PluginHookAfterCompactionEvent,
   PluginHookMessageContext,
   PluginHookMessageInboundEvent,
@@ -230,6 +232,18 @@ export function createHookRunner(registry: PluginRegistry, options: HookRunnerOp
     ctx: PluginHookAgentContext,
   ): Promise<void> {
     return runVoidHook("after_compaction", event, ctx);
+  }
+
+  /**
+   * Run before_reset hook.
+   * Fired when /new or /reset clears a session, before messages are lost.
+   * Runs in parallel (fire-and-forget).
+   */
+  async function runBeforeReset(
+    event: PluginHookBeforeResetEvent,
+    ctx: PluginHookAgentContext,
+  ): Promise<void> {
+    return runVoidHook("before_reset", event, ctx);
   }
 
   // =========================================================================
@@ -461,6 +475,7 @@ export function createHookRunner(registry: PluginRegistry, options: HookRunnerOp
     runAgentEnd,
     runBeforeCompaction,
     runAfterCompaction,
+    runBeforeReset,
     // Message hooks
     runMessageInbound,
     runMessageReceived,

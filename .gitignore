@@ -86,7 +86,7 @@ USER.md
 /memory/
 .agent/*.json
 !.agent/workflows/
-local/
+/local/
 
 # Pre-compiled extension build artifacts (scripts/build-extensions.ts)
 extensions/**/*.js
@@ -95,3 +95,4 @@ extensions/**/*.mjs
 
 # Editor directories
 .vscode/
+package-lock.json

@@ -75,6 +75,37 @@ const resolvePluginSdkAlias = (): string | null => {
   return null;
 };
 
+const resolvePluginSdkAccountIdAlias = (): string | null => {
+  try {
+    const modulePath = fileURLToPath(import.meta.url);
+    const isProduction = process.env.NODE_ENV === "production";
+    const isTest = process.env.VITEST || process.env.NODE_ENV === "test";
+    let cursor = path.dirname(modulePath);
+    for (let i = 0; i < 6; i += 1) {
+      const srcCandidate = path.join(cursor, "src", "plugin-sdk", "account-id.ts");
+      const distCandidate = path.join(cursor, "dist", "plugin-sdk", "account-id.js");
+      const orderedCandidates = isProduction
+        ? isTest
+          ? [distCandidate, srcCandidate]
+          : [distCandidate]
+        : [srcCandidate, distCandidate];
+      for (const candidate of orderedCandidates) {
+        if (fs.existsSync(candidate)) {
+          return candidate;
+        }
+      }
+      const parent = path.dirname(cursor);
+      if (parent === cursor) {
+        break;
+      }
+      cursor = parent;
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+};
+
 function buildCacheKey(params: {
   workspaceDir?: string;
   plugins: NormalizedPluginsConfig;
@@ -212,6 +243,7 @@ export function loadOpenClawPlugins(options: PluginLoadOptions = {}): PluginRegi
   pushDiagnostics(registry.diagnostics, manifestRegistry.diagnostics);
 
   const pluginSdkAlias = resolvePluginSdkAlias();
+  const pluginSdkAccountIdAlias = resolvePluginSdkAccountIdAlias();
 
   // Native require for pre-compiled .js extensions — avoids jiti/Babel overhead.
   const nativeRequire = createRequire(import.meta.url);
@@ -234,9 +266,14 @@ export function loadOpenClawPlugins(options: PluginLoadOptions = {}): PluginRegi
           ".cjs",
           ".json",
         ],
-        ...(pluginSdkAlias
+        ...(pluginSdkAlias || pluginSdkAccountIdAlias
           ? {
-              alias: { "openclaw/plugin-sdk": pluginSdkAlias },
+              alias: {
+                ...(pluginSdkAlias ? { "openclaw/plugin-sdk": pluginSdkAlias } : {}),
+                ...(pluginSdkAccountIdAlias
+                  ? { "openclaw/plugin-sdk/account-id": pluginSdkAccountIdAlias }
+                  : {}),
+              },
             }
           : {}),
       });

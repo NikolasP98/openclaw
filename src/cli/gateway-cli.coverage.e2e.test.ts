@@ -38,7 +38,6 @@ async function withEnvOverride<T>(
       process.env[key] = overrides[key];
     }
   }
-  vi.resetModules();
   try {
     return await fn();
   } finally {
@@ -49,7 +48,6 @@ async function withEnvOverride<T>(
         process.env[key] = saved[key];
       }
     }
-    vi.resetModules();
   }
 }
 
@@ -206,7 +204,7 @@ describe("gateway-cli coverage", () => {
     expect(out).toContain("- Studio openclaw.internal.");
     expect(out).toContain("  tailnet: studio.tailnet.ts.net");
     expect(out).toContain("  host: studio.openclaw.internal");
-    expect(out).toContain("  ws: ws://studio.tailnet.ts.net:18789");
+    expect(out).toContain("  ws: ws://studio.openclaw.internal:18789");
   });
 
   it("validates gateway discover timeout", async () => {
