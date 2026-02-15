@@ -2,10 +2,10 @@
 
 ## Current State (Ready to Use!)
 
-✅ Main branch is now clean and synced with origin
-✅ Git alias `sync-upstream` is configured globally
-✅ Branch tracking configured for DEV and PRD
-✅ Full workflow documentation: `.agent/workflows/openclaw-fork-sync.md`
+- Mirror branch is a clean mirror of upstream
+- Git alias `sync-upstream` is configured globally
+- Branch tracking configured for DEV and main
+- Full workflow documentation: `.agent/workflows/openclaw-fork-sync.md`
 
 ## Your Workflow in Action
 
@@ -18,14 +18,14 @@ git sync-upstream
 **This does**:
 
 - Fetches latest from upstream
-- Fast-forwards main to upstream/main
-- Merges main into DEV
+- Fast-forwards mirror to upstream/main
+- Merges mirror into DEV
 - Pushes both branches to origin
 - Leaves you on DEV ready to work
 
 **This does NOT**:
 
-- Touch feature branches or PRD (manually managed)
+- Touch feature branches or main (production) (manually managed)
 - Overwrite your custom Docker code (merge protects it)
 - Delete anything
 
@@ -39,13 +39,13 @@ git rebase DEV  # or git merge DEV
 git push -f
 ```
 
-**Update PRD when ready for production:**
+**Update main when ready for production:**
 
 ```bash
 # Test DEV thoroughly first!
-git checkout PRD
+git checkout main
 git merge DEV -m "Release: promote DEV to production"
-git push origin PRD
+git push origin main
 ```
 
 ### Daily Feature Work
@@ -82,23 +82,23 @@ git push origin DEV
 
 - Upstream changes: `src/gateway/*.ts`, `docs/*.md`
 - You changed: `Dockerfile`, `docker-compose.yml`, `entrypoint.sh`
-- **Result**: ✅ Both sets automatically preserved
+- **Result**: Both sets automatically preserved
 
 **Scenario 2: Conflicts (rare)**
 
 - Upstream changed: `Dockerfile` line 10
 - You changed: `Dockerfile` line 10
-- **Result**: ⚠️ Git STOPS and asks you to resolve (YOUR CHOICE)
+- **Result**: Git STOPS and asks you to resolve (YOUR CHOICE)
 
 **Scenario 3: Same file, different lines**
 
 - Upstream changed: `Dockerfile` line 10
 - You changed: `Dockerfile` line 50
-- **Result**: ✅ Both changes merged in same file
+- **Result**: Both changes merged in same file
 
 ### Why Merge > Cherry-Pick
 
-| Merge (✅ Use This)            | Cherry-Pick (❌ Avoid)      |
+| Merge (Use This)               | Cherry-Pick (Avoid)         |
 | ------------------------------ | --------------------------- |
 | Automatic - brings all commits | Manual - select each commit |
 | Preserves relationships        | Creates duplicate commits   |
@@ -110,7 +110,7 @@ git push origin DEV
 ```
 upstream/main (openclaw/openclaw)
     ↓ git sync-upstream (automated)
-main (clean mirror)
+mirror (clean mirror)
     ↓ git sync-upstream (automated)
 DEV (development + custom Docker work)
 
@@ -118,7 +118,7 @@ DEV (development + custom Docker work)
 Manual (update when needed):
 ───────────────────────────────────
 feature/* branches → rebase/merge from DEV
-PRD → merge from DEV
+main → merge from DEV (production)
 ```
 
 ## Next Steps
@@ -145,8 +145,8 @@ A: No! Merge preserves both upstream changes AND your custom code. Conflicts onl
 **Q: What if I get conflicts?**
 A: Git stops and shows conflict markers. Edit the file, keep what you want, stage with `git add`, then `git commit`. See full guide for examples.
 
-**Q: When should I update PRD?**
-A: Only after testing DEV thoroughly. PRD is production - promote manually, not automatically.
+**Q: When should I update main (production)?**
+A: Only after testing DEV thoroughly. Main is production - promote manually, not automatically.
 
 **Q: Can I still use cherry-pick?**
 A: For normal syncing, no - merge is better. Only use cherry-pick for one-off fixes if absolutely needed.
@@ -154,11 +154,11 @@ A: For normal syncing, no - merge is better. Only use cherry-pick for one-off fi
 ## Verification Commands
 
 ```bash
-# Check main is clean mirror of upstream
-git log --oneline main..upstream/main  # Should be empty
+# Check mirror is clean mirror of upstream
+git log --oneline mirror..upstream/main  # Should be empty
 
-# Check DEV contains main
-git merge-base --is-ancestor main DEV && echo "✓ DEV up to date"
+# Check DEV contains mirror
+git merge-base --is-ancestor mirror DEV && echo "DEV up to date"
 
 # View branch structure
 git log --oneline --graph --all --decorate -20

@@ -5,7 +5,7 @@ on:
   push:
     branches:
       - DEV
-      - PRD
+      - main
     tags:
       - "v*"
     paths-ignore:

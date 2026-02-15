@@ -7,18 +7,19 @@ This document describes the branch naming conventions and cleanup strategies for
 ```
 upstream/main (openclaw/openclaw official)
     ↓ (fast-forward sync - automated)
-main (your fork's main, clean mirror of upstream)
+mirror (clean mirror of upstream - NO custom commits)
     ↓ (automated sync)
-DEV (integration: main + all custom work)
+DEV (integration: mirror + all custom work)
+    ↓ (manual merge when ready)
+main (production - deployed to servers, Docker tag: prd)
 
 ───────────────────────────────────────────
 Manual branch management (not auto-synced):
 ───────────────────────────────────────────
 feature/* branches → Update by rebasing/merging from DEV
-PRD → Update by merging from DEV when ready
 ```
 
-**Note**: The simplified fork-sync skill now only auto-syncs `main` and `DEV`. Feature branches and PRD are managed manually when needed.
+**Note**: The fork-sync skill auto-syncs `mirror` and `DEV`. Feature branches and main (production) are managed manually when needed.
 
 ## Remotes
 
@@ -29,23 +30,21 @@ upstream → git@github.com:openclaw/openclaw.git (official repo)
 
 ## Branch Naming Conventions
 
-### The `main` Branch
+### The `mirror` Branch
 
-**Keep the name `main`** - this is standard practice for forks.
-
-**Why not rename to `upstream` or `fork`?**
-
-- ✅ Industry Standard: 99% of forks use `main`
-- ✅ Tool Compatibility: GitHub, CI/CD tools expect `main`
-- ✅ Clear Semantics: The remote names already provide distinction
-- ❌ `upstream` would collide with the remote name
-- ❌ Non-standard naming breaks developer expectations
+**Purpose**: Clean mirror of upstream/main. Never contains custom commits.
 
 **Terminology:**
 
 - `upstream/main` = Official OpenClaw main branch
-- `origin/main` = Your fork's main branch (mirrors upstream)
-- `main` (local) = Your working copy (tracks origin/main)
+- `origin/mirror` = Your fork's mirror branch (tracks upstream)
+- `mirror` (local) = Your working copy (tracks origin/mirror)
+
+### The `main` Branch
+
+**Purpose**: Production branch. Deployed to servers, builds Docker `:prd` tag.
+
+**GitHub default branch**: `main` — makes semantic sense as the primary production branch.
 
 ### Feature Branch Lifecycle
 
@@ -58,9 +57,7 @@ upstream → git@github.com:openclaw/openclaw.git (official repo)
 
 **Examples:** `feature/docker-workflow-automation`, `nikolas/custom-setup`
 
-**Note**: As of the simplified fork-sync workflow, feature branches are no longer auto-synced. Update them manually when needed.
-
-**Temporary Feature Branches** (DELETE after merging to PRD):
+**Temporary Feature Branches** (DELETE after merging to main):
 
 - One-off bug fixes
 - Features that will be upstreamed soon
@@ -76,21 +73,21 @@ git push origin --delete feature/temporary-feature # Delete remote
 
 ## Syncing Workflow
 
-### Update Main from Upstream
+### Update Mirror from Upstream
 
 ```bash
-# Update your local main
-git checkout main
+# Update your local mirror
+git checkout mirror
 git fetch upstream
 git merge --ff-only upstream/main
-git push origin main
+git push origin mirror
 ```
 
-**If fast-forward fails** (main has diverged):
+**If fast-forward fails** (mirror has diverged):
 
 ```bash
 git reset --hard upstream/main
-git push origin main --force-with-lease
+git push origin mirror --force-with-lease
 ```
 
 ### Update Persistent Feature Branches
@@ -105,11 +102,11 @@ git push origin main --force-with-lease
 **Workflow:**
 
 ```bash
-# 1. Update main first (see above)
+# 1. Update mirror first (see above)
 
 # 2. Update feature branch
 git checkout feature/docker-workflow-automation
-git merge main
+git merge DEV
 
 # 3. If no conflicts
 git push origin feature/docker-workflow-automation
@@ -117,21 +114,21 @@ git push origin feature/docker-workflow-automation
 # 4. If conflicts occur (see conflict resolution below)
 ```
 
-### Re-merge into DEV/PRD
+### Re-merge into DEV/main
 
 After updating a persistent feature branch:
 
 ```bash
 # Update DEV
 git checkout DEV
-git merge main                              # Get latest main
-git merge feature/docker-workflow-automation # Merge updated feature
+git merge mirror                              # Get latest upstream
+git merge feature/docker-workflow-automation   # Merge updated feature
 git push origin DEV
 
-# Update PRD (after testing DEV)
-git checkout PRD
+# Update main (after testing DEV)
+git checkout main
 git merge DEV
-git push origin PRD
+git push origin main
 ```
 
 ## Conflict Resolution
@@ -166,9 +163,9 @@ Unmerged paths:
 // Your feature branch code
 your code here
 =======
-// Upstream main code
+// Upstream mirror code
 upstream code here
->>>>>>> main
+>>>>>>> mirror
 ```
 
 #### Step 3: Resolve by Conflict Type
@@ -186,7 +183,7 @@ Example:
 await runDockerWorkflow(config);
 =======
 await runWorkflow(config, options);
->>>>>>> main
+>>>>>>> mirror
 
 // After (combined):
 await runDockerWorkflow(config, options);
@@ -205,7 +202,7 @@ Example:
 import { oldFunction } from './old-location';
 =======
 import { newFunction } from './new-structure/location';
->>>>>>> main
+>>>>>>> mirror
 
 // After:
 import { newFunction } from './new-structure/location';
@@ -263,7 +260,7 @@ pnpm openclaw <your-feature-command>
 
 ```bash
 git merge --abort
-git rebase main
+git rebase DEV
 # Resolve conflicts one commit at a time
 git rebase --continue
 ```
@@ -274,12 +271,12 @@ git rebase --continue
 # Backup current branch
 git branch feature/docker-workflow-automation-backup
 
-# Create fresh branch from main
-git checkout main
+# Create fresh branch from DEV
+git checkout DEV
 git checkout -b feature/docker-workflow-automation-new
 
 # Review what changed
-git diff main feature/docker-workflow-automation-backup
+git diff DEV feature/docker-workflow-automation-backup
 
 # Manually reapply customizations
 
@@ -292,7 +289,7 @@ git push origin feature/docker-workflow-automation --force-with-lease
 **Option 3: Cherry-pick Commits**
 
 ```bash
-git checkout main
+git checkout DEV
 git checkout -b feature/docker-workflow-automation-new
 
 # Find commits to preserve
@@ -340,15 +337,15 @@ This helps during conflict resolution.
 **Scenario:** Monthly sync of `feature/docker-workflow-automation`
 
 ```bash
-# 1. Update main from upstream
-git checkout main
+# 1. Update mirror from upstream
+git checkout mirror
 git fetch upstream
 git merge --ff-only upstream/main
-git push origin main
+git push origin mirror
 
 # 2. Switch to feature branch and merge
 git checkout feature/docker-workflow-automation
-git merge main
+git merge DEV
 
 # 3. If conflicts occur
 git status
@@ -362,7 +359,7 @@ git status
 git add src/docker-workflow.ts
 
 # 6. Complete the merge
-git commit -m "Merge main into feature/docker-workflow-automation"
+git commit -m "Merge DEV into feature/docker-workflow-automation"
 
 # 7. Test the feature
 pnpm test
@@ -373,7 +370,7 @@ git push origin feature/docker-workflow-automation
 
 # 9. Update DEV with refreshed feature
 git checkout DEV
-git merge main
+git merge mirror
 git merge feature/docker-workflow-automation
 git push origin DEV
 ```
@@ -383,11 +380,11 @@ git push origin DEV
 ### Standard Sync (No Conflicts)
 
 ```bash
-# One-liner for main update
-git checkout main && git fetch upstream && git merge --ff-only upstream/main && git push origin main
+# One-liner for mirror update
+git checkout mirror && git fetch upstream && git merge --ff-only upstream/main && git push origin mirror
 
 # One-liner for feature update
-git checkout feature/your-feature && git merge main && git push origin feature/your-feature
+git checkout feature/your-feature && git merge DEV && git push origin feature/your-feature
 ```
 
 ### Conflict Commands
@@ -408,11 +405,9 @@ git rebase --abort         # Cancel rebase
 
 ## Current Branch Status
 
-**No changes needed** - your current setup already follows best practices:
+1. `mirror` is the clean upstream mirror
+2. `DEV` is the integration branch
+3. `main` is the production branch
+4. Feature branches kept as persistent customizations
 
-1. ✅ `main` is the correct name (not `upstream` or `fork`)
-2. ✅ `feature/docker-workflow-automation` kept as persistent feature
-3. ✅ `nikolas/custom-setup` kept as persistent feature
-4. ✅ Clean, maintainable workflow
-
-**Going forward:** Delete temporary feature branches after they're merged to PRD, but keep persistent customization branches.
+**Going forward:** Delete temporary feature branches after they're merged to main, but keep persistent customization branches.

@@ -28,6 +28,24 @@ completed work (`- [x]`).
 
 ## Medium Priority
 
+- [ ] **Publish automation (name swap + 2FA)**
+  - Description: Publishing `@nikolasp98/openclaw` requires manually swapping `package.json` name from `openclaw` to the scoped name, then swapping back. Automate with a `publish` script that: (1) stamps version, (2) swaps name, (3) builds, (4) publishes with `--ignore-scripts`, (5) restores name. Integrate `op` CLI for 2FA OTP.
+  - Affected files: `scripts/publish.ts` (new), `package.json` (scripts)
+  - Dependencies: 1Password CLI (`op`) for OTP
+  - Effort: Small
+
+- [ ] **Disable prepack for publish**
+  - Description: The `prepack` lifecycle script runs a full build including DTS generation, which blocks `npm publish` when types fail. Either remove `prepack` entirely or gate it behind a `CI` env check. Current workaround is `--ignore-scripts`.
+  - Affected files: `package.json` (scripts.prepack)
+  - Dependencies: None
+  - Effort: Small
+
+- [ ] **Server config tracks install method**
+  - Description: `.github/servers/*.json` configs don't record whether a server uses `package` or `source` install method. Add `installMethod` and `packageManager` fields so provisioning and update scripts know how to handle each server.
+  - Affected files: `.github/servers/production.json`, `.github/servers/development.json`, provision-server skill
+  - Dependencies: None
+  - Effort: Small
+
 - [ ] **Tailscale auto-configuration**
   - Description: If `--tailscale-key` is provided, automatically install Tailscale, authenticate, and configure SSH access. Currently the key is accepted but not acted on.
   - Affected files: `phases/30-environment-setup.sh` or new `phases/35-tailscale.sh`
@@ -60,6 +78,12 @@ completed work (`- [x]`).
 
 ## Low Priority
 
+- [ ] **Suppress Control UI warning on headless servers**
+  - Description: Gateway logs noisy `Control UI is not available` warnings on servers without the web UI built. Either suppress the warning when `OPENCLAW_DISABLE_CONTROL_UI=1` is set, or auto-detect headless environments and skip the warning.
+  - Affected files: Gateway control-ui initialization code
+  - Dependencies: None
+  - Effort: Small
+
 - [ ] **Dry-run test suite**
   - Description: Automated test harness that runs `--dry-run` with various flag combinations and asserts expected output. Uses bats or plain bash assertions.
   - Affected files: `tests/` (new directory), CI integration
@@ -83,6 +107,26 @@ completed work (`- [x]`).
   - Description: Automatic cascading cleanup on phase failure. Rolls back from the last checkpoint in reverse phase order.
   - Delivered in: `phases/99-rollback.sh`, checkpoint system in `lib/logging.sh`
   - Completed: 2026-02-12
+
+- [x] **Fix `allCommands` reference error in Telegram bot**
+  - Description: `src/telegram/bot-native-commands.ts` referenced `allCommands` after it was renamed to `allCommandsFull`. Gateway crashed on startup when Telegram channel was enabled. Fixed references to use `commandsToRegister`.
+  - Delivered in: `src/telegram/bot-native-commands.ts` (lines 364, 368)
+  - Completed: 2026-02-15
+
+- [x] **Consolidate CORE_PACKAGE_NAMES across codebase**
+  - Description: Package name check (`"openclaw"`) was hardcoded in 4 separate files, causing version resolution to fail for the `@nikolasp98/openclaw` scoped package (reported `0.0.0`). Unified to `CORE_PACKAGE_NAMES = new Set(["openclaw", "@nikolasp98/openclaw"])` in all locations.
+  - Delivered in: `src/version.ts`, `src/infra/openclaw-root.ts`, `src/infra/update-runner.ts`, `src/cli/update-cli/shared.ts`
+  - Completed: 2026-02-15
+
+- [x] **Build-time version injection**
+  - Description: npm package had no version metadata at runtime because `package.json` was not bundled. Added `__OPENCLAW_VERSION__` define injection via tsdown config and `scripts/stamp-version.ts` for `yyyy.M.d` date-based versioning.
+  - Delivered in: `tsdown.config.ts`, `scripts/stamp-version.ts`, `src/version.ts`
+  - Completed: 2026-02-15
+
+- [x] **Migrate bernibites from nohup to systemd**
+  - Description: bernibites `bot-prd` was running the gateway via `nohup` instead of a proper systemd user service. Created and enabled systemd service with linger for reliable restarts.
+  - Delivered in: `~bot-prd/.config/systemd/user/openclaw-gateway.service` on bernibites
+  - Completed: 2026-02-15
 
 ---
 

@@ -6,20 +6,20 @@
 
 **Strategy**: Merge-based workflow to preserve history and protect custom code
 
-**Branch Flow**: `upstream/main` → `main` → `DEV`
+**Branch Flow**: `upstream/main` → `mirror` → `DEV` (→ `main` for production)
 
-**Key Principle**: Main mirrors upstream; DEV integrates custom work; PRD promotes when stable
+**Key Principle**: Mirror tracks upstream; DEV integrates custom work; main is production
 
 ## Quick Reference
 
 ```bash
-# Full sync (upstream → main → DEV)
+# Full sync (upstream → mirror → DEV)
 git fetch upstream && \
-git checkout main && git merge --ff-only upstream/main && git push origin main && \
-git checkout DEV && git merge main && git push origin DEV
+git checkout mirror && git merge --ff-only upstream/main && git push origin mirror && \
+git checkout DEV && git merge mirror && git push origin DEV
 ```
 
-**Note**: Feature branches and PRD are not auto-synced. Update them manually when needed.
+**Note**: Feature branches and main (production) are not auto-synced. Update them manually when needed.
 
 ## Understanding Merge Safety
 
@@ -30,26 +30,26 @@ git checkout DEV && git merge main && git push origin DEV
 1. **No overlapping changes** (99% of syncs)
    - Upstream changed: `src/gateway/*.ts`, `docs/*.md`
    - You changed: `Dockerfile`, `docker-compose.yml`, `entrypoint.sh`
-   - **Result**: Both sets of changes preserved automatically ✅
+   - **Result**: Both sets of changes preserved automatically
 
 2. **Conflicts detected** (rare)
    - Upstream changed: `Dockerfile` line 10
    - You changed: `Dockerfile` line 10
-   - **Result**: Git stops and asks you to resolve ⚠️
+   - **Result**: Git stops and asks you to resolve
 
 3. **Same file, different lines**
    - Upstream changed: `Dockerfile` line 10
    - You changed: `Dockerfile` line 50
-   - **Result**: Both changes merged in same file ✅
+   - **Result**: Both changes merged in same file
 
 ### Why Merge > Cherry-Pick
 
-| Merge                             | Cherry-Pick                                      |
-| --------------------------------- | ------------------------------------------------ |
-| ✅ Automatic - brings all commits | ❌ Manual - select each commit                   |
-| ✅ Preserves commit relationships | ❌ Creates duplicate commits with different SHAs |
-| ✅ Idempotent - safe to repeat    | ❌ Easy to lose track of what's synced           |
-| ✅ Self-documenting history       | ❌ Tedious and error-prone                       |
+| Merge                          | Cherry-Pick                                   |
+| ------------------------------ | --------------------------------------------- |
+| Automatic - brings all commits | Manual - select each commit                   |
+| Preserves commit relationships | Creates duplicate commits with different SHAs |
+| Idempotent - safe to repeat    | Easy to lose track of what's synced           |
+| Self-documenting history       | Tedious and error-prone                       |
 
 ## Step-by-Step Workflow
 
@@ -60,36 +60,36 @@ git checkout DEV && git merge main && git push origin DEV
 git fetch upstream
 
 # Optional: Preview what's new
-git log --oneline main..upstream/main
+git log --oneline mirror..upstream/main
 ```
 
 **Frequency**: Run anytime before syncing (daily, weekly, or as needed)
 
-### Phase 2: Sync Main Branch (Clean Mirror)
+### Phase 2: Sync Mirror Branch (Clean Mirror)
 
 ```bash
-# Switch to main
-git checkout main
+# Switch to mirror
+git checkout mirror
 
 # Fast-forward merge (no merge commit needed)
 git merge --ff-only upstream/main
 
 # Push to your fork
-git push origin main
+git push origin mirror
 ```
 
-**Expected Result**: Main stays as exact mirror of upstream
+**Expected Result**: Mirror stays as exact mirror of upstream
 
-**If it fails**: Main has diverged from upstream, see Troubleshooting section
+**If it fails**: Mirror has diverged from upstream, see Troubleshooting section
 
-### Phase 3: Propagate to DEV Only
+### Phase 3: Propagate to DEV
 
 ```bash
 # Switch to DEV
 git checkout DEV
 
-# Merge main (which now has upstream changes)
-git merge main -m "Merge upstream changes from main"
+# Merge mirror (which now has upstream changes)
+git merge mirror -m "Merge upstream changes from mirror"
 
 # If conflicts occur, resolve them (see Conflict Resolution below)
 # Git will NEVER silently overwrite your Docker customizations
@@ -100,11 +100,11 @@ git push origin DEV
 
 **Expected Result**:
 
-- ✅ DEV contains all upstream changes + your custom Docker work
-- ✅ Your Docker files preserved (Dockerfile, docker-compose.yml, entrypoint.sh)
-- ✅ If conflicts, Git stops and asks you to resolve
+- DEV contains all upstream changes + your custom Docker work
+- Your Docker files preserved (Dockerfile, docker-compose.yml, entrypoint.sh)
+- If conflicts, Git stops and asks you to resolve
 
-**Note**: This is the final automated phase. Feature branches and PRD are not auto-synced.
+**Note**: This is the final automated phase. Feature branches and main (production) are not auto-synced.
 
 ### Manual Branch Management
 
@@ -169,23 +169,23 @@ git branch -d feature/add-xyz
 git push origin --delete feature/add-xyz
 ```
 
-#### Updating PRD (Manual, When Ready)
+#### Updating Main / Production (Manual, When Ready)
 
 ```bash
 # Test DEV thoroughly first!
 
-# Switch to PRD
-git checkout PRD
-git pull origin PRD
+# Switch to main
+git checkout main
+git pull origin main
 
-# Merge DEV into PRD (production release)
+# Merge DEV into main (production release)
 git merge DEV -m "Release: promote DEV changes to production"
 
 # Tag the release (optional but recommended)
 git tag -a v1.2.3 -m "Production release v1.2.3"
 
 # Push to production
-git push origin PRD
+git push origin main
 git push origin v1.2.3
 ```
 
@@ -195,7 +195,7 @@ git push origin v1.2.3
 
 ### When Conflicts Occur
 
-Conflicts typically happen in Phase 3 (DEV ← main) when both upstream and your fork modified the same lines.
+Conflicts typically happen in Phase 3 (DEV ← mirror) when both upstream and your fork modified the same lines.
 
 ```bash
 # After "git merge" reports conflicts:
@@ -210,7 +210,7 @@ FROM node:22-alpine
 RUN apk add --no-cache git bash curl
 =======
 FROM node:20-slim
->>>>>>> main (Incoming upstream changes)
+>>>>>>> mirror (Incoming upstream changes)
 
 # 3. Decide what to keep:
 #    Option A: Keep your version (delete markers + upstream version)
@@ -228,7 +228,7 @@ RUN apk add --no-cache git bash curl python3
 git add Dockerfile
 
 # 5. Complete the merge
-git commit -m "Merge upstream changes from main"
+git commit -m "Merge upstream changes from mirror"
 
 # 6. Push
 git push origin DEV
@@ -238,7 +238,7 @@ git push origin DEV
 
 | File                          | Likelihood | Resolution Strategy                                       |
 | ----------------------------- | ---------- | --------------------------------------------------------- |
-| `docker-compose.yml`          | Low        | Keep YOUR version (DEV/PRD specific config)               |
+| `docker-compose.yml`          | Low        | Keep YOUR version (DEV/main specific config)              |
 | `Dockerfile`                  | Low        | Keep YOUR optimizations, review upstream security updates |
 | `entrypoint.sh`               | Very Low   | Keep YOUR enhanced version                                |
 | `docker/preset-enhanced.json` | Zero       | Your custom file, upstream doesn't have it                |
@@ -248,14 +248,14 @@ git push origin DEV
 
 ### Best Practices to Minimize Conflicts
 
-✅ **DO**:
+**DO**:
 
 - Keep Docker customizations in Docker-specific files
 - Add new files (e.g., `docker/preset-enhanced.json`) instead of modifying existing
 - Document custom changes in fork-specific docs
 - Use config overrides instead of modifying core files
 
-❌ **DON'T**:
+**DON'T**:
 
 - Modify `src/**/*.ts` unless absolutely necessary
 - Change upstream documentation (create fork-specific docs instead)
@@ -268,15 +268,15 @@ upstream/main (openclaw/openclaw)
     │
     │ git fetch upstream
     ↓
-main (clean mirror)
+mirror (clean mirror)
     │
     │ git merge --ff-only upstream/main
-    │ git push origin main
+    │ git push origin mirror
     ↓
-origin/main (your fork)
+origin/mirror (your fork)
     │
     │ git checkout DEV
-    │ git merge main
+    │ git merge mirror
     │ (resolve conflicts if any - YOUR CODE PROTECTED)
     ↓
 DEV (development branch - AUTO-SYNCED)
@@ -286,7 +286,7 @@ Manual Branch Management (not auto-synced):
 ──────────────────────────────────────────
 
 feature/* branches → Rebase or merge from DEV when needed
-PRD branch → Merge from DEV when ready for production
+main branch → Merge from DEV when ready for production
 ```
 
 ## Automation
@@ -300,16 +300,16 @@ Add to `~/.gitconfig`:
     sync-upstream = "!f() { \
         echo '→ Fetching upstream...' && \
         git fetch upstream && \
-        echo '→ Syncing main branch...' && \
-        git checkout main && \
+        echo '→ Syncing mirror branch...' && \
+        git checkout mirror && \
         git merge --ff-only upstream/main && \
-        git push origin main && \
+        git push origin mirror && \
         echo '→ Updating DEV...' && \
         git checkout DEV && \
-        git merge main -m 'Merge upstream changes from main' && \
+        git merge mirror -m 'Merge upstream changes from mirror' && \
         git push origin DEV && \
-        echo '✅ Sync complete! DEV is up to date.' && \
-        echo '💡 Feature branches and PRD are not auto-synced.'; \
+        echo 'Sync complete! DEV is up to date.' && \
+        echo 'Feature branches and main (production) are not auto-synced.'; \
     }; f"
 ```
 
@@ -321,52 +321,52 @@ git sync-upstream
 
 **This does**:
 
-- ✅ Syncs main with upstream
-- ✅ Updates DEV
-- ✅ Protects your custom code (stops on conflicts)
-- ✅ Keeps you on DEV for continued work
+- Syncs mirror with upstream
+- Updates DEV
+- Protects your custom code (stops on conflicts)
+- Keeps you on DEV for continued work
 
 **This does NOT**:
 
-- ❌ Touch feature branches or PRD
-- ❌ Overwrite your code (merge respects both histories)
-- ❌ Delete anything
+- Touch feature branches or main (production)
+- Overwrite your code (merge respects both histories)
+- Delete anything
 
 ## Verification
 
 After each sync cycle, verify:
 
 ```bash
-# ✓ Main matches upstream
-git log --oneline main..upstream/main  # Should be empty
+# Main matches upstream
+git log --oneline mirror..upstream/main  # Should be empty
 
-# ✓ DEV contains main
-git merge-base --is-ancestor main DEV && echo "✓ DEV contains main"
+# DEV contains mirror
+git merge-base --is-ancestor mirror DEV && echo "DEV contains mirror"
 
-# ✓ View branch structure
+# View branch structure
 git log --oneline --graph --all --decorate -20
 
-# ✓ Verify Docker configurations preserved
+# Verify Docker configurations preserved
 git diff origin/DEV -- Dockerfile docker-compose.yml entrypoint.sh docker/
 ```
 
 ## Troubleshooting
 
-### "fatal: Not possible to fast-forward" on main
+### "fatal: Not possible to fast-forward" on mirror
 
-**Cause**: Main has diverged from upstream (has local commits)
+**Cause**: Mirror has diverged from upstream (has local commits)
 
 **Solution Options**:
 
 **Option 1: Push local commit to origin** (if commit is valuable)
 
 ```bash
-git checkout main
-git push origin main
+git checkout mirror
+git push origin mirror
 # Next sync will create a merge commit
 ```
 
-**Option 2: Move commit to DEV** (keep main clean)
+**Option 2: Move commit to DEV** (keep mirror clean)
 
 ```bash
 # Cherry-pick the commit to DEV (one-time exception)
@@ -374,18 +374,18 @@ git checkout DEV
 git cherry-pick <commit-hash>
 git push origin DEV
 
-# Reset main to match origin
-git checkout main
-git reset --hard origin/main
-git push origin main -f
+# Reset mirror to match upstream
+git checkout mirror
+git reset --hard upstream/main
+git push origin mirror -f
 ```
 
 **Option 3: Discard the commit** (if not needed)
 
 ```bash
-git checkout main
-git reset --hard origin/main
-git push origin main -f
+git checkout mirror
+git reset --hard upstream/main
+git push origin mirror -f
 ```
 
 ### Merge conflicts on every sync
@@ -399,28 +399,28 @@ git push origin main -f
 - If you must modify core files, document changes for easy re-application
 - Consider proposing changes upstream via PR instead of maintaining fork-only modifications
 
-### PRD and DEV have diverged
+### main and DEV have diverged
 
-**Cause**: Direct commits to PRD instead of merging from DEV
+**Cause**: Direct commits to main instead of merging from DEV
 
-**Solution**: Always commit to DEV first, then merge to PRD
+**Solution**: Always commit to DEV first, then merge to main
 
 **Recovery**:
 
 ```bash
-# Option 1: Reset PRD to match DEV (if PRD changes not needed)
-git checkout PRD
+# Option 1: Reset main to match DEV (if main changes not needed)
+git checkout main
 git reset --hard DEV
-git push origin PRD -f
+git push origin main -f
 
-# Option 2: Merge PRD changes back to DEV first
+# Option 2: Merge main changes back to DEV first
 git checkout DEV
-git merge PRD -m "Merge PRD divergence back to DEV"
+git merge main -m "Merge main divergence back to DEV"
 git push origin DEV
-# Then reset PRD
-git checkout PRD
+# Then reset main
+git checkout main
 git reset --hard DEV
-git push origin PRD -f
+git push origin main -f
 ```
 
 ### Lost track of what's synced
@@ -432,14 +432,14 @@ git push origin PRD -f
 **Recovery**: Compare branches to understand current state
 
 ```bash
-# See what DEV has that main doesn't
-git log main..DEV --oneline
+# See what DEV has that mirror doesn't
+git log mirror..DEV --oneline
 
-# See what PRD has that DEV doesn't
-git log DEV..PRD --oneline
+# See what main has that DEV doesn't
+git log DEV..main --oneline
 
 # See divergence between branches
-git log --oneline --graph DEV PRD main
+git log --oneline --graph DEV main mirror
 ```
 
 ## Maintenance Schedule
@@ -451,12 +451,12 @@ git log --oneline --graph DEV PRD main
 
 ## Success Criteria
 
-- ✅ Can sync fork with upstream using simple merge commands
-- ✅ No cherry-picking required for normal operations
-- ✅ Clear merge history showing sync points
-- ✅ Custom Docker work preserved across syncs
-- ✅ Minimal conflicts due to isolated customizations
-- ✅ Reproducible workflow that can be automated
+- Can sync fork with upstream using simple merge commands
+- No cherry-picking required for normal operations
+- Clear merge history showing sync points
+- Custom Docker work preserved across syncs
+- Minimal conflicts due to isolated customizations
+- Reproducible workflow that can be automated
 
 ## Differences from update_clawdbot.md
 
@@ -465,7 +465,7 @@ This workflow differs from `.agent/workflows/update_clawdbot.md`:
 | Feature         | update_clawdbot.md | openclaw-fork-sync.md     |
 | --------------- | ------------------ | ------------------------- |
 | **Target**      | Clawdbot fork      | OpenClaw fork             |
-| **Branches**    | main only          | main → DEV → PRD          |
+| **Branches**    | main only          | mirror → DEV → main       |
 | **Strategy**    | Rebase preferred   | Merge preferred           |
 | **Rebuild**     | macOS/Swift focus  | Docker container focus    |
 | **Custom Code** | General source     | Docker-specific isolation |

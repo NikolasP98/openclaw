@@ -1,17 +1,17 @@
 # Fork Sync Skill
 
-Comprehensive workflow automation for syncing the OpenClaw fork with upstream and managing the DEV/PRD branch structure.
+Comprehensive workflow automation for syncing the OpenClaw fork with upstream and managing the DEV/main branch structure.
 
 ## Overview
 
 This skill manages the complete fork synchronization workflow for the OpenClaw fork, including:
 
-- Syncing `main` with `upstream/main`
+- Syncing `mirror` with `upstream/main`
 - Updating `DEV` (integration) branch with upstream changes
 - Handling merge conflicts
 - Validating sync success
 
-**Note**: Feature branches and PRD are no longer auto-synced. Manage them manually when needed.
+**Note**: Feature branches and main (production) are not auto-synced. Manage them manually when needed.
 
 ## Files
 
@@ -45,22 +45,22 @@ For routine syncs (when no conflicts are expected):
 
 The script includes:
 
-- ✅ Pre-flight checks (clean working directory, upstream configured)
-- ✅ Interactive confirmation with new commit preview
-- ✅ Automatic execution of all 3 phases (0, 1, 2)
-- ✅ Post-sync verification
-- ✅ Error handling and rollback on conflicts
+- Pre-flight checks (clean working directory, upstream configured)
+- Interactive confirmation with new commit preview
+- Automatic execution of all 3 phases (0, 1, 2)
+- Post-sync verification
+- Error handling and rollback on conflicts
 
 ## Branch Structure
 
 ```
-upstream/main → main → DEV
+upstream/main → mirror → DEV (→ main for production)
 ```
 
-- **main**: Clean mirror of upstream, no custom work
+- **mirror**: Clean mirror of upstream, no custom work
 - **DEV**: Integration branch with all custom work
+- **main**: Production branch, merge from DEV when ready
 - **Feature branches** (manual): Update by rebasing or merging from DEV
-- **PRD** (manual): Update by merging from DEV when ready
 
 ## Documentation
 
@@ -93,9 +93,9 @@ See SKILL.md for detailed conflict resolution procedures.
 
 ## Version
 
-- **Version**: 1.0.0
+- **Version**: 2.0.0
 - **Created**: 2026-02-01
-- **Last Updated**: 2026-02-01
+- **Last Updated**: 2026-02-15
 - **Maintained By**: Nikolas P. (NikolasP98)
 
 ## Branch Management Notes
@@ -109,12 +109,12 @@ git rebase DEV
 git merge DEV -m "Update feature with latest"
 ```
 
-**PRD branch**: No longer auto-synced. To update manually:
+**main branch (production)**: No longer auto-synced. To update manually:
 
 ```bash
-git checkout PRD
-git merge DEV -m "Manual sync from DEV"
-git push origin PRD
+git checkout main
+git merge DEV -m "Release: promote DEV to production"
+git push origin main
 ```
 
 ## Related Resources

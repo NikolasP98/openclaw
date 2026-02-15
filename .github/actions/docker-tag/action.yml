@@ -13,9 +13,9 @@ runs:
       run: |
         REF="${{ github.ref }}"
         case "$REF" in
-          refs/heads/DEV)  TAG="dev" ;;
-          refs/heads/PRD)  TAG="prd" ;;
-          refs/heads/main) TAG="main" ;;
+          refs/heads/DEV)    TAG="dev" ;;
+          refs/heads/main)   TAG="prd" ;;
+          refs/heads/mirror) TAG="mirror" ;;
           refs/tags/v*)    TAG="${REF#refs/tags/v}" ;;
           *)               TAG="unknown" ;;
         esac
