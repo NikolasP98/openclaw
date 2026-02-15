@@ -1,0 +1,11 @@
+{
+  "id": "agent-switcher",
+  "name": "Agent Switcher",
+  "description": "Platform-level /agent command for switching agent routing",
+  "version": "1.0.0",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}
