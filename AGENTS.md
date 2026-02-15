@@ -3,6 +3,16 @@
 - Repo: https://github.com/openclaw/openclaw
 - GitHub issues/comments/PR comments: use literal multiline strings or `-F - <<'EOF'` (or $'...') for real newlines; never embed "\\n".
 
+## Package Installation
+
+**CRITICAL:** All OpenClaw installations MUST use the custom fork package:
+
+```bash
+npm install -g @nikolasp98/openclaw
+```
+
+**NEVER** use `@anthropic/openclaw` or generic `openclaw` from npm registry. See [docs/fork/package-installation.md](./docs/fork/package-installation.md) for details.
+
 ## Project Structure & Module Organization
 
 - Source code: `src/` (CLI wiring in `src/cli`, commands in `src/commands`, web provider in `src/provider-web.ts`, infra in `src/infra`, media pipeline in `src/media`).
@@ -19,31 +29,26 @@
 
 ## Docker Compose Sync Across Branches
 
-This fork maintains separate `docker-compose.yml` files per branch (main, DEV, PRD) with environment-specific defaults. When updating the Docker configuration, sync changes across all branches:
+This fork maintains separate `docker-compose.yml` files per branch (mirror, DEV, main) with environment-specific defaults. When updating the Docker configuration, sync changes across all branches:
 
 **Sync Checklist:**
 
-1. Make changes on the main branch (or current branch)
+1. Make changes on the DEV branch (or current branch)
 2. Commit the changes: `git add docker-compose.yml && git commit -m "Docker: <description>"`
-3. Switch to DEV branch: `git switch DEV`
+3. Switch to main branch: `git switch main`
 4. Cherry-pick the commit: `git cherry-pick <commit-sha>`
-5. Verify DEV-specific defaults are preserved (container names: `openclaw_DEV_gw`, image: `ghcr.io/nikolasp98/openclaw:dev`)
+5. Verify main-specific defaults are preserved (container names: `openclaw_prd_gw`, image: `ghcr.io/nikolasp98/openclaw:prd`)
 6. Commit if needed: `git add docker-compose.yml && git commit --amend --no-edit` or create a fix commit
-7. Switch to PRD branch: `git switch PRD`
-8. Cherry-pick the commit: `git cherry-pick <commit-sha>`
-9. Verify PRD-specific defaults are preserved (container names: `openclaw_PRD_gw`, image: `ghcr.io/nikolasp98/openclaw:prd`)
-10. Commit if needed: `git add docker-compose.yml && git commit --amend --no-edit` or create a fix commit
-11. Verify only environment-specific lines differ:
-    ```bash
-    git diff DEV:docker-compose.yml PRD:docker-compose.yml
-    git diff main:docker-compose.yml DEV:docker-compose.yml
-    ```
+7. Verify only environment-specific lines differ:
+   ```bash
+   git diff DEV:docker-compose.yml main:docker-compose.yml
+   ```
 
 **Environment-Specific Defaults (keep these per branch):**
 
-- **main**: `image: ghcr.io/nikolasp98/openclaw:main` (no container_name)
+- **mirror**: no Docker image (clean upstream mirror)
 - **DEV**: `image: ghcr.io/nikolasp98/openclaw:dev`, `container_name: openclaw_DEV_gw/cli`
-- **PRD**: `image: ghcr.io/nikolasp98/openclaw:prd`, `container_name: openclaw_PRD_gw/cli`
+- **main**: `image: ghcr.io/nikolasp98/openclaw:prd`, `container_name: openclaw_prd_gw/cli`
 
 **Common Configuration (should be identical across branches):**
 
@@ -55,7 +60,7 @@ This fork maintains separate `docker-compose.yml` files per branch (main, DEV, P
 
 ## GitHub Actions Workflow Management
 
-When pushing to `DEV` or `PRD` branches, cancel any in-progress or queued workflow runs for that branch before pushing. Multiple rapid pushes (e.g., 6 pushes in a 6-minute window) would otherwise queue 6 Docker image builds when only the latest matters.
+When pushing to `DEV` or `main` branches, cancel any in-progress or queued workflow runs for that branch before pushing. Multiple rapid pushes (e.g., 6 pushes in a 6-minute window) would otherwise queue 6 Docker image builds when only the latest matters.
 
 **Cancel workflow runs before pushing:**
 
@@ -63,8 +68,8 @@ When pushing to `DEV` or `PRD` branches, cancel any in-progress or queued workfl
 # Cancel in-progress and queued runs for DEV branch
 gh run list --branch DEV --status in_progress --status queued --json databaseId -q '.[].databaseId' | xargs -I {} gh run cancel {}
 
-# Cancel in-progress and queued runs for PRD branch
-gh run list --branch PRD --status in_progress --status queued --json databaseId -q '.[].databaseId' | xargs -I {} gh run cancel {}
+# Cancel in-progress and queued runs for main branch
+gh run list --branch main --status in_progress --status queued --json databaseId -q '.[].databaseId' | xargs -I {} gh run cancel {}
 ```
 
 Or as a one-liner before push:
@@ -75,15 +80,15 @@ gh run list --branch DEV --status in_progress --status queued --json databaseId 
 
 ## Branch Protection (Agent Guidelines)
 
-- **Never commit directly to `main`, `DEV`, or `PRD` branches** unless explicitly requested
+- **Never commit directly to `mirror`, `DEV`, or `main` branches** unless explicitly requested
 - Create feature branches for all work: `git checkout -b feature/<name> <base-branch>`
 - Base branches:
-  - `main` for upstream-related work (syncs with upstream)
+  - `mirror` for upstream-related work (syncs with upstream)
   - `DEV` for development features (all changes funnel through here)
-  - `PRD` for production (merges from DEV only)
-- **Branch flow:** `main` ← upstream sync | `DEV` ← all feature work | `PRD` ← merges from `DEV` only
+  - `main` for production (merges from DEV only)
+- **Branch flow:** `mirror` ← upstream sync | `DEV` ← all feature work | `main` ← merges from `DEV` only
 - Only merge to protected branches when explicitly instructed
-- If asked to "push" without branch specification, **always ask** whether to push to `DEV` or `PRD`
+- If asked to "push" without branch specification, **always ask** whether to push to `DEV` or `main`
 
 ## Docs Linking (Mintlify)
 
