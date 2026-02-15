@@ -3,33 +3,33 @@
  * Handles localhost OAuth redirects and token exchange
  */
 
+import crypto from "crypto";
 import http from "http";
 import { URL } from "url";
-import crypto from "crypto";
 import type {
-	OAuthServerConfig,
-	PendingOAuthFlow,
-	OAuthCallbackParams,
-	TokenExchangeResponse,
-	GogCredentials,
+  OAuthServerConfig,
+  PendingOAuthFlow,
+  OAuthCallbackParams,
+  TokenExchangeResponse,
+  GogCredentials,
 } from "./gog-oauth-types.js";
+import { updateSessionStore, resolveDefaultSessionStorePath } from "../config/sessions.js";
 import { saveSessionCredentials } from "./gog-credentials.js";
 import {
-	notifyAuthSuccess,
-	notifyAuthError,
-	notifyAuthTimeout,
+  notifyAuthSuccess,
+  notifyAuthError,
+  notifyAuthTimeout,
 } from "./gog-oauth-notifications.js";
-import { updateSessionStore, resolveDefaultSessionStorePath } from "../config/sessions.js";
 
 /**
  * Default OAuth server configuration
  */
-const DEFAULT_CONFIG: Required<OAuthServerConfig> = {
-	enabled: true,
-	port: 51234,
-	bind: "127.0.0.1",
-	callbackPath: "/oauth-callback",
-	timeoutMinutes: 5,
+const DEFAULT_CONFIG: Required<Omit<OAuthServerConfig, "externalRedirectUri">> = {
+  enabled: true,
+  port: 51234,
+  bind: "127.0.0.1",
+  callbackPath: "/oauth-callback",
+  timeoutMinutes: 5,
 };
 
 /**
@@ -44,254 +44,253 @@ const pendingFlows = new Map<string, PendingOAuthFlow>();
 let server: http.Server | null = null;
 let actualPort: number | null = null;
 let cleanupInterval: NodeJS.Timeout | null = null;
+let configuredExternalRedirectUri: string | undefined;
+
+/**
+ * Get the redirect URI for OAuth flows.
+ * Priority: env var > config > localhost fallback.
+ */
+export function getRedirectUri(): string {
+  const envUri = process.env.OPENCLAW_GOG_OAUTH_REDIRECT_URI;
+  if (envUri) {
+    return envUri;
+  }
+  if (configuredExternalRedirectUri) {
+    return configuredExternalRedirectUri;
+  }
+  return `http://localhost:${actualPort ?? DEFAULT_CONFIG.port}${DEFAULT_CONFIG.callbackPath}`;
+}
 
 /**
  * Generate cryptographic state token for CSRF protection
  */
 export function generateState(): string {
-	return crypto.randomBytes(32).toString("hex");
+  return crypto.randomBytes(32).toString("hex");
 }
 
 /**
  * Add a pending OAuth flow
  */
 export function addPendingFlow(flow: PendingOAuthFlow): void {
-	pendingFlows.set(flow.state, flow);
+  pendingFlows.set(flow.state, flow);
 }
 
 /**
  * Get a pending OAuth flow by state
  */
 export function getPendingFlow(state: string): PendingOAuthFlow | undefined {
-	return pendingFlows.get(state);
+  return pendingFlows.get(state);
 }
 
 /**
  * Remove a pending OAuth flow
  */
 export function removePendingFlow(state: string): void {
-	pendingFlows.delete(state);
+  pendingFlows.delete(state);
 }
 
 /**
  * Clean up expired OAuth flows
  */
 function cleanupExpiredFlows(): void {
-	const now = Date.now();
-	const expired: string[] = [];
+  const now = Date.now();
+  const expired: string[] = [];
 
-	for (const [state, flow] of pendingFlows.entries()) {
-		if (now > flow.expiresAt) {
-			expired.push(state);
+  for (const [state, flow] of pendingFlows.entries()) {
+    if (now > flow.expiresAt) {
+      expired.push(state);
 
-			// Notify user of timeout
-			notifyAuthTimeout(flow.sessionKey, flow.agentId, flow.email).catch(
-				(err) => {
-					console.error("Failed to send timeout notification:", err);
-				},
-			);
-		}
-	}
+      // Notify user of timeout
+      notifyAuthTimeout(flow.sessionKey, flow.agentId, flow.email).catch((err) => {
+        console.error("Failed to send timeout notification:", err);
+      });
+    }
+  }
 
-	for (const state of expired) {
-		pendingFlows.delete(state);
-	}
+  for (const state of expired) {
+    pendingFlows.delete(state);
+  }
 }
 
 /**
  * Exchange authorization code for tokens
  */
 async function exchangeCodeForTokens(
-	code: string,
-	redirectUri: string,
+  code: string,
+  redirectUri: string,
 ): Promise<TokenExchangeResponse> {
-	const clientId = process.env.GOOGLE_CLIENT_ID;
-	const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
-	if (!clientId || !clientSecret) {
-		throw new Error(
-			"GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set",
-		);
-	}
+  if (!clientId || !clientSecret) {
+    throw new Error("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set");
+  }
 
-	const response = await fetch("https://oauth2.googleapis.com/token", {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/x-www-form-urlencoded",
-		},
-		body: new URLSearchParams({
-			code,
-			client_id: clientId,
-			client_secret: clientSecret,
-			redirect_uri: redirectUri,
-			grant_type: "authorization_code",
-		}),
-	});
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      code,
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: redirectUri,
+      grant_type: "authorization_code",
+    }),
+  });
 
-	if (!response.ok) {
-		const error = await response.text();
-		throw new Error(`Token exchange failed: ${error}`);
-	}
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Token exchange failed: ${error}`);
+  }
 
-	return await response.json();
+  return await response.json();
 }
 
 /**
  * Handle OAuth callback request
  */
 async function handleCallback(
-	params: OAuthCallbackParams,
-	agentDir: string,
+  params: OAuthCallbackParams,
+  agentDir: string,
 ): Promise<{ status: number; message: string }> {
-	// Check for error from Google
-	if (params.error) {
-		const state = params.state;
-		if (state) {
-			const flow = getPendingFlow(state);
-			if (flow) {
-				removePendingFlow(state);
-				await notifyAuthError(
-					flow.sessionKey,
-					flow.agentId,
-					flow.email,
-					params.error,
-				);
-			}
-		}
+  // Check for error from Google
+  if (params.error) {
+    const state = params.state;
+    if (state) {
+      const flow = getPendingFlow(state);
+      if (flow) {
+        removePendingFlow(state);
+        await notifyAuthError(flow.sessionKey, flow.agentId, flow.email, params.error);
+      }
+    }
 
-		return {
-			status: 400,
-			message: `Authorization failed: ${params.error_description || params.error}`,
-		};
-	}
+    return {
+      status: 400,
+      message: `Authorization failed: ${params.error_description || params.error}`,
+    };
+  }
 
-	// Validate required parameters
-	if (!params.code || !params.state) {
-		return {
-			status: 400,
-			message: "Missing code or state parameter",
-		};
-	}
+  // Validate required parameters
+  if (!params.code || !params.state) {
+    return {
+      status: 400,
+      message: "Missing code or state parameter",
+    };
+  }
 
-	// Validate state (CSRF protection)
-	const flow = getPendingFlow(params.state);
-	if (!flow) {
-		console.warn(
-			`[gog-oauth] Invalid or expired state token: ${params.state}`,
-		);
-		return {
-			status: 400,
-			message: "Invalid or expired authorization request",
-		};
-	}
+  // Validate state (CSRF protection)
+  const flow = getPendingFlow(params.state);
+  if (!flow) {
+    console.warn(`[gog-oauth] Invalid or expired state token: ${params.state}`);
+    return {
+      status: 400,
+      message: "Invalid or expired authorization request",
+    };
+  }
 
-	// Check expiry
-	if (Date.now() > flow.expiresAt) {
-		removePendingFlow(params.state);
-		await notifyAuthTimeout(flow.sessionKey, flow.agentId, flow.email);
-		return {
-			status: 400,
-			message: "Authorization request expired (5 minutes)",
-		};
-	}
+  // Check expiry
+  if (Date.now() > flow.expiresAt) {
+    removePendingFlow(params.state);
+    await notifyAuthTimeout(flow.sessionKey, flow.agentId, flow.email);
+    return {
+      status: 400,
+      message: "Authorization request expired (5 minutes)",
+    };
+  }
 
-	// Remove flow (one-time use)
-	removePendingFlow(params.state);
+  // Remove flow (one-time use)
+  removePendingFlow(params.state);
 
-	try {
-		// Exchange code for tokens
-		const redirectUri = `http://localhost:${actualPort}${DEFAULT_CONFIG.callbackPath}`;
-		const tokens = await exchangeCodeForTokens(params.code, redirectUri);
+  try {
+    // Exchange code for tokens
+    const redirectUri = getRedirectUri();
+    const tokens = await exchangeCodeForTokens(params.code, redirectUri);
 
-		// Create credentials object
-		const credentials: GogCredentials = {
-			email: flow.email,
-			accessToken: tokens.access_token,
-			refreshToken: tokens.refresh_token || "",
-			expiresAt: Date.now() + tokens.expires_in * 1000,
-			createdAt: Date.now(),
-			sessionKey: flow.sessionKey,
-			agentId: flow.agentId,
-			services: flow.services,
-		};
+    // Create credentials object
+    const credentials: GogCredentials = {
+      email: flow.email,
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token || "",
+      expiresAt: Date.now() + tokens.expires_in * 1000,
+      createdAt: Date.now(),
+      sessionKey: flow.sessionKey,
+      agentId: flow.agentId,
+      services: flow.services,
+    };
 
-		// Save credentials
-		const credPath = await saveSessionCredentials(credentials);
+    // Save credentials
+    const credPath = await saveSessionCredentials(credentials);
 
-		// Update session entry
-		const storePath = resolveDefaultSessionStorePath(flow.agentId);
-		await updateSessionStore(storePath, (store) => {
-			const session = store[flow.sessionKey];
-			if (session) {
-				session.gogCredentialsFile = credPath;
-				session.gogAuthEmail = flow.email;
-				delete session.gogAuthPending;
-				session.updatedAt = Date.now();
-			}
-		});
+    // Update session entry
+    const storePath = resolveDefaultSessionStorePath(flow.agentId);
+    await updateSessionStore(storePath, (store) => {
+      const session = store[flow.sessionKey];
+      if (session) {
+        session.gogCredentialsFile = credPath;
+        session.gogAuthEmail = flow.email;
+        delete session.gogAuthPending;
+        session.updatedAt = Date.now();
+      }
+    });
 
-		// Notify user of success
-		await notifyAuthSuccess(
-			flow.sessionKey,
-			flow.agentId,
-			flow.email,
-			flow.services,
-		);
+    // Notify user of success
+    await notifyAuthSuccess(flow.sessionKey, flow.agentId, flow.email, flow.services);
 
-		return {
-			status: 200,
-			message: "Authentication successful! You can close this window.",
-		};
-	} catch (error) {
-		console.error("[gog-oauth] Token exchange error:", error);
-		await notifyAuthError(
-			flow.sessionKey,
-			flow.agentId,
-			flow.email,
-			error instanceof Error ? error.message : "Unknown error",
-		);
+    return {
+      status: 200,
+      message: "Authentication successful! You can close this window.",
+    };
+  } catch (error) {
+    console.error("[gog-oauth] Token exchange error:", error);
+    await notifyAuthError(
+      flow.sessionKey,
+      flow.agentId,
+      flow.email,
+      error instanceof Error ? error.message : "Unknown error",
+    );
 
-		return {
-			status: 500,
-			message: "Failed to complete authentication. Please try again.",
-		};
-	}
+    return {
+      status: 500,
+      message: "Failed to complete authentication. Please try again.",
+    };
+  }
 }
 
 /**
  * Handle HTTP request
  */
 async function handleRequest(
-	req: http.IncomingMessage,
-	res: http.ServerResponse,
-	config: Required<OAuthServerConfig>,
-	agentDir: string,
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  config: Required<Omit<OAuthServerConfig, "externalRedirectUri">>,
+  agentDir: string,
 ): Promise<void> {
-	const url = new URL(req.url || "/", `http://${req.headers.host}`);
+  const url = new URL(req.url || "/", `http://${req.headers.host}`);
 
-	// Health check endpoint
-	if (url.pathname === "/health") {
-		res.statusCode = 200;
-		res.setHeader("Content-Type", "text/plain");
-		res.end("OK");
-		return;
-	}
+  // Health check endpoint
+  if (url.pathname === "/health") {
+    res.statusCode = 200;
+    res.setHeader("Content-Type", "text/plain");
+    res.end("OK");
+    return;
+  }
 
-	// OAuth callback endpoint
-	if (url.pathname === config.callbackPath) {
-		const params: OAuthCallbackParams = {
-			code: url.searchParams.get("code") || undefined,
-			state: url.searchParams.get("state") || undefined,
-			error: url.searchParams.get("error") || undefined,
-			error_description:
-				url.searchParams.get("error_description") || undefined,
-		};
+  // OAuth callback endpoint
+  if (url.pathname === config.callbackPath) {
+    const params: OAuthCallbackParams = {
+      code: url.searchParams.get("code") || undefined,
+      state: url.searchParams.get("state") || undefined,
+      error: url.searchParams.get("error") || undefined,
+      error_description: url.searchParams.get("error_description") || undefined,
+    };
 
-		const result = await handleCallback(params, agentDir);
+    const result = await handleCallback(params, agentDir);
 
-		res.statusCode = result.status;
-		res.setHeader("Content-Type", "text/html");
-		res.end(`
+    res.statusCode = result.status;
+    res.setHeader("Content-Type", "text/html");
+    res.end(`
 <!DOCTYPE html>
 <html>
 <head>
@@ -332,124 +331,126 @@ async function handleRequest(
 </body>
 </html>
 		`);
-		return;
-	}
+    return;
+  }
 
-	// 404 for other paths
-	res.statusCode = 404;
-	res.setHeader("Content-Type", "text/plain");
-	res.end("Not Found");
+  // 404 for other paths
+  res.statusCode = 404;
+  res.setHeader("Content-Type", "text/plain");
+  res.end("Not Found");
 }
 
 /**
  * Try to start server on a specific port
  */
 function tryStartServer(
-	port: number,
-	bind: string,
-	config: Required<OAuthServerConfig>,
-	agentDir: string,
+  port: number,
+  bind: string,
+  config: Required<Omit<OAuthServerConfig, "externalRedirectUri">>,
+  agentDir: string,
 ): Promise<http.Server> {
-	return new Promise((resolve, reject) => {
-		const srv = http.createServer((req, res) => {
-			handleRequest(req, res, config, agentDir).catch((err) => {
-				console.error("[gog-oauth] Request handler error:", err);
-				res.statusCode = 500;
-				res.end("Internal Server Error");
-			});
-		});
+  return new Promise((resolve, reject) => {
+    const srv = http.createServer((req, res) => {
+      handleRequest(req, res, config, agentDir).catch((err) => {
+        console.error("[gog-oauth] Request handler error:", err);
+        res.statusCode = 500;
+        res.end("Internal Server Error");
+      });
+    });
 
-		srv.on("error", (err: NodeJS.ErrnoException) => {
-			if (err.code === "EADDRINUSE") {
-				reject(new Error(`Port ${port} is already in use`));
-			} else {
-				reject(err);
-			}
-		});
+    srv.on("error", (err: NodeJS.ErrnoException) => {
+      if (err.code === "EADDRINUSE") {
+        reject(new Error(`Port ${port} is already in use`));
+      } else {
+        reject(err);
+      }
+    });
 
-		srv.listen(port, bind, () => {
-			resolve(srv);
-		});
-	});
+    srv.listen(port, bind, () => {
+      resolve(srv);
+    });
+  });
 }
 
 /**
  * Start the OAuth callback server with port fallback
  */
 export async function startGogOAuthServer(
-	config: Partial<OAuthServerConfig>,
-	agentDir: string,
+  config: Partial<OAuthServerConfig>,
+  agentDir: string,
 ): Promise<{
-	port: number;
-	stop: () => Promise<void>;
+  port: number;
+  stop: () => Promise<void>;
 }> {
-	const fullConfig: Required<OAuthServerConfig> = {
-		...DEFAULT_CONFIG,
-		...config,
-	};
+  const { externalRedirectUri, ...rest } = config;
+  const fullConfig: Required<Omit<OAuthServerConfig, "externalRedirectUri">> = {
+    ...DEFAULT_CONFIG,
+    ...rest,
+  };
 
-	if (!fullConfig.enabled) {
-		throw new Error("OAuth server is disabled in configuration");
-	}
+  // Store external redirect URI from config (env var takes priority in getRedirectUri)
+  configuredExternalRedirectUri = externalRedirectUri;
 
-	// Try ports from 51234 to 51239
-	const ports = [fullConfig.port, 51235, 51236, 51237, 51238, 51239];
-	let lastError: Error | null = null;
+  if (!fullConfig.enabled) {
+    throw new Error("OAuth server is disabled in configuration");
+  }
 
-	for (const port of ports) {
-		try {
-			server = await tryStartServer(port, fullConfig.bind, fullConfig, agentDir);
-			actualPort = port;
-			console.log(
-				`[gog-oauth] Server listening on ${fullConfig.bind}:${port}`,
-			);
+  // Try ports from 51234 to 51239
+  const ports = [fullConfig.port, 51235, 51236, 51237, 51238, 51239];
+  let lastError: Error | null = null;
 
-			// Start cleanup interval (every 60 seconds)
-			cleanupInterval = setInterval(cleanupExpiredFlows, 60000);
+  for (const port of ports) {
+    try {
+      server = await tryStartServer(port, fullConfig.bind, fullConfig, agentDir);
+      actualPort = port;
+      console.log(`[gog-oauth] Server listening on ${fullConfig.bind}:${port}`);
 
-			return {
-				port,
-				stop: async () => {
-					if (cleanupInterval) {
-						clearInterval(cleanupInterval);
-						cleanupInterval = null;
-					}
+      // Start cleanup interval (every 60 seconds)
+      cleanupInterval = setInterval(cleanupExpiredFlows, 60000);
 
-					return new Promise((resolve) => {
-						if (server) {
-							server.close(() => {
-								server = null;
-								actualPort = null;
-								pendingFlows.clear();
-								resolve();
-							});
-						} else {
-							resolve();
-						}
-					});
-				},
-			};
-		} catch (error) {
-			lastError = error as Error;
-			// Try next port
-		}
-	}
+      return {
+        port,
+        stop: async () => {
+          if (cleanupInterval) {
+            clearInterval(cleanupInterval);
+            cleanupInterval = null;
+          }
 
-	throw new Error(
-		`Failed to start OAuth server on any port (${ports.join(", ")}): ${lastError?.message}`,
-	);
+          return new Promise((resolve) => {
+            if (server) {
+              server.close(() => {
+                server = null;
+                actualPort = null;
+                pendingFlows.clear();
+                resolve();
+              });
+            } else {
+              resolve();
+            }
+          });
+        },
+      };
+    } catch (error) {
+      lastError = error as Error;
+      // Try next port
+    }
+  }
+
+  throw new Error(
+    `Failed to start OAuth server on any port (${ports.join(", ")}): ${lastError?.message}`,
+  );
 }
 
 /**
  * Get the current server port (if running)
  */
 export function getServerPort(): number | null {
-	return actualPort;
+  return actualPort;
 }
 
 /**
  * Check if server is running
  */
 export function isServerRunning(): boolean {
-	return server !== null;
+  return server !== null;
 }

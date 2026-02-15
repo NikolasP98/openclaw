@@ -124,6 +124,8 @@ export type HooksGogOAuthConfig = {
   callbackPath?: string;
   /** Timeout in minutes for pending OAuth flows (default: 5) */
   timeoutMinutes?: number;
+  /** Public redirect URI (e.g. Tailscale Funnel URL) for headless/remote OAuth flows */
+  externalRedirectUri?: string;
 };
 
 export type HooksConfig = {
