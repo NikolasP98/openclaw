@@ -7,7 +7,7 @@
     "@sinclair/typebox": "0.34.48"
   },
   "devDependencies": {
-    "minion": "workspace:*"
+    "@nikolasp98/minion": "workspace:*"
   },
   "minion": {
     "extensions": [

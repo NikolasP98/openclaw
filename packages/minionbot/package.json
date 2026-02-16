@@ -11,6 +11,6 @@
     "./cli-entry": "./bin/minionbot.js"
   },
   "dependencies": {
-    "minion": "workspace:*"
+    "@nikolasp98/minion": "workspace:*"
   }
 }

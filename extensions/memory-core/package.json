@@ -5,10 +5,10 @@
   "description": "Minion core memory search plugin",
   "type": "module",
   "devDependencies": {
-    "minion": "workspace:*"
+    "@nikolasp98/minion": "workspace:*"
   },
   "peerDependencies": {
-    "minion": ">=2026.1.26"
+    "@nikolasp98/minion": ">=2026.1.26"
   },
   "minion": {
     "extensions": [

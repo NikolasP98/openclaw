@@ -5,7 +5,7 @@
   "description": "Minion Signal channel plugin",
   "type": "module",
   "devDependencies": {
-    "minion": "workspace:*"
+    "@nikolasp98/minion": "workspace:*"
   },
   "minion": {
     "extensions": [

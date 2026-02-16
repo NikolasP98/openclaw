@@ -10,7 +10,7 @@
     "express": "^5.2.1"
   },
   "devDependencies": {
-    "minion": "workspace:*"
+    "@nikolasp98/minion": "workspace:*"
   },
   "minion": {
     "extensions": [

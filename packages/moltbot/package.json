@@ -11,6 +11,6 @@
     "./cli-entry": "./bin/moltbot.js"
   },
   "dependencies": {
-    "minion": "workspace:*"
+    "@nikolasp98/minion": "workspace:*"
   }
 }

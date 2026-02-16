@@ -8,10 +8,10 @@
     "google-auth-library": "^10.5.0"
   },
   "devDependencies": {
-    "minion": "workspace:*"
+    "@nikolasp98/minion": "workspace:*"
   },
   "peerDependencies": {
-    "minion": ">=2026.1.26"
+    "@nikolasp98/minion": ">=2026.1.26"
   },
   "minion": {
     "extensions": [
