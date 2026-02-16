@@ -109,22 +109,119 @@ git push origin mirror
 
 **Expected**: Fast-forward merge, no conflicts (since mirror is clean mirror)
 
+### Phase 1.5: Pre-Merge Evaluation
+
+**Goal**: Analyze upstream changes before merging to understand impact and plan conflict resolution
+
+```bash
+# Compare mirror (upstream) with main to see what changed
+git diff main..mirror --stat | head -50
+git log --oneline main..mirror --no-merges | head -30
+
+# Generate per-file change analysis
+git diff main..mirror --name-status | sort
+```
+
+**Evaluation Process**:
+
+1. **Categorize changes by type**:
+   - Core infrastructure (package.json, workflows, build config)
+   - New features (new files/directories)
+   - Refactors (modified existing files)
+   - Deletions (removed files - check if fork depends on them)
+   - Documentation updates
+
+2. **For each significant change, evaluate**:
+   - **Worth merging?** Does this fix bugs, add useful features, or improve architecture?
+   - **Breaking changes?** Does upstream remove/change APIs that fork code depends on?
+   - **Conflicts with fork features?** Does upstream implement something we already have differently?
+   - **Dependencies?** Do new features require config changes or have dependencies on other changes?
+
+3. **Identify high-risk files**:
+   - Files modified by both upstream and fork (will conflict)
+   - Core files like package.json, tsconfig.json, workflow files
+   - Files the fork heavily customized (banner.ts, rebrand-related files)
+
+4. **Plan merge strategy**:
+   - **Accept wholesale**: Upstream changes that don't conflict (most files)
+   - **Manual merge**: Files with conflicts - plan which hunks to keep from each side
+   - **Reject**: Upstream changes that break fork features (rare - document why)
+   - **Adapt after merge**: Fork features that need updates to work with upstream changes
+
+5. **Document evaluation**:
+   Create a mental (or written) map of:
+   - Major upstream features being merged
+   - Expected conflicts and resolution strategy
+   - Files that will need post-merge fixes
+   - Tests that might break and need updates
+
+**Expected time**: 5-10 minutes for review
+
+**Output**: Clear understanding of what's changing and plan for Phase 2 merge
+
 ### Phase 2: Update DEV Branch
 
-**Goal**: Merge updated mirror into DEV to bring in upstream changes
+**Goal**: Merge updated mirror into DEV using the strategy from Phase 1.5 evaluation
 
 ```bash
 git checkout DEV
 
 # Merge updated mirror
 git merge mirror -m "Merge upstream changes from mirror"
-
-# Resolve conflicts if any
-# Push to origin
-git push origin DEV
 ```
 
-**Expected**: Clean merge or conflicts requiring manual resolution
+**If conflicts occur**: Use feature-by-feature resolution strategy
+
+1. **Triage conflicts by category**:
+
+   ```bash
+   # List all conflicts
+   git status --short | grep "^UU\|^DU\|^UD\|^AA\|^AU\|^UA"
+
+   # Group by type
+   # - Package files (package.json, pnpm-lock.yaml)
+   # - Config files (tsconfig, workflows, docker)
+   # - Source code (src/, extensions/)
+   # - Tests (*.test.ts)
+   # - Documentation (docs/, *.md)
+   ```
+
+2. **Resolve systematically feature-by-feature**:
+   - **Start with infrastructure**: package.json, workflows, build config
+     - For package.json: accept upstream versions, keep fork-specific dependencies
+     - For workflows: upstream is source of truth unless we added custom steps
+
+   - **Then core features**: Process related files together
+     - If upstream refactored auth → resolve all auth-related conflicts together
+     - If upstream added new tool → review entire tool implementation
+     - Keep fork features that don't conflict, adapt those that do
+
+   - **Handle deletions carefully**:
+     - Files deleted upstream but modified in fork (UD/DU conflicts)
+     - Check if fork actually uses them: `git log --oneline -- <file>`
+     - If fork changes were already upstreamed differently → accept deletion
+     - If fork still needs the file → keep it (but verify it still works)
+
+   - **Update tests last**: After source changes are resolved
+     - Accept upstream test changes unless they break fork features
+     - Update fork tests to match new upstream patterns
+
+3. **Validate after each category**:
+
+   ```bash
+   # After resolving a group of files
+   git add <resolved-files>
+   pnpm build  # Quick smoke test
+   ```
+
+4. **Complete merge**:
+   ```bash
+   git add .  # Stage all resolutions
+   git commit  # Use the merge commit message
+   git push origin DEV
+   ```
+
+**Expected**: Systematic conflict resolution, not all-at-once
 
 **Note**: This is the final automated phase. Feature branches and main (production) are not auto-synced.
 
@@ -332,26 +429,32 @@ git push origin <branch-name>
 ## Quick Reference Card
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                  Fork Sync Quick Reference                   │
-├─────────────────────────────────────────────────────────────┤
-│ 0. Clean mirror (if needed) → git checkout mirror           │
-│                                git reset --hard upstream/main│
-│                                git push --force-with-lease   │
-├─────────────────────────────────────────────────────────────┤
-│ 1. Sync mirror             → git checkout mirror             │
-│                               git merge --ff-only upstream/main│
-│                               git push origin mirror         │
-├─────────────────────────────────────────────────────────────┤
-│ 2. Update DEV              → git checkout DEV                │
-│                               git merge mirror               │
-│                               git push origin DEV            │
-├─────────────────────────────────────────────────────────────┤
-│ Verify:                    → git log mirror..upstream/main   │
-│                               (should be empty)              │
-├─────────────────────────────────────────────────────────────┤
-│ Note: Feature branches and main (production) are manual     │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                  Fork Sync Quick Reference                       │
+├──────────────────────────────────────────────────────────────────┤
+│ 0. Clean mirror (if needed) → git checkout mirror               │
+│                                git reset --hard upstream/main    │
+│                                git push --force-with-lease       │
+├──────────────────────────────────────────────────────────────────┤
+│ 1. Sync mirror              → git checkout mirror               │
+│                                git merge --ff-only upstream/main │
+│                                git push origin mirror            │
+├──────────────────────────────────────────────────────────────────┤
+│ 1.5. Pre-merge evaluation   → git diff main..mirror --stat      │
+│                                Review changes per-file           │
+│                                Plan conflict resolution strategy │
+├──────────────────────────────────────────────────────────────────┤
+│ 2. Update DEV               → git checkout DEV                  │
+│                                git merge mirror                  │
+│                                Resolve conflicts feature-by-     │
+│                                feature (not all-at-once)         │
+│                                git push origin DEV               │
+├──────────────────────────────────────────────────────────────────┤
+│ Verify:                     → git log mirror..upstream/main     │
+│                                (should be empty)                 │
+├──────────────────────────────────────────────────────────────────┤
+│ Note: Feature branches and main (production) are manual         │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ## When to Use This Skill
@@ -369,6 +472,6 @@ Invoke this skill when:
 
 ---
 
-**Skill Version**: 3.0.0
-**Last Updated**: 2026-02-15
+**Skill Version**: 3.1.0
+**Last Updated**: 2026-02-16
 **Maintained By**: Nikolas P. (NikolasP98)
