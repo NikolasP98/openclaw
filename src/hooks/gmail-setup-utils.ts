@@ -358,7 +358,7 @@ export async function resolveProjectIdFromGogCredentials(): Promise<string | nul
   return null;
 }
 
-function gogCredentialsPaths(): string[] {
+export function gogCredentialsPaths(): string[] {
   const paths: string[] = [];
   const xdg = process.env.XDG_CONFIG_HOME;
   if (xdg) {
@@ -376,6 +376,42 @@ function extractGogClientId(parsed: Record<string, unknown>): string | null {
   const web = parsed.web as Record<string, unknown> | undefined;
   const candidate = installed?.client_id || web?.client_id || parsed.client_id || "";
   return typeof candidate === "string" ? candidate : null;
+}
+
+function extractGogClientSecret(parsed: Record<string, unknown>): string | null {
+  const installed = parsed.installed as Record<string, unknown> | undefined;
+  const web = parsed.web as Record<string, unknown> | undefined;
+  const candidate = installed?.client_secret || web?.client_secret || parsed.client_secret || "";
+  return typeof candidate === "string" && candidate.length > 0 ? candidate : null;
+}
+
+/**
+ * Extract Google OAuth client credentials (client_id + client_secret) from gog CLI credential files.
+ * Searches standard gog CLI config paths. Supports `installed`, `web`, and flat JSON formats.
+ * Returns null if no valid credentials file is found.
+ */
+export function extractGogClientCredentials(): {
+  clientId: string;
+  clientSecret: string;
+} | null {
+  const candidates = gogCredentialsPaths();
+  for (const candidate of candidates) {
+    if (!fs.existsSync(candidate)) {
+      continue;
+    }
+    try {
+      const raw = fs.readFileSync(candidate, "utf-8");
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      const clientId = extractGogClientId(parsed);
+      const clientSecret = extractGogClientSecret(parsed);
+      if (clientId && clientSecret) {
+        return { clientId, clientSecret };
+      }
+    } catch {
+      // keep scanning
+    }
+  }
+  return null;
 }
 
 function extractProjectNumber(clientId: string | null): string | null {

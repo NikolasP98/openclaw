@@ -1,7 +1,16 @@
+import chalk from "chalk";
 import { resolveCommitHash } from "../infra/git-commit.js";
 import { visibleWidth } from "../terminal/ansi.js";
 import { isRich, theme } from "../terminal/theme.js";
 import { pickTagline, type TaglineOptions } from "./tagline.js";
+
+/** Deep yellow palette for the MINION banner */
+const bannerColor = {
+  bright: chalk.hex("#FFD700"),
+  mid: chalk.hex("#DAA520"),
+  dim: chalk.hex("#8B6914"),
+  bold: chalk.bold.hex("#FFD700"),
+};
 
 type BannerOptions = TaglineOptions & {
   argv?: string[];
@@ -65,12 +74,12 @@ export function formatCliBannerLine(version: string, options: BannerOptions = {}
 }
 
 const SQUID_ASCII = [
-  "▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄",
-  "██░▄▄▄░██░▄▄░██░▄▄▄██░▀██░██░▄▄▀██░████░▄▄▀██░███░██",
-  "██░███░██░▀▀░██░▄▄▄██░█░█░██░█████░████░▀▀░██░█░█░██",
-  "██░▀▀▀░██░█████░▀▀▀██░██▄░██░▀▀▄██░▀▀░█░██░██▄▀▄▀▄██",
-  "▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀",
-  "                  🦑 MINION 🦑                    ",
+  "▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄",
+  "██░▄▀█▀▄░██░░▄░░██░▀██░██░░▄░░██░▄▄▄░██░▀██░██",
+  "██░█░░░█░██░░█░░██░█░█░██░░█░░██░███░██░█░█░██",
+  "██░▀░░░▀░██░░▀░░██░██▄░██░░▀░░██░▀▀▀░██░██▄░██",
+  "▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀",
+  "                 🦑 MINION 🦑                 ",
   " ",
 ];
 
@@ -82,23 +91,23 @@ export function formatCliBannerArt(options: BannerOptions = {}): string {
 
   const colorChar = (ch: string) => {
     if (ch === "█") {
-      return theme.accentBright(ch);
+      return bannerColor.bright(ch);
     }
     if (ch === "░") {
-      return theme.accentDim(ch);
+      return bannerColor.dim(ch);
     }
     if (ch === "▀") {
-      return theme.accent(ch);
+      return bannerColor.mid(ch);
     }
-    return theme.muted(ch);
+    return bannerColor.mid(ch);
   };
 
   const colored = SQUID_ASCII.map((line) => {
     if (line.includes("MINION")) {
       return (
-        theme.muted("              ") +
+        theme.muted("                 ") +
         theme.accent("🦑") +
-        theme.info(" MINION ") +
+        bannerColor.bold(" MINION ") +
         theme.accent("🦑")
       );
     }

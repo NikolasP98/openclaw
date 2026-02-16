@@ -4,9 +4,12 @@
  */
 
 import fs from "fs/promises";
+import fsSync from "node:fs";
 import os from "os";
 import path from "path";
 import type { GogCredentials, TokenRefreshResponse } from "./gog-oauth-types.js";
+import { runCommandWithTimeout } from "../process/exec.js";
+import { extractGogClientCredentials } from "./gmail-setup-utils.js";
 
 /**
  * Get the credentials directory for an agent
@@ -53,7 +56,7 @@ export async function loadSessionCredentials(
         const creds: GogCredentials = JSON.parse(data);
         creds.filePath = credPath;
         return creds;
-      } catch (error) {
+      } catch {
         // File doesn't exist or is invalid, continue to search
       }
     }
@@ -75,7 +78,7 @@ export async function loadSessionCredentials(
         creds.filePath = credPath;
         return creds;
       }
-    } catch (error) {
+    } catch {
       // Directory doesn't exist or can't be read
     }
 
@@ -117,8 +120,8 @@ export async function refreshAccessToken(credentials: GogCredentials): Promise<G
       "Content-Type": "application/x-www-form-urlencoded",
     },
     body: new URLSearchParams({
-      client_id: await getGoogleClientId(),
-      client_secret: await getGoogleClientSecret(),
+      client_id: getGoogleClientId(),
+      client_secret: getGoogleClientSecret(),
       refresh_token: credentials.refreshToken,
       grant_type: "refresh_token",
     }),
@@ -238,41 +241,110 @@ export async function listCredentials(agentId: string): Promise<GogCredentials[]
           const creds: GogCredentials = JSON.parse(data);
           creds.filePath = credPath;
           credentials.push(creds);
-        } catch (error) {
+        } catch {
           console.error(`Failed to load credentials file ${file}:`, error);
         }
       }
     }
-  } catch (error) {
+  } catch {
     // Directory doesn't exist or can't be read
   }
 
   return credentials;
 }
 
-/**
- * Get Google OAuth client ID from gogcli or environment
- */
-async function getGoogleClientId(): Promise<string> {
-  // Try environment variable first
-  if (process.env.GOOGLE_CLIENT_ID) {
-    return process.env.GOOGLE_CLIENT_ID;
-  }
+/** Cached credentials extracted from gog CLI JSON file */
+let cachedFileCredentials: { clientId: string; clientSecret: string } | null | undefined;
 
-  // Fall back to gogcli's client ID
-  // This should be extracted from gogcli's source or config
-  throw new Error("GOOGLE_CLIENT_ID not set. Please configure Google OAuth credentials.");
+function getFileCredentials(): { clientId: string; clientSecret: string } | null {
+  if (cachedFileCredentials !== undefined) {
+    return cachedFileCredentials;
+  }
+  cachedFileCredentials = extractGogClientCredentials();
+  return cachedFileCredentials;
 }
 
 /**
- * Get Google OAuth client secret from gogcli or environment
+ * Get Google OAuth client ID.
+ * Priority: env var GOOGLE_CLIENT_ID > gog CLI credentials.json file
  */
-async function getGoogleClientSecret(): Promise<string> {
-  // Try environment variable first
+export function getGoogleClientId(): string {
+  if (process.env.GOOGLE_CLIENT_ID) {
+    return process.env.GOOGLE_CLIENT_ID;
+  }
+  const fileCreds = getFileCredentials();
+  if (fileCreds) {
+    return fileCreds.clientId;
+  }
+  throw new Error(
+    "GOOGLE_CLIENT_ID not set and no gog CLI credentials.json found. " +
+      "Set the env var or place credentials in ~/.config/gogcli/credentials.json",
+  );
+}
+
+/**
+ * Get Google OAuth client secret.
+ * Priority: env var GOOGLE_CLIENT_SECRET > gog CLI credentials.json file
+ */
+export function getGoogleClientSecret(): string {
   if (process.env.GOOGLE_CLIENT_SECRET) {
     return process.env.GOOGLE_CLIENT_SECRET;
   }
+  const fileCreds = getFileCredentials();
+  if (fileCreds) {
+    return fileCreds.clientSecret;
+  }
+  throw new Error(
+    "GOOGLE_CLIENT_SECRET not set and no gog CLI credentials.json found. " +
+      "Set the env var or place credentials in ~/.config/gogcli/credentials.json",
+  );
+}
 
-  // Fall back to gogcli's client secret
-  throw new Error("GOOGLE_CLIENT_SECRET not set. Please configure Google OAuth credentials.");
+/**
+ * Sync OAuth tokens to gog CLI keyring so `gog gmail ...` commands work.
+ * Best-effort: logs errors but never throws.
+ */
+export async function syncToGogKeyring(credentials: GogCredentials): Promise<void> {
+  try {
+    // Check if gog binary is available
+    const gogCheck = await runCommandWithTimeout(["which", "gog"], { timeoutMs: 2_000 });
+    if (gogCheck.code !== 0) {
+      return; // gog CLI not installed, skip silently
+    }
+
+    // Write a temporary token file in gog CLI's expected snake_case format
+    const tmpDir = os.tmpdir();
+    const tmpFile = path.join(tmpDir, `gog-token-import-${Date.now()}.json`);
+    const tokenData = {
+      access_token: credentials.accessToken,
+      refresh_token: credentials.refreshToken,
+      token_type: "Bearer",
+      expiry: new Date(credentials.expiresAt).toISOString(),
+    };
+
+    fsSync.writeFileSync(tmpFile, JSON.stringify(tokenData, null, 2), { mode: 0o600 });
+
+    try {
+      const result = await runCommandWithTimeout(
+        ["gog", "auth", "token", "import", tmpFile, "--account", credentials.email],
+        { timeoutMs: 10_000 },
+      );
+      if (result.code === 0) {
+        console.log(`[gog-credentials] Synced tokens to gog CLI keyring for ${credentials.email}`);
+      } else {
+        console.warn(
+          `[gog-credentials] gog auth token import failed (code=${result.code}): ${result.stderr || result.stdout}`,
+        );
+      }
+    } finally {
+      // Clean up temp file
+      try {
+        fsSync.unlinkSync(tmpFile);
+      } catch {
+        // ignore cleanup errors
+      }
+    }
+  } catch (error) {
+    console.warn("[gog-credentials] Failed to sync tokens to gog CLI keyring:", error);
+  }
 }

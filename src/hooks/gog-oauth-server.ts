@@ -14,7 +14,12 @@ import type {
   GogCredentials,
 } from "./gog-oauth-types.js";
 import { updateSessionStore, resolveDefaultSessionStorePath } from "../config/sessions.js";
-import { saveSessionCredentials } from "./gog-credentials.js";
+import {
+  saveSessionCredentials,
+  getGoogleClientId,
+  getGoogleClientSecret,
+  syncToGogKeyring,
+} from "./gog-credentials.js";
 import {
   notifyAuthSuccess,
   notifyAuthError,
@@ -119,12 +124,8 @@ async function exchangeCodeForTokens(
   code: string,
   redirectUri: string,
 ): Promise<TokenExchangeResponse> {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-
-  if (!clientId || !clientSecret) {
-    throw new Error("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set");
-  }
+  const clientId = getGoogleClientId();
+  const clientSecret = getGoogleClientSecret();
 
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -153,7 +154,7 @@ async function exchangeCodeForTokens(
  */
 async function handleCallback(
   params: OAuthCallbackParams,
-  agentDir: string,
+  _agentDir: string,
 ): Promise<{ status: number; message: string }> {
   // Check for error from Google
   if (params.error) {
@@ -222,6 +223,9 @@ async function handleCallback(
 
     // Save credentials
     const credPath = await saveSessionCredentials(credentials);
+
+    // Best-effort sync to gog CLI keyring
+    await syncToGogKeyring(credentials);
 
     // Update session entry
     const storePath = resolveDefaultSessionStorePath(flow.agentId);

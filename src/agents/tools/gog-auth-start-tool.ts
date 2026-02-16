@@ -6,6 +6,7 @@ import { Type } from "@sinclair/typebox";
 import type { PendingOAuthFlow, OAuthStartResult } from "../../hooks/gog-oauth-types.js";
 import type { AnyAgentTool } from "./common.js";
 import { updateSessionStore, resolveDefaultSessionStorePath } from "../../config/sessions.js";
+import { getGoogleClientId } from "../../hooks/gog-credentials.js";
 import {
   generateState,
   addPendingFlow,
@@ -85,10 +86,13 @@ export function createGogAuthStartTool(opts?: {
       const scopes = getScopesForServices(services);
 
       // Build OAuth authorization URL
-      const clientId = process.env.GOOGLE_CLIENT_ID;
-      if (!clientId) {
+      let clientId: string;
+      try {
+        clientId = getGoogleClientId();
+      } catch {
         return jsonResult({
-          error: "GOOGLE_CLIENT_ID not configured. Please set up Google OAuth credentials.",
+          error:
+            "Google OAuth client ID not configured. Set GOOGLE_CLIENT_ID env var or place credentials in ~/.config/gogcli/credentials.json",
         });
       }
 
