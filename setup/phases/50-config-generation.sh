@@ -130,6 +130,22 @@ AUTHEOF
     local workspace_dir="${WORKSPACE_DIR:-${config_dir}/workspace}"
     local systemd_dir="${AGENT_HOME_DIR:-$HOME}/.config/systemd/user"
 
+    # Backup existing config before overwriting
+    local existing_config="${config_dir}/minion.json"
+    if [ "${EXEC_MODE:-local}" = "remote" ]; then
+        if run_cmd "test -f '${existing_config}'" 2>/dev/null; then
+            local backup_path="${existing_config}.$(date +%Y%m%d%H%M%S).bak"
+            log_info "Backing up existing config to ${backup_path}"
+            run_cmd "cp '${existing_config}' '${backup_path}'"
+        fi
+    else
+        if [ -f "${existing_config}" ]; then
+            local backup_path="${existing_config}.$(date +%Y%m%d%H%M%S).bak"
+            log_info "Backing up existing config to ${backup_path}"
+            cp "${existing_config}" "${backup_path}"
+        fi
+    fi
+
     if [ "${EXEC_MODE:-local}" = "remote" ]; then
         # Remote: SCP files to staging dir, then place + permission in one batch
         local remote_tmp="/tmp/minion-deploy-$$"

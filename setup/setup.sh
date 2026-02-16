@@ -42,6 +42,9 @@ source "${SCRIPT_DIR}/lib/variables.sh"
 source "${SCRIPT_DIR}/lib/network.sh"
 source "${SCRIPT_DIR}/lib/templates.sh"
 
+# Load defaults from config/defaults.yaml (before CLI args, so args can override)
+load_defaults
+
 # Default values
 DRY_RUN=false
 SKIP_PHASES=()

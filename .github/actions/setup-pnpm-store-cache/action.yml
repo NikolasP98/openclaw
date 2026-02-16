@@ -2,9 +2,11 @@ name: Setup pnpm + store cache
 description: Prepare pnpm via corepack and restore pnpm store cache.
 inputs:
   pnpm-version:
-    description: pnpm version to activate via corepack.
+    description: >
+      pnpm version to activate via corepack.
+      If empty, auto-resolved from package.json packageManager field.
     required: false
-    default: "10.29.3"
+    default: ""
   cache-key-suffix:
     description: Suffix appended to the cache key.
     required: false
@@ -12,13 +14,29 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Resolve pnpm version
+      id: resolve
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.pnpm-version }}" ]; then
+          echo "version=${{ inputs.pnpm-version }}" >> "$GITHUB_OUTPUT"
+        else
+          PKG_MGR=$(node -p "require('./package.json').packageManager || ''")
+          VERSION="${PKG_MGR#pnpm@}"
+          if [ -z "$VERSION" ] || [ "$VERSION" = "$PKG_MGR" ]; then
+            echo "::error::Cannot resolve pnpm version from package.json packageManager field"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Setup pnpm (corepack retry)
       shell: bash
       run: |
         set -euo pipefail
         corepack enable
         for attempt in 1 2 3; do
-          if corepack prepare "pnpm@${{ inputs.pnpm-version }}" --activate; then
+          if corepack prepare "pnpm@${{ steps.resolve.outputs.version }}" --activate; then
             pnpm -v
             exit 0
           fi

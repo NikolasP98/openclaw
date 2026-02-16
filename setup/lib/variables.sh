@@ -255,6 +255,51 @@ load_profile() {
     return 0
 }
 
+# Load default values from defaults.yaml config
+# Only sets variables that are not already set (CLI args / profile take precedence)
+load_defaults() {
+    local defaults_file="${SCRIPT_DIR:-$(dirname "${BASH_SOURCE[0]}")/..}/config/defaults.yaml"
+
+    if [ ! -f "$defaults_file" ]; then
+        log_debug "No defaults.yaml found at $defaults_file, skipping"
+        return 0
+    fi
+
+    log_debug "Loading defaults from $defaults_file"
+
+    if command -v yq &> /dev/null; then
+        # Use yq for proper YAML parsing
+        PNPM_VERSION="${PNPM_VERSION:-$(yq '.system.pnpm_version // ""' "$defaults_file")}"
+        NODE_VERSION="${NODE_VERSION:-$(yq '.system.node_version // ""' "$defaults_file")}"
+        GATEWAY_PORT="${GATEWAY_PORT:-$(yq '.gateway.port_start // ""' "$defaults_file")}"
+        GATEWAY_BIND="${GATEWAY_BIND:-$(yq '.gateway.bind // ""' "$defaults_file")}"
+        INSTALL_METHOD="${INSTALL_METHOD:-$(yq '.install.method // ""' "$defaults_file")}"
+        PACKAGE_NAME="${PACKAGE_NAME:-$(yq '.install.package_name // ""' "$defaults_file")}"
+        PACKAGE_MANAGER="${PACKAGE_MANAGER:-$(yq '.install.package_manager // ""' "$defaults_file")}"
+        SANDBOX_MODE="${SANDBOX_MODE:-$(yq '.security.sandbox_mode // ""' "$defaults_file")}"
+        DM_POLICY="${DM_POLICY:-$(yq '.security.dm_policy // ""' "$defaults_file")}"
+    else
+        # Fallback: simple grep-based extraction for key defaults
+        log_debug "yq not found, using grep-based defaults parsing"
+        _read_yaml_value() {
+            local key="$1"
+            grep -E "^\s+${key}:" "$defaults_file" 2>/dev/null | head -1 | sed 's/.*:\s*//' | sed 's/\s*#.*//' | xargs
+        }
+        PNPM_VERSION="${PNPM_VERSION:-$(_read_yaml_value pnpm_version)}"
+        NODE_VERSION="${NODE_VERSION:-$(_read_yaml_value node_version)}"
+        GATEWAY_PORT="${GATEWAY_PORT:-$(_read_yaml_value port_start)}"
+        GATEWAY_BIND="${GATEWAY_BIND:-$(_read_yaml_value bind)}"
+        INSTALL_METHOD="${INSTALL_METHOD:-$(_read_yaml_value method)}"
+        PACKAGE_NAME="${PACKAGE_NAME:-$(_read_yaml_value package_name)}"
+        PACKAGE_MANAGER="${PACKAGE_MANAGER:-$(_read_yaml_value package_manager)}"
+        SANDBOX_MODE="${SANDBOX_MODE:-$(_read_yaml_value sandbox_mode)}"
+        DM_POLICY="${DM_POLICY:-$(_read_yaml_value dm_policy)}"
+        unset -f _read_yaml_value
+    fi
+
+    return 0
+}
+
 # Display current configuration (masks sensitive values)
 display_config() {
     echo ""
@@ -306,4 +351,4 @@ display_config() {
 # Export functions
 export -f validate_required_variables derive_system_variables
 export -f validate_api_key validate_username
-export -f load_profile display_config
+export -f load_defaults load_profile display_config

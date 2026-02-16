@@ -8,9 +8,11 @@ inputs:
     required: false
     default: "22.x"
   pnpm-version:
-    description: pnpm version for corepack.
+    description: >
+      pnpm version for corepack.
+      If empty, auto-resolved from package.json packageManager field.
     required: false
-    default: "10.29.3"
+    default: ""
   install-bun:
     description: Whether to install Bun alongside Node.
     required: false

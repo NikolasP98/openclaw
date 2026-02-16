@@ -81,6 +81,9 @@ RUN chmod +x /app/docker/entrypoint.sh && \
 # Note: Container starts as root to allow entrypoint to fix mounted directory permissions
 # The entrypoint script will drop privileges to 'node' user (uid 1000) before running the app
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD curl -sf http://localhost:18789/health || exit 1
+
 ENTRYPOINT ["/app/docker/entrypoint.sh"]
 
 # Start gateway server with pre-baked config.
