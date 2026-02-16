@@ -13,6 +13,27 @@ if ! command -v log_info &> /dev/null; then
     source "$(dirname "${BASH_SOURCE[0]}")/logging.sh"
 fi
 
+# Process {{#VAR}}...{{/VAR}} conditional blocks.
+# If VAR is "true" (case-insensitive): keep content, strip tags.
+# Otherwise: remove entire block including content.
+process_conditional_blocks() {
+    local content="$1"
+    local blocks
+    blocks=$(printf '%s\n' "$content" | grep -oP '\{\{#[A-Z_]+\}\}' | sed 's/[{}#]//g' | sort -u) || true
+
+    for var in $blocks; do
+        local val="${!var:-}"
+        if [[ "${val,,}" == "true" ]]; then
+            # Keep block content, strip the tag lines
+            content=$(printf '%s\n' "$content" | sed "/{{#${var}}}/d; /{{\\/${var}}}/d")
+        else
+            # Remove entire block (opening tag through closing tag, inclusive)
+            content=$(printf '%s\n' "$content" | sed "/{{#${var}}}/,/{{\\/${var}}}/d")
+        fi
+    done
+    printf '%s\n' "$content"
+}
+
 # Render template by replacing {{VARIABLE}} placeholders
 render_template() {
     local template_file="$1"
@@ -27,6 +48,9 @@ render_template() {
 
     local content
     content=$(cat "$template_file")
+
+    # Process conditional blocks before variable replacement
+    content=$(process_conditional_blocks "$content")
 
     # Replace all {{VARIABLE}} patterns with environment variable values
     local variables
@@ -100,4 +124,4 @@ render_templates_from_dir() {
 }
 
 # Export functions
-export -f render_template validate_template render_templates_from_dir
+export -f process_conditional_blocks render_template validate_template render_templates_from_dir

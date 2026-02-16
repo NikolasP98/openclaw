@@ -258,6 +258,17 @@ jobs:
       - name: Check docs
         run: pnpm check:docs
 
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: ShellCheck setup scripts
+        run: shellcheck setup/setup.sh setup/lib/*.sh setup/phases/*.sh setup/utilities/*.sh
+
   secrets:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:

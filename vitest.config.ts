@@ -45,6 +45,11 @@ export default defineConfig({
       "**/*.live.test.ts",
       "**/*.e2e.test.ts",
     ],
+    // Coverage thresholds: 70% line/function/statement, 55% branch.
+    // These reflect the current codebase maturity. Excluded paths below
+    // fall into categories that are validated through other means (e2e,
+    // Docker smoke tests, manual QA). When adding new exclusions, add a
+    // comment explaining which test strategy covers the excluded code.
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
@@ -57,7 +62,9 @@ export default defineConfig({
       include: ["src/**/*.ts"],
       exclude: [
         "src/**/*.test.ts",
-        // Entrypoints and wiring (covered by CI smoke + manual/e2e flows).
+
+        // --- Entrypoints & CLI wiring ---
+        // Thin wiring layers covered by CI install-smoke and e2e Docker tests.
         "src/entry.ts",
         "src/index.ts",
         "src/runtime.ts",
@@ -67,7 +74,8 @@ export default defineConfig({
         "src/hooks/**",
         "src/macos/**",
 
-        // Some agent integrations are intentionally validated via manual/e2e runs.
+        // --- Agent integrations (e2e/manual) ---
+        // Require live model providers or sandbox environments to test.
         "src/agents/model-scan.ts",
         "src/agents/pi-embedded-runner.ts",
         "src/agents/sandbox-paths.ts",
@@ -77,7 +85,8 @@ export default defineConfig({
         "src/agents/tools/discord-actions*.ts",
         "src/agents/tools/slack-actions.ts",
 
-        // Gateway server integration surfaces are intentionally validated via manual/e2e runs.
+        // --- Gateway server methods (e2e/manual) ---
+        // HTTP/WebSocket handlers validated via gateway e2e and Docker tests.
         "src/gateway/control-ui.ts",
         "src/gateway/server-bridge.ts",
         "src/gateway/server-channels.ts",
@@ -87,29 +96,33 @@ export default defineConfig({
         "src/gateway/server-methods/talk.ts",
         "src/gateway/server-methods/web.ts",
         "src/gateway/server-methods/wizard.ts",
+        "src/gateway/server.ts",
+        "src/gateway/client.ts",
+        "src/gateway/protocol/**",
 
-        // Process bridges are hard to unit-test in isolation.
+        // --- Process bridges (hard to isolate) ---
+        // IPC/RPC layers that require running child processes.
         "src/gateway/call.ts",
         "src/process/tau-rpc.ts",
         "src/process/exec.ts",
-        // Interactive UIs/flows are intentionally validated via manual/e2e runs.
+
+        // --- Interactive UIs (manual) ---
+        // Terminal and onboarding flows requiring interactive input.
         "src/tui/**",
         "src/wizard/**",
-        // Channel surfaces are largely integration-tested (or manually validated).
+
+        // --- Channel surfaces (integration-tested) ---
+        // Each channel has platform-specific API dependencies.
         "src/discord/**",
         "src/imessage/**",
         "src/signal/**",
         "src/slack/**",
         "src/browser/**",
         "src/channels/web/**",
-        "src/telegram/index.ts",
-        "src/telegram/proxy.ts",
-        "src/telegram/webhook-set.ts",
         "src/telegram/**",
         "src/webchat/**",
-        "src/gateway/server.ts",
-        "src/gateway/client.ts",
-        "src/gateway/protocol/**",
+
+        // --- Infrastructure (environment-dependent) ---
         "src/infra/tailscale.ts",
       ],
     },
