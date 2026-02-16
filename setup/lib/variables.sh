@@ -279,22 +279,28 @@ load_defaults() {
         SANDBOX_MODE="${SANDBOX_MODE:-$(yq '.security.sandbox_mode // ""' "$defaults_file")}"
         DM_POLICY="${DM_POLICY:-$(yq '.security.dm_policy // ""' "$defaults_file")}"
     else
-        # Fallback: simple grep-based extraction for key defaults
+        # Fallback: section-aware grep-based extraction for key defaults.
+        # Searches for "key:" under a specific top-level "section:" header
+        # to avoid matching ambiguous keys in the wrong YAML section.
         log_debug "yq not found, using grep-based defaults parsing"
-        _read_yaml_value() {
-            local key="$1"
-            grep -E "^\s+${key}:" "$defaults_file" 2>/dev/null | head -1 | sed 's/.*:\s*//' | sed 's/\s*#.*//' | xargs
+        _read_yaml_section_value() {
+            local section="$1" key="$2"
+            # Extract lines between "^section:" and the next "^[a-z]" header,
+            # then find the key within that block.
+            sed -n "/^${section}:/,/^[a-z]/p" "$defaults_file" 2>/dev/null \
+                | grep -E "^\s+${key}:" | head -1 \
+                | sed 's/.*:\s*//' | sed 's/\s*#.*//' | xargs
         }
-        PNPM_VERSION="${PNPM_VERSION:-$(_read_yaml_value pnpm_version)}"
-        NODE_VERSION="${NODE_VERSION:-$(_read_yaml_value node_version)}"
-        GATEWAY_PORT="${GATEWAY_PORT:-$(_read_yaml_value port_start)}"
-        GATEWAY_BIND="${GATEWAY_BIND:-$(_read_yaml_value bind)}"
-        INSTALL_METHOD="${INSTALL_METHOD:-$(_read_yaml_value method)}"
-        PACKAGE_NAME="${PACKAGE_NAME:-$(_read_yaml_value package_name)}"
-        PACKAGE_MANAGER="${PACKAGE_MANAGER:-$(_read_yaml_value package_manager)}"
-        SANDBOX_MODE="${SANDBOX_MODE:-$(_read_yaml_value sandbox_mode)}"
-        DM_POLICY="${DM_POLICY:-$(_read_yaml_value dm_policy)}"
-        unset -f _read_yaml_value
+        PNPM_VERSION="${PNPM_VERSION:-$(_read_yaml_section_value system pnpm_version)}"
+        NODE_VERSION="${NODE_VERSION:-$(_read_yaml_section_value system node_version)}"
+        GATEWAY_PORT="${GATEWAY_PORT:-$(_read_yaml_section_value gateway port_start)}"
+        GATEWAY_BIND="${GATEWAY_BIND:-$(_read_yaml_section_value gateway bind)}"
+        INSTALL_METHOD="${INSTALL_METHOD:-$(_read_yaml_section_value install method)}"
+        PACKAGE_NAME="${PACKAGE_NAME:-$(_read_yaml_section_value install package_name)}"
+        PACKAGE_MANAGER="${PACKAGE_MANAGER:-$(_read_yaml_section_value install package_manager)}"
+        SANDBOX_MODE="${SANDBOX_MODE:-$(_read_yaml_section_value security sandbox_mode)}"
+        DM_POLICY="${DM_POLICY:-$(_read_yaml_section_value security dm_policy)}"
+        unset -f _read_yaml_section_value
     fi
 
     return 0

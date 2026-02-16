@@ -20,11 +20,19 @@ runs:
       run: |
         if [ -n "${{ inputs.pnpm-version }}" ]; then
           echo "version=${{ inputs.pnpm-version }}" >> "$GITHUB_OUTPUT"
-        else
+        elif command -v node &>/dev/null; then
           PKG_MGR=$(node -p "require('./package.json').packageManager || ''")
           VERSION="${PKG_MGR#pnpm@}"
           if [ -z "$VERSION" ] || [ "$VERSION" = "$PKG_MGR" ]; then
             echo "::error::Cannot resolve pnpm version from package.json packageManager field"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+        else
+          # Fallback: extract version without Node (e.g., install-smoke before Node setup)
+          VERSION=$(grep -o '"packageManager":\s*"pnpm@[^"]*"' package.json | grep -o '[0-9][0-9.]*')
+          if [ -z "$VERSION" ]; then
+            echo "::error::Cannot resolve pnpm version (no Node, no packageManager in package.json)"
             exit 1
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
