@@ -41,10 +41,10 @@ SIGN_IDENTITY="Developer ID Application: <Developer Name> (<TEAMID>)" \
 scripts/package-mac-app.sh
 
 # Zip for distribution (includes resource forks for Sparkle delta support)
-ditto -c -k --sequesterRsrc --keepParent dist/Minion.app dist/Minion-2026.2.13.zip
+ditto -c -k --sequesterRsrc --keepParent dist/OpenClaw.app dist/OpenClaw-2026.2.13.zip
 
 # Optional: also build a styled DMG for humans (drag to /Applications)
-scripts/create-dmg.sh dist/Minion.app dist/Minion-2026.2.13.dmg
+scripts/create-dmg.sh dist/OpenClaw.app dist/OpenClaw-2026.2.13.dmg
 
 # Recommended: build + notarize/staple zip + DMG
 # First, create a keychain profile once:
@@ -59,7 +59,7 @@ SIGN_IDENTITY="Developer ID Application: <Developer Name> (<TEAMID>)" \
 scripts/package-mac-dist.sh
 
 # Optional: ship dSYM alongside the release
-ditto -c -k --keepParent apps/macos/.build/release/Minion.app.dSYM dist/Minion-2026.2.13.dSYM.zip
+ditto -c -k --keepParent apps/macos/.build/release/OpenClaw.app.dSYM dist/OpenClaw-2026.2.13.dSYM.zip
 ```
 
 ## Appcast entry
@@ -67,7 +67,7 @@ ditto -c -k --keepParent apps/macos/.build/release/Minion.app.dSYM dist/Minion-2
 Use the release note generator so Sparkle renders formatted HTML notes:
 
 ```bash
-SPARKLE_PRIVATE_KEY_FILE=/path/to/ed25519-private-key scripts/make_appcast.sh dist/Minion-2026.2.13.zip https://raw.githubusercontent.com/minion/minion/main/appcast.xml
+SPARKLE_PRIVATE_KEY_FILE=/path/to/ed25519-private-key scripts/make_appcast.sh dist/OpenClaw-2026.2.13.zip https://raw.githubusercontent.com/minion/minion/main/appcast.xml
 ```
 
 Generates HTML release notes from `CHANGELOG.md` (via [`scripts/changelog-to-html.sh`](https://github.com/minion/minion/blob/main/scripts/changelog-to-html.sh)) and embeds them in the appcast entry.
@@ -75,7 +75,7 @@ Commit the updated `appcast.xml` alongside the release assets (zip + dSYM) when 
 
 ## Publish & verify
 
-- Upload `Minion-2026.2.13.zip` (and `Minion-2026.2.13.dSYM.zip`) to the GitHub release for tag `v2026.2.13`.
+- Upload `OpenClaw-2026.2.13.zip` (and `OpenClaw-2026.2.13.dSYM.zip`) to the GitHub release for tag `v2026.2.13`.
 - Ensure the raw appcast URL matches the baked feed: `https://raw.githubusercontent.com/minion/minion/main/appcast.xml`.
 - Sanity checks:
   - `curl -I https://raw.githubusercontent.com/minion/minion/main/appcast.xml` returns 200.

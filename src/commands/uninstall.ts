@@ -91,9 +91,9 @@ async function removeMacApp(runtime: RuntimeEnv, dryRun?: boolean) {
   if (process.platform !== "darwin") {
     return;
   }
-  await removePath("/Applications/Minion.app", runtime, {
+  await removePath("/Applications/OpenClaw.app", runtime, {
     dryRun,
-    label: "/Applications/Minion.app",
+    label: "/Applications/OpenClaw.app",
   });
 }
 
@@ -125,7 +125,7 @@ export async function uninstallCommand(runtime: RuntimeEnv, opts: UninstallOptio
         {
           value: "app",
           label: "macOS app",
-          hint: "/Applications/Minion.app",
+          hint: "/Applications/OpenClaw.app",
         },
       ],
       initialValues: ["service", "state", "workspace"],

@@ -1,12 +1,12 @@
 ---
-summary: "SSH tunnel setup for Minion.app connecting to a remote gateway"
+summary: "SSH tunnel setup for OpenClaw.app connecting to a remote gateway"
 read_when: "Connecting the macOS app to a remote gateway over SSH"
 title: "Remote Gateway Setup"
 ---
 
-# Running Minion.app with a Remote Gateway
+# Running OpenClaw.app with a Remote Gateway
 
-Minion.app uses SSH tunneling to connect to a remote gateway. This guide shows you how to set it up.
+OpenClaw.app uses SSH tunneling to connect to a remote gateway. This guide shows you how to set it up.
 
 ## Overview
 
@@ -14,7 +14,7 @@ Minion.app uses SSH tunneling to connect to a remote gateway. This guide shows y
 flowchart TB
     subgraph Client["Client Machine"]
         direction TB
-        A["Minion.app"]
+        A["OpenClaw.app"]
         B["ws://127.0.0.1:18789\n(local port)"]
         T["SSH Tunnel"]
 
@@ -67,11 +67,11 @@ launchctl setenv MINION_GATEWAY_TOKEN "<your-token>"
 ssh -N remote-gateway &
 ```
 
-### Step 5: Restart Minion.app
+### Step 5: Restart OpenClaw.app
 
 ```bash
-# Quit Minion.app (⌘Q), then reopen:
-open /path/to/Minion.app
+# Quit OpenClaw.app (⌘Q), then reopen:
+open /path/to/OpenClaw.app
 ```
 
 The app will now connect to the remote gateway through the SSH tunnel.
@@ -155,4 +155,4 @@ launchctl bootout gui/$UID/bot.molt.ssh-tunnel
 | `KeepAlive`                          | Automatically restarts tunnel if it crashes                  |
 | `RunAtLoad`                          | Starts tunnel when the agent loads                           |
 
-Minion.app connects to `ws://127.0.0.1:18789` on your client machine. The SSH tunnel forwards that connection to port 18789 on the remote machine where the Gateway is running.
+OpenClaw.app connects to `ws://127.0.0.1:18789` on your client machine. The SSH tunnel forwards that connection to port 18789 on the remote machine where the Gateway is running.

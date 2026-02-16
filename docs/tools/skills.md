@@ -14,7 +14,7 @@ Minion uses **[AgentSkills](https://agentskills.io)-compatible** skill folders t
 
 Skills are loaded from **three** places:
 
-1. **Bundled skills**: shipped with the install (npm package or Minion.app)
+1. **Bundled skills**: shipped with the install (npm package or OpenClaw.app)
 2. **Managed/local skills**: `~/.minion/skills`
 3. **Workspace skills**: `<workspace>/skills`
 
@@ -285,7 +285,7 @@ Notes:
 ## Managed skills lifecycle
 
 Minion ships a baseline set of skills as **bundled skills** as part of the
-install (npm package or Minion.app). `~/.minion/skills` exists for local
+install (npm package or OpenClaw.app). `~/.minion/skills` exists for local
 overrides (for example, pinning/patching a skill without changing the bundled
 copy). Workspace skills are user-owned and override both on name conflicts.
 

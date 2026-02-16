@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Reset Minion like Trimmy: kill running instances, rebuild, repackage, relaunch, verify.
+# Reset OpenClaw like Trimmy: kill running instances, rebuild, repackage, relaunch, verify.
 
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_BUNDLE="${MINION_APP_BUNDLE:-}"
-APP_PROCESS_PATTERN="Minion.app/Contents/MacOS/Minion"
-DEBUG_PROCESS_PATTERN="${ROOT_DIR}/apps/macos/.build/debug/Minion"
-LOCAL_PROCESS_PATTERN="${ROOT_DIR}/apps/macos/.build-local/debug/Minion"
-RELEASE_PROCESS_PATTERN="${ROOT_DIR}/apps/macos/.build/release/Minion"
+APP_PROCESS_PATTERN="OpenClaw.app/Contents/MacOS/OpenClaw"
+DEBUG_PROCESS_PATTERN="${ROOT_DIR}/apps/macos/.build/debug/OpenClaw"
+LOCAL_PROCESS_PATTERN="${ROOT_DIR}/apps/macos/.build-local/debug/OpenClaw"
+RELEASE_PROCESS_PATTERN="${ROOT_DIR}/apps/macos/.build/release/OpenClaw"
 LAUNCH_AGENT="${HOME}/Library/LaunchAgents/ai.minion.mac.plist"
 LOCK_KEY="$(printf '%s' "${ROOT_DIR}" | shasum -a 256 | cut -c1-8)"
 LOCK_DIR="${TMPDIR:-/tmp}/minion-restart-${LOCK_KEY}"
@@ -132,12 +132,12 @@ kill_all_minion() {
     pkill -f "${DEBUG_PROCESS_PATTERN}" 2>/dev/null || true
     pkill -f "${LOCAL_PROCESS_PATTERN}" 2>/dev/null || true
     pkill -f "${RELEASE_PROCESS_PATTERN}" 2>/dev/null || true
-    pkill -x "Minion" 2>/dev/null || true
+    pkill -x "OpenClaw" 2>/dev/null || true
     if ! pgrep -f "${APP_PROCESS_PATTERN}" >/dev/null 2>&1 \
        && ! pgrep -f "${DEBUG_PROCESS_PATTERN}" >/dev/null 2>&1 \
        && ! pgrep -f "${LOCAL_PROCESS_PATTERN}" >/dev/null 2>&1 \
        && ! pgrep -f "${RELEASE_PROCESS_PATTERN}" >/dev/null 2>&1 \
-       && ! pgrep -x "Minion" >/dev/null 2>&1; then
+       && ! pgrep -x "OpenClaw" >/dev/null 2>&1; then
       return 0
     fi
     sleep 0.3
@@ -149,7 +149,7 @@ stop_launch_agent() {
 }
 
 # 1) Kill all running instances first.
-log "==> Killing existing Minion instances"
+log "==> Killing existing OpenClaw instances"
 kill_all_minion
 stop_launch_agent
 
@@ -158,7 +158,7 @@ run_step "bundle canvas a2ui" bash -lc "cd '${ROOT_DIR}' && pnpm canvas:a2ui:bun
 
 # 2) Rebuild into the same path the packager consumes (.build).
 run_step "clean build cache" bash -lc "cd '${ROOT_DIR}/apps/macos' && rm -rf .build .build-swift .swiftpm 2>/dev/null || true"
-run_step "swift build" bash -lc "cd '${ROOT_DIR}/apps/macos' && swift build -q --product Minion"
+run_step "swift build" bash -lc "cd '${ROOT_DIR}/apps/macos' && swift build -q --product OpenClaw"
 
 if [ "$AUTO_DETECT_SIGNING" -eq 1 ]; then
   if check_signing_keys; then
@@ -191,20 +191,20 @@ choose_app_bundle() {
     return 0
   fi
 
-  if [[ -d "/Applications/Minion.app" ]]; then
-    APP_BUNDLE="/Applications/Minion.app"
+  if [[ -d "/Applications/OpenClaw.app" ]]; then
+    APP_BUNDLE="/Applications/OpenClaw.app"
     return 0
   fi
 
-  if [[ -d "${ROOT_DIR}/dist/Minion.app" ]]; then
-    APP_BUNDLE="${ROOT_DIR}/dist/Minion.app"
+  if [[ -d "${ROOT_DIR}/dist/OpenClaw.app" ]]; then
+    APP_BUNDLE="${ROOT_DIR}/dist/OpenClaw.app"
     if [[ ! -d "${APP_BUNDLE}/Contents/Frameworks/Sparkle.framework" ]]; then
-      fail "dist/Minion.app missing Sparkle after packaging"
+      fail "dist/OpenClaw.app missing Sparkle after packaging"
     fi
     return 0
   fi
 
-  fail "App bundle not found. Set MINION_APP_BUNDLE to your installed Minion.app"
+  fail "App bundle not found. Set MINION_APP_BUNDLE to your installed OpenClaw.app"
 }
 
 choose_app_bundle
@@ -259,7 +259,7 @@ run_step "launch app" env -i \
 # 5) Verify the app is alive.
 sleep 1.5
 if pgrep -f "${APP_PROCESS_PATTERN}" >/dev/null 2>&1; then
-  log "OK: Minion is running."
+  log "OK: OpenClaw is running."
 else
   fail "App exited immediately. Check ${LOG_PATH} or Console.app (User Reports)."
 fi

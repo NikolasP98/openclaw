@@ -67,7 +67,7 @@ bun remove -g minion
 6. If you installed the macOS app:
 
 ```bash
-rm -rf /Applications/Minion.app
+rm -rf /Applications/OpenClaw.app
 ```
 
 Notes:
