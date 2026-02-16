@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk";
+import type { MinionConfig } from "minion/plugin-sdk";
 import {
   createReplyPrefixOptions,
   logAckFailure,
@@ -6,7 +6,7 @@ import {
   logTypingFailure,
   resolveAckReaction,
   resolveControlCommandGate,
-} from "openclaw/plugin-sdk";
+} from "minion/plugin-sdk";
 import type {
   BlueBubblesCoreRuntime,
   BlueBubblesRuntimeEnv,
@@ -81,7 +81,7 @@ function logGroupAllowlistHint(params: {
 }
 
 function resolveBlueBubblesAckReaction(params: {
-  cfg: OpenClawConfig;
+  cfg: MinionConfig;
   agentId: string;
   core: BlueBubblesCoreRuntime;
   runtime: BlueBubblesRuntimeEnv;

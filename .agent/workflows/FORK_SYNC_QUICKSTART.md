@@ -1,11 +1,11 @@
-# OpenClaw Fork Sync - Quick Start
+# Minion Fork Sync - Quick Start
 
 ## Current State (Ready to Use!)
 
 - Mirror branch is a clean mirror of upstream
 - Git alias `sync-upstream` is configured globally
 - Branch tracking configured for DEV and main
-- Full workflow documentation: `.agent/workflows/openclaw-fork-sync.md`
+- Full workflow documentation: `.agent/workflows/minion-fork-sync.md`
 
 ## Your Workflow in Action
 
@@ -108,7 +108,7 @@ git push origin DEV
 ## Branch Strategy
 
 ```
-upstream/main (openclaw/openclaw)
+upstream/main (minion/minion)
     ↓ git sync-upstream (automated)
 mirror (clean mirror)
     ↓ git sync-upstream (automated)
@@ -130,7 +130,7 @@ main → merge from DEV (production)
    ```
 
 2. **Read the full guide** when you have time:
-   `.agent/workflows/openclaw-fork-sync.md`
+   `.agent/workflows/minion-fork-sync.md`
 
 3. **Start using feature branches** for your work:
    ```bash
@@ -166,6 +166,6 @@ git log --oneline --graph --all --decorate -20
 
 ## Get Help
 
-- Full workflow documentation: `.agent/workflows/openclaw-fork-sync.md`
+- Full workflow documentation: `.agent/workflows/minion-fork-sync.md`
 - Troubleshooting section covers common issues
 - Git conflict resolution examples included

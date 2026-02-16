@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-OPENCLAW_HOME="/home/node/.openclaw"
+MINION_HOME="/home/node/.minion"
 GOGCLI_CONFIG="/home/node/.config/gogcli"
 DEFAULT_CONFIG="/app/docker/default-config.json"
 
@@ -11,17 +11,17 @@ log() {
 
 # Create required directories if they don't exist
 dirs=(
-  "$OPENCLAW_HOME"
-  "$OPENCLAW_HOME/workspace"
-  "$OPENCLAW_HOME/agents"
-  "$OPENCLAW_HOME/canvas"
-  "$OPENCLAW_HOME/credentials"
-  "$OPENCLAW_HOME/devices"
-  "$OPENCLAW_HOME/identity"
-  "$OPENCLAW_HOME/media"
-  "$OPENCLAW_HOME/memory"
-  "$OPENCLAW_HOME/cron"
-  "$OPENCLAW_HOME/sessions"
+  "$MINION_HOME"
+  "$MINION_HOME/workspace"
+  "$MINION_HOME/agents"
+  "$MINION_HOME/canvas"
+  "$MINION_HOME/credentials"
+  "$MINION_HOME/devices"
+  "$MINION_HOME/identity"
+  "$MINION_HOME/media"
+  "$MINION_HOME/memory"
+  "$MINION_HOME/cron"
+  "$MINION_HOME/sessions"
   "$GOGCLI_CONFIG"
 )
 
@@ -39,24 +39,24 @@ for dir in "${dirs[@]}"; do
   fi
 done
 
-# Validate OPENCLAW_ENV (soft warning — never fatal to avoid breaking existing deploys)
-if [[ -n "${OPENCLAW_ENV:-}" ]]; then
-  _ENV_LOWER="$(echo "$OPENCLAW_ENV" | tr '[:upper:]' '[:lower:]')"
-  if [[ "$_ENV_LOWER" != "$OPENCLAW_ENV" ]]; then
-    log "WARNING: OPENCLAW_ENV should be lowercase ('$_ENV_LOWER'), got '$OPENCLAW_ENV'"
+# Validate MINION_ENV (soft warning — never fatal to avoid breaking existing deploys)
+if [[ -n "${MINION_ENV:-}" ]]; then
+  _ENV_LOWER="$(echo "$MINION_ENV" | tr '[:upper:]' '[:lower:]')"
+  if [[ "$_ENV_LOWER" != "$MINION_ENV" ]]; then
+    log "WARNING: MINION_ENV should be lowercase ('$_ENV_LOWER'), got '$MINION_ENV'"
   fi
-  log "Environment: OPENCLAW_ENV=$OPENCLAW_ENV"
+  log "Environment: MINION_ENV=$MINION_ENV"
   unset _ENV_LOWER
 fi
 
 # Copy default config only if it doesn't exist
 if [ -f "$DEFAULT_CONFIG" ]; then
-  if [ ! -f "$OPENCLAW_HOME/openclaw.json" ]; then
-    cp "$DEFAULT_CONFIG" "$OPENCLAW_HOME/openclaw.json"
-    chmod 644 "$OPENCLAW_HOME/openclaw.json"
-    log "Created default config: $OPENCLAW_HOME/openclaw.json"
+  if [ ! -f "$MINION_HOME/minion.json" ]; then
+    cp "$DEFAULT_CONFIG" "$MINION_HOME/minion.json"
+    chmod 644 "$MINION_HOME/minion.json"
+    log "Created default config: $MINION_HOME/minion.json"
   else
-    log "Config exists, preserving: $OPENCLAW_HOME/openclaw.json"
+    log "Config exists, preserving: $MINION_HOME/minion.json"
   fi
 else
   log "Warning: Default config not found at $DEFAULT_CONFIG"
@@ -65,7 +65,7 @@ fi
 # Drop privileges to node user and execute the main command
 log "Dropping privileges to node user (uid 1000)"
 
-# Auto-prepend node openclaw.mjs for OpenClaw commands
+# Auto-prepend node minion.mjs for Minion commands
 # Allow system commands (node, bash, sh, etc.) to pass through unchanged
 case "$1" in
   node|bash|sh|/bin/*|/usr/bin/*|"")
@@ -73,7 +73,7 @@ case "$1" in
     exec gosu node "$@"
     ;;
   *)
-    # OpenClaw CLI command - prepend node openclaw.mjs
-    exec gosu node node openclaw.mjs "$@"
+    # Minion CLI command - prepend node minion.mjs
+    exec gosu node node minion.mjs "$@"
     ;;
 esac

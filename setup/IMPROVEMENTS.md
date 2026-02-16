@@ -29,7 +29,7 @@ completed work (`- [x]`).
 ## Medium Priority
 
 - [ ] **Publish automation (name swap + 2FA)**
-  - Description: Publishing `@nikolasp98/openclaw` requires manually swapping `package.json` name from `openclaw` to the scoped name, then swapping back. Automate with a `publish` script that: (1) stamps version, (2) swaps name, (3) builds, (4) publishes with `--ignore-scripts`, (5) restores name. Integrate `op` CLI for 2FA OTP.
+  - Description: Publishing `@nikolasp98/minion` requires manually swapping `package.json` name from `minion` to the scoped name, then swapping back. Automate with a `publish` script that: (1) stamps version, (2) swaps name, (3) builds, (4) publishes with `--ignore-scripts`, (5) restores name. Integrate `op` CLI for 2FA OTP.
   - Affected files: `scripts/publish.ts` (new), `package.json` (scripts)
   - Dependencies: 1Password CLI (`op`) for OTP
   - Effort: Small
@@ -79,7 +79,7 @@ completed work (`- [x]`).
 ## Low Priority
 
 - [ ] **Suppress Control UI warning on headless servers**
-  - Description: Gateway logs noisy `Control UI is not available` warnings on servers without the web UI built. Either suppress the warning when `OPENCLAW_DISABLE_CONTROL_UI=1` is set, or auto-detect headless environments and skip the warning.
+  - Description: Gateway logs noisy `Control UI is not available` warnings on servers without the web UI built. Either suppress the warning when `MINION_DISABLE_CONTROL_UI=1` is set, or auto-detect headless environments and skip the warning.
   - Affected files: Gateway control-ui initialization code
   - Dependencies: None
   - Effort: Small
@@ -91,7 +91,7 @@ completed work (`- [x]`).
   - Effort: Medium
 
 - [ ] **Config diff on update**
-  - Description: When running `--update`, show a diff of what changed in `openclaw.json` before applying. Allows the operator to review config changes.
+  - Description: When running `--update`, show a diff of what changed in `minion.json` before applying. Allows the operator to review config changes.
   - Affected files: `phases/50-config-generation.sh`
   - Dependencies: `diff` available on target
   - Effort: Small
@@ -114,18 +114,18 @@ completed work (`- [x]`).
   - Completed: 2026-02-15
 
 - [x] **Consolidate CORE_PACKAGE_NAMES across codebase**
-  - Description: Package name check (`"openclaw"`) was hardcoded in 4 separate files, causing version resolution to fail for the `@nikolasp98/openclaw` scoped package (reported `0.0.0`). Unified to `CORE_PACKAGE_NAMES = new Set(["openclaw", "@nikolasp98/openclaw"])` in all locations.
-  - Delivered in: `src/version.ts`, `src/infra/openclaw-root.ts`, `src/infra/update-runner.ts`, `src/cli/update-cli/shared.ts`
+  - Description: Package name check (`"minion"`) was hardcoded in 4 separate files, causing version resolution to fail for the `@nikolasp98/minion` scoped package (reported `0.0.0`). Unified to `CORE_PACKAGE_NAMES = new Set(["minion", "@nikolasp98/minion"])` in all locations.
+  - Delivered in: `src/version.ts`, `src/infra/minion-root.ts`, `src/infra/update-runner.ts`, `src/cli/update-cli/shared.ts`
   - Completed: 2026-02-15
 
 - [x] **Build-time version injection**
-  - Description: npm package had no version metadata at runtime because `package.json` was not bundled. Added `__OPENCLAW_VERSION__` define injection via tsdown config and `scripts/stamp-version.ts` for `yyyy.M.d` date-based versioning.
+  - Description: npm package had no version metadata at runtime because `package.json` was not bundled. Added `__MINION_VERSION__` define injection via tsdown config and `scripts/stamp-version.ts` for `yyyy.M.d` date-based versioning.
   - Delivered in: `tsdown.config.ts`, `scripts/stamp-version.ts`, `src/version.ts`
   - Completed: 2026-02-15
 
 - [x] **Migrate bernibites from nohup to systemd**
   - Description: bernibites `bot-prd` was running the gateway via `nohup` instead of a proper systemd user service. Created and enabled systemd service with linger for reliable restarts.
-  - Delivered in: `~bot-prd/.config/systemd/user/openclaw-gateway.service` on bernibites
+  - Delivered in: `~bot-prd/.config/systemd/user/minion-gateway.service` on bernibites
   - Completed: 2026-02-15
 
 ---

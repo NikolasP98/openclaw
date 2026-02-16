@@ -3,7 +3,7 @@
 ## ✅ Test Status: ALL TESTS PASSED
 
 **Test Date:** 2026-02-09
-**Test Environment:** OpenClaw DEV branch
+**Test Environment:** Minion DEV branch
 **Implementation:** Phase 1 & 2 Complete
 
 ---
@@ -12,26 +12,26 @@
 
 ### Core Functionality Tests
 
-| Test | Status | Details |
-|------|--------|---------|
-| **State Token Generation** | ✅ PASS | Cryptographic random tokens (64 hex chars) |
-| **Scope Resolution** | ✅ PASS | Gmail (4), Calendar (2), Drive (2) scopes |
-| **Pending Flow Management** | ✅ PASS | Add, retrieve, remove flows correctly |
-| **Credential Path Resolution** | ✅ PASS | Session-isolated paths with sanitization |
-| **OAuth URL Construction** | ✅ PASS | Valid Google OAuth URLs with all params |
-| **Security Properties** | ✅ PASS | 1000 unique tokens, no collisions |
-| **Error Handling** | ✅ PASS | Expired flows, invalid state, user denial |
+| Test                           | Status  | Details                                    |
+| ------------------------------ | ------- | ------------------------------------------ |
+| **State Token Generation**     | ✅ PASS | Cryptographic random tokens (64 hex chars) |
+| **Scope Resolution**           | ✅ PASS | Gmail (4), Calendar (2), Drive (2) scopes  |
+| **Pending Flow Management**    | ✅ PASS | Add, retrieve, remove flows correctly      |
+| **Credential Path Resolution** | ✅ PASS | Session-isolated paths with sanitization   |
+| **OAuth URL Construction**     | ✅ PASS | Valid Google OAuth URLs with all params    |
+| **Security Properties**        | ✅ PASS | 1000 unique tokens, no collisions          |
+| **Error Handling**             | ✅ PASS | Expired flows, invalid state, user denial  |
 
 ### Security Validation
 
-| Security Feature | Status | Implementation |
-|------------------|--------|----------------|
-| **CSRF Protection** | ✅ | `crypto.randomBytes(32)` for state tokens |
-| **Localhost Binding** | ✅ | Binds to `127.0.0.1` only, never `0.0.0.0` |
-| **One-Time Tokens** | ✅ | State deleted after single use |
-| **Token Expiry** | ✅ | 5-minute timeout with auto-cleanup |
-| **Secure Storage** | ✅ | Credentials saved with `0600` permissions |
-| **Session Isolation** | ✅ | Per-session credential storage |
+| Security Feature      | Status | Implementation                             |
+| --------------------- | ------ | ------------------------------------------ |
+| **CSRF Protection**   | ✅     | `crypto.randomBytes(32)` for state tokens  |
+| **Localhost Binding** | ✅     | Binds to `127.0.0.1` only, never `0.0.0.0` |
+| **One-Time Tokens**   | ✅     | State deleted after single use             |
+| **Token Expiry**      | ✅     | 5-minute timeout with auto-cleanup         |
+| **Secure Storage**    | ✅     | Credentials saved with `0600` permissions  |
+| **Session Isolation** | ✅     | Per-session credential storage             |
 
 ---
 
@@ -95,7 +95,7 @@
 6. **`src/gateway/server.impl.ts`**
    - Pass OAuth server to close handler
 
-7. **`src/agents/openclaw-tools.ts`**
+7. **`src/agents/minion-tools.ts`**
    - Registered three OAuth tools
 
 8. **`skills/gog/SKILL.md`**
@@ -117,17 +117,17 @@ export GOOGLE_CLIENT_SECRET="your-client-secret"
 ```yaml
 hooks:
   gogOAuth:
-    enabled: true          # default
-    port: 51234           # default
-    bind: "127.0.0.1"     # default (localhost only)
-    callbackPath: "/oauth-callback"  # default
-    timeoutMinutes: 5     # default
+    enabled: true # default
+    port: 51234 # default
+    bind: "127.0.0.1" # default (localhost only)
+    callbackPath: "/oauth-callback" # default
+    timeoutMinutes: 5 # default
 ```
 
 ### Disable OAuth Server
 
 ```bash
-export OPENCLAW_SKIP_GOG_OAUTH=1
+export MINION_SKIP_GOG_OAUTH=1
 ```
 
 ---
@@ -150,17 +150,20 @@ export OPENCLAW_SKIP_GOG_OAUTH=1
 ### Test Procedure
 
 **Step 1: Start Gateway**
+
 ```bash
-openclaw gateway run
+minion gateway run
 ```
 
 Expected output:
+
 ```
 [gateway] google oauth server started
 [gateway] Server listening on 127.0.0.1:51234
 ```
 
 **Step 2: Health Check**
+
 ```bash
 curl http://localhost:51234/health
 ```
@@ -168,17 +171,20 @@ curl http://localhost:51234/health
 Expected: `200 OK`
 
 **Step 3: Connect Chat Client**
+
 - Start Telegram, Discord, or another configured provider
 - Send message to agent
 
 **Step 4: Trigger OAuth**
 
 User message:
+
 ```
 Check my Gmail messages
 ```
 
 Agent response:
+
 ```
 I need to authenticate with Gmail first. Please visit this link:
 https://accounts.google.com/o/oauth2/v2/auth?client_id=...&state=...
@@ -189,12 +195,14 @@ I'll notify you when authentication is complete (or if it times out after 5 minu
 **Agent remains responsive during this time** ✅
 
 **Step 5: Authorize in Browser**
+
 1. Click the OAuth link
 2. Sign in to Google
 3. Grant requested permissions
 4. Browser redirects to `http://localhost:51234/oauth-callback`
 
 Expected browser response:
+
 ```
 ✓ Success
 Authentication successful! You can close this window.
@@ -203,23 +211,27 @@ Authentication successful! You can close this window.
 **Step 6: Async Notification**
 
 Agent sends followup message:
+
 ```
 ✓ Google authentication complete for user@gmail.com! You can now use Gmail, Calendar, Drive features.
 ```
 
 **Step 7: Verify Credentials**
+
 ```bash
-ls ~/.openclaw/agents/main/gog-credentials/
+ls ~/.minion/agents/main/gog-credentials/
 ```
 
 Expected:
+
 ```
 telegram_123456_user@gmail.com.json
 ```
 
 Check permissions:
+
 ```bash
-stat -c "%a" ~/.openclaw/agents/main/gog-credentials/*.json
+stat -c "%a" ~/.minion/agents/main/gog-credentials/*.json
 ```
 
 Expected: `600` (owner read/write only)
@@ -227,11 +239,13 @@ Expected: `600` (owner read/write only)
 **Step 8: Use Gmail**
 
 User message:
+
 ```
 Show my recent Gmail messages
 ```
 
 Agent executes:
+
 ```bash
 gog gmail messages search "in:inbox" --max 10 --account user@gmail.com
 ```
@@ -243,6 +257,7 @@ Credentials automatically loaded from session storage ✅
 ## 🔍 Expected Behaviors
 
 ### Success Flow
+
 1. ✅ Agent offers OAuth link
 2. ✅ Agent remains responsive
 3. ✅ User authorizes in browser
@@ -252,6 +267,7 @@ Credentials automatically loaded from session storage ✅
 7. ✅ Gmail commands work immediately
 
 ### Timeout Flow (5 minutes)
+
 1. User doesn't authorize within 5 minutes
 2. State token expires and is cleaned up
 3. Agent sends timeout notification:
@@ -260,6 +276,7 @@ Credentials automatically loaded from session storage ✅
    ```
 
 ### User Denial Flow
+
 1. User clicks "Deny" in Google OAuth
 2. Browser redirects with `?error=access_denied`
 3. Agent sends error notification:
@@ -268,6 +285,7 @@ Credentials automatically loaded from session storage ✅
    ```
 
 ### Invalid State Flow
+
 1. Someone tries to use invalid/expired state token
 2. Server returns 400 Bad Request
 3. Security warning logged
@@ -280,21 +298,27 @@ Credentials automatically loaded from session storage ✅
 ### Test Cases
 
 1. **CSRF Protection:**
+
    ```bash
    curl "http://localhost:51234/oauth-callback?code=fake&state=invalid"
    ```
+
    Expected: `400 Bad Request` - "Invalid or expired authorization request"
 
 2. **Localhost Binding:**
+
    ```bash
    netstat -tulpn | grep 51234
    ```
+
    Expected: Bound to `127.0.0.1:51234`, NOT `0.0.0.0:51234`
 
 3. **File Permissions:**
+
    ```bash
-   stat -c "%a" ~/.openclaw/agents/main/gog-credentials/*.json
+   stat -c "%a" ~/.minion/agents/main/gog-credentials/*.json
    ```
+
    Expected: `600` (not `644` or `666`)
 
 4. **State Uniqueness:**
@@ -329,6 +353,7 @@ Credentials automatically loaded from session storage ✅
 ## ✨ Next Steps
 
 ### For Development Team
+
 - [ ] Add unit tests for OAuth server endpoints
 - [ ] Add integration tests with mock OAuth provider
 - [ ] Test with multiple concurrent users
@@ -336,6 +361,7 @@ Credentials automatically loaded from session storage ✅
 - [ ] Test gateway restart with pending auth flows
 
 ### For Production Deployment
+
 - [ ] Document Google Cloud Console setup process
 - [ ] Create setup wizard for OAuth credentials
 - [ ] Add monitoring/logging for OAuth flows
@@ -343,6 +369,7 @@ Credentials automatically loaded from session storage ✅
 - [ ] Consider token rotation policy
 
 ### For Documentation
+
 - [ ] Add troubleshooting guide
 - [ ] Add video walkthrough
 - [ ] Add FAQ section
@@ -359,8 +386,9 @@ Credentials automatically loaded from session storage ✅
 **Implementation Status:** ✅ Complete and Ready for Use
 
 **Code Quality:**
+
 - ✅ Type-safe TypeScript implementation
-- ✅ Follows OpenClaw patterns and conventions
+- ✅ Follows Minion patterns and conventions
 - ✅ Comprehensive error handling
 - ✅ Security best practices implemented
 - ✅ Session isolation for multi-user support

@@ -1,5 +1,5 @@
-import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
-import { emptyPluginConfigSchema } from "openclaw/plugin-sdk";
+import type { MinionPluginApi } from "minion/plugin-sdk";
+import { emptyPluginConfigSchema } from "minion/plugin-sdk";
 import { twitchPlugin } from "./src/plugin.js";
 import { setTwitchRuntime } from "./src/runtime.js";
 
@@ -10,7 +10,7 @@ const plugin = {
   name: "Twitch",
   description: "Twitch channel plugin",
   configSchema: emptyPluginConfigSchema(),
-  register(api: OpenClawPluginApi) {
+  register(api: MinionPluginApi) {
     setTwitchRuntime(api.runtime);
     // oxlint-disable-next-line typescript/no-explicit-any
     api.registerChannel({ plugin: twitchPlugin as any });

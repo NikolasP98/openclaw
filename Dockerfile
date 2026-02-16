@@ -14,7 +14,7 @@ WORKDIR /app
 # - jq: for JSON processing in scripts
 # - ffmpeg: for video-frames skill (optional but commonly used)
 # - gosu: for privilege dropping in entrypoint
-ARG OPENCLAW_DOCKER_APT_PACKAGES=""
+ARG MINION_DOCKER_APT_PACKAGES=""
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     sqlite3 \
@@ -22,7 +22,7 @@ RUN apt-get update && \
     ffmpeg \
     gosu \
     poppler-utils \
-    $OPENCLAW_DOCKER_APT_PACKAGES && \
+    $MINION_DOCKER_APT_PACKAGES && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
 
@@ -67,7 +67,7 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm build
 # Force pnpm for UI build (Bun may fail on ARM/Synology architectures)
-ENV OPENCLAW_PREFER_PNPM=1
+ENV MINION_PREFER_PNPM=1
 RUN pnpm ui:build
 
 ENV NODE_ENV=production
@@ -84,5 +84,5 @@ RUN chmod +x /app/docker/entrypoint.sh && \
 ENTRYPOINT ["/app/docker/entrypoint.sh"]
 
 # Start gateway server with pre-baked config.
-# Binds to LAN (0.0.0.0) - auth is enforced via OPENCLAW_GATEWAY_TOKEN env var.
-CMD ["node", "openclaw.mjs", "gateway", "--bind", "lan", "--port", "18789"]
+# Binds to LAN (0.0.0.0) - auth is enforced via MINION_GATEWAY_TOKEN env var.
+CMD ["node", "minion.mjs", "gateway", "--bind", "lan", "--port", "18789"]

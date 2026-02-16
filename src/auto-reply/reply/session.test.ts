@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { MinionConfig } from "../../config/config.js";
 import { saveSessionStore } from "../../config/sessions.js";
 import { initSessionState } from "./session.js";
 
@@ -10,7 +10,7 @@ let suiteRoot = "";
 let suiteCase = 0;
 
 beforeAll(async () => {
-  suiteRoot = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-session-suite-"));
+  suiteRoot = await fs.mkdtemp(path.join(os.tmpdir(), "minion-session-suite-"));
 });
 
 afterAll(async () => {
@@ -27,7 +27,7 @@ async function makeCaseDir(prefix: string): Promise<string> {
 
 describe("initSessionState thread forking", () => {
   it("forks a new session from the parent session file", async () => {
-    const root = await makeCaseDir("openclaw-thread-session-");
+    const root = await makeCaseDir("minion-thread-session-");
     const sessionsDir = path.join(root, "sessions");
     await fs.mkdir(sessionsDir);
 
@@ -65,7 +65,7 @@ describe("initSessionState thread forking", () => {
 
     const cfg = {
       session: { store: storePath },
-    } as OpenClawConfig;
+    } as MinionConfig;
 
     const threadSessionKey = "agent:main:slack:channel:c1:thread:123";
     const threadLabel = "Slack thread #general: starter";
@@ -99,12 +99,12 @@ describe("initSessionState thread forking", () => {
   });
 
   it("records topic-specific session files when MessageThreadId is present", async () => {
-    const root = await makeCaseDir("openclaw-topic-session-");
+    const root = await makeCaseDir("minion-topic-session-");
     const storePath = path.join(root, "sessions.json");
 
     const cfg = {
       session: { store: storePath },
-    } as OpenClawConfig;
+    } as MinionConfig;
 
     const result = await initSessionState({
       ctx: {
@@ -126,9 +126,9 @@ describe("initSessionState thread forking", () => {
 
 describe("initSessionState RawBody", () => {
   it("triggerBodyNormalized correctly extracts commands when Body contains context but RawBody is clean", async () => {
-    const root = await makeCaseDir("openclaw-rawbody-");
+    const root = await makeCaseDir("minion-rawbody-");
     const storePath = path.join(root, "sessions.json");
-    const cfg = { session: { store: storePath } } as OpenClawConfig;
+    const cfg = { session: { store: storePath } } as MinionConfig;
 
     const groupMessageCtx = {
       Body: `[Chat messages since your last reply - for context]\n[WhatsApp ...] Someone: hello\n\n[Current message - respond to this]\n[WhatsApp ...] Jake: /status\n[from: Jake McInteer (+6421807830)]`,
@@ -147,9 +147,9 @@ describe("initSessionState RawBody", () => {
   });
 
   it("Reset triggers (/new, /reset) work with RawBody", async () => {
-    const root = await makeCaseDir("openclaw-rawbody-reset-");
+    const root = await makeCaseDir("minion-rawbody-reset-");
     const storePath = path.join(root, "sessions.json");
-    const cfg = { session: { store: storePath } } as OpenClawConfig;
+    const cfg = { session: { store: storePath } } as MinionConfig;
 
     const groupMessageCtx = {
       Body: `[Context]\nJake: /new\n[from: Jake]`,
@@ -169,7 +169,7 @@ describe("initSessionState RawBody", () => {
   });
 
   it("preserves argument casing while still matching reset triggers case-insensitively", async () => {
-    const root = await makeCaseDir("openclaw-rawbody-reset-case-");
+    const root = await makeCaseDir("minion-rawbody-reset-case-");
     const storePath = path.join(root, "sessions.json");
 
     const cfg = {
@@ -177,7 +177,7 @@ describe("initSessionState RawBody", () => {
         store: storePath,
         resetTriggers: ["/new"],
       },
-    } as OpenClawConfig;
+    } as MinionConfig;
 
     const ctx = {
       RawBody: "/NEW KeepThisCase",
@@ -197,9 +197,9 @@ describe("initSessionState RawBody", () => {
   });
 
   it("falls back to Body when RawBody is undefined", async () => {
-    const root = await makeCaseDir("openclaw-rawbody-fallback-");
+    const root = await makeCaseDir("minion-rawbody-fallback-");
     const storePath = path.join(root, "sessions.json");
-    const cfg = { session: { store: storePath } } as OpenClawConfig;
+    const cfg = { session: { store: storePath } } as MinionConfig;
 
     const ctx = {
       Body: "/status",
@@ -216,15 +216,15 @@ describe("initSessionState RawBody", () => {
   });
 
   it("uses the default per-agent sessions store when config store is unset", async () => {
-    const root = await makeCaseDir("openclaw-session-store-default-");
-    const stateDir = path.join(root, ".openclaw");
+    const root = await makeCaseDir("minion-session-store-default-");
+    const stateDir = path.join(root, ".minion");
     const agentId = "worker1";
     const sessionKey = `agent:${agentId}:telegram:12345`;
     const sessionId = "sess-worker-1";
     const sessionFile = path.join(stateDir, "agents", agentId, "sessions", `${sessionId}.jsonl`);
     const storePath = path.join(stateDir, "agents", agentId, "sessions", "sessions.json");
 
-    vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
+    vi.stubEnv("MINION_STATE_DIR", stateDir);
     try {
       await fs.mkdir(path.dirname(storePath), { recursive: true });
       await saveSessionStore(storePath, {
@@ -235,7 +235,7 @@ describe("initSessionState RawBody", () => {
         },
       });
 
-      const cfg = {} as OpenClawConfig;
+      const cfg = {} as MinionConfig;
       const result = await initSessionState({
         ctx: {
           Body: "hello",
@@ -268,7 +268,7 @@ describe("initSessionState reset policy", () => {
 
   it("defaults to daily reset at 4am local time", async () => {
     vi.setSystemTime(new Date(2026, 0, 18, 5, 0, 0));
-    const root = await makeCaseDir("openclaw-reset-daily-");
+    const root = await makeCaseDir("minion-reset-daily-");
     const storePath = path.join(root, "sessions.json");
     const sessionKey = "agent:main:whatsapp:dm:s1";
     const existingSessionId = "daily-session-id";
@@ -280,7 +280,7 @@ describe("initSessionState reset policy", () => {
       },
     });
 
-    const cfg = { session: { store: storePath } } as OpenClawConfig;
+    const cfg = { session: { store: storePath } } as MinionConfig;
     const result = await initSessionState({
       ctx: { Body: "hello", SessionKey: sessionKey },
       cfg,
@@ -293,7 +293,7 @@ describe("initSessionState reset policy", () => {
 
   it("treats sessions as stale before the daily reset when updated before yesterday's boundary", async () => {
     vi.setSystemTime(new Date(2026, 0, 18, 3, 0, 0));
-    const root = await makeCaseDir("openclaw-reset-daily-edge-");
+    const root = await makeCaseDir("minion-reset-daily-edge-");
     const storePath = path.join(root, "sessions.json");
     const sessionKey = "agent:main:whatsapp:dm:s-edge";
     const existingSessionId = "daily-edge-session";
@@ -305,7 +305,7 @@ describe("initSessionState reset policy", () => {
       },
     });
 
-    const cfg = { session: { store: storePath } } as OpenClawConfig;
+    const cfg = { session: { store: storePath } } as MinionConfig;
     const result = await initSessionState({
       ctx: { Body: "hello", SessionKey: sessionKey },
       cfg,
@@ -318,7 +318,7 @@ describe("initSessionState reset policy", () => {
 
   it("expires sessions when idle timeout wins over daily reset", async () => {
     vi.setSystemTime(new Date(2026, 0, 18, 5, 30, 0));
-    const root = await makeCaseDir("openclaw-reset-idle-");
+    const root = await makeCaseDir("minion-reset-idle-");
     const storePath = path.join(root, "sessions.json");
     const sessionKey = "agent:main:whatsapp:dm:s2";
     const existingSessionId = "idle-session-id";
@@ -335,7 +335,7 @@ describe("initSessionState reset policy", () => {
         store: storePath,
         reset: { mode: "daily", atHour: 4, idleMinutes: 30 },
       },
-    } as OpenClawConfig;
+    } as MinionConfig;
     const result = await initSessionState({
       ctx: { Body: "hello", SessionKey: sessionKey },
       cfg,
@@ -348,7 +348,7 @@ describe("initSessionState reset policy", () => {
 
   it("uses per-type overrides for thread sessions", async () => {
     vi.setSystemTime(new Date(2026, 0, 18, 5, 0, 0));
-    const root = await makeCaseDir("openclaw-reset-thread-");
+    const root = await makeCaseDir("minion-reset-thread-");
     const storePath = path.join(root, "sessions.json");
     const sessionKey = "agent:main:slack:channel:c1:thread:123";
     const existingSessionId = "thread-session-id";
@@ -366,7 +366,7 @@ describe("initSessionState reset policy", () => {
         reset: { mode: "daily", atHour: 4 },
         resetByType: { thread: { mode: "idle", idleMinutes: 180 } },
       },
-    } as OpenClawConfig;
+    } as MinionConfig;
     const result = await initSessionState({
       ctx: { Body: "reply", SessionKey: sessionKey, ThreadLabel: "Slack thread" },
       cfg,
@@ -379,7 +379,7 @@ describe("initSessionState reset policy", () => {
 
   it("detects thread sessions without thread key suffix", async () => {
     vi.setSystemTime(new Date(2026, 0, 18, 5, 0, 0));
-    const root = await makeCaseDir("openclaw-reset-thread-nosuffix-");
+    const root = await makeCaseDir("minion-reset-thread-nosuffix-");
     const storePath = path.join(root, "sessions.json");
     const sessionKey = "agent:main:discord:channel:c1";
     const existingSessionId = "thread-nosuffix";
@@ -396,7 +396,7 @@ describe("initSessionState reset policy", () => {
         store: storePath,
         resetByType: { thread: { mode: "idle", idleMinutes: 180 } },
       },
-    } as OpenClawConfig;
+    } as MinionConfig;
     const result = await initSessionState({
       ctx: { Body: "reply", SessionKey: sessionKey, ThreadLabel: "Discord thread" },
       cfg,
@@ -409,7 +409,7 @@ describe("initSessionState reset policy", () => {
 
   it("defaults to daily resets when only resetByType is configured", async () => {
     vi.setSystemTime(new Date(2026, 0, 18, 5, 0, 0));
-    const root = await makeCaseDir("openclaw-reset-type-default-");
+    const root = await makeCaseDir("minion-reset-type-default-");
     const storePath = path.join(root, "sessions.json");
     const sessionKey = "agent:main:whatsapp:dm:s4";
     const existingSessionId = "type-default-session";
@@ -426,7 +426,7 @@ describe("initSessionState reset policy", () => {
         store: storePath,
         resetByType: { thread: { mode: "idle", idleMinutes: 60 } },
       },
-    } as OpenClawConfig;
+    } as MinionConfig;
     const result = await initSessionState({
       ctx: { Body: "hello", SessionKey: sessionKey },
       cfg,
@@ -439,7 +439,7 @@ describe("initSessionState reset policy", () => {
 
   it("keeps legacy idleMinutes behavior without reset config", async () => {
     vi.setSystemTime(new Date(2026, 0, 18, 5, 0, 0));
-    const root = await makeCaseDir("openclaw-reset-legacy-");
+    const root = await makeCaseDir("minion-reset-legacy-");
     const storePath = path.join(root, "sessions.json");
     const sessionKey = "agent:main:whatsapp:dm:s3";
     const existingSessionId = "legacy-session-id";
@@ -456,7 +456,7 @@ describe("initSessionState reset policy", () => {
         store: storePath,
         idleMinutes: 240,
       },
-    } as OpenClawConfig;
+    } as MinionConfig;
     const result = await initSessionState({
       ctx: { Body: "hello", SessionKey: sessionKey },
       cfg,
@@ -470,7 +470,7 @@ describe("initSessionState reset policy", () => {
 
 describe("initSessionState channel reset overrides", () => {
   it("uses channel-specific reset policy when configured", async () => {
-    const root = await makeCaseDir("openclaw-channel-idle-");
+    const root = await makeCaseDir("minion-channel-idle-");
     const storePath = path.join(root, "sessions.json");
     const sessionKey = "agent:main:discord:dm:123";
     const sessionId = "session-override";
@@ -490,7 +490,7 @@ describe("initSessionState channel reset overrides", () => {
         resetByType: { direct: { mode: "idle", idleMinutes: 10 } },
         resetByChannel: { discord: { mode: "idle", idleMinutes: 10080 } },
       },
-    } as OpenClawConfig;
+    } as MinionConfig;
 
     const result = await initSessionState({
       ctx: {

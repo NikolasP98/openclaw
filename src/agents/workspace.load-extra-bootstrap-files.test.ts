@@ -6,7 +6,7 @@ import { loadExtraBootstrapFiles } from "./workspace.js";
 
 describe("loadExtraBootstrapFiles", () => {
   it("loads recognized bootstrap files from glob patterns", async () => {
-    const workspaceDir = await makeTempWorkspace("openclaw-extra-bootstrap-glob-");
+    const workspaceDir = await makeTempWorkspace("minion-extra-bootstrap-glob-");
     const packageDir = path.join(workspaceDir, "packages", "core");
     await fs.mkdir(packageDir, { recursive: true });
     await fs.writeFile(path.join(packageDir, "TOOLS.md"), "tools", "utf-8");
@@ -20,7 +20,7 @@ describe("loadExtraBootstrapFiles", () => {
   });
 
   it("keeps path-traversal attempts outside workspace excluded", async () => {
-    const rootDir = await makeTempWorkspace("openclaw-extra-bootstrap-root-");
+    const rootDir = await makeTempWorkspace("minion-extra-bootstrap-root-");
     const workspaceDir = path.join(rootDir, "workspace");
     const outsideDir = path.join(rootDir, "outside");
     await fs.mkdir(workspaceDir, { recursive: true });
@@ -37,7 +37,7 @@ describe("loadExtraBootstrapFiles", () => {
       return;
     }
 
-    const rootDir = await makeTempWorkspace("openclaw-extra-bootstrap-symlink-");
+    const rootDir = await makeTempWorkspace("minion-extra-bootstrap-symlink-");
     const realWorkspace = path.join(rootDir, "real-workspace");
     const linkedWorkspace = path.join(rootDir, "linked-workspace");
     await fs.mkdir(realWorkspace, { recursive: true });

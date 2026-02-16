@@ -34,11 +34,9 @@ afterEach(() => {
 
 describe("resolveGatewayDevMode", () => {
   it("detects dev mode for src ts entrypoints", () => {
-    expect(resolveGatewayDevMode(["node", "/Users/me/openclaw/src/cli/index.ts"])).toBe(true);
-    expect(resolveGatewayDevMode(["node", "C:\\Users\\me\\openclaw\\src\\cli\\index.ts"])).toBe(
-      true,
-    );
-    expect(resolveGatewayDevMode(["node", "/Users/me/openclaw/dist/cli/index.js"])).toBe(false);
+    expect(resolveGatewayDevMode(["node", "/Users/me/minion/src/cli/index.ts"])).toBe(true);
+    expect(resolveGatewayDevMode(["node", "C:\\Users\\me\\minion\\src\\cli\\index.ts"])).toBe(true);
+    expect(resolveGatewayDevMode(["node", "/Users/me/minion/dist/cli/index.js"])).toBe(false);
   });
 });
 
@@ -55,7 +53,7 @@ describe("buildGatewayInstallPlan", () => {
       supported: true,
     });
     mocks.renderSystemNodeWarning.mockReturnValue(undefined);
-    mocks.buildServiceEnvironment.mockReturnValue({ OPENCLAW_PORT: "3000" });
+    mocks.buildServiceEnvironment.mockReturnValue({ MINION_PORT: "3000" });
 
     const plan = await buildGatewayInstallPlan({
       env: {},
@@ -66,7 +64,7 @@ describe("buildGatewayInstallPlan", () => {
 
     expect(plan.programArguments).toEqual(["node", "gateway"]);
     expect(plan.workingDirectory).toBe("/Users/me");
-    expect(plan.environment).toEqual({ OPENCLAW_PORT: "3000" });
+    expect(plan.environment).toEqual({ MINION_PORT: "3000" });
     expect(mocks.resolvePreferredNodePath).not.toHaveBeenCalled();
   });
 
@@ -108,7 +106,7 @@ describe("buildGatewayInstallPlan", () => {
       supported: true,
     });
     mocks.buildServiceEnvironment.mockReturnValue({
-      OPENCLAW_PORT: "3000",
+      MINION_PORT: "3000",
       HOME: "/Users/me",
     });
 
@@ -130,7 +128,7 @@ describe("buildGatewayInstallPlan", () => {
     expect(plan.environment.GOOGLE_API_KEY).toBe("test-key");
     expect(plan.environment.CUSTOM_VAR).toBe("custom-value");
     // Service environment vars should take precedence
-    expect(plan.environment.OPENCLAW_PORT).toBe("3000");
+    expect(plan.environment.MINION_PORT).toBe("3000");
     expect(plan.environment.HOME).toBe("/Users/me");
   });
 
@@ -145,7 +143,7 @@ describe("buildGatewayInstallPlan", () => {
       version: "22.0.0",
       supported: true,
     });
-    mocks.buildServiceEnvironment.mockReturnValue({ OPENCLAW_PORT: "3000" });
+    mocks.buildServiceEnvironment.mockReturnValue({ MINION_PORT: "3000" });
 
     const plan = await buildGatewayInstallPlan({
       env: {},
@@ -209,7 +207,7 @@ describe("buildGatewayInstallPlan", () => {
     });
     mocks.buildServiceEnvironment.mockReturnValue({
       HOME: "/Users/service",
-      OPENCLAW_PORT: "3000",
+      MINION_PORT: "3000",
     });
 
     const plan = await buildGatewayInstallPlan({
@@ -220,14 +218,14 @@ describe("buildGatewayInstallPlan", () => {
         env: {
           HOME: "/Users/config",
           vars: {
-            OPENCLAW_PORT: "9999",
+            MINION_PORT: "9999",
           },
         },
       },
     });
 
     expect(plan.environment.HOME).toBe("/Users/service");
-    expect(plan.environment.OPENCLAW_PORT).toBe("3000");
+    expect(plan.environment.MINION_PORT).toBe("3000");
   });
 });
 
@@ -235,7 +233,7 @@ describe("gatewayInstallErrorHint", () => {
   it("returns platform-specific hints", () => {
     expect(gatewayInstallErrorHint("win32")).toContain("Run as administrator");
     expect(gatewayInstallErrorHint("linux")).toMatch(
-      /(?:openclaw|openclaw)( --profile isolated)? gateway install/,
+      /(?:minion|minion)( --profile isolated)? gateway install/,
     );
   });
 });

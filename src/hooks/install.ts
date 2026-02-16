@@ -99,14 +99,14 @@ function resolveSafeInstallDir(
   return { ok: true, path: targetDir };
 }
 
-async function ensureOpenClawHooks(manifest: HookPackageManifest) {
+async function ensureMinionHooks(manifest: HookPackageManifest) {
   const hooks = manifest[MANIFEST_KEY]?.hooks;
   if (!Array.isArray(hooks)) {
-    throw new Error("package.json missing openclaw.hooks");
+    throw new Error("package.json missing minion.hooks");
   }
   const list = hooks.map((e) => (typeof e === "string" ? e.trim() : "")).filter(Boolean);
   if (list.length === 0) {
-    throw new Error("package.json openclaw.hooks is empty");
+    throw new Error("package.json minion.hooks is empty");
   }
   return list;
 }
@@ -165,7 +165,7 @@ async function installHookPackageFromDir(params: {
 
   let hookEntries: string[];
   try {
-    hookEntries = await ensureOpenClawHooks(manifest);
+    hookEntries = await ensureMinionHooks(manifest);
   } catch (err) {
     return { ok: false, error: String(err) };
   }
@@ -329,7 +329,7 @@ export async function installHooksFromArchive(params: {
     return { ok: false, error: `unsupported archive: ${archivePath}` };
   }
 
-  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-hook-"));
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "minion-hook-"));
   try {
     const extractDir = path.join(tmpDir, "extract");
     await fs.mkdir(extractDir, { recursive: true });
@@ -394,7 +394,7 @@ export async function installHooksFromNpmSpec(params: {
     return { ok: false, error: specError };
   }
 
-  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-hook-pack-"));
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "minion-hook-pack-"));
   try {
     logger.info?.(`Downloading ${spec}…`);
     const res = await runCommandWithTimeout(["npm", "pack", spec, "--ignore-scripts"], {

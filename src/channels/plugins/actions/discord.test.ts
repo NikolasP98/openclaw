@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../../config/config.js";
+import type { MinionConfig } from "../../../config/config.js";
 type SendMessageDiscord = typeof import("../../../discord/send.js").sendMessageDiscord;
 type SendPollDiscord = typeof import("../../../discord/send.js").sendPollDiscord;
 
@@ -26,7 +26,7 @@ const { discordMessageActions } = await import("./discord.js");
 
 describe("discord message actions", () => {
   it("lists channel and upload actions by default", async () => {
-    const cfg = { channels: { discord: { token: "d0" } } } as OpenClawConfig;
+    const cfg = { channels: { discord: { token: "d0" } } } as MinionConfig;
     const actions = discordMessageActions.listActions?.({ cfg }) ?? [];
 
     expect(actions).toContain("emoji-upload");
@@ -37,7 +37,7 @@ describe("discord message actions", () => {
   it("respects disabled channel actions", async () => {
     const cfg = {
       channels: { discord: { token: "d0", actions: { channels: false } } },
-    } as OpenClawConfig;
+    } as MinionConfig;
     const actions = discordMessageActions.listActions?.({ cfg }) ?? [];
 
     expect(actions).not.toContain("channel-create");
@@ -54,7 +54,7 @@ describe("handleDiscordMessageAction", () => {
         to: "channel:123",
         message: "hi",
       },
-      cfg: {} as OpenClawConfig,
+      cfg: {} as MinionConfig,
       accountId: "ops",
     });
 
@@ -78,7 +78,7 @@ describe("handleDiscordMessageAction", () => {
         pollOption: ["Yes", "No"],
         accountId: "marve",
       },
-      cfg: {} as OpenClawConfig,
+      cfg: {} as MinionConfig,
     });
 
     expect(sendPollDiscord).toHaveBeenCalledWith(
@@ -102,7 +102,7 @@ describe("handleDiscordMessageAction", () => {
         channelId: "123",
         message: "hi",
       },
-      cfg: {} as OpenClawConfig,
+      cfg: {} as MinionConfig,
       accountId: "ops",
     });
 
@@ -127,7 +127,7 @@ describe("handleDiscordMessageAction", () => {
         channelId: "123",
         message: "hi",
       },
-      cfg: {} as OpenClawConfig,
+      cfg: {} as MinionConfig,
       accountId: "ops",
     });
 

@@ -3,7 +3,7 @@ export interface AgentBinding {
   match: {
     channel: string;
     accountId?: string;
-    peer?: { kind: 'dm' | 'group' | 'channel'; id: string };
+    peer?: { kind: "dm" | "group" | "channel"; id: string };
     guildId?: string;
     teamId?: string;
   };
@@ -17,9 +17,9 @@ export interface AgentConfig {
 }
 
 export interface GatewayConfig {
-  mode?: 'local' | 'remote';
+  mode?: "local" | "remote";
   reload?: {
-    mode?: 'off' | 'restart' | 'hot' | 'hybrid';
+    mode?: "off" | "restart" | "hot" | "hybrid";
     debounceMs?: number;
   };
   auth?: {
@@ -32,7 +32,7 @@ export interface GatewayConfig {
   };
 }
 
-export interface OpenClawConfig {
+export interface MinionConfig {
   meta?: {
     lastTouchedVersion?: string;
     lastTouchedAt?: string;

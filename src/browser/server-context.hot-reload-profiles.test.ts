@@ -11,7 +11,7 @@ function buildConfig() {
       enabled: true,
       color: "#FF4500",
       headless: true,
-      defaultProfile: "openclaw",
+      defaultProfile: "minion",
       profiles: { ...cfgProfiles },
     },
   };
@@ -41,11 +41,11 @@ vi.mock("../config/config.js", () => ({
 vi.mock("./chrome.js", () => ({
   isChromeCdpReady: vi.fn(async () => false),
   isChromeReachable: vi.fn(async () => false),
-  launchOpenClawChrome: vi.fn(async () => {
+  launchMinionChrome: vi.fn(async () => {
     throw new Error("launch disabled");
   }),
-  resolveOpenClawUserDataDir: vi.fn(() => "/tmp/openclaw"),
-  stopOpenClawChrome: vi.fn(async () => {}),
+  resolveMinionUserDataDir: vi.fn(() => "/tmp/minion"),
+  stopMinionChrome: vi.fn(async () => {}),
 }));
 
 vi.mock("./cdp.js", () => ({
@@ -97,7 +97,7 @@ describe("server-context hot-reload profiles", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     cfgProfiles = {
-      openclaw: { cdpPort: 18800, color: "#FF4500" },
+      minion: { cdpPort: 18800, color: "#FF4500" },
     };
     cachedConfig = null; // Clear simulated cache
   });
@@ -106,7 +106,7 @@ describe("server-context hot-reload profiles", () => {
     const { createBrowserRouteContext, resolveBrowserConfig, loadConfig, clearConfigCache } =
       await getModules();
 
-    // Start with only openclaw profile
+    // Start with only minion profile
     // 1. Prime the cache by calling loadConfig() first
     const cfg = loadConfig();
     const resolved = resolveBrowserConfig(cfg.browser, cfg);
@@ -128,7 +128,7 @@ describe("server-context hot-reload profiles", () => {
     // Initially, "desktop" profile should not exist
     expect(() => ctx.forProfile("desktop")).toThrow(/not found/);
 
-    // 2. Simulate adding a new profile to config (like user editing openclaw.json)
+    // 2. Simulate adding a new profile to config (like user editing minion.json)
     cfgProfiles.desktop = { cdpUrl: "http://127.0.0.1:9222", color: "#0066CC" };
 
     // 3. Verify without clearConfigCache, loadConfig() still returns stale cached value
@@ -191,15 +191,15 @@ describe("server-context hot-reload profiles", () => {
       refreshConfigFromDisk: true,
     });
 
-    const before = ctx.forProfile("openclaw");
+    const before = ctx.forProfile("minion");
     expect(before.profile.cdpPort).toBe(18800);
 
-    cfgProfiles.openclaw = { cdpPort: 19999, color: "#FF4500" };
+    cfgProfiles.minion = { cdpPort: 19999, color: "#FF4500" };
     cachedConfig = null;
 
-    const after = ctx.forProfile("openclaw");
+    const after = ctx.forProfile("minion");
     expect(after.profile.cdpPort).toBe(19999);
-    expect(state.resolved.profiles.openclaw?.cdpPort).toBe(19999);
+    expect(state.resolved.profiles.minion?.cdpPort).toBe(19999);
   });
 
   it("listProfiles refreshes config before enumerating profiles", async () => {

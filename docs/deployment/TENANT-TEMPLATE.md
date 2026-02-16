@@ -19,7 +19,7 @@
 
 - **Server IP**: `XXX.XXX.XXX.XXX`
 - **SSH Port**: `22` (or custom)
-- **SSH Key**: `~/.ssh/openclaw/openclaw_deploy_key`
+- **SSH Key**: `~/.ssh/minion/minion_deploy_key`
 - **Provider**: [DigitalOcean, AWS, GCP, etc.]
 - **Instance Type**: [e.g., Droplet 2GB RAM]
 
@@ -43,19 +43,19 @@
 
 ### Paths
 
-- **Deployment Directory**: `/home/deploy/openclaw-prd-[tenant-id]`
-- **Config Directory**: `/home/deploy/.openclaw-prd-[tenant-id]`
+- **Deployment Directory**: `/home/deploy/minion-prd-[tenant-id]`
+- **Config Directory**: `/home/deploy/.minion-prd-[tenant-id]`
 - **Data Directories**:
-  - Workspace: `/home/deploy/.openclaw-prd-[tenant-id]/workspace`
-  - Agents: `/home/deploy/.openclaw-prd-[tenant-id]/agents`
-  - Memory: `/home/deploy/.openclaw-prd-[tenant-id]/memory`
-  - Sessions: `/home/deploy/.openclaw-prd-[tenant-id]/sessions`
+  - Workspace: `/home/deploy/.minion-prd-[tenant-id]/workspace`
+  - Agents: `/home/deploy/.minion-prd-[tenant-id]/agents`
+  - Memory: `/home/deploy/.minion-prd-[tenant-id]/memory`
+  - Sessions: `/home/deploy/.minion-prd-[tenant-id]/sessions`
 
 ### Containers
 
-- **Gateway Container**: `[tenant-id]_openclaw_gw`
-- **CLI Container**: `[tenant-id]_openclaw_cli`
-- **Docker Image**: `ghcr.io/nikolasp98/openclaw:prd`
+- **Gateway Container**: `[tenant-id]_minion_gw`
+- **CLI Container**: `[tenant-id]_minion_cli`
+- **Docker Image**: `ghcr.io/nikolasp98/minion:prd`
 
 ### Server Registry Entry
 
@@ -65,7 +65,7 @@
   "host": "XXX.XXX.XXX.XXX",
   "user": "deploy",
   "port": 22,
-  "deployment_path": "/home/deploy/openclaw-prd-[tenant-id]",
+  "deployment_path": "/home/deploy/minion-prd-[tenant-id]",
   "container_prefix": "[tenant-id]",
   "gateway_port": 18789,
   "bridge_port": 18790,
@@ -80,18 +80,18 @@
 
 ### Storage Location
 
-- **Server**: All credentials stored in `/home/deploy/openclaw-prd-[tenant-id]/.env`
+- **Server**: All credentials stored in `/home/deploy/minion-prd-[tenant-id]/.env`
 - **Local Backup**: [Optional: where credentials are backed up locally]
 - **Password Manager**: [Optional: 1Password, LastPass, etc.]
 
 ### Required Credentials
 
-| Credential | Status | Last Updated | Notes |
-|------------|--------|--------------|-------|
-| `OPENCLAW_GATEWAY_TOKEN` | ✅ Set | YYYY-MM-DD | Auto-generated during setup |
-| `CLAUDE_AI_SESSION_KEY` | ✅ Set | YYYY-MM-DD | Provided by tenant |
-| `CLAUDE_WEB_SESSION_KEY` | ✅ Set | YYYY-MM-DD | Provided by tenant |
-| `CLAUDE_WEB_COOKIE` | ✅ Set | YYYY-MM-DD | Provided by tenant |
+| Credential               | Status | Last Updated | Notes                       |
+| ------------------------ | ------ | ------------ | --------------------------- |
+| `MINION_GATEWAY_TOKEN`   | ✅ Set | YYYY-MM-DD   | Auto-generated during setup |
+| `CLAUDE_AI_SESSION_KEY`  | ✅ Set | YYYY-MM-DD   | Provided by tenant          |
+| `CLAUDE_WEB_SESSION_KEY` | ✅ Set | YYYY-MM-DD   | Provided by tenant          |
+| `CLAUDE_WEB_COOKIE`      | ✅ Set | YYYY-MM-DD   | Provided by tenant          |
 
 ### Credential Rotation Schedule
 
@@ -108,13 +108,13 @@
 
 ```bash
 # Connect to server
-ssh -i ~/.ssh/openclaw/openclaw_deploy_key deploy@XXX.XXX.XXX.XXX
+ssh -i ~/.ssh/minion/minion_deploy_key deploy@XXX.XXX.XXX.XXX
 
 # Navigate to deployment
-cd ~/openclaw-prd-[tenant-id]
+cd ~/minion-prd-[tenant-id]
 
 # View logs
-docker compose logs -f openclaw-gateway
+docker compose logs -f minion-gateway
 ```
 
 ### Health Endpoints
@@ -137,21 +137,21 @@ docker compose logs -f openclaw-gateway
 
 - **Date**: YYYY-MM-DD
 - **By**: [Your name]
-- **Version**: [OpenClaw version]
+- **Version**: [Minion version]
 - **Notes**: Initial tenant setup and configuration
 
 ### Updates
 
-| Date | Version | Deployed By | Notes |
-|------|---------|-------------|-------|
-| YYYY-MM-DD | v1.0.0 | GitHub Actions | Initial deployment |
-| YYYY-MM-DD | v1.1.0 | GitHub Actions | Feature update |
-| YYYY-MM-DD | v1.2.0 | GitHub Actions | Bug fixes |
+| Date       | Version | Deployed By    | Notes              |
+| ---------- | ------- | -------------- | ------------------ |
+| YYYY-MM-DD | v1.0.0  | GitHub Actions | Initial deployment |
+| YYYY-MM-DD | v1.1.0  | GitHub Actions | Feature update     |
+| YYYY-MM-DD | v1.2.0  | GitHub Actions | Bug fixes          |
 
 ### Incidents
 
-| Date | Issue | Resolution | Downtime |
-|------|-------|------------|----------|
+| Date       | Issue         | Resolution         | Downtime  |
+| ---------- | ------------- | ------------------ | --------- |
 | YYYY-MM-DD | [Description] | [How it was fixed] | X minutes |
 
 ---
@@ -210,11 +210,13 @@ docker compose logs -f openclaw-gateway
 ### Common Issues
 
 **Issue 1: [Description]**
+
 - **Symptoms**: [What you see]
 - **Cause**: [Why it happens]
 - **Solution**: [How to fix]
 
 **Issue 2: [Description]**
+
 - **Symptoms**: [What you see]
 - **Cause**: [Why it happens]
 - **Solution**: [How to fix]
@@ -230,12 +232,12 @@ docker compose logs -f openclaw-gateway
 
 ```bash
 # Restart containers
-ssh -i ~/.ssh/openclaw/openclaw_deploy_key deploy@XXX.XXX.XXX.XXX
-cd ~/openclaw-prd-[tenant-id]
+ssh -i ~/.ssh/minion/minion_deploy_key deploy@XXX.XXX.XXX.XXX
+cd ~/minion-prd-[tenant-id]
 docker compose restart
 
 # View recent logs
-docker compose logs --tail=100 openclaw-gateway
+docker compose logs --tail=100 minion-gateway
 
 # Force pull and restart (if update failed)
 docker compose pull

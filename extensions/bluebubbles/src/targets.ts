@@ -3,7 +3,7 @@ import {
   parseChatTargetPrefixesOrThrow,
   resolveServicePrefixedAllowTarget,
   resolveServicePrefixedTarget,
-} from "openclaw/plugin-sdk";
+} from "minion/plugin-sdk";
 
 export type BlueBubblesService = "imessage" | "sms" | "auto";
 

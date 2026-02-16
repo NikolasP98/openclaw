@@ -3,17 +3,17 @@
 # name: "Service Setup"
 # phase: 60
 # description: >
-#   Reloads systemd user daemon, enables and starts the openclaw-gateway
+#   Reloads systemd user daemon, enables and starts the minion-gateway
 #   service. Waits for the service to stabilize and checks its status.
 #   Uses the systemd user service unit deployed in Phase 50.
 # when: >
-#   After configuration files are deployed. Starts the OpenClaw gateway
+#   After configuration files are deployed. Starts the Minion gateway
 #   as a persistent background service.
 # requires:
 #   - "Phase 50 (config generation) completed"
-#   - "systemd user service file at ~/.config/systemd/user/openclaw-gateway.service"
+#   - "systemd user service file at ~/.config/systemd/user/minion-gateway.service"
 # produces:
-#   - "Running openclaw-gateway systemd user service"
+#   - "Running minion-gateway systemd user service"
 # flags:
 #   -v, --verbose: "Enable debug-level logging"
 # idempotent: true
@@ -52,28 +52,28 @@ setup_service() {
     fi
 
     # Enable the service
-    log_info "Enabling OpenClaw gateway service..."
+    log_info "Enabling Minion gateway service..."
     if [ "${EXEC_MODE:-local}" = "remote" ]; then
-        if ! run_cmd --as "$exec_user" "systemctl --user enable openclaw-gateway.service"; then
+        if ! run_cmd --as "$exec_user" "systemctl --user enable minion-gateway.service"; then
             handle_error $? "Failed to enable service" "Service Setup"
             return 1
         fi
     else
-        if ! systemctl --user enable openclaw-gateway.service; then
+        if ! systemctl --user enable minion-gateway.service; then
             handle_error $? "Failed to enable service" "Service Setup"
             return 1
         fi
     fi
 
     # Start the service
-    log_info "Starting OpenClaw gateway service..."
+    log_info "Starting Minion gateway service..."
     if [ "${EXEC_MODE:-local}" = "remote" ]; then
-        if ! run_cmd --as "$exec_user" "systemctl --user start openclaw-gateway.service"; then
+        if ! run_cmd --as "$exec_user" "systemctl --user start minion-gateway.service"; then
             handle_error $? "Failed to start service" "Service Setup"
             return 1
         fi
     else
-        if ! systemctl --user start openclaw-gateway.service; then
+        if ! systemctl --user start minion-gateway.service; then
             handle_error $? "Failed to start service" "Service Setup"
             return 1
         fi
@@ -87,18 +87,18 @@ setup_service() {
     log_info "Checking service status..."
     local service_status
     if [ "${EXEC_MODE:-local}" = "remote" ]; then
-        service_status=$(run_cmd --as "$exec_user" "systemctl --user is-active openclaw-gateway.service" || echo "failed")
+        service_status=$(run_cmd --as "$exec_user" "systemctl --user is-active minion-gateway.service" || echo "failed")
     else
-        service_status=$(systemctl --user is-active openclaw-gateway.service || echo "failed")
+        service_status=$(systemctl --user is-active minion-gateway.service || echo "failed")
     fi
 
     if [ "$service_status" != "active" ]; then
         log_error "Service is not running properly (status: $service_status)"
         log_info "Fetching service logs..."
         if [ "${EXEC_MODE:-local}" = "remote" ]; then
-            run_cmd --as "$exec_user" "journalctl --user -u openclaw-gateway.service -n 50 --no-pager" || true
+            run_cmd --as "$exec_user" "journalctl --user -u minion-gateway.service -n 50 --no-pager" || true
         else
-            journalctl --user -u openclaw-gateway.service -n 50 --no-pager 2>/dev/null || true
+            journalctl --user -u minion-gateway.service -n 50 --no-pager 2>/dev/null || true
         fi
         handle_error 1 "Service failed to start" "Service Setup"
         return 1

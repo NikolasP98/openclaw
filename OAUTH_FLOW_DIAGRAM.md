@@ -100,7 +100,7 @@
      │                    │                       │◄─────────────────────┤
      │                    │                       │                      │
      │                    │                       │ 3. Save credentials  │
-     │                    │                       │    Path: ~/.openclaw/│
+     │                    │                       │    Path: ~/.minion/│
      │                    │                       │    /agents/main/     │
      │                    │                       │    /gog-credentials/ │
      │                    │                       │    telegram_123_     │
@@ -153,7 +153,7 @@
      │                    │    gog gmail messages │                      │
      │                    │    --account user@... │                      │
      │                    │    GOG_CREDENTIALS_   │                      │
-     │                    │    FILE=~/.openclaw/..│                      │
+     │                    │    FILE=~/.minion/..│                      │
      │                    │                       │                      │
      │  [Gmail results]   │                       │                      │
      │◄───────────────────┤                       │                      │
@@ -244,13 +244,13 @@ Three users authenticate simultaneously:
 ┌────────────┬──────────────┬────────────────────────────────────────────────┐
 │ User       │ Session Key  │ Credential Path                                │
 ├────────────┼──────────────┼────────────────────────────────────────────────┤
-│ Alice      │ telegram:111 │ ~/.openclaw/agents/main/gog-credentials/       │
+│ Alice      │ telegram:111 │ ~/.minion/agents/main/gog-credentials/       │
 │            │              │   telegram_111_alice@gmail.com.json            │
 ├────────────┼──────────────┼────────────────────────────────────────────────┤
-│ Bob        │ telegram:222 │ ~/.openclaw/agents/main/gog-credentials/       │
+│ Bob        │ telegram:222 │ ~/.minion/agents/main/gog-credentials/       │
 │            │              │   telegram_222_bob@gmail.com.json              │
 ├────────────┼──────────────┼────────────────────────────────────────────────┤
-│ Carol      │ discord:333  │ ~/.openclaw/agents/main/gog-credentials/       │
+│ Carol      │ discord:333  │ ~/.minion/agents/main/gog-credentials/       │
 │            │              │   discord_333_carol@gmail.com.json             │
 └────────────┴──────────────┴────────────────────────────────────────────────┘
 
@@ -274,3 +274,4 @@ Each user:
 ✅ ERROR-HANDLING:  Timeout, denial, invalid state
 ✅ MULTI-USER:      Concurrent authentication support
 ✅ GRACEFUL:        Server shutdown cleanup
+```

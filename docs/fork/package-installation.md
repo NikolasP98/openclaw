@@ -2,17 +2,17 @@
 
 ## Custom Fork Package
 
-**CRITICAL:** All OpenClaw installations for this fork MUST use the custom scoped package:
+**CRITICAL:** All Minion installations for this fork MUST use the custom scoped package:
 
 ```bash
-npm install -g @nikolasp98/openclaw
+npm install -g @nikolasp98/minion
 ```
 
-**DO NOT** use the upstream package `@anthropic/openclaw` or generic `openclaw` from npm registry.
+**DO NOT** use the upstream package `@anthropic/minion` or generic `minion` from npm registry.
 
 ## Why This Matters
 
-This fork maintains custom features, modifications, and configurations that are not present in upstream OpenClaw. Using the wrong package will result in:
+This fork maintains custom features, modifications, and configurations that are not present in upstream Minion. Using the wrong package will result in:
 
 - Missing fork-specific features
 - Configuration incompatibilities
@@ -26,13 +26,13 @@ Fast installation without building from source:
 
 ```bash
 # npm (default)
-npm install -g @nikolasp98/openclaw
+npm install -g @nikolasp98/minion
 
 # pnpm
-pnpm add -g @nikolasp98/openclaw
+pnpm add -g @nikolasp98/minion
 
 # bun
-bun install -g @nikolasp98/openclaw
+bun install -g @nikolasp98/minion
 ```
 
 ### Source Installation
@@ -40,8 +40,8 @@ bun install -g @nikolasp98/openclaw
 For development or custom modifications:
 
 ```bash
-git clone https://github.com/NikolasP98/openclaw.git
-cd openclaw
+git clone https://github.com/NikolasP98/minion.git
+cd minion
 pnpm install
 pnpm build
 pnpm link --global
@@ -59,7 +59,7 @@ The default configuration in `setup/config/defaults.yaml` specifies:
 
 ```yaml
 install:
-  method: package # npm install -g @nikolasp98/openclaw
+  method: package # npm install -g @nikolasp98/minion
 ```
 
 ## Verification
@@ -68,20 +68,20 @@ After installation, verify you're using the correct package:
 
 ```bash
 # Check the binary path
-which openclaw
+which minion
 
 # It should point to:
-# /usr/bin/openclaw -> /usr/lib/node_modules/@nikolasp98/openclaw/openclaw.mjs
+# /usr/bin/minion -> /usr/lib/node_modules/@nikolasp98/minion/minion.mjs
 
 # Check version
-openclaw --version
+minion --version
 ```
 
 ## Server Deployments
 
 All production and development servers use the custom package:
 
-- **protopi**: `@nikolasp98/openclaw` version 2026.2.15-1
+- **protopi**: `@nikolasp98/minion` version 2026.2.15-1
 - **prd-faces** (nc-faces): Uses custom package via setup script
 - **prd-bernibites**: Uses custom package via setup script
 
@@ -91,11 +91,11 @@ If you accidentally installed the wrong package:
 
 ```bash
 # Remove the upstream package
-npm uninstall -g openclaw
-npm uninstall -g @anthropic/openclaw
+npm uninstall -g minion
+npm uninstall -g @anthropic/minion
 
 # Install the correct custom package
-npm install -g @nikolasp98/openclaw
+npm install -g @nikolasp98/minion
 ```
 
 ## Related Documentation

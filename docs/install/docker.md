@@ -1,5 +1,5 @@
 ---
-summary: "Optional Docker-based setup and onboarding for OpenClaw"
+summary: "Optional Docker-based setup and onboarding for Minion"
 read_when:
   - You want a containerized gateway instead of local installs
   - You are validating the Docker flow
@@ -12,13 +12,13 @@ Docker is **optional**. Use it only if you want a containerized gateway or to va
 
 ## Is Docker right for me?
 
-- **Yes**: you want an isolated, throwaway gateway environment or to run OpenClaw on a host without local installs.
+- **Yes**: you want an isolated, throwaway gateway environment or to run Minion on a host without local installs.
 - **No**: you’re running on your own machine and just want the fastest dev loop. Use the normal install flow instead.
 - **Sandboxing note**: agent sandboxing uses Docker too, but it does **not** require the full gateway to run in Docker. See [Sandboxing](/gateway/sandboxing).
 
 This guide covers:
 
-- Containerized Gateway (full OpenClaw in Docker)
+- Containerized Gateway (full Minion in Docker)
 - Per-session Agent Sandbox (host gateway + Docker-isolated agent tools)
 
 Sandboxing details: [Sandboxing](/gateway/sandboxing)
@@ -48,20 +48,20 @@ This script:
 
 Optional env vars:
 
-- `OPENCLAW_DOCKER_APT_PACKAGES` — install extra apt packages during build
-- `OPENCLAW_EXTRA_MOUNTS` — add extra host bind mounts
-- `OPENCLAW_HOME_VOLUME` — persist `/home/node` in a named volume
+- `MINION_DOCKER_APT_PACKAGES` — install extra apt packages during build
+- `MINION_EXTRA_MOUNTS` — add extra host bind mounts
+- `MINION_HOME_VOLUME` — persist `/home/node` in a named volume
 
 After it finishes:
 
 - Open `http://127.0.0.1:18789/` in your browser.
 - Paste the token into the Control UI (Settings → token).
-- Need the URL again? Run `docker compose run --rm openclaw-cli dashboard --no-open`.
+- Need the URL again? Run `docker compose run --rm minion-cli dashboard --no-open`.
 
 It writes config/workspace on the host:
 
-- `~/.openclaw/`
-- `~/.openclaw/workspace`
+- `~/.minion/`
+- `~/.minion/workspace`
 
 Running on a VPS? See [Hetzner (Docker VPS)](/install/hetzner).
 
@@ -70,7 +70,7 @@ Running on a VPS? See [Hetzner (Docker VPS)](/install/hetzner).
 If using Gmail Pub/Sub webhooks, mount GOG credentials:
 
 ```bash
-export OPENCLAW_GOG_CONFIG_DIR="$HOME/.config/gogcli"
+export MINION_GOG_CONFIG_DIR="$HOME/.config/gogcli"
 ./docker-setup.sh
 ```
 
@@ -84,32 +84,32 @@ The credentials at `~/.config/gogcli/credentials.json` will be accessible to the
 
 ### Shell Helpers (optional)
 
-For easier day-to-day Docker management, install `ClawDock`:
+For easier day-to-day Docker management, install `MinionDock`:
 
 ```bash
-mkdir -p ~/.clawdock && curl -sL https://raw.githubusercontent.com/openclaw/openclaw/main/scripts/shell-helpers/clawdock-helpers.sh -o ~/.clawdock/clawdock-helpers.sh
+mkdir -p ~/.miniondock && curl -sL https://raw.githubusercontent.com/minion/minion/main/scripts/shell-helpers/miniondock-helpers.sh -o ~/.miniondock/miniondock-helpers.sh
 ```
 
 **Add to your shell config (zsh):**
 
 ```bash
-echo 'source ~/.clawdock/clawdock-helpers.sh' >> ~/.zshrc && source ~/.zshrc
+echo 'source ~/.miniondock/miniondock-helpers.sh' >> ~/.zshrc && source ~/.zshrc
 ```
 
-Then use `clawdock-start`, `clawdock-stop`, `clawdock-dashboard`, etc. Run `clawdock-help` for all commands.
+Then use `miniondock-start`, `miniondock-stop`, `miniondock-dashboard`, etc. Run `miniondock-help` for all commands.
 
-See [`ClawDock` Helper README](https://github.com/openclaw/openclaw/blob/main/scripts/shell-helpers/README.md) for details.
+See [`MinionDock` Helper README](https://github.com/minion/minion/blob/main/scripts/shell-helpers/README.md) for details.
 
 ### Manual flow (compose)
 
 ```bash
-docker build -t openclaw:local -f Dockerfile .
-docker compose run --rm openclaw-cli onboard
-docker compose up -d openclaw-gateway
+docker build -t minion:local -f Dockerfile .
+docker compose run --rm minion-cli onboard
+docker compose up -d minion-gateway
 ```
 
 Note: run `docker compose ...` from the repo root. If you enabled
-`OPENCLAW_EXTRA_MOUNTS` or `OPENCLAW_HOME_VOLUME`, the setup script writes
+`MINION_EXTRA_MOUNTS` or `MINION_HOME_VOLUME`, the setup script writes
 `docker-compose.extra.yml`; include it when running Compose elsewhere:
 
 ```bash
@@ -122,9 +122,9 @@ If you see “unauthorized” or “disconnected (1008): pairing required”, fe
 fresh dashboard link and approve the browser device:
 
 ```bash
-docker compose run --rm openclaw-cli dashboard --no-open
-docker compose run --rm openclaw-cli devices list
-docker compose run --rm openclaw-cli devices approve <requestId>
+docker compose run --rm minion-cli dashboard --no-open
+docker compose run --rm minion-cli devices list
+docker compose run --rm minion-cli devices approve <requestId>
 ```
 
 More detail: [Dashboard](/web/dashboard), [Devices](/cli/devices).
@@ -132,71 +132,71 @@ More detail: [Dashboard](/web/dashboard), [Devices](/cli/devices).
 ### Extra mounts (optional)
 
 If you want to mount additional host directories into the containers, set
-`OPENCLAW_EXTRA_MOUNTS` before running `docker-setup.sh`. This accepts a
+`MINION_EXTRA_MOUNTS` before running `docker-setup.sh`. This accepts a
 comma-separated list of Docker bind mounts and applies them to both
-`openclaw-gateway` and `openclaw-cli` by generating `docker-compose.extra.yml`.
+`minion-gateway` and `minion-cli` by generating `docker-compose.extra.yml`.
 
 Example:
 
 ```bash
-export OPENCLAW_EXTRA_MOUNTS="$HOME/.codex:/home/node/.codex:ro,$HOME/github:/home/node/github:rw"
+export MINION_EXTRA_MOUNTS="$HOME/.codex:/home/node/.codex:ro,$HOME/github:/home/node/github:rw"
 ./docker-setup.sh
 ```
 
 Notes:
 
 - Paths must be shared with Docker Desktop on macOS/Windows.
-- If you edit `OPENCLAW_EXTRA_MOUNTS`, rerun `docker-setup.sh` to regenerate the
+- If you edit `MINION_EXTRA_MOUNTS`, rerun `docker-setup.sh` to regenerate the
   extra compose file.
 - `docker-compose.extra.yml` is generated. Don’t hand-edit it.
 
 ### Persist the entire container home (optional)
 
 If you want `/home/node` to persist across container recreation, set a named
-volume via `OPENCLAW_HOME_VOLUME`. This creates a Docker volume and mounts it at
+volume via `MINION_HOME_VOLUME`. This creates a Docker volume and mounts it at
 `/home/node`, while keeping the standard config/workspace bind mounts. Use a
 named volume here (not a bind path); for bind mounts, use
-`OPENCLAW_EXTRA_MOUNTS`.
+`MINION_EXTRA_MOUNTS`.
 
 Example:
 
 ```bash
-export OPENCLAW_HOME_VOLUME="openclaw_home"
+export MINION_HOME_VOLUME="minion_home"
 ./docker-setup.sh
 ```
 
 You can combine this with extra mounts:
 
 ```bash
-export OPENCLAW_HOME_VOLUME="openclaw_home"
-export OPENCLAW_EXTRA_MOUNTS="$HOME/.codex:/home/node/.codex:ro,$HOME/github:/home/node/github:rw"
+export MINION_HOME_VOLUME="minion_home"
+export MINION_EXTRA_MOUNTS="$HOME/.codex:/home/node/.codex:ro,$HOME/github:/home/node/github:rw"
 ./docker-setup.sh
 ```
 
 Notes:
 
-- If you change `OPENCLAW_HOME_VOLUME`, rerun `docker-setup.sh` to regenerate the
+- If you change `MINION_HOME_VOLUME`, rerun `docker-setup.sh` to regenerate the
   extra compose file.
 - The named volume persists until removed with `docker volume rm <name>`.
 
 ### Install extra apt packages (optional)
 
 If you need system packages inside the image (for example, build tools or media
-libraries), set `OPENCLAW_DOCKER_APT_PACKAGES` before running `docker-setup.sh`.
+libraries), set `MINION_DOCKER_APT_PACKAGES` before running `docker-setup.sh`.
 This installs the packages during the image build, so they persist even if the
 container is deleted.
 
 Example:
 
 ```bash
-export OPENCLAW_DOCKER_APT_PACKAGES="ffmpeg build-essential"
+export MINION_DOCKER_APT_PACKAGES="ffmpeg build-essential"
 ./docker-setup.sh
 ```
 
 Notes:
 
 - This accepts a space-separated list of apt package names.
-- If you change `OPENCLAW_DOCKER_APT_PACKAGES`, rerun `docker-setup.sh` to rebuild
+- If you change `MINION_DOCKER_APT_PACKAGES`, rerun `docker-setup.sh` to rebuild
   the image.
 
 ### Power-user / full-featured container (opt-in)
@@ -213,33 +213,33 @@ If you want a more full-featured container, use these opt-in knobs:
 1. **Persist `/home/node`** so browser downloads and tool caches survive:
 
 ```bash
-export OPENCLAW_HOME_VOLUME="openclaw_home"
+export MINION_HOME_VOLUME="minion_home"
 ./docker-setup.sh
 ```
 
 2. **Bake system deps into the image** (repeatable + persistent):
 
 ```bash
-export OPENCLAW_DOCKER_APT_PACKAGES="git curl jq"
+export MINION_DOCKER_APT_PACKAGES="git curl jq"
 ./docker-setup.sh
 ```
 
 3. **Install Playwright browsers without `npx`** (avoids npm override conflicts):
 
 ```bash
-docker compose run --rm openclaw-cli \
+docker compose run --rm minion-cli \
   node /app/node_modules/playwright-core/cli.js install chromium
 ```
 
 If you need Playwright to install system deps, rebuild the image with
-`OPENCLAW_DOCKER_APT_PACKAGES` instead of using `--with-deps` at runtime.
+`MINION_DOCKER_APT_PACKAGES` instead of using `--with-deps` at runtime.
 
 4. **Persist Playwright browser downloads**:
 
 - Set `PLAYWRIGHT_BROWSERS_PATH=/home/node/.cache/ms-playwright` in
   `docker-compose.yml`.
-- Ensure `/home/node` persists via `OPENCLAW_HOME_VOLUME`, or mount
-  `/home/node/.cache/ms-playwright` via `OPENCLAW_EXTRA_MOUNTS`.
+- Ensure `/home/node` persists via `MINION_HOME_VOLUME`, or mount
+  `/home/node/.cache/ms-playwright` via `MINION_EXTRA_MOUNTS`.
 
 ### Permissions + EACCES
 
@@ -247,7 +247,7 @@ The image automatically fixes ownership of mounted directories when the containe
 
 **How it works:**
 
-- Entrypoint checks `/home/node/.openclaw`, `/home/node/.config/gogcli`, and workspace directories
+- Entrypoint checks `/home/node/.minion`, `/home/node/.config/gogcli`, and workspace directories
 - If owned by root or another user, automatically runs `chown -R 1000:1000`
 - Drops to `node` user before starting the app
 - App runs as non-root for security
@@ -259,14 +259,14 @@ The image automatically fixes ownership of mounted directories when the containe
 Check ownership inside container:
 
 ```bash
-docker compose exec openclaw-gateway stat -c '%U:%G' /home/node/.openclaw /home/node/.config/gogcli
+docker compose exec minion-gateway stat -c '%U:%G' /home/node/.minion /home/node/.config/gogcli
 # Should show: node:node
 ```
 
 Verify app runs as node user:
 
 ```bash
-docker compose exec openclaw-gateway whoami
+docker compose exec minion-gateway whoami
 # Should output: node
 ```
 
@@ -310,19 +310,19 @@ Use the CLI container to configure channels, then restart the gateway if needed.
 WhatsApp (QR):
 
 ```bash
-docker compose run --rm openclaw-cli channels login
+docker compose run --rm minion-cli channels login
 ```
 
 Telegram (bot token):
 
 ```bash
-docker compose run --rm openclaw-cli channels add --channel telegram --token "<token>"
+docker compose run --rm minion-cli channels add --channel telegram --token "<token>"
 ```
 
 Discord (bot token):
 
 ```bash
-docker compose run --rm openclaw-cli channels add --channel discord --token "<token>"
+docker compose run --rm minion-cli channels add --channel discord --token "<token>"
 ```
 
 Docs: [WhatsApp](/channels/whatsapp), [Telegram](/channels/telegram), [Discord](/channels/discord)
@@ -337,7 +337,7 @@ URL you land on and paste it back into the wizard to finish auth.
 ### Health check
 
 ```bash
-docker compose exec openclaw-gateway node dist/index.js health --token "$OPENCLAW_GATEWAY_TOKEN"
+docker compose exec minion-gateway node dist/index.js health --token "$MINION_GATEWAY_TOKEN"
 ```
 
 ### E2E smoke test (Docker)
@@ -356,7 +356,7 @@ pnpm test:docker:qr
 
 - Gateway bind defaults to `lan` for container use.
 - Dockerfile CMD uses `--allow-unconfigured`; mounted config with `gateway.mode` not `local` will still start. Override CMD to enforce the guard.
-- The gateway container is the source of truth for sessions (`~/.openclaw/agents/<agentId>/sessions/`).
+- The gateway container is the source of truth for sessions (`~/.minion/agents/<agentId>/sessions/`).
 
 ## Agent Sandbox (host gateway + Docker tools)
 
@@ -392,9 +392,9 @@ precedence, and troubleshooting.
 
 ### Default behavior
 
-- Image: `openclaw-sandbox:bookworm-slim`
+- Image: `minion-sandbox:bookworm-slim`
 - One container per agent
-- Agent workspace access: `workspaceAccess: "none"` (default) uses `~/.openclaw/sandboxes`
+- Agent workspace access: `workspaceAccess: "none"` (default) uses `~/.minion/sandboxes`
   - `"ro"` keeps the sandbox workspace at `/workspace` and mounts the agent workspace read-only at `/agent` (disables `write`/`edit`/`apply_patch`)
   - `"rw"` mounts the agent workspace read/write at `/workspace`
 - Auto-prune: idle > 24h OR age > 7d
@@ -409,9 +409,9 @@ If you plan to install packages in `setupCommand`, note:
 - Default `docker.network` is `"none"` (no egress).
 - `readOnlyRoot: true` blocks package installs.
 - `user` must be root for `apt-get` (omit `user` or set `user: "0:0"`).
-  OpenClaw auto-recreates containers when `setupCommand` (or docker config) changes
+  Minion auto-recreates containers when `setupCommand` (or docker config) changes
   unless the container was **recently used** (within ~5 minutes). Hot containers
-  log a warning with the exact `openclaw sandbox recreate ...` command.
+  log a warning with the exact `minion sandbox recreate ...` command.
 
 ```json5
 {
@@ -421,9 +421,9 @@ If you plan to install packages in `setupCommand`, note:
         mode: "non-main", // off | non-main | all
         scope: "agent", // session | agent | shared (agent is default)
         workspaceAccess: "none", // none | ro | rw
-        workspaceRoot: "~/.openclaw/sandboxes",
+        workspaceRoot: "~/.minion/sandboxes",
         docker: {
-          image: "openclaw-sandbox:bookworm-slim",
+          image: "minion-sandbox:bookworm-slim",
           workdir: "/workspace",
           readOnlyRoot: true,
           tmpfs: ["/tmp", "/var/tmp", "/run"],
@@ -441,7 +441,7 @@ If you plan to install packages in `setupCommand`, note:
             nproc: 256,
           },
           seccompProfile: "/path/to/seccomp.json",
-          apparmorProfile: "openclaw-sandbox",
+          apparmorProfile: "minion-sandbox",
           dns: ["1.1.1.1", "8.8.8.8"],
           extraHosts: ["internal.service:10.0.0.5"],
         },
@@ -487,7 +487,7 @@ Multi-agent: override `agents.defaults.sandbox.{docker,browser,prune}.*` per age
 scripts/sandbox-setup.sh
 ```
 
-This builds `openclaw-sandbox:bookworm-slim` using `Dockerfile.sandbox`.
+This builds `minion-sandbox:bookworm-slim` using `Dockerfile.sandbox`.
 
 ### Sandbox common image (optional)
 
@@ -497,13 +497,13 @@ If you want a sandbox image with common build tooling (Node, Go, Rust, etc.), bu
 scripts/sandbox-common-setup.sh
 ```
 
-This builds `openclaw-sandbox-common:bookworm-slim`. To use it:
+This builds `minion-sandbox-common:bookworm-slim`. To use it:
 
 ```json5
 {
   agents: {
     defaults: {
-      sandbox: { docker: { image: "openclaw-sandbox-common:bookworm-slim" } },
+      sandbox: { docker: { image: "minion-sandbox-common:bookworm-slim" } },
     },
   },
 }
@@ -517,7 +517,7 @@ To run the browser tool inside the sandbox, build the browser image:
 scripts/sandbox-browser-setup.sh
 ```
 
-This builds `openclaw-sandbox-browser:bookworm-slim` using
+This builds `minion-sandbox-browser:bookworm-slim` using
 `Dockerfile.sandbox-browser`. The container runs Chromium with CDP enabled and
 an optional noVNC observer (headful via Xvfb).
 
@@ -547,7 +547,7 @@ Custom browser image:
 {
   agents: {
     defaults: {
-      sandbox: { browser: { image: "my-openclaw-browser" } },
+      sandbox: { browser: { image: "my-minion-browser" } },
     },
   },
 }
@@ -567,14 +567,14 @@ Prune rules (`agents.defaults.sandbox.prune`) apply to browser containers too.
 Build your own image and point config to it:
 
 ```bash
-docker build -t my-openclaw-sbx -f Dockerfile.sandbox .
+docker build -t my-minion-sbx -f Dockerfile.sandbox .
 ```
 
 ```json5
 {
   agents: {
     defaults: {
-      sandbox: { docker: { image: "my-openclaw-sbx" } },
+      sandbox: { docker: { image: "my-minion-sbx" } },
     },
   },
 }
@@ -608,11 +608,11 @@ Example:
 
 ## Troubleshooting
 
-- Image missing: build with [`scripts/sandbox-setup.sh`](https://github.com/openclaw/openclaw/blob/main/scripts/sandbox-setup.sh) or set `agents.defaults.sandbox.docker.image`.
+- Image missing: build with [`scripts/sandbox-setup.sh`](https://github.com/minion/minion/blob/main/scripts/sandbox-setup.sh) or set `agents.defaults.sandbox.docker.image`.
 - Container not running: it will auto-create per session on demand.
 - Permission errors in sandbox: set `docker.user` to a UID:GID that matches your
   mounted workspace ownership (or chown the workspace folder).
-- Custom tools not found: OpenClaw runs commands with `sh -lc` (login shell), which
+- Custom tools not found: Minion runs commands with `sh -lc` (login shell), which
   sources `/etc/profile` and may reset PATH. Set `docker.env.PATH` to prepend your
   custom tool paths (e.g., `/custom/bin:/usr/local/share/npm-global/bin`), or add
   a script under `/etc/profile.d/` in your Dockerfile.

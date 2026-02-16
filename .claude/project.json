@@ -1,5 +1,5 @@
 {
-  "name": "openclaw",
-  "description": "OpenClaw fork - Personal development environment with DEV/PRD workflow automation",
+  "name": "minion",
+  "description": "Minion fork - Personal development environment with DEV/PRD workflow automation",
   "skills": ["fork-sync", "lessons-learned", "provision-server"]
 }

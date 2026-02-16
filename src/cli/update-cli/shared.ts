@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import type { UpdateStepProgress, UpdateStepResult } from "../../infra/update-runner.js";
 import { resolveStateDir } from "../../config/paths.js";
-import { resolveOpenClawPackageRoot } from "../../infra/openclaw-root.js";
+import { resolveMinionPackageRoot } from "../../infra/minion-root.js";
 import { trimLogTail } from "../../infra/restart-sentinel.js";
 import { parseSemver } from "../../infra/runtime-guard.js";
 import { fetchNpmTagVersion } from "../../infra/update-check.js";
@@ -37,11 +37,11 @@ export type UpdateWizardOptions = {
   timeout?: string;
 };
 
-const OPENCLAW_REPO_URL = "https://github.com/NikolasP98/openclaw.git";
+const MINION_REPO_URL = "https://github.com/NikolasP98/minion.git";
 const MAX_LOG_CHARS = 8000;
 
-export const DEFAULT_PACKAGE_NAME = "@nikolasp98/openclaw";
-const CORE_PACKAGE_NAMES = new Set([DEFAULT_PACKAGE_NAME, "openclaw"]);
+export const DEFAULT_PACKAGE_NAME = "@nikolasp98/minion";
+const CORE_PACKAGE_NAMES = new Set([DEFAULT_PACKAGE_NAME, "minion"]);
 
 export function normalizeTag(value?: string | null): string | null {
   if (!value) {
@@ -54,8 +54,8 @@ export function normalizeTag(value?: string | null): string | null {
   if (trimmed.startsWith(`${DEFAULT_PACKAGE_NAME}@`)) {
     return trimmed.slice(`${DEFAULT_PACKAGE_NAME}@`.length);
   }
-  if (trimmed.startsWith("openclaw@")) {
-    return trimmed.slice("openclaw@".length);
+  if (trimmed.startsWith("minion@")) {
+    return trimmed.slice("minion@".length);
   }
   return trimmed;
 }
@@ -126,7 +126,7 @@ export async function isEmptyDir(targetPath: string): Promise<boolean> {
 }
 
 export function resolveGitInstallDir(): string {
-  const override = process.env.OPENCLAW_GIT_DIR?.trim();
+  const override = process.env.MINION_GIT_DIR?.trim();
   if (override) {
     return path.resolve(override);
   }
@@ -147,7 +147,7 @@ export function resolveNodeRunner(): string {
 
 export async function resolveUpdateRoot(): Promise<string> {
   return (
-    (await resolveOpenClawPackageRoot({
+    (await resolveMinionPackageRoot({
       moduleUrl: import.meta.url,
       argv1: process.argv[1],
       cwd: process.cwd(),
@@ -208,7 +208,7 @@ export async function ensureGitCheckout(params: {
   if (!dirExists) {
     return await runUpdateStep({
       name: "git clone",
-      argv: ["git", "clone", OPENCLAW_REPO_URL, params.dir],
+      argv: ["git", "clone", MINION_REPO_URL, params.dir],
       timeoutMs: params.timeoutMs,
       progress: params.progress,
     });
@@ -218,13 +218,13 @@ export async function ensureGitCheckout(params: {
     const empty = await isEmptyDir(params.dir);
     if (!empty) {
       throw new Error(
-        `OPENCLAW_GIT_DIR points at a non-git directory: ${params.dir}. Set OPENCLAW_GIT_DIR to an empty folder or an openclaw checkout.`,
+        `MINION_GIT_DIR points at a non-git directory: ${params.dir}. Set MINION_GIT_DIR to an empty folder or an minion checkout.`,
       );
     }
 
     return await runUpdateStep({
       name: "git clone",
-      argv: ["git", "clone", OPENCLAW_REPO_URL, params.dir],
+      argv: ["git", "clone", MINION_REPO_URL, params.dir],
       cwd: params.dir,
       timeoutMs: params.timeoutMs,
       progress: params.progress,
@@ -232,7 +232,7 @@ export async function ensureGitCheckout(params: {
   }
 
   if (!(await isCorePackage(params.dir))) {
-    throw new Error(`OPENCLAW_GIT_DIR does not look like a core checkout: ${params.dir}.`);
+    throw new Error(`MINION_GIT_DIR does not look like a core checkout: ${params.dir}.`);
   }
 
   return null;
@@ -264,7 +264,7 @@ export async function resolveGlobalManager(params: {
 }
 
 export async function tryWriteCompletionCache(root: string, jsonMode: boolean): Promise<void> {
-  const binPath = path.join(root, "openclaw.mjs");
+  const binPath = path.join(root, "minion.mjs");
   if (!(await pathExists(binPath))) {
     return;
   }

@@ -1,6 +1,6 @@
 ---
 skill: fork-sync
-description: Sync OpenClaw fork with upstream and update all development branches
+description: Sync Minion fork with upstream and update all development branches
 triggers:
   - sync fork
   - update from upstream
@@ -11,7 +11,7 @@ triggers:
 
 # Fork Sync Workflow
 
-Comprehensive skill for managing the OpenClaw fork workflow, syncing with upstream, and updating all development branches.
+Comprehensive skill for managing the Minion fork workflow, syncing with upstream, and updating all development branches.
 
 ## Critical Principle: Mirror is a Clean Mirror
 
@@ -359,7 +359,7 @@ git push origin <branch-name>
 Invoke this skill when:
 
 - "Sync with upstream"
-- "Update fork from openclaw/openclaw"
+- "Update fork from minion/minion"
 - "Pull latest from upstream"
 - "Update all branches"
 - "Sync DEV with upstream"

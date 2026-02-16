@@ -138,7 +138,7 @@ describe("gateway server agent", () => {
   test("agent marks implicit delivery when lastTo is stale", async () => {
     setRegistry(defaultRegistry);
     testState.allowFrom = ["+436769770569"];
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-gw-"));
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "minion-gw-"));
     testState.sessionStorePath = path.join(dir, "sessions.json");
     await writeSessionStore({
       entries: {
@@ -170,7 +170,7 @@ describe("gateway server agent", () => {
 
   test("agent forwards sessionKey to agentCommand", async () => {
     setRegistry(defaultRegistry);
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-gw-"));
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "minion-gw-"));
     testState.sessionStorePath = path.join(dir, "sessions.json");
     await writeSessionStore({
       entries: {
@@ -198,7 +198,7 @@ describe("gateway server agent", () => {
 
   test("agent derives sessionKey from agentId", async () => {
     setRegistry(defaultRegistry);
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-gw-"));
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "minion-gw-"));
     testState.sessionStorePath = path.join(dir, "sessions.json");
     testState.agentsConfig = { list: [{ id: "ops" }] };
     await writeSessionStore({
@@ -256,7 +256,7 @@ describe("gateway server agent", () => {
   test("agent forwards accountId to agentCommand", async () => {
     setRegistry(defaultRegistry);
     testState.allowFrom = ["+1555"];
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-gw-"));
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "minion-gw-"));
     testState.sessionStorePath = path.join(dir, "sessions.json");
     await writeSessionStore({
       entries: {
@@ -291,7 +291,7 @@ describe("gateway server agent", () => {
   test("agent avoids lastAccountId when explicit to is provided", async () => {
     setRegistry(defaultRegistry);
     testState.allowFrom = ["+1555"];
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-gw-"));
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "minion-gw-"));
     testState.sessionStorePath = path.join(dir, "sessions.json");
     await writeSessionStore({
       entries: {
@@ -324,7 +324,7 @@ describe("gateway server agent", () => {
   test("agent keeps explicit accountId when explicit to is provided", async () => {
     setRegistry(defaultRegistry);
     testState.allowFrom = ["+1555"];
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-gw-"));
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "minion-gw-"));
     testState.sessionStorePath = path.join(dir, "sessions.json");
     await writeSessionStore({
       entries: {
@@ -358,7 +358,7 @@ describe("gateway server agent", () => {
   test("agent falls back to lastAccountId for implicit delivery", async () => {
     setRegistry(defaultRegistry);
     testState.allowFrom = ["+1555"];
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-gw-"));
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "minion-gw-"));
     testState.sessionStorePath = path.join(dir, "sessions.json");
     await writeSessionStore({
       entries: {
@@ -389,7 +389,7 @@ describe("gateway server agent", () => {
 
   test("agent forwards image attachments as images[]", async () => {
     setRegistry(defaultRegistry);
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-gw-"));
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "minion-gw-"));
     testState.sessionStorePath = path.join(dir, "sessions.json");
     await writeSessionStore({
       entries: {
@@ -431,7 +431,7 @@ describe("gateway server agent", () => {
   test("agent falls back to whatsapp when delivery requested and no last channel exists", async () => {
     setRegistry(defaultRegistry);
     testState.allowFrom = ["+1555"];
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-gw-"));
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "minion-gw-"));
     testState.sessionStorePath = path.join(dir, "sessions.json");
     await writeSessionStore({
       entries: {
@@ -460,7 +460,7 @@ describe("gateway server agent", () => {
 
   test("agent routes main last-channel whatsapp", async () => {
     setRegistry(defaultRegistry);
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-gw-"));
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "minion-gw-"));
     testState.sessionStorePath = path.join(dir, "sessions.json");
     await writeSessionStore({
       entries: {
@@ -493,7 +493,7 @@ describe("gateway server agent", () => {
 
   test("agent routes main last-channel telegram", async () => {
     setRegistry(defaultRegistry);
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-gw-"));
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "minion-gw-"));
     testState.sessionStorePath = path.join(dir, "sessions.json");
     await writeSessionStore({
       entries: {
@@ -525,7 +525,7 @@ describe("gateway server agent", () => {
 
   test("agent routes main last-channel discord", async () => {
     setRegistry(defaultRegistry);
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-gw-"));
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "minion-gw-"));
     testState.sessionStorePath = path.join(dir, "sessions.json");
     await writeSessionStore({
       entries: {
@@ -557,7 +557,7 @@ describe("gateway server agent", () => {
 
   test("agent routes main last-channel slack", async () => {
     setRegistry(defaultRegistry);
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-gw-"));
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "minion-gw-"));
     testState.sessionStorePath = path.join(dir, "sessions.json");
     await writeSessionStore({
       entries: {
@@ -589,7 +589,7 @@ describe("gateway server agent", () => {
 
   test("agent routes main last-channel signal", async () => {
     setRegistry(defaultRegistry);
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-gw-"));
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "minion-gw-"));
     testState.sessionStorePath = path.join(dir, "sessions.json");
     await writeSessionStore({
       entries: {

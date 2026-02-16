@@ -1,13 +1,13 @@
 {
-  "name": "@openclaw/mattermost",
+  "name": "@minion/mattermost",
   "version": "2026.2.13",
   "private": true,
-  "description": "OpenClaw Mattermost channel plugin",
+  "description": "Minion Mattermost channel plugin",
   "type": "module",
   "devDependencies": {
-    "openclaw": "workspace:*"
+    "minion": "workspace:*"
   },
-  "openclaw": {
+  "minion": {
     "extensions": [
       "./index.ts"
     ],
@@ -21,7 +21,7 @@
       "order": 65
     },
     "install": {
-      "npmSpec": "@openclaw/mattermost",
+      "npmSpec": "@minion/mattermost",
       "localPath": "extensions/mattermost",
       "defaultChoice": "npm"
     }

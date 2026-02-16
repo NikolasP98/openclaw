@@ -1,10 +1,10 @@
 <script lang="ts">
-  import type { OpenClawConfig } from '../types';
+  import type { MinionConfig } from '../types';
 
-  let { config }: { config: OpenClawConfig } = $props();
+  let { config }: { config: MinionConfig } = $props();
 
   $effect(() => {
-    if (!config.bindings) config.bindings = [];
+    if (!config.bindings) {config.bindings = [];}
   });
 
   function addBinding() {

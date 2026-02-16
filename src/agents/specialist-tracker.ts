@@ -37,7 +37,7 @@ class SpecialistTracker {
   private readonly PERSIST_DEBOUNCE_MS = 5000;
 
   constructor() {
-    const stateDir = process.env.OPENCLAW_STATE_DIR || path.join(os.homedir(), ".openclaw");
+    const stateDir = process.env.MINION_STATE_DIR || path.join(os.homedir(), ".minion");
     this.persistPath = path.join(stateDir, "specialist-metrics.json");
     void this.loadMetrics();
   }

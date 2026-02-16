@@ -1,10 +1,10 @@
-import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
+import type { MinionPluginApi } from "minion/plugin-sdk";
 import { execSync } from "node:child_process";
 import path from "node:path";
 
-const SCRIPTS_DIR = path.join(process.env.HOME ?? "/home/bot-prd", ".openclaw", "scripts");
+const SCRIPTS_DIR = path.join(process.env.HOME ?? "/home/bot-prd", ".minion", "scripts");
 
-export default function register(api: OpenClawPluginApi) {
+export default function register(api: MinionPluginApi) {
   api.registerCommand({
     name: "agent",
     description: "Switch which agent handles your messages.",

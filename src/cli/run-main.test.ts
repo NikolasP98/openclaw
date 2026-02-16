@@ -42,12 +42,12 @@ describe("rewriteUpdateFlagArgv", () => {
 
 describe("shouldRegisterPrimarySubcommand", () => {
   it("skips eager primary registration for help/version invocations", () => {
-    expect(shouldRegisterPrimarySubcommand(["node", "openclaw", "status", "--help"])).toBe(false);
-    expect(shouldRegisterPrimarySubcommand(["node", "openclaw", "-V"])).toBe(false);
+    expect(shouldRegisterPrimarySubcommand(["node", "minion", "status", "--help"])).toBe(false);
+    expect(shouldRegisterPrimarySubcommand(["node", "minion", "-V"])).toBe(false);
   });
 
   it("keeps eager primary registration for regular command runs", () => {
-    expect(shouldRegisterPrimarySubcommand(["node", "openclaw", "status"])).toBe(true);
+    expect(shouldRegisterPrimarySubcommand(["node", "minion", "status"])).toBe(true);
   });
 });
 
@@ -55,7 +55,7 @@ describe("shouldSkipPluginCommandRegistration", () => {
   it("skips plugin registration for root help/version", () => {
     expect(
       shouldSkipPluginCommandRegistration({
-        argv: ["node", "openclaw", "--help"],
+        argv: ["node", "minion", "--help"],
         primary: null,
         hasBuiltinPrimary: false,
       }),
@@ -65,7 +65,7 @@ describe("shouldSkipPluginCommandRegistration", () => {
   it("skips plugin registration for builtin subcommand help", () => {
     expect(
       shouldSkipPluginCommandRegistration({
-        argv: ["node", "openclaw", "config", "--help"],
+        argv: ["node", "minion", "config", "--help"],
         primary: "config",
         hasBuiltinPrimary: true,
       }),
@@ -75,7 +75,7 @@ describe("shouldSkipPluginCommandRegistration", () => {
   it("skips plugin registration for builtin command runs", () => {
     expect(
       shouldSkipPluginCommandRegistration({
-        argv: ["node", "openclaw", "sessions", "--json"],
+        argv: ["node", "minion", "sessions", "--json"],
         primary: "sessions",
         hasBuiltinPrimary: true,
       }),
@@ -85,7 +85,7 @@ describe("shouldSkipPluginCommandRegistration", () => {
   it("keeps plugin registration for non-builtin help", () => {
     expect(
       shouldSkipPluginCommandRegistration({
-        argv: ["node", "openclaw", "voicecall", "--help"],
+        argv: ["node", "minion", "voicecall", "--help"],
         primary: "voicecall",
         hasBuiltinPrimary: false,
       }),
@@ -95,7 +95,7 @@ describe("shouldSkipPluginCommandRegistration", () => {
   it("keeps plugin registration for non-builtin command runs", () => {
     expect(
       shouldSkipPluginCommandRegistration({
-        argv: ["node", "openclaw", "voicecall", "status"],
+        argv: ["node", "minion", "voicecall", "status"],
         primary: "voicecall",
         hasBuiltinPrimary: false,
       }),
@@ -105,19 +105,19 @@ describe("shouldSkipPluginCommandRegistration", () => {
 
 describe("shouldEnsureCliPath", () => {
   it("skips path bootstrap for help/version invocations", () => {
-    expect(shouldEnsureCliPath(["node", "openclaw", "--help"])).toBe(false);
-    expect(shouldEnsureCliPath(["node", "openclaw", "-V"])).toBe(false);
+    expect(shouldEnsureCliPath(["node", "minion", "--help"])).toBe(false);
+    expect(shouldEnsureCliPath(["node", "minion", "-V"])).toBe(false);
   });
 
   it("skips path bootstrap for read-only fast paths", () => {
-    expect(shouldEnsureCliPath(["node", "openclaw", "status"])).toBe(false);
-    expect(shouldEnsureCliPath(["node", "openclaw", "sessions", "--json"])).toBe(false);
-    expect(shouldEnsureCliPath(["node", "openclaw", "config", "get", "update"])).toBe(false);
-    expect(shouldEnsureCliPath(["node", "openclaw", "models", "status", "--json"])).toBe(false);
+    expect(shouldEnsureCliPath(["node", "minion", "status"])).toBe(false);
+    expect(shouldEnsureCliPath(["node", "minion", "sessions", "--json"])).toBe(false);
+    expect(shouldEnsureCliPath(["node", "minion", "config", "get", "update"])).toBe(false);
+    expect(shouldEnsureCliPath(["node", "minion", "models", "status", "--json"])).toBe(false);
   });
 
   it("keeps path bootstrap for mutating or unknown commands", () => {
-    expect(shouldEnsureCliPath(["node", "openclaw", "message", "send"])).toBe(true);
-    expect(shouldEnsureCliPath(["node", "openclaw", "voicecall", "status"])).toBe(true);
+    expect(shouldEnsureCliPath(["node", "minion", "message", "send"])).toBe(true);
+    expect(shouldEnsureCliPath(["node", "minion", "voicecall", "status"])).toBe(true);
   });
 });

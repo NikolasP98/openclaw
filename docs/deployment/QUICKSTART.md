@@ -1,4 +1,4 @@
-# OpenClaw Production Deployment - Quick Start Guide
+# Minion Production Deployment - Quick Start Guide
 
 This guide will get you from zero to automatic production deployment in ~30 minutes.
 
@@ -19,15 +19,15 @@ If you already have SSH keys (e.g., exported from 1Password):
 
 ```bash
 # Verify keys exist
-ls -la ~/.ssh/openclaw/openclaw_deploy_key*
+ls -la ~/.ssh/minion/minion_deploy_key*
 
 # Should show:
-# - ~/.ssh/openclaw/openclaw_deploy_key (private key)
-# - ~/.ssh/openclaw/openclaw_deploy_key.pub (public key)
+# - ~/.ssh/minion/minion_deploy_key (private key)
+# - ~/.ssh/minion/minion_deploy_key.pub (public key)
 
 # Ensure correct permissions
-chmod 600 ~/.ssh/openclaw/openclaw_deploy_key
-chmod 644 ~/.ssh/openclaw/openclaw_deploy_key.pub
+chmod 600 ~/.ssh/minion/minion_deploy_key
+chmod 644 ~/.ssh/minion/minion_deploy_key.pub
 ```
 
 ### Option B: Generate New Keys
@@ -35,34 +35,35 @@ chmod 644 ~/.ssh/openclaw/openclaw_deploy_key.pub
 If you don't have keys yet:
 
 ```bash
-cd /path/to/openclaw/scripts/deployment
+cd /path/to/minion/scripts/deployment
 
 # Generate deployment SSH keys
 ./generate-deploy-keys.sh
 
 # This creates:
-# - ~/.ssh/openclaw/openclaw_deploy_key (private key - for GitHub)
-# - ~/.ssh/openclaw/openclaw_deploy_key.pub (public key - for server)
+# - ~/.ssh/minion/minion_deploy_key (private key - for GitHub)
+# - ~/.ssh/minion/minion_deploy_key.pub (public key - for server)
 ```
 
 ## Step 2: Setup Production Server (5 minutes)
 
-Run the setup script from your **LOCAL machine** (in the openclaw repository):
+Run the setup script from your **LOCAL machine** (in the minion repository):
 
 ```bash
-cd /path/to/openclaw
+cd /path/to/minion
 
 # Run setup script - it will handle everything remotely
 ./scripts/deployment/setup-server.sh 100.105.147.99
 ```
 
 **What this script does**:
+
 - Connects to your server as root (using root SSH access)
-- Automatically finds your SSH keys in `~/.ssh/openclaw/`
+- Automatically finds your SSH keys in `~/.ssh/minion/`
 - Creates `deploy` user with Docker access
 - Copies your SSH public key to the server
-- Sets up deployment directory structure (`/home/deploy/openclaw-prd/`)
-- Generates secure credentials (including `OPENCLAW_GATEWAY_TOKEN`)
+- Sets up deployment directory structure (`/home/deploy/minion-prd/`)
+- Generates secure credentials (including `MINION_GATEWAY_TOKEN`)
 - Creates template `.env` file
 - Copies `docker-compose.yml` to the server
 
@@ -80,9 +81,9 @@ ssh root@100.105.147.99
 su - deploy
 
 # Edit .env file
-nano ~/openclaw-prd/.env
+nano ~/minion-prd/.env
 
-# Update these values (keep the auto-generated OPENCLAW_GATEWAY_TOKEN):
+# Update these values (keep the auto-generated MINION_GATEWAY_TOKEN):
 # - CLAUDE_AI_SESSION_KEY=<your-key>
 # - CLAUDE_WEB_SESSION_KEY=<your-key>
 # - CLAUDE_WEB_COOKIE=<your-cookie>
@@ -100,10 +101,10 @@ On your **LOCAL machine**:
 
 ```bash
 # SSH to server as deploy user
-ssh -i ~/.ssh/openclaw/openclaw_deploy_key deploy@100.105.147.99
+ssh -i ~/.ssh/minion/minion_deploy_key deploy@100.105.147.99
 
 # Verify files exist
-ls -la ~/openclaw-prd/
+ls -la ~/minion-prd/
 
 # Should show:
 # - docker-compose.yml
@@ -117,10 +118,10 @@ On the **SERVER** (continue from previous step or SSH if disconnected):
 
 ```bash
 # If not already on server, SSH as deploy user
-# ssh -i ~/.ssh/openclaw/openclaw_deploy_key deploy@100.105.147.99
+# ssh -i ~/.ssh/minion/minion_deploy_key deploy@100.105.147.99
 
 # Navigate to deployment directory
-cd ~/openclaw-prd
+cd ~/minion-prd
 
 # Pull images
 docker compose pull
@@ -138,7 +139,7 @@ docker compose ps
 curl http://localhost:18789/health
 
 # Check logs (Ctrl+C to exit)
-docker compose logs -f openclaw-gateway
+docker compose logs -f minion-gateway
 ```
 
 **Expected output**: Health endpoint should return `200 OK` and containers should be running.
@@ -149,13 +150,13 @@ On your **LOCAL machine**, go to GitHub repository: `Settings → Secrets and va
 
 Add these secrets:
 
-| Secret Name | Value | How to get |
-|-------------|-------|------------|
-| `SSH_PRIVATE_KEY` | Contents of `~/.ssh/openclaw/openclaw_deploy_key` | `cat ~/.ssh/openclaw/openclaw_deploy_key` |
-| `SSH_HOST` | `100.105.147.99` | Your server IP |
-| `SSH_USER` | `deploy` | Fixed value |
-| `SSH_PORT` | `22` | Default SSH port |
-| `DEPLOYMENT_PATH` | `/home/deploy/openclaw-prd` | Fixed value |
+| Secret Name       | Value                                         | How to get                            |
+| ----------------- | --------------------------------------------- | ------------------------------------- |
+| `SSH_PRIVATE_KEY` | Contents of `~/.ssh/minion/minion_deploy_key` | `cat ~/.ssh/minion/minion_deploy_key` |
+| `SSH_HOST`        | `100.105.147.99`                              | Your server IP                        |
+| `SSH_USER`        | `deploy`                                      | Fixed value                           |
+| `SSH_PORT`        | `22`                                          | Default SSH port                      |
+| `DEPLOYMENT_PATH` | `/home/deploy/minion-prd`                     | Fixed value                           |
 
 **Important**: Copy the **entire private key** including the `-----BEGIN` and `-----END` lines.
 
@@ -164,7 +165,7 @@ Add these secrets:
 On your **LOCAL machine**:
 
 ```bash
-cd /path/to/openclaw
+cd /path/to/minion
 
 # Checkout PRD branch (create if doesn't exist)
 git checkout PRD || git checkout -b PRD
@@ -189,13 +190,13 @@ On your **LOCAL machine**:
 
 ```bash
 # SSH to server
-ssh -i ~/.ssh/openclaw/openclaw_deploy_key deploy@100.105.147.99
+ssh -i ~/.ssh/minion/minion_deploy_key deploy@100.105.147.99
 
 # Check containers are running
 docker compose ps
 
 # Check image version (should match latest push)
-docker images | grep openclaw
+docker images | grep minion
 
 # Test health endpoint
 curl http://localhost:18789/health
@@ -204,6 +205,7 @@ curl http://localhost:18789/health
 ## ✅ Success!
 
 You now have automatic production deployment! Every push to the PRD branch will automatically:
+
 1. Build Docker images
 2. Push to GitHub Container Registry
 3. Deploy to production server
@@ -218,20 +220,20 @@ You now have automatic production deployment! Every push to the PRD branch will 
 
 ```bash
 # Copy backup script to server
-scp scripts/deployment/backup-openclaw.sh deploy@100.105.147.99:~/
+scp scripts/deployment/backup-minion.sh deploy@100.105.147.99:~/
 
 # SSH to server
 ssh deploy@100.105.147.99
 
 # Make executable
-chmod +x ~/backup-openclaw.sh
+chmod +x ~/backup-minion.sh
 
 # Test backup
-./backup-openclaw.sh
+./backup-minion.sh
 
 # Add to crontab (daily at 2 AM)
 crontab -e
-# Add line: 0 2 * * * /home/deploy/backup-openclaw.sh
+# Add line: 0 2 * * * /home/deploy/backup-minion.sh
 ```
 
 **2. Security Hardening** (3 minutes)
@@ -254,14 +256,15 @@ systemctl restart sshd
 
 # Configure firewall
 ufw allow 22/tcp      # SSH
-ufw allow 18789/tcp   # OpenClaw Gateway
-ufw allow 18790/tcp   # OpenClaw Bridge
+ufw allow 18789/tcp   # Minion Gateway
+ufw allow 18790/tcp   # Minion Bridge
 ufw enable
 ```
 
 **3. Scale to Multi-Tenant** (see full documentation)
 
 When you need to deploy to multiple servers:
+
 - Disable Phase 1 workflow: `mv .github/workflows/deploy-prd.yml .github/workflows/deploy-prd-single.yml.disabled`
 - Enable Phase 2 workflow: `mv .github/workflows/deploy-prd-multi.yml .github/workflows/deploy-prd.yml`
 - Update server registry: `.github/servers/production.json`
@@ -273,10 +276,10 @@ When you need to deploy to multiple servers:
 
 ```bash
 # Verify SSH key is correct
-ssh-keygen -l -f ~/.ssh/openclaw/openclaw_deploy_key.pub
+ssh-keygen -l -f ~/.ssh/minion/minion_deploy_key.pub
 
 # Test connection with verbose output
-ssh -vvv -i ~/.ssh/openclaw/openclaw_deploy_key deploy@100.105.147.99
+ssh -vvv -i ~/.ssh/minion/minion_deploy_key deploy@100.105.147.99
 ```
 
 ### Health check fails
@@ -286,8 +289,8 @@ ssh -vvv -i ~/.ssh/openclaw/openclaw_deploy_key deploy@100.105.147.99
 ssh deploy@100.105.147.99
 
 # Check container logs
-cd ~/openclaw-prd
-docker compose logs openclaw-gateway
+cd ~/minion-prd
+docker compose logs minion-gateway
 
 # Check if port is listening
 netstat -tlnp | grep 18789
@@ -315,6 +318,7 @@ docker compose down && docker compose up -d
 ## Support
 
 If you encounter issues:
+
 1. Check GitHub Actions logs
 2. Check server logs: `docker compose logs`
 3. Review troubleshooting section in full documentation

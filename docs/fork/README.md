@@ -1,10 +1,10 @@
 # Fork Documentation
 
-This directory contains documentation for features specific to this fork that differ from upstream openclaw/openclaw.
+This directory contains documentation for features specific to this fork that differ from upstream minion/minion.
 
 ## Fork-Specific Features
 
-- **[Package Installation](./package-installation.md)** - **CRITICAL:** Custom package requirements (@nikolasp98/openclaw)
+- **[Package Installation](./package-installation.md)** - **CRITICAL:** Custom package requirements (@nikolasp98/minion)
 - [Docker Environment Naming](./docker-environments.md) - Multi-environment container naming support
 - [Docker Gateway Setup](./docker-setup.md) - Gateway authentication and configuration
 

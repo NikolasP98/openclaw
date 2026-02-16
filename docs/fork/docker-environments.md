@@ -4,9 +4,9 @@ This fork adds support for environment-specific container naming.
 
 ## Environment Variables
 
-- `OPENCLAW_ENV` — environment name (default: `DEV`)
-- `OPENCLAW_GATEWAY_CONTAINER_NAME` — gateway container name (default: `openclaw_${OPENCLAW_ENV}_gw`)
-- `OPENCLAW_CLI_CONTAINER_NAME` — CLI container name (default: `openclaw_${OPENCLAW_ENV}_cli`)
+- `MINION_ENV` — environment name (default: `DEV`)
+- `MINION_GATEWAY_CONTAINER_NAME` — gateway container name (default: `minion_${MINION_ENV}_gw`)
+- `MINION_CLI_CONTAINER_NAME` — CLI container name (default: `minion_${MINION_ENV}_cli`)
 
 ## Usage
 
@@ -15,10 +15,10 @@ This fork adds support for environment-specific container naming.
 ./docker-setup.sh
 
 # Use custom environment name
-OPENCLAW_ENV=staging ./docker-setup.sh
+MINION_ENV=staging ./docker-setup.sh
 
 # Fully custom container names
-OPENCLAW_GATEWAY_CONTAINER_NAME=my-gateway ./docker-setup.sh
+MINION_GATEWAY_CONTAINER_NAME=my-gateway ./docker-setup.sh
 ```
 
 ## Benefits
@@ -31,18 +31,18 @@ OPENCLAW_GATEWAY_CONTAINER_NAME=my-gateway ./docker-setup.sh
 
 Each branch has environment-specific GHCR image defaults:
 
-- **PRD**: `ghcr.io/nikolasp98/openclaw:prd`
-- **DEV**: `ghcr.io/nikolasp98/openclaw:dev`
-- **main**: `ghcr.io/nikolasp98/openclaw:main`
+- **PRD**: `ghcr.io/nikolasp98/minion:prd`
+- **DEV**: `ghcr.io/nikolasp98/minion:dev`
+- **main**: `ghcr.io/nikolasp98/minion:main`
 
 This means you can deploy without manually specifying the image:
 
 ```bash
-# On PRD branch - automatically pulls ghcr.io/nikolasp98/openclaw:prd
+# On PRD branch - automatically pulls ghcr.io/nikolasp98/minion:prd
 git checkout PRD
 ./docker-setup.sh
 
-# On DEV branch - automatically pulls ghcr.io/nikolasp98/openclaw:dev
+# On DEV branch - automatically pulls ghcr.io/nikolasp98/minion:dev
 git checkout DEV
 ./docker-setup.sh
 ```
@@ -50,13 +50,13 @@ git checkout DEV
 Override with a custom image if needed:
 
 ```bash
-OPENCLAW_IMAGE=ghcr.io/nikolasp98/openclaw:custom ./docker-setup.sh
+MINION_IMAGE=ghcr.io/nikolasp98/minion:custom ./docker-setup.sh
 ```
 
 Or build locally:
 
 ```bash
-OPENCLAW_IMAGE=openclaw:local ./docker-setup.sh
+MINION_IMAGE=minion:local ./docker-setup.sh
 ```
 
 ## GOG Credentials for Gmail Hooks
@@ -66,19 +66,22 @@ For Gmail Pub/Sub hooks to work in containers, GOG (Google OAuth CLI) credential
 **Default mount**: `~/.config/gogcli` → `/home/node/.config/gogcli`
 
 **Custom path**:
+
 ```bash
-OPENCLAW_GOG_CONFIG_DIR=/custom/path/gogcli ./docker-setup.sh
+MINION_GOG_CONFIG_DIR=/custom/path/gogcli ./docker-setup.sh
 ```
 
 **Setup GOG credentials**:
+
 1. Run GOG authentication on host: `gog auth login`
 2. Credentials stored at `~/.config/gogcli/credentials.json`
 3. Start/restart container with mount
 4. Container can now access GOG credentials
 
 **Verify in container**:
+
 ```bash
-docker compose exec openclaw-gateway ls -la /home/node/.config/gogcli
+docker compose exec minion-gateway ls -la /home/node/.config/gogcli
 ```
 
 ## Implementation Details
@@ -91,12 +94,12 @@ Both services use the container_name directive with environment variable fallbac
 
 ```yaml
 services:
-  openclaw-gateway:
-    container_name: ${OPENCLAW_GATEWAY_CONTAINER_NAME:-openclaw_DEV_gw}
+  minion-gateway:
+    container_name: ${MINION_GATEWAY_CONTAINER_NAME:-minion_DEV_gw}
     # ...
 
-  openclaw-cli:
-    container_name: ${OPENCLAW_CLI_CONTAINER_NAME:-openclaw_DEV_cli}
+  minion-cli:
+    container_name: ${MINION_CLI_CONTAINER_NAME:-minion_DEV_cli}
     # ...
 ```
 
@@ -105,21 +108,21 @@ services:
 The setup script exports the environment variables with sensible defaults:
 
 ```bash
-export OPENCLAW_ENV="${OPENCLAW_ENV:-DEV}"
-export OPENCLAW_GATEWAY_CONTAINER_NAME="${OPENCLAW_GATEWAY_CONTAINER_NAME:-openclaw_${OPENCLAW_ENV}_gw}"
-export OPENCLAW_CLI_CONTAINER_NAME="${OPENCLAW_CLI_CONTAINER_NAME:-openclaw_${OPENCLAW_ENV}_cli}"
+export MINION_ENV="${MINION_ENV:-DEV}"
+export MINION_GATEWAY_CONTAINER_NAME="${MINION_GATEWAY_CONTAINER_NAME:-minion_${MINION_ENV}_gw}"
+export MINION_CLI_CONTAINER_NAME="${MINION_CLI_CONTAINER_NAME:-minion_${MINION_ENV}_cli}"
 ```
 
 ## Service Names vs Container Names
 
-Note that `docker compose` commands use **service names** (`openclaw-gateway`, `openclaw-cli`), not container names. The container names are visible in `docker ps` output and used for direct `docker` commands (not `docker compose`).
+Note that `docker compose` commands use **service names** (`minion-gateway`, `minion-cli`), not container names. The container names are visible in `docker ps` output and used for direct `docker` commands (not `docker compose`).
 
 Example:
 
 ```bash
 # Use service name with docker compose
-docker compose logs -f openclaw-gateway
+docker compose logs -f minion-gateway
 
 # Use container name with docker
-docker logs -f openclaw_DEV_gw
+docker logs -f minion_DEV_gw
 ```

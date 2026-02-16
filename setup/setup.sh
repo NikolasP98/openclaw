@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 # ---
-# name: "OpenClaw Setup Orchestrator"
+# name: "Minion Setup Orchestrator"
 # description: >
-#   Single entry-point for deploying OpenClaw on a VPS.
-#   Supports two install methods: package (npm install -g @nikolasp98/openclaw)
+#   Single entry-point for deploying Minion on a VPS.
+#   Supports two install methods: package (npm install -g @nikolasp98/minion)
 #   or source (git clone + pnpm install + pnpm build). Package is default.
 #   Supports two exec modes: remote (orchestrate VPS via SSH from local machine)
 #   and local (run directly on the VPS).
 # when: >
-#   Run this to deploy a new OpenClaw instance or update an existing one.
+#   Run this to deploy a new Minion instance or update an existing one.
 #   Use --mode=remote from your local machine, or --mode=local on the VPS itself.
 #   If --vps-hostname is provided, mode auto-detects to remote.
 # flags:
 #   --mode=MODE: "local or remote (auto-detect if omitted)"
-#   --install-dir=PATH: "Where to clone openclaw (default: ~/openclaw)"
-#   --repo=REPO: "GitHub repo (default: NikolasP98/openclaw)"
+#   --install-dir=PATH: "Where to clone minion (default: ~/minion)"
+#   --repo=REPO: "GitHub repo (default: NikolasP98/minion)"
 #   --branch=BRANCH: "Git branch (default: main)"
 #   --update: "Pull latest source and rebuild"
 #   --profile=PROFILE: "Load from profile file"
@@ -53,7 +53,7 @@ DECOMMISSION_MODE=false
 # Display usage information
 usage() {
     cat << 'EOF'
-OpenClaw Setup - VPS Deployment Framework
+Minion Setup - VPS Deployment Framework
 
 Usage: setup.sh [OPTIONS]
 
@@ -63,13 +63,13 @@ Modes:
 
 Install Method:
     --install-method=METHOD Install method: package (default), source
-                            package: npm install -g @nikolasp98/openclaw (fast, no build)
+                            package: npm install -g @nikolasp98/minion (fast, no build)
                             source:  git clone + pnpm install + pnpm build
     --pkg-manager=PM        Package manager for package installs: npm (default), pnpm, bun
 
 Source Install (only with --install-method=source):
-    --install-dir=PATH      Where to clone openclaw (default: ~/openclaw)
-    --repo=REPO             GitHub repo (default: NikolasP98/openclaw)
+    --install-dir=PATH      Where to clone minion (default: ~/minion)
+    --repo=REPO             GitHub repo (default: NikolasP98/minion)
     --branch=BRANCH         Git branch to checkout (default: main)
     --update                Pull latest source and rebuild (for existing installs)
     --decommission          Stop services, free disk space, preserve config (non-destructive)
@@ -148,7 +148,7 @@ parse_args() {
                 EXEC_MODE="${1#*=}"
                 ;;
             --install-dir=*)
-                OPENCLAW_ROOT="${1#*=}"
+                MINION_ROOT="${1#*=}"
                 ;;
             --repo=*)
                 GITHUB_REPO="${1#*=}"
@@ -190,7 +190,7 @@ parse_args() {
                 DM_POLICY="${1#*=}"
                 ;;
             --tenant=*)
-                OPENCLAW_TENANT="${1#*=}"
+                MINION_TENANT="${1#*=}"
                 ;;
             --enable-whatsapp)
                 ENABLE_WHATSAPP=true
@@ -345,11 +345,11 @@ export_variables() {
     export INSTALL_METHOD PACKAGE_MANAGER
     export NODE_INSTALL_METHOD FORCE_REINSTALL UPDATE_MODE DECOMMISSION_MODE
     export GATEWAY_PORT GATEWAY_BIND AGENT_MODEL AGENT_USERNAME GATEWAY_AUTH_TOKEN
-    export AGENT_HOME_DIR OPENCLAW_CONFIG_DIR WORKSPACE_DIR
-    export OPENCLAW_ROOT OPENCLAW_WRAPPER OPENCLAW_BIN OPENCLAW_PKG_ROOT NODE_BIN_PATH
+    export AGENT_HOME_DIR MINION_CONFIG_DIR WORKSPACE_DIR
+    export MINION_ROOT MINION_WRAPPER MINION_BIN MINION_PKG_ROOT NODE_BIN_PATH
     export GITHUB_REPO GITHUB_BRANCH EXEC_MODE
     export MEMORY_LIMIT CPU_QUOTA
-    export OPENCLAW_TENANT
+    export MINION_TENANT
     export DRY_RUN VERBOSE CURRENT_LOG_LEVEL
     export LOG_DIR LOG_FILE
 } 2>/dev/null  # suppress errors for unset variables
@@ -373,7 +373,7 @@ main() {
 BANNER
     echo -e "${NC}"
 
-    log_info "Starting OpenClaw setup"
+    log_info "Starting Minion setup"
     log_info "Log file: $LOG_FILE"
 
     # Parse arguments
@@ -410,7 +410,7 @@ BANNER
         "00-preflight.sh"
         "20-user-creation.sh"
         "30-environment-setup.sh"
-        "40-openclaw-install.sh"
+        "40-minion-install.sh"
         "45-alias-setup.sh"
         "50-config-generation.sh"
         "60-service-setup.sh"
@@ -427,7 +427,7 @@ BANNER
         exit 0
     fi
 
-    log_success "OpenClaw setup completed successfully!"
+    log_success "Minion setup completed successfully!"
     return 0
 }
 

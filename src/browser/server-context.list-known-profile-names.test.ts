@@ -6,14 +6,14 @@ import { listKnownProfileNames } from "./server-context.js";
 describe("browser server-context listKnownProfileNames", () => {
   it("includes configured and runtime-only profile names", () => {
     const resolved = resolveBrowserConfig({
-      defaultProfile: "openclaw",
+      defaultProfile: "minion",
       profiles: {
-        openclaw: { cdpPort: 18800, color: "#FF4500" },
+        minion: { cdpPort: 18800, color: "#FF4500" },
       },
     });
-    const openclaw = resolveProfile(resolved, "openclaw");
-    if (!openclaw) {
-      throw new Error("expected openclaw profile");
+    const minion = resolveProfile(resolved, "minion");
+    if (!minion) {
+      throw new Error("expected minion profile");
     }
 
     const state: BrowserServerState = {
@@ -24,17 +24,13 @@ describe("browser server-context listKnownProfileNames", () => {
         [
           "stale-removed",
           {
-            profile: { ...openclaw, name: "stale-removed" },
+            profile: { ...minion, name: "stale-removed" },
             running: null,
           },
         ],
       ]),
     };
 
-    expect(listKnownProfileNames(state).toSorted()).toEqual([
-      "chrome",
-      "openclaw",
-      "stale-removed",
-    ]);
+    expect(listKnownProfileNames(state).toSorted()).toEqual(["chrome", "minion", "stale-removed"]);
   });
 });

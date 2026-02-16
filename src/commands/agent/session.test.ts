@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { MinionConfig } from "../../config/config.js";
 
 const mocks = vi.hoisted(() => ({
   loadSessionStore: vi.fn(),
@@ -30,7 +30,7 @@ describe("resolveSessionKeyForRequest", () => {
     mocks.listAgentIds.mockReturnValue(["main"]);
   });
 
-  const baseCfg: OpenClawConfig = {};
+  const baseCfg: MinionConfig = {};
 
   it("returns sessionKey when --to resolves a session key via context", async () => {
     mocks.resolveStorePath.mockReturnValue("/tmp/main-store.json");

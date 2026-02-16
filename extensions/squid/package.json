@@ -1,0 +1,14 @@
+{
+  "name": "@minion/squid",
+  "version": "2026.2.13",
+  "description": "Squid workflow tool plugin (typed pipelines + resumable approvals)",
+  "type": "module",
+  "devDependencies": {
+    "minion": "workspace:*"
+  },
+  "minion": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { MinionConfig } from "../config/config.js";
 import {
   clearInternalHooks,
   getRegisteredEventKeys,
@@ -18,21 +18,21 @@ describe("loader", () => {
   beforeEach(async () => {
     clearInternalHooks();
     // Create a temp directory for test modules
-    tmpDir = path.join(os.tmpdir(), `openclaw-test-${Date.now()}`);
+    tmpDir = path.join(os.tmpdir(), `minion-test-${Date.now()}`);
     await fs.mkdir(tmpDir, { recursive: true });
 
     // Disable bundled hooks during tests by setting env var to non-existent directory
-    originalBundledDir = process.env.OPENCLAW_BUNDLED_HOOKS_DIR;
-    process.env.OPENCLAW_BUNDLED_HOOKS_DIR = "/nonexistent/bundled/hooks";
+    originalBundledDir = process.env.MINION_BUNDLED_HOOKS_DIR;
+    process.env.MINION_BUNDLED_HOOKS_DIR = "/nonexistent/bundled/hooks";
   });
 
   afterEach(async () => {
     clearInternalHooks();
     // Restore original env var
     if (originalBundledDir === undefined) {
-      delete process.env.OPENCLAW_BUNDLED_HOOKS_DIR;
+      delete process.env.MINION_BUNDLED_HOOKS_DIR;
     } else {
-      process.env.OPENCLAW_BUNDLED_HOOKS_DIR = originalBundledDir;
+      process.env.MINION_BUNDLED_HOOKS_DIR = originalBundledDir;
     }
     // Clean up temp directory
     try {
@@ -44,7 +44,7 @@ describe("loader", () => {
 
   describe("loadInternalHooks", () => {
     it("should return 0 when hooks are not enabled", async () => {
-      const cfg: OpenClawConfig = {
+      const cfg: MinionConfig = {
         hooks: {
           internal: {
             enabled: false,
@@ -57,7 +57,7 @@ describe("loader", () => {
     });
 
     it("should return 0 when hooks config is missing", async () => {
-      const cfg: OpenClawConfig = {};
+      const cfg: MinionConfig = {};
       const count = await loadInternalHooks(cfg, tmpDir);
       expect(count).toBe(0);
     });
@@ -72,7 +72,7 @@ describe("loader", () => {
       `;
       await fs.writeFile(handlerPath, handlerCode, "utf-8");
 
-      const cfg: OpenClawConfig = {
+      const cfg: MinionConfig = {
         hooks: {
           internal: {
             enabled: true,
@@ -101,7 +101,7 @@ describe("loader", () => {
       await fs.writeFile(handler1Path, "export default async function() {}", "utf-8");
       await fs.writeFile(handler2Path, "export default async function() {}", "utf-8");
 
-      const cfg: OpenClawConfig = {
+      const cfg: MinionConfig = {
         hooks: {
           internal: {
             enabled: true,
@@ -131,7 +131,7 @@ describe("loader", () => {
       `;
       await fs.writeFile(handlerPath, handlerCode, "utf-8");
 
-      const cfg: OpenClawConfig = {
+      const cfg: MinionConfig = {
         hooks: {
           internal: {
             enabled: true,
@@ -151,7 +151,7 @@ describe("loader", () => {
     });
 
     it("should handle module loading errors gracefully", async () => {
-      const cfg: OpenClawConfig = {
+      const cfg: MinionConfig = {
         hooks: {
           internal: {
             enabled: true,
@@ -175,7 +175,7 @@ describe("loader", () => {
       const handlerPath = path.join(tmpDir, "bad-export.js");
       await fs.writeFile(handlerPath, 'export default "not a function";', "utf-8");
 
-      const cfg: OpenClawConfig = {
+      const cfg: MinionConfig = {
         hooks: {
           internal: {
             enabled: true,
@@ -202,7 +202,7 @@ describe("loader", () => {
       // Relative to workspaceDir (tmpDir)
       const relativePath = path.relative(tmpDir, handlerPath);
 
-      const cfg: OpenClawConfig = {
+      const cfg: MinionConfig = {
         hooks: {
           internal: {
             enabled: true,
@@ -234,7 +234,7 @@ describe("loader", () => {
       `;
       await fs.writeFile(handlerPath, handlerCode, "utf-8");
 
-      const cfg: OpenClawConfig = {
+      const cfg: MinionConfig = {
         hooks: {
           internal: {
             enabled: true,

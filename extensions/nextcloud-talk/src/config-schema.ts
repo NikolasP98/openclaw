@@ -6,7 +6,7 @@ import {
   MarkdownConfigSchema,
   ToolPolicySchema,
   requireOpenAllowFrom,
-} from "openclaw/plugin-sdk";
+} from "minion/plugin-sdk";
 import { z } from "zod";
 
 export const NextcloudTalkRoomSchema = z

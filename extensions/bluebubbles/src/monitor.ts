@@ -1,5 +1,5 @@
+import type { MinionConfig } from "minion/plugin-sdk";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { OpenClawConfig } from "openclaw/plugin-sdk";
 import { timingSafeEqual } from "node:crypto";
 import {
   normalizeWebhookMessage,
@@ -117,10 +117,7 @@ type BlueBubblesDebouncer = {
  */
 const targetDebouncers = new Map<WebhookTarget, BlueBubblesDebouncer>();
 
-function resolveBlueBubblesDebounceMs(
-  config: OpenClawConfig,
-  core: BlueBubblesCoreRuntime,
-): number {
+function resolveBlueBubblesDebounceMs(config: MinionConfig, core: BlueBubblesCoreRuntime): number {
   const inbound = config.messages?.inbound;
   const hasExplicitDebounce =
     typeof inbound?.debounceMs === "number" || typeof inbound?.byChannel?.bluebubbles === "number";

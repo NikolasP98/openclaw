@@ -1,0 +1,16 @@
+{
+  "name": "minionbot",
+  "version": "2026.2.12",
+  "description": "Compatibility shim that forwards to minion",
+  "bin": {
+    "minionbot": "./bin/minionbot.js"
+  },
+  "type": "module",
+  "exports": {
+    ".": "./index.js",
+    "./cli-entry": "./bin/minionbot.js"
+  },
+  "dependencies": {
+    "minion": "workspace:*"
+  }
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { MinionConfig } from "../config/config.js";
 import {
   DEFAULT_BOOTSTRAP_MAX_CHARS,
   DEFAULT_BOOTSTRAP_TOTAL_MAX_CHARS,
@@ -22,13 +22,13 @@ describe("resolveBootstrapMaxChars", () => {
   it("uses configured value when valid", () => {
     const cfg = {
       agents: { defaults: { bootstrapMaxChars: 12345 } },
-    } as OpenClawConfig;
+    } as MinionConfig;
     expect(resolveBootstrapMaxChars(cfg)).toBe(12345);
   });
   it("falls back when invalid", () => {
     const cfg = {
       agents: { defaults: { bootstrapMaxChars: -1 } },
-    } as OpenClawConfig;
+    } as MinionConfig;
     expect(resolveBootstrapMaxChars(cfg)).toBe(DEFAULT_BOOTSTRAP_MAX_CHARS);
   });
 });
@@ -40,13 +40,13 @@ describe("resolveBootstrapTotalMaxChars", () => {
   it("uses configured value when valid", () => {
     const cfg = {
       agents: { defaults: { bootstrapTotalMaxChars: 12345 } },
-    } as OpenClawConfig;
+    } as MinionConfig;
     expect(resolveBootstrapTotalMaxChars(cfg)).toBe(12345);
   });
   it("falls back when invalid", () => {
     const cfg = {
       agents: { defaults: { bootstrapTotalMaxChars: -1 } },
-    } as OpenClawConfig;
+    } as MinionConfig;
     expect(resolveBootstrapTotalMaxChars(cfg)).toBe(DEFAULT_BOOTSTRAP_TOTAL_MAX_CHARS);
   });
 });

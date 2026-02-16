@@ -1,11 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import type { OpenClawConfig } from './types';
+  import type { MinionConfig } from './types';
   import GatewaySection from './lib/GatewaySection.svelte';
   import AgentsSection from './lib/AgentsSection.svelte';
   import BindingsSection from './lib/BindingsSection.svelte';
 
-  let config = $state<OpenClawConfig>({});
+  let config = $state<MinionConfig>({});
   let originalConfig = $state('');
   let isDirty = $derived(JSON.stringify(config) !== originalConfig);
   let loading = $state(false);
@@ -76,7 +76,7 @@
 
 <main>
   <div class="header">
-    <h1>OpenClaw Configuration Editor</h1>
+    <h1>Minion Configuration Editor</h1>
     {#if isDirty}
       <span class="dirty-indicator">● Unsaved changes</span>
     {/if}

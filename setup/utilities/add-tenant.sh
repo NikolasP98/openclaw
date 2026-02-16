@@ -2,7 +2,7 @@
 # ---
 # name: "Add Tenant"
 # description: >
-#   Interactive helper for adding a new tenant to a multi-tenant OpenClaw
+#   Interactive helper for adding a new tenant to a multi-tenant Minion
 #   deployment. Prompts for tenant info, runs the setup framework with
 #   --tenant flag, and updates the server registry.
 # when: >
@@ -26,7 +26,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-echo -e "${GREEN}=== OpenClaw Tenant Addition Helper ===${NC}"
+echo -e "${GREEN}=== Minion Tenant Addition Helper ===${NC}"
 echo ""
 echo "This script will guide you through adding a new tenant."
 echo ""
@@ -96,7 +96,7 @@ cat << EOF
 {
   "id": "prd-tenant-${TENANT}",
   "host": "${VPS_HOST:-localhost}",
-  "user": "openclaw-${AGENT_NAME}",
+  "user": "minion-${AGENT_NAME}",
   "port": ${SSH_PORT:-22},
   "tenant": "${TENANT}",
   "region": "${REGION}"
@@ -139,7 +139,7 @@ echo ""
 echo "Next steps:"
 echo ""
 echo "1. Verify the deployment:"
-echo "   openclaw --version"
+echo "   minion --version"
 echo "   curl http://127.0.0.1:18789/health"
 echo ""
 echo "2. Commit and push the registry changes:"

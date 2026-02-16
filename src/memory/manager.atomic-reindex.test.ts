@@ -40,9 +40,9 @@ describe("memory manager atomic reindex", () => {
   let manager: MemoryIndexManager | null = null;
 
   beforeEach(async () => {
-    vi.stubEnv("OPENCLAW_TEST_MEMORY_UNSAFE_REINDEX", "0");
+    vi.stubEnv("MINION_TEST_MEMORY_UNSAFE_REINDEX", "0");
     shouldFail = false;
-    workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-mem-"));
+    workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), "minion-mem-"));
     indexPath = path.join(workspaceDir, "index.sqlite");
     await fs.mkdir(path.join(workspaceDir, "memory"));
     await fs.writeFile(path.join(workspaceDir, "MEMORY.md"), "Hello memory.");

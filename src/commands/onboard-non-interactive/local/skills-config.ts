@@ -1,9 +1,9 @@
-import type { OpenClawConfig } from "../../../config/config.js";
+import type { MinionConfig } from "../../../config/config.js";
 import type { RuntimeEnv } from "../../../runtime.js";
 import type { OnboardOptions } from "../../onboard-types.js";
 
 export function applyNonInteractiveSkillsConfig(params: {
-  nextConfig: OpenClawConfig;
+  nextConfig: MinionConfig;
   opts: OnboardOptions;
   runtime: RuntimeEnv;
 }) {

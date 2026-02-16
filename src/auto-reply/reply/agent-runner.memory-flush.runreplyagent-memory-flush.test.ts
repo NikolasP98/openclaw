@@ -111,7 +111,7 @@ async function expectMemoryFlushSkippedWithWorkspaceAccess(
 }
 
 beforeAll(async () => {
-  fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-memory-flush-"));
+  fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "minion-memory-flush-"));
   ({ runReplyAgent } = await import("./agent-runner.js"));
 });
 

@@ -47,12 +47,12 @@ SYSTEM_DERIVED=(
     "AGENT_USERNAME"
     "GATEWAY_AUTH_TOKEN"
     "AGENT_HOME_DIR"
-    "OPENCLAW_CONFIG_DIR"
+    "MINION_CONFIG_DIR"
     "WORKSPACE_DIR"
-    "OPENCLAW_ROOT"
-    "OPENCLAW_WRAPPER"
-    "OPENCLAW_BIN"
-    "OPENCLAW_PKG_ROOT"
+    "MINION_ROOT"
+    "MINION_WRAPPER"
+    "MINION_BIN"
+    "MINION_PKG_ROOT"
     "NODE_BIN_PATH"
 )
 
@@ -115,15 +115,15 @@ derive_system_variables() {
     PACKAGE_MANAGER="${PACKAGE_MANAGER:-npm}"
 
     # Source install settings
-    GITHUB_REPO="${GITHUB_REPO:-NikolasP98/openclaw}"
+    GITHUB_REPO="${GITHUB_REPO:-NikolasP98/minion}"
     GITHUB_BRANCH="${GITHUB_BRANCH:-main}"
 
     # Agent username from agent name
     if [ -n "${AGENT_NAME:-}" ]; then
-        AGENT_USERNAME="${AGENT_USERNAME:-openclaw-${AGENT_NAME// /-}}"
+        AGENT_USERNAME="${AGENT_USERNAME:-minion-${AGENT_NAME// /-}}"
         AGENT_USERNAME="${AGENT_USERNAME,,}"  # lowercase
     else
-        AGENT_USERNAME="${AGENT_USERNAME:-openclaw}"
+        AGENT_USERNAME="${AGENT_USERNAME:-minion}"
     fi
 
     # Generate gateway port (default 18789)
@@ -142,15 +142,15 @@ derive_system_variables() {
     fi
 
     if [ "$INSTALL_METHOD" = "source" ]; then
-        OPENCLAW_ROOT="${OPENCLAW_ROOT:-${AGENT_HOME_DIR}/openclaw}"
-        OPENCLAW_WRAPPER="${OPENCLAW_WRAPPER:-${AGENT_HOME_DIR}/.local/bin/openclaw}"
+        MINION_ROOT="${MINION_ROOT:-${AGENT_HOME_DIR}/minion}"
+        MINION_WRAPPER="${MINION_WRAPPER:-${AGENT_HOME_DIR}/.local/bin/minion}"
     else
-        # Package install: OPENCLAW_BIN and OPENCLAW_PKG_ROOT resolved in phase 40
-        OPENCLAW_BIN="${OPENCLAW_BIN:-}"
-        OPENCLAW_PKG_ROOT="${OPENCLAW_PKG_ROOT:-}"
+        # Package install: MINION_BIN and MINION_PKG_ROOT resolved in phase 40
+        MINION_BIN="${MINION_BIN:-}"
+        MINION_PKG_ROOT="${MINION_PKG_ROOT:-}"
     fi
-    OPENCLAW_CONFIG_DIR="${OPENCLAW_CONFIG_DIR:-${AGENT_HOME_DIR}/.openclaw}"
-    WORKSPACE_DIR="${WORKSPACE_DIR:-${OPENCLAW_CONFIG_DIR}/workspace}"
+    MINION_CONFIG_DIR="${MINION_CONFIG_DIR:-${AGENT_HOME_DIR}/.minion}"
+    WORKSPACE_DIR="${WORKSPACE_DIR:-${MINION_CONFIG_DIR}/workspace}"
 
     # Detect node binary path
     NODE_BIN_PATH="${NODE_BIN_PATH:-$(command -v node 2>/dev/null || echo "/usr/bin/node")}"
@@ -277,14 +277,14 @@ display_config() {
 
     echo -e "\n${GREEN}Install Method:${NC} ${INSTALL_METHOD:-package}"
     if [ "${INSTALL_METHOD:-package}" = "source" ]; then
-        echo -e "  GITHUB_REPO: ${GITHUB_REPO:-NikolasP98/openclaw}"
+        echo -e "  GITHUB_REPO: ${GITHUB_REPO:-NikolasP98/minion}"
         echo -e "  GITHUB_BRANCH: ${GITHUB_BRANCH:-main}"
-        echo -e "  OPENCLAW_ROOT: ${OPENCLAW_ROOT:-[NOT SET]}"
+        echo -e "  MINION_ROOT: ${MINION_ROOT:-[NOT SET]}"
     else
         echo -e "  PACKAGE_MANAGER: ${PACKAGE_MANAGER:-npm}"
-        echo -e "  Package: @nikolasp98/openclaw"
-        echo -e "  OPENCLAW_BIN: ${OPENCLAW_BIN:-[resolved at install]}"
-        echo -e "  OPENCLAW_PKG_ROOT: ${OPENCLAW_PKG_ROOT:-[resolved at install]}"
+        echo -e "  Package: @nikolasp98/minion"
+        echo -e "  MINION_BIN: ${MINION_BIN:-[resolved at install]}"
+        echo -e "  MINION_PKG_ROOT: ${MINION_PKG_ROOT:-[resolved at install]}"
     fi
 
     echo -e "\n${GREEN}Inferable Variables:${NC}"

@@ -52,7 +52,7 @@ Maintainers may apply stricter limits, temporary freezes, labeling controls, or 
 
 All bot/agent-created PRs, Issues, and comments **MUST** end with:
 
-`Agent-Signoff: <lobster-name-or-pun>`
+`Agent-Signoff: <squid-name-or-pun>`
 
 Rules:
 
@@ -68,5 +68,5 @@ Enforcement:
 
 Style note (optional):
 
-- Agent-authored submissions are encouraged to use a playful lobster-themed voice when helpful.
+- Agent-authored submissions are encouraged to use a playful squid-themed voice when helpful.
 - Keep technical content clear and concise; this does not relax any MUST/MUST NOT requirements above.

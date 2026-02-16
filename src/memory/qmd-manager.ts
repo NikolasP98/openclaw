@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import readline from "node:readline";
-import type { OpenClawConfig } from "../config/config.js";
+import type { MinionConfig } from "../config/config.js";
 import type {
   MemoryEmbeddingProbeResult,
   MemoryProviderStatus,
@@ -48,7 +48,7 @@ type QmdManagerMode = "full" | "status";
 
 export class QmdMemoryManager implements MemorySearchManager {
   static async create(params: {
-    cfg: OpenClawConfig;
+    cfg: MinionConfig;
     agentId: string;
     resolved: ResolvedMemoryBackendConfig;
     mode?: QmdManagerMode;
@@ -62,7 +62,7 @@ export class QmdMemoryManager implements MemorySearchManager {
     return manager;
   }
 
-  private readonly cfg: OpenClawConfig;
+  private readonly cfg: MinionConfig;
   private readonly agentId: string;
   private readonly qmd: ResolvedQmdConfig;
   private readonly workspaceDir: string;
@@ -98,11 +98,7 @@ export class QmdMemoryManager implements MemorySearchManager {
   private lastUpdateAt: number | null = null;
   private lastEmbedAt: number | null = null;
 
-  private constructor(params: {
-    cfg: OpenClawConfig;
-    agentId: string;
-    resolved: ResolvedQmdConfig;
-  }) {
+  private constructor(params: { cfg: MinionConfig; agentId: string; resolved: ResolvedQmdConfig }) {
     this.cfg = params.cfg;
     this.agentId = params.agentId;
     this.qmd = params.resolved;

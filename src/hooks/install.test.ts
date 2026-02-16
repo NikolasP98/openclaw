@@ -7,7 +7,7 @@ import path from "node:path";
 import * as tar from "tar";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const fixtureRoot = path.join(os.tmpdir(), `openclaw-hook-install-${randomUUID()}`);
+const fixtureRoot = path.join(os.tmpdir(), `minion-hook-install-${randomUUID()}`);
 let tempDirIndex = 0;
 
 let zipHooksBuffer: Buffer;
@@ -61,9 +61,9 @@ beforeAll(async () => {
   zipHooks.file(
     "package/package.json",
     JSON.stringify({
-      name: "@openclaw/zip-hooks",
+      name: "@minion/zip-hooks",
       version: "0.0.1",
-      openclaw: { hooks: ["./hooks/zip-hook"] },
+      minion: { hooks: ["./hooks/zip-hook"] },
     }),
   );
   zipHooks.file(
@@ -72,7 +72,7 @@ beforeAll(async () => {
       "---",
       "name: zip-hook",
       "description: Zip hook",
-      'metadata: {"openclaw":{"events":["command:new"]}}',
+      'metadata: {"minion":{"events":["command:new"]}}',
       "---",
       "",
       "# Zip Hook",
@@ -98,7 +98,7 @@ beforeAll(async () => {
       JSON.stringify({
         name: params.packageName,
         version: "0.0.1",
-        openclaw: { hooks: [`./hooks/${params.hookName}`] },
+        minion: { hooks: [`./hooks/${params.hookName}`] },
       }),
       "utf-8",
     );
@@ -108,7 +108,7 @@ beforeAll(async () => {
         "---",
         `name: ${params.hookName}`,
         `description: ${params.hookName}`,
-        'metadata: {"openclaw":{"events":["command:new"]}}',
+        'metadata: {"minion":{"events":["command:new"]}}',
         "---",
         "",
         "# Hook",
@@ -125,7 +125,7 @@ beforeAll(async () => {
   };
 
   tarHooksBuffer = await makeTarWithPackage({
-    packageName: "@openclaw/tar-hooks",
+    packageName: "@minion/tar-hooks",
     hookName: "tar-hook",
   });
   tarEvilIdBuffer = await makeTarWithPackage({ packageName: "@evil/..", hookName: "evil-hook" });
@@ -154,9 +154,9 @@ beforeAll(async () => {
     fs.writeFileSync(
       path.join(pkgDir, "package.json"),
       JSON.stringify({
-        name: "@openclaw/test-hooks",
+        name: "@minion/test-hooks",
         version: "0.0.1",
-        openclaw: { hooks: ["./hooks/one-hook"] },
+        minion: { hooks: ["./hooks/one-hook"] },
       }),
       "utf-8",
     );
@@ -166,7 +166,7 @@ beforeAll(async () => {
         "---",
         "name: one-hook",
         "description: One hook",
-        'metadata: {"openclaw":{"events":["command:new"]}}',
+        'metadata: {"minion":{"events":["command:new"]}}',
         "---",
         "",
         "# One Hook",
@@ -313,9 +313,9 @@ describe("installHooksFromPath", () => {
     fs.writeFileSync(
       path.join(pkgDir, "package.json"),
       JSON.stringify({
-        name: "@openclaw/test-hooks",
+        name: "@minion/test-hooks",
         version: "0.0.1",
-        openclaw: { hooks: ["./hooks/one-hook"] },
+        minion: { hooks: ["./hooks/one-hook"] },
         dependencies: { "left-pad": "1.3.0" },
       }),
       "utf-8",
@@ -326,7 +326,7 @@ describe("installHooksFromPath", () => {
         "---",
         "name: one-hook",
         "description: One hook",
-        'metadata: {"openclaw":{"events":["command:new"]}}',
+        'metadata: {"minion":{"events":["command:new"]}}',
         "---",
         "",
         "# One Hook",
@@ -375,7 +375,7 @@ describe("installHooksFromPath", () => {
         "---",
         "name: my-hook",
         "description: My hook",
-        'metadata: {"openclaw":{"events":["command:new"]}}',
+        'metadata: {"minion":{"events":["command:new"]}}',
         "---",
         "",
         "# My Hook",
@@ -416,7 +416,7 @@ describe("installHooksFromNpmSpec", () => {
 
     const hooksDir = path.join(stateDir, "hooks");
     const result = await installHooksFromNpmSpec({
-      spec: "@openclaw/test-hooks@0.0.1",
+      spec: "@minion/test-hooks@0.0.1",
       hooksDir,
       logger: { info: () => {}, warn: () => {} },
     });
@@ -436,7 +436,7 @@ describe("installHooksFromNpmSpec", () => {
       throw new Error("expected npm pack call");
     }
     const [argv, options] = packCall;
-    expect(argv).toEqual(["npm", "pack", "@openclaw/test-hooks@0.0.1", "--ignore-scripts"]);
+    expect(argv).toEqual(["npm", "pack", "@minion/test-hooks@0.0.1", "--ignore-scripts"]);
     expect(options?.env).toMatchObject({ NPM_CONFIG_IGNORE_SCRIPTS: "true" });
 
     expect(packTmpDir).not.toBe("");

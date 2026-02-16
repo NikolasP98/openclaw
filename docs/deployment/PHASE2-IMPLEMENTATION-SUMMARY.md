@@ -33,7 +33,7 @@ Phase 2 multi-server deployment system with full tenant isolation is now **ready
 
 1. **`scripts/deployment/setup-server.sh`** (Enhanced)
    - Added `--tenant <name>` parameter
-   - Creates tenant-specific directories: `/home/deploy/openclaw-prd-{tenant}`
+   - Creates tenant-specific directories: `/home/deploy/minion-prd-{tenant}`
    - Generates tenant-specific .env with correct container names
    - Validates tenant naming (lowercase, alphanumeric + hyphens)
    - Default tenant is "primary" for backward compatibility
@@ -60,6 +60,7 @@ Phase 2 multi-server deployment system with full tenant isolation is now **ready
 ### Phase 1 (Active)
 
 ✅ **Status**: Currently deployed and working
+
 - Single-server deployment to `100.105.147.99`
 - Automatic deployment on push to PRD
 - Workflow: `.github/workflows/deploy-prd.yml`
@@ -67,6 +68,7 @@ Phase 2 multi-server deployment system with full tenant isolation is now **ready
 ### Phase 2 (Ready, Not Active)
 
 🟡 **Status**: Fully implemented, ready to activate
+
 - All scripts enhanced with tenant support
 - Comprehensive documentation created
 - Multi-server workflow ready
@@ -79,6 +81,7 @@ Phase 2 multi-server deployment system with full tenant isolation is now **ready
 **When**: When you're ready to add your first additional server
 
 **Steps**:
+
 1. Read: `docs/deployment/PHASE2-GUIDE.md`
 2. Add new server using `setup-server.sh` with `--tenant` parameter
 3. Configure credentials on new server
@@ -103,9 +106,10 @@ Phase 2 multi-server deployment system with full tenant isolation is now **ready
 ### Tenant Isolation
 
 Each tenant gets:
-- ✅ Separate Docker containers with unique names: `{tenant}_openclaw_gw`
-- ✅ Separate configuration files: `/home/deploy/openclaw-prd-{tenant}/.env`
-- ✅ Separate data directories: `/home/deploy/.openclaw-prd-{tenant}/`
+
+- ✅ Separate Docker containers with unique names: `{tenant}_minion_gw`
+- ✅ Separate configuration files: `/home/deploy/minion-prd-{tenant}/.env`
+- ✅ Separate data directories: `/home/deploy/.minion-prd-{tenant}/`
 - ✅ Separate credentials (no sharing between tenants)
 
 ### Parallel Deployment
@@ -118,6 +122,7 @@ Each tenant gets:
 ### Easy Tenant Addition
 
 **Option 1: Manual** (15-20 minutes per tenant)
+
 ```bash
 cd scripts/deployment
 ./setup-server.sh <ip> 22 --tenant <name>
@@ -127,6 +132,7 @@ cd scripts/deployment
 ```
 
 **Option 2: Interactive Helper**
+
 ```bash
 cd scripts/deployment
 ./add-tenant.sh
@@ -143,10 +149,10 @@ cd scripts/deployment
 Server: 100.105.148.100 (ACME tenant)
 
 /home/deploy/
-├── openclaw-prd-acme/           # Deployment files
+├── minion-prd-acme/           # Deployment files
 │   ├── .env                      # Tenant-specific config
 │   └── docker-compose.yml        # Copied from repo
-└── .openclaw-prd-acme/           # Runtime data
+└── .minion-prd-acme/           # Runtime data
     ├── workspace/                # ACME's workspace
     ├── agents/                   # ACME's agents
     ├── credentials/              # ACME's credentials
@@ -156,13 +162,14 @@ Server: 100.105.148.100 (ACME tenant)
 
 ### Container Naming
 
-- **Primary tenant**: `openclaw_PRD_gw`, `openclaw_PRD_cli`
-- **ACME tenant**: `acme_openclaw_gw`, `acme_openclaw_cli`
-- **Widgets tenant**: `widgets_openclaw_gw`, `widgets_openclaw_cli`
+- **Primary tenant**: `minion_PRD_gw`, `minion_PRD_cli`
+- **ACME tenant**: `acme_minion_gw`, `acme_minion_cli`
+- **Widgets tenant**: `widgets_minion_gw`, `widgets_minion_cli`
 
 ### Port Configuration
 
 **Standard setup** (recommended):
+
 - One tenant per server
 - Gateway: `18789` (same on all servers)
 - Bridge: `18790` (same on all servers)
@@ -212,28 +219,31 @@ Before activating Phase 2, verify:
 ### Before Activating Phase 2
 
 1. **Test setup script on a test server**:
+
    ```bash
    ./setup-server.sh <test-ip> 22 --tenant test
    ```
 
 2. **Verify tenant-specific directories created**:
+
    ```bash
    ssh deploy@<test-ip>
-   ls -la ~/openclaw-prd-test/
-   ls -la ~/.openclaw-prd-test/
+   ls -la ~/minion-prd-test/
+   ls -la ~/.minion-prd-test/
    ```
 
 3. **Verify .env has correct container names**:
+
    ```bash
    ssh deploy@<test-ip>
-   cat ~/openclaw-prd-test/.env | grep CONTAINER_NAME
-   # Should show: test_openclaw_gw and test_openclaw_cli
+   cat ~/minion-prd-test/.env | grep CONTAINER_NAME
+   # Should show: test_minion_gw and test_minion_cli
    ```
 
 4. **Test manual deployment on test server**:
    ```bash
    ssh deploy@<test-ip>
-   cd ~/openclaw-prd-test
+   cd ~/minion-prd-test
    docker compose pull
    docker compose up -d
    docker compose ps  # Verify containers running
@@ -250,6 +260,7 @@ Before activating Phase 2, verify:
    - Multiple "Deploy to prd-tenant-X" jobs running simultaneously
 
 3. **Verify tenant isolation**:
+
    ```bash
    # On each server, verify unique container names
    ssh deploy@<server-ip> "docker ps --format '{{.Names}}'"
@@ -367,7 +378,7 @@ scripts/deployment/
 ├── setup-server.sh                     # Enhanced with --tenant support (MODIFIED)
 ├── add-tenant.sh                       # Interactive helper (NEW)
 ├── generate-deploy-keys.sh             # SSH key generation (existing)
-└── backup-openclaw.sh                  # Backup script (existing)
+└── backup-minion.sh                  # Backup script (existing)
 
 .github/
 ├── workflows/
@@ -392,9 +403,10 @@ scripts/deployment/
    - Error messages help identify issues
 
 3. **Check server logs**:
+
    ```bash
    ssh deploy@<server-ip>
-   docker compose logs openclaw-gateway
+   docker compose logs minion-gateway
    ```
 
 4. **Rollback if needed**:
@@ -408,6 +420,7 @@ scripts/deployment/
 ✅ **Phase 2 is fully implemented and ready to use**
 
 **What you have now:**
+
 - Enhanced setup script with tenant support
 - Comprehensive step-by-step guide
 - Interactive helper script for easy tenant addition
@@ -415,6 +428,7 @@ scripts/deployment/
 - Complete documentation and templates
 
 **What you need to do:**
+
 - **Nothing, unless you want to add more servers**
 - Phase 1 continues working as-is
 - Activate Phase 2 when ready to scale

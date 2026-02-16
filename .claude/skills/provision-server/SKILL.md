@@ -1,7 +1,7 @@
 ---
 skill: provision-server
 description: >
-  Provision a new OpenClaw instance on a remote server. Handles the full lifecycle:
+  Provision a new Minion instance on a remote server. Handles the full lifecycle:
   SSH connectivity check, dry run, credential collection, setup execution, monitoring,
   verification, and server config registration. Use when deploying a new agent instance,
   setting up a dev environment on a VPS, or provisioning a new tenant.
@@ -11,7 +11,7 @@ triggers:
   - set up VPS
   - new agent deployment
   - provision remote
-  - deploy openclaw
+  - deploy minion
   - new server setup
   - add server
   - provision tenant
@@ -19,7 +19,7 @@ triggers:
 
 # Server Provisioning — Expert Workflow
 
-End-to-end provisioning of OpenClaw instances on remote servers using the setup framework
+End-to-end provisioning of Minion instances on remote servers using the setup framework
 at `setup/setup.sh`.
 
 ## Architecture Overview
@@ -29,7 +29,7 @@ at `setup/setup.sh`.
 - **Entry point**: `setup/setup.sh` — orchestrates all phases
 - **Phases**: `setup/phases/` — 00 through 70 (plus 95-decommission, 99-rollback)
 - **Libraries**: `setup/lib/` — logging, variables, network, templates
-- **Templates**: `setup/templates/` — openclaw.json, systemd, SOUL.md, wrapper
+- **Templates**: `setup/templates/` — minion.json, systemd, SOUL.md, wrapper
 - **Config**: `setup/config/defaults.yaml` — all default values
 - **Profiles**: External `minions` repo or `setup/profiles/`
 
@@ -41,7 +41,7 @@ at `setup/setup.sh`.
 | 20    | User Creation | Create agent user, directories, enable linger     |
 | 30    | Environment   | Install/verify Node.js, pnpm, gh CLI, build tools |
 | 40    | Install       | Clone repo, checkout branch, pnpm install + build |
-| 45    | Alias         | Create `~/.local/bin/openclaw` wrapper            |
+| 45    | Alias         | Create `~/.local/bin/minion` wrapper              |
 | 50    | Config        | Render templates, deploy with correct permissions |
 | 60    | Service       | Enable + start systemd user service               |
 | 70    | Verification  | Health checks, deployment summary                 |
@@ -57,9 +57,9 @@ Format:
 {
   "id": "env-tenant-name",
   "host": "hostname-or-ip",
-  "user": "openclaw-username",
+  "user": "minion-username",
   "port": 22,
-  "deployment_path": "/home/username/openclaw",
+  "deployment_path": "/home/username/minion",
   "platform": "linux/amd64",
   "gateway_port": 18789,
   "bridge_port": 18790,
@@ -85,7 +85,7 @@ Root access is required for user creation (phase 20) and package installation (p
 
 ### Step 2: Check for Port Conflicts
 
-If the server already hosts other OpenClaw instances, verify port availability:
+If the server already hosts other Minion instances, verify port availability:
 
 - Check `.github/servers/production.json` and `development.json` for existing port allocations
 - Default gateway port: 18789, bridge: 18790
@@ -107,7 +107,7 @@ bash setup/setup.sh \
 
 Review the output to confirm:
 
-- Correct `AGENT_USERNAME` derivation (openclaw-{agent-name})
+- Correct `AGENT_USERNAME` derivation (minion-{agent-name})
 - Correct `AGENT_HOME_DIR` path
 - No variable conflicts with existing deployments
 
@@ -176,7 +176,7 @@ After provisioning, review the full output for improvement observations using th
 ### Configuration
 
 - `--vps-hostname=HOST` — Target server (implies remote mode)
-- `--agent-name=NAME` — Agent name (derives username as `openclaw-{name}`)
+- `--agent-name=NAME` — Agent name (derives username as `minion-{name}`)
 - `--branch=BRANCH` — Git branch to deploy (default: main)
 - `--gateway-port=PORT` — Gateway listen port (default: 18789)
 - `--api-key=KEY` — Anthropic API key (required)
@@ -195,7 +195,7 @@ After provisioning, review the full output for improvement observations using th
 
 When deploying multiple agents on the same server:
 
-- Each agent gets its own Linux user (`openclaw-{name}`)
+- Each agent gets its own Linux user (`minion-{name}`)
 - Each needs a unique gateway port
 - Bridge port conventionally follows gateway port + 1
 - Config directories are isolated under each user's home
@@ -206,8 +206,8 @@ When deploying multiple agents on the same server:
 ### Service won't start
 
 ```bash
-ssh openclaw-{name}@<host> "systemctl --user status openclaw-gateway"
-ssh openclaw-{name}@<host> "journalctl --user -u openclaw-gateway -n 50"
+ssh minion-{name}@<host> "systemctl --user status minion-gateway"
+ssh minion-{name}@<host> "journalctl --user -u minion-gateway -n 50"
 ```
 
 ### Health check fails
@@ -215,7 +215,7 @@ ssh openclaw-{name}@<host> "journalctl --user -u openclaw-gateway -n 50"
 The gateway may need more warmup time. Check if the process is running:
 
 ```bash
-ssh openclaw-{name}@<host> "systemctl --user is-active openclaw-gateway"
+ssh minion-{name}@<host> "systemctl --user is-active minion-gateway"
 ```
 
 ### Resume after failure

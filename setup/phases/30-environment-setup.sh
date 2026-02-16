@@ -8,7 +8,7 @@
 #   dual-mode support.
 # when: >
 #   After user creation. Ensures the build toolchain is available before
-#   cloning and building OpenClaw from source.
+#   cloning and building Minion from source.
 # requires:
 #   - "Phase 20 (user creation) completed"
 #   - "Internet connectivity"

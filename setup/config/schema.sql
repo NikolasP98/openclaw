@@ -1,4 +1,4 @@
--- OpenClaw Setup Framework - SQLite Schema
+-- Minion Setup Framework - SQLite Schema
 -- Database: state.db
 -- Purpose: Track profiles, agents, and deployments
 
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS agents (
     last_health_check TIMESTAMP,
     health_status TEXT,  -- healthy, unhealthy, unknown
     profile_id TEXT,
-    version TEXT,  -- OpenClaw version
+    version TEXT,  -- Minion version
     FOREIGN KEY (profile_id) REFERENCES profiles(profile_id) ON DELETE SET NULL,
     CONSTRAINT valid_status CHECK (status IN ('pending', 'deploying', 'active', 'stopped', 'failed')),
     CONSTRAINT valid_port CHECK (gateway_port BETWEEN 1024 AND 65535)
@@ -97,7 +97,7 @@ CREATE TABLE IF NOT EXISTS channels (
 
 -- API keys table: Encrypted storage of API credentials (NOT IMPLEMENTED - use file-based)
 -- Note: This table is reserved for future use with proper encryption
--- For now, API keys are stored in agent's openclaw.json with 600 permissions
+-- For now, API keys are stored in agent's minion.json with 600 permissions
 CREATE TABLE IF NOT EXISTS api_keys (
     key_id INTEGER PRIMARY KEY AUTOINCREMENT,
     agent_id TEXT NOT NULL,

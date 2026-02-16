@@ -1,0 +1,10 @@
+{
+  "id": "squid",
+  "name": "Squid",
+  "description": "Typed workflow tool with resumable approvals.",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

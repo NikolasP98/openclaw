@@ -1,11 +1,11 @@
 <script lang="ts">
-  import type { OpenClawConfig } from '../types';
+  import type { MinionConfig } from '../types';
 
-  let { config }: { config: OpenClawConfig } = $props();
+  let { config }: { config: MinionConfig } = $props();
 
   $effect(() => {
-    if (!config.agents) config.agents = {};
-    if (!config.agents.list) config.agents.list = [];
+    if (!config.agents) {config.agents = {};}
+    if (!config.agents.list) {config.agents.list = [];}
   });
 
   function addAgent() {
@@ -65,7 +65,7 @@
               id="agent-workspace-{index}"
               type="text"
               bind:value={agent.workspace}
-              placeholder="e.g., /home/node/.openclaw/workspace"
+              placeholder="e.g., /home/node/.minion/workspace"
             />
           </label>
         </div>

@@ -51,7 +51,7 @@ let configuredExternalRedirectUri: string | undefined;
  * Priority: env var > config > localhost fallback.
  */
 export function getRedirectUri(): string {
-  const envUri = process.env.OPENCLAW_GOG_OAUTH_REDIRECT_URI;
+  const envUri = process.env.MINION_GOG_OAUTH_REDIRECT_URI;
   if (envUri) {
     return envUri;
   }
@@ -294,7 +294,7 @@ async function handleRequest(
 <!DOCTYPE html>
 <html>
 <head>
-	<title>Google OAuth - OpenClaw</title>
+	<title>Google OAuth - Minion</title>
 	<style>
 		body {
 			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;

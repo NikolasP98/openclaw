@@ -1,11 +1,11 @@
 # Fork Workflow & Branch Management
 
-This document describes the branch naming conventions and cleanup strategies for the OpenClaw fork.
+This document describes the branch naming conventions and cleanup strategies for the Minion fork.
 
 ## Branch Structure
 
 ```
-upstream/main (openclaw/openclaw official)
+upstream/main (minion/minion official)
     ↓ (fast-forward sync - automated)
 mirror (clean mirror of upstream - NO custom commits)
     ↓ (automated sync)
@@ -24,8 +24,8 @@ feature/* branches → Update by rebasing/merging from DEV
 ## Remotes
 
 ```
-origin   → git@github.com:NikolasP98/openclaw.git (your fork)
-upstream → git@github.com:openclaw/openclaw.git (official repo)
+origin   → git@github.com:NikolasP98/minion.git (your fork)
+upstream → git@github.com:minion/minion.git (official repo)
 ```
 
 ## Branch Naming Conventions
@@ -36,7 +36,7 @@ upstream → git@github.com:openclaw/openclaw.git (official repo)
 
 **Terminology:**
 
-- `upstream/main` = Official OpenClaw main branch
+- `upstream/main` = Official Minion main branch
 - `origin/mirror` = Your fork's mirror branch (tracks upstream)
 - `mirror` (local) = Your working copy (tracks origin/mirror)
 
@@ -251,7 +251,7 @@ git push origin feature/docker-workflow-automation
 
 ```bash
 pnpm test
-pnpm openclaw <your-feature-command>
+pnpm minion <your-feature-command>
 ```
 
 ### Emergency Conflict Resolution
@@ -316,7 +316,7 @@ git cherry-pick <commit-hash>
 
 ### 3. Monitor Upstream Changes
 
-- Watch the openclaw/openclaw repository
+- Watch the minion/minion repository
 - Review changelogs for breaking changes
 - Sync proactively when relevant changes land
 
@@ -363,7 +363,7 @@ git commit -m "Merge DEV into feature/docker-workflow-automation"
 
 # 7. Test the feature
 pnpm test
-pnpm openclaw docker-workflow --help
+pnpm minion docker-workflow --help
 
 # 8. Push updated branch
 git push origin feature/docker-workflow-automation

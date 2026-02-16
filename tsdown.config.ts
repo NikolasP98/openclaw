@@ -8,7 +8,7 @@ const env = {
 };
 
 const define = {
-  __OPENCLAW_VERSION__: JSON.stringify(pkg.version),
+  __MINION_VERSION__: JSON.stringify(pkg.version),
 };
 
 export default defineConfig([

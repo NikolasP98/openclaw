@@ -1,12 +1,12 @@
 [Unit]
-Description=OpenClaw Gateway - {{AGENT_NAME}}
+Description=Minion Gateway - {{AGENT_NAME}}
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory={{OPENCLAW_ROOT}}
-ExecStart={{NODE_BIN_PATH}} {{OPENCLAW_ROOT}}/scripts/run-node.mjs gateway
+WorkingDirectory={{MINION_ROOT}}
+ExecStart={{NODE_BIN_PATH}} {{MINION_ROOT}}/scripts/run-node.mjs gateway
 Restart=always
 RestartSec=10
 StandardOutput=journal

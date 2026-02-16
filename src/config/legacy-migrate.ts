@@ -1,9 +1,9 @@
-import type { OpenClawConfig } from "./types.js";
+import type { MinionConfig } from "./types.js";
 import { applyLegacyMigrations } from "./legacy.js";
 import { validateConfigObjectWithPlugins } from "./validation.js";
 
 export function migrateLegacyConfig(raw: unknown): {
-  config: OpenClawConfig | null;
+  config: MinionConfig | null;
   changes: string[];
 } {
   const { next, changes } = applyLegacyMigrations(raw);

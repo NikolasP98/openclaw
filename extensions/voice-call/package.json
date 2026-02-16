@@ -1,7 +1,7 @@
 {
-  "name": "@openclaw/voice-call",
+  "name": "@minion/voice-call",
   "version": "2026.2.13",
-  "description": "OpenClaw voice-call plugin",
+  "description": "Minion voice-call plugin",
   "type": "module",
   "dependencies": {
     "@sinclair/typebox": "0.34.48",
@@ -9,9 +9,9 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "openclaw": "workspace:*"
+    "minion": "workspace:*"
   },
-  "openclaw": {
+  "minion": {
     "extensions": [
       "./index.ts"
     ]

@@ -1,5 +1,5 @@
 #!/bin/bash
-# OpenClaw Fork Quick Sync Script
+# Minion Fork Quick Sync Script
 # Automates the full fork sync workflow for routine updates
 # WARNING: This assumes no merge conflicts. Review changes manually first!
 
@@ -12,7 +12,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}🔄 Starting OpenClaw fork sync workflow...${NC}"
+echo -e "${BLUE}🔄 Starting Minion fork sync workflow...${NC}"
 echo ""
 
 # Pre-flight checks
@@ -26,7 +26,7 @@ fi
 
 if ! git remote | grep -q "^upstream$"; then
   echo -e "${RED}❌ Upstream remote not configured.${NC}"
-  echo "Add it with: git remote add upstream https://github.com/openclaw/openclaw.git"
+  echo "Add it with: git remote add upstream https://github.com/minion/minion.git"
   exit 1
 fi
 

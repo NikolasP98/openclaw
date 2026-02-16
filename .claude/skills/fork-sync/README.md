@@ -1,10 +1,10 @@
 # Fork Sync Skill
 
-Comprehensive workflow automation for syncing the OpenClaw fork with upstream and managing the DEV/main branch structure.
+Comprehensive workflow automation for syncing the Minion fork with upstream and managing the DEV/main branch structure.
 
 ## Overview
 
-This skill manages the complete fork synchronization workflow for the OpenClaw fork, including:
+This skill manages the complete fork synchronization workflow for the Minion fork, including:
 
 - Syncing `mirror` with `upstream/main`
 - Updating `DEV` (integration) branch with upstream changes
@@ -121,5 +121,5 @@ git push origin main
 
 - Repository guidelines: `CLAUDE.md`
 - Fork workflow docs: `docs/fork-workflow.md`
-- Upstream repo: https://github.com/openclaw/openclaw
-- Fork repo: https://github.com/NikolasP98/openclaw
+- Upstream repo: https://github.com/minion/minion
+- Fork repo: https://github.com/NikolasP98/minion

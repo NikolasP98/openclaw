@@ -1,6 +1,6 @@
 import "./test-helpers.js";
 import { describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { MinionConfig } from "../config/config.js";
 import { monitorWebChannel } from "./auto-reply.js";
 import {
   createWebInboundDeliverySpies,
@@ -27,7 +27,7 @@ describe("broadcast groups", () => {
       broadcast: {
         "+1000": ["alfred", "missing"],
       },
-    } satisfies OpenClawConfig);
+    } satisfies MinionConfig);
 
     const seen: string[] = [];
     const resolver = vi.fn(async (ctx: { SessionKey?: unknown }) => {

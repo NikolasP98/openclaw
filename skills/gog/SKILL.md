@@ -4,7 +4,7 @@ description: Google Workspace CLI for Gmail, Calendar, Drive, Contacts, Sheets, 
 homepage: https://gogcli.sh
 metadata:
   {
-    "openclaw":
+    "minion":
       {
         "emoji": "🎮",
         "requires": { "bins": ["gog"] },
@@ -28,7 +28,7 @@ Use `gog` for Gmail/Calendar/Drive/Contacts/Sheets/Docs. Requires OAuth setup.
 
 ## Authentication
 
-OpenClaw provides **non-blocking OAuth authentication** via agent tools. When you need to access Google services, the agent will:
+Minion provides **non-blocking OAuth authentication** via agent tools. When you need to access Google services, the agent will:
 
 1. Use `gog_auth_start` to initiate OAuth (provides a clickable link)
 2. Remain responsive while you authorize in your browser
@@ -46,7 +46,7 @@ OpenClaw provides **non-blocking OAuth authentication** via agent tools. When yo
 - `gog auth add you@gmail.com --services gmail,calendar,drive,contacts,docs,sheets`
 - `gog auth list`
 
-Note: Session credentials are isolated per chat session. Each user/session maintains separate OAuth credentials stored in `~/.openclaw/agents/{agentId}/gog-credentials/`.
+Note: Session credentials are isolated per chat session. Each user/session maintains separate OAuth credentials stored in `~/.minion/agents/{agentId}/gog-credentials/`.
 
 Common commands
 
@@ -148,7 +148,7 @@ hooks:
 
 - `GOOGLE_CLIENT_ID` - OAuth client ID (required)
 - `GOOGLE_CLIENT_SECRET` - OAuth client secret (required)
-- `OPENCLAW_SKIP_GOG_OAUTH=1` - Disable OAuth server
+- `MINION_SKIP_GOG_OAUTH=1` - Disable OAuth server
 
 **Security:**
 

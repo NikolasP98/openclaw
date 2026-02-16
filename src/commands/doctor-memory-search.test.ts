@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../config/config.js";
+import type { MinionConfig } from "../config/config.js";
 
 const note = vi.hoisted(() => vi.fn());
 const resolveDefaultAgentId = vi.hoisted(() => vi.fn(() => "agent-default"));
@@ -27,7 +27,7 @@ vi.mock("../agents/model-auth.js", () => ({
 import { noteMemorySearchHealth } from "./doctor-memory-search.js";
 
 describe("noteMemorySearchHealth", () => {
-  const cfg = {} as OpenClawConfig;
+  const cfg = {} as MinionConfig;
 
   beforeEach(() => {
     note.mockReset();

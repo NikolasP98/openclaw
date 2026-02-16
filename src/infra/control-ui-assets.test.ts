@@ -10,7 +10,7 @@ import {
   resolveControlUiRootOverrideSync,
   resolveControlUiRootSync,
 } from "./control-ui-assets.js";
-import { resolveOpenClawPackageRoot } from "./openclaw-root.js";
+import { resolveMinionPackageRoot } from "./minion-root.js";
 
 /** Try to create a symlink; returns false if the OS denies it (Windows CI without Developer Mode). */
 async function trySymlink(target: string, linkPath: string): Promise<boolean> {
@@ -41,7 +41,7 @@ describe("control UI assets helpers", () => {
   }
 
   beforeAll(async () => {
-    fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-ui-"));
+    fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "minion-ui-"));
   });
 
   afterAll(async () => {
@@ -96,7 +96,7 @@ describe("control UI assets helpers", () => {
 
   it("resolves control-ui root for dist/gateway bundle argv1", async () => {
     await withTempDir(async (tmp) => {
-      await fs.writeFile(path.join(tmp, "package.json"), JSON.stringify({ name: "openclaw" }));
+      await fs.writeFile(path.join(tmp, "package.json"), JSON.stringify({ name: "minion" }));
       await fs.mkdir(path.join(tmp, "dist", "gateway"), { recursive: true });
       await fs.mkdir(path.join(tmp, "dist", "control-ui"), { recursive: true });
       await fs.writeFile(path.join(tmp, "dist", "gateway", "control-ui.js"), "export {};\n");
@@ -122,12 +122,12 @@ describe("control UI assets helpers", () => {
 
   it("resolves dist control-ui index path from package root argv1", async () => {
     await withTempDir(async (tmp) => {
-      await fs.writeFile(path.join(tmp, "package.json"), JSON.stringify({ name: "openclaw" }));
-      await fs.writeFile(path.join(tmp, "openclaw.mjs"), "export {};\n");
+      await fs.writeFile(path.join(tmp, "package.json"), JSON.stringify({ name: "minion" }));
+      await fs.writeFile(path.join(tmp, "minion.mjs"), "export {};\n");
       await fs.mkdir(path.join(tmp, "dist", "control-ui"), { recursive: true });
       await fs.writeFile(path.join(tmp, "dist", "control-ui", "index.html"), "<html></html>\n");
 
-      expect(await resolveControlUiDistIndexPath(path.join(tmp, "openclaw.mjs"))).toBe(
+      expect(await resolveControlUiDistIndexPath(path.join(tmp, "minion.mjs"))).toBe(
         path.join(tmp, "dist", "control-ui", "index.html"),
       );
     });
@@ -135,12 +135,12 @@ describe("control UI assets helpers", () => {
 
   it("resolves control-ui root for package entrypoint argv1", async () => {
     await withTempDir(async (tmp) => {
-      await fs.writeFile(path.join(tmp, "package.json"), JSON.stringify({ name: "openclaw" }));
-      await fs.writeFile(path.join(tmp, "openclaw.mjs"), "export {};\n");
+      await fs.writeFile(path.join(tmp, "package.json"), JSON.stringify({ name: "minion" }));
+      await fs.writeFile(path.join(tmp, "minion.mjs"), "export {};\n");
       await fs.mkdir(path.join(tmp, "dist", "control-ui"), { recursive: true });
       await fs.writeFile(path.join(tmp, "dist", "control-ui", "index.html"), "<html></html>\n");
 
-      expect(resolveControlUiRootSync({ argv1: path.join(tmp, "openclaw.mjs") })).toBe(
+      expect(resolveControlUiRootSync({ argv1: path.join(tmp, "minion.mjs") })).toBe(
         path.join(tmp, "dist", "control-ui"),
       );
     });
@@ -149,14 +149,14 @@ describe("control UI assets helpers", () => {
   it("resolves dist control-ui index path from .bin argv1", async () => {
     await withTempDir(async (tmp) => {
       const binDir = path.join(tmp, "node_modules", ".bin");
-      const pkgRoot = path.join(tmp, "node_modules", "openclaw");
+      const pkgRoot = path.join(tmp, "node_modules", "minion");
       await fs.mkdir(binDir, { recursive: true });
       await fs.mkdir(path.join(pkgRoot, "dist", "control-ui"), { recursive: true });
-      await fs.writeFile(path.join(binDir, "openclaw"), "#!/usr/bin/env node\n");
-      await fs.writeFile(path.join(pkgRoot, "package.json"), JSON.stringify({ name: "openclaw" }));
+      await fs.writeFile(path.join(binDir, "minion"), "#!/usr/bin/env node\n");
+      await fs.writeFile(path.join(pkgRoot, "package.json"), JSON.stringify({ name: "minion" }));
       await fs.writeFile(path.join(pkgRoot, "dist", "control-ui", "index.html"), "<html></html>\n");
 
-      expect(await resolveControlUiDistIndexPath(path.join(binDir, "openclaw"))).toBe(
+      expect(await resolveControlUiDistIndexPath(path.join(binDir, "minion"))).toBe(
         path.join(pkgRoot, "dist", "control-ui", "index.html"),
       );
     });
@@ -164,19 +164,19 @@ describe("control UI assets helpers", () => {
 
   it("resolves via fallback when package root resolution fails but package name matches", async () => {
     await withTempDir(async (tmp) => {
-      // Package named "openclaw" but resolveOpenClawPackageRoot failed for other reasons
-      await fs.writeFile(path.join(tmp, "package.json"), JSON.stringify({ name: "openclaw" }));
-      await fs.writeFile(path.join(tmp, "openclaw.mjs"), "export {};\n");
+      // Package named "minion" but resolveMinionPackageRoot failed for other reasons
+      await fs.writeFile(path.join(tmp, "package.json"), JSON.stringify({ name: "minion" }));
+      await fs.writeFile(path.join(tmp, "minion.mjs"), "export {};\n");
       await fs.mkdir(path.join(tmp, "dist", "control-ui"), { recursive: true });
       await fs.writeFile(path.join(tmp, "dist", "control-ui", "index.html"), "<html></html>\n");
 
-      expect(await resolveControlUiDistIndexPath(path.join(tmp, "openclaw.mjs"))).toBe(
+      expect(await resolveControlUiDistIndexPath(path.join(tmp, "minion.mjs"))).toBe(
         path.join(tmp, "dist", "control-ui", "index.html"),
       );
     });
   });
 
-  it("returns null when package name does not match openclaw", async () => {
+  it("returns null when package name does not match minion", async () => {
     await withTempDir(async (tmp) => {
       // Package with different name should not be resolved
       await fs.writeFile(path.join(tmp, "package.json"), JSON.stringify({ name: "malicious-pkg" }));
@@ -227,19 +227,19 @@ describe("control UI assets helpers", () => {
       const bin = path.join(tmp, "bin");
       await fs.mkdir(realPkg, { recursive: true });
       await fs.mkdir(bin, { recursive: true });
-      await fs.writeFile(path.join(realPkg, "package.json"), JSON.stringify({ name: "openclaw" }));
-      await fs.writeFile(path.join(realPkg, "openclaw.mjs"), "export {};\n");
+      await fs.writeFile(path.join(realPkg, "package.json"), JSON.stringify({ name: "minion" }));
+      await fs.writeFile(path.join(realPkg, "minion.mjs"), "export {};\n");
       await fs.mkdir(path.join(realPkg, "dist", "control-ui"), { recursive: true });
       await fs.writeFile(path.join(realPkg, "dist", "control-ui", "index.html"), "<html></html>\n");
       const ok = await trySymlink(
-        path.join("..", "real-pkg", "openclaw.mjs"),
-        path.join(bin, "openclaw"),
+        path.join("..", "real-pkg", "minion.mjs"),
+        path.join(bin, "minion"),
       );
       if (!ok) {
         return; // symlinks not supported (Windows CI)
       }
 
-      const resolvedRoot = resolveControlUiRootSync({ argv1: path.join(bin, "openclaw") });
+      const resolvedRoot = resolveControlUiRootSync({ argv1: path.join(bin, "minion") });
       expect(resolvedRoot).not.toBeNull();
       expect(await canonicalPath(resolvedRoot ?? "")).toBe(
         await canonicalPath(path.join(realPkg, "dist", "control-ui")),
@@ -253,19 +253,19 @@ describe("control UI assets helpers", () => {
       const bin = path.join(tmp, "bin");
       await fs.mkdir(realPkg, { recursive: true });
       await fs.mkdir(bin, { recursive: true });
-      await fs.writeFile(path.join(realPkg, "package.json"), JSON.stringify({ name: "openclaw" }));
-      await fs.writeFile(path.join(realPkg, "openclaw.mjs"), "export {};\n");
+      await fs.writeFile(path.join(realPkg, "package.json"), JSON.stringify({ name: "minion" }));
+      await fs.writeFile(path.join(realPkg, "minion.mjs"), "export {};\n");
       await fs.mkdir(path.join(realPkg, "dist", "control-ui"), { recursive: true });
       await fs.writeFile(path.join(realPkg, "dist", "control-ui", "index.html"), "<html></html>\n");
       const ok = await trySymlink(
-        path.join("..", "real-pkg", "openclaw.mjs"),
-        path.join(bin, "openclaw"),
+        path.join("..", "real-pkg", "minion.mjs"),
+        path.join(bin, "minion"),
       );
       if (!ok) {
         return; // symlinks not supported (Windows CI)
       }
 
-      const packageRoot = await resolveOpenClawPackageRoot({ argv1: path.join(bin, "openclaw") });
+      const packageRoot = await resolveMinionPackageRoot({ argv1: path.join(bin, "minion") });
       expect(packageRoot).not.toBeNull();
       expect(await canonicalPath(packageRoot ?? "")).toBe(await canonicalPath(realPkg));
     });
@@ -277,19 +277,19 @@ describe("control UI assets helpers", () => {
       const bin = path.join(tmp, "bin");
       await fs.mkdir(realPkg, { recursive: true });
       await fs.mkdir(bin, { recursive: true });
-      await fs.writeFile(path.join(realPkg, "package.json"), JSON.stringify({ name: "openclaw" }));
-      await fs.writeFile(path.join(realPkg, "openclaw.mjs"), "export {};\n");
+      await fs.writeFile(path.join(realPkg, "package.json"), JSON.stringify({ name: "minion" }));
+      await fs.writeFile(path.join(realPkg, "minion.mjs"), "export {};\n");
       await fs.mkdir(path.join(realPkg, "dist", "control-ui"), { recursive: true });
       await fs.writeFile(path.join(realPkg, "dist", "control-ui", "index.html"), "<html></html>\n");
       const ok = await trySymlink(
-        path.join("..", "real-pkg", "openclaw.mjs"),
-        path.join(bin, "openclaw"),
+        path.join("..", "real-pkg", "minion.mjs"),
+        path.join(bin, "minion"),
       );
       if (!ok) {
         return; // symlinks not supported (Windows CI)
       }
 
-      const indexPath = await resolveControlUiDistIndexPath(path.join(bin, "openclaw"));
+      const indexPath = await resolveControlUiDistIndexPath(path.join(bin, "minion"));
       expect(indexPath).not.toBeNull();
       expect(await canonicalPath(indexPath ?? "")).toBe(
         await canonicalPath(path.join(realPkg, "dist", "control-ui", "index.html")),

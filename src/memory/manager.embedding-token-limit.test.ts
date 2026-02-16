@@ -61,7 +61,7 @@ describe("memory embedding token limits", () => {
   }
 
   beforeAll(async () => {
-    fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-mem-token-"));
+    fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "minion-mem-token-"));
     workspaceDir = path.join(fixtureRoot, "workspace");
     memoryDir = path.join(workspaceDir, "memory");
     indexPathLarge = path.join(fixtureRoot, "index.large.sqlite");

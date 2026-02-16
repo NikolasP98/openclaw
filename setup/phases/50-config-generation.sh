@@ -3,19 +3,19 @@
 # name: "Configuration Generation"
 # phase: 50
 # description: >
-#   Renders configuration templates (openclaw.json, systemd service, SOUL.md)
+#   Renders configuration templates (minion.json, systemd service, SOUL.md)
 #   with environment variable values. Validates JSON syntax. Deploys config
 #   files to their final locations with correct ownership and permissions.
 # when: >
-#   After OpenClaw is installed and alias is set up. Generates the runtime
+#   After Minion is installed and alias is set up. Generates the runtime
 #   configuration files the gateway needs to start.
 # requires:
 #   - "Phase 45 (alias setup) completed"
 #   - "All configuration variables set"
 # produces:
-#   - "~/.openclaw/openclaw.json (mode 600)"
-#   - "~/.openclaw/workspace/SOUL.md"
-#   - "~/.config/systemd/user/openclaw-gateway.service"
+#   - "~/.minion/minion.json (mode 600)"
+#   - "~/.minion/workspace/SOUL.md"
+#   - "~/.config/systemd/user/minion-gateway.service"
 # flags:
 #   -v, --verbose: "Enable debug-level logging"
 # idempotent: true
@@ -36,7 +36,7 @@ derive_system_variables
 generate_configuration() {
     phase_start "Configuration Generation" "50"
 
-    local temp_dir="/tmp/openclaw-config-$$"
+    local temp_dir="/tmp/minion-config-$$"
     mkdir -p "$temp_dir"
 
     local exec_user="${AGENT_USERNAME:-$(whoami)}"
@@ -49,7 +49,7 @@ generate_configuration() {
     # Set defaults for deployment metadata
     DEPLOYMENT_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     DEPLOYMENT_ENVIRONMENT="${DEPLOYMENT_ENVIRONMENT:-production}"
-    OPENCLAW_VERSION="${OPENCLAW_VERSION:-source}"
+    MINION_VERSION="${MINION_VERSION:-source}"
 
     # Set defaults for agent behavior
     AGENT_PERSONALITY="${AGENT_PERSONALITY:-You are a helpful AI assistant.}"
@@ -58,26 +58,26 @@ generate_configuration() {
     DOMAIN_KNOWLEDGE="${DOMAIN_KNOWLEDGE:-General purpose knowledge and skills}"
 
     # Export all for template rendering
-    export DEPLOYMENT_DATE DEPLOYMENT_ENVIRONMENT OPENCLAW_VERSION
+    export DEPLOYMENT_DATE DEPLOYMENT_ENVIRONMENT MINION_VERSION
     export AGENT_PERSONALITY AGENT_RESPONSIBILITIES COMMUNICATION_STYLE DOMAIN_KNOWLEDGE
 
-    # --- Render openclaw.json ---
-    log_info "Rendering openclaw.json configuration..."
-    if ! render_template "${SCRIPT_DIR}/../templates/openclaw.json.template" "$temp_dir/openclaw.json"; then
-        handle_error $? "Failed to render openclaw.json" "Configuration Generation"
+    # --- Render minion.json ---
+    log_info "Rendering minion.json configuration..."
+    if ! render_template "${SCRIPT_DIR}/../templates/minion.json.template" "$temp_dir/minion.json"; then
+        handle_error $? "Failed to render minion.json" "Configuration Generation"
         return 1
     fi
 
     log_info "Validating rendered configuration..."
-    if ! validate_template "$temp_dir/openclaw.json"; then
+    if ! validate_template "$temp_dir/minion.json"; then
         handle_error $? "Configuration validation failed" "Configuration Generation"
         return 1
     fi
 
     # Validate JSON syntax (if jq available)
     if command -v jq &> /dev/null; then
-        if ! jq empty "$temp_dir/openclaw.json" 2>/dev/null; then
-            log_error "Invalid JSON in rendered openclaw.json"
+        if ! jq empty "$temp_dir/minion.json" 2>/dev/null; then
+            log_error "Invalid JSON in rendered minion.json"
             handle_error 1 "Invalid JSON configuration" "Configuration Generation"
             return 1
         fi
@@ -93,10 +93,10 @@ generate_configuration() {
     else
         service_template="${SCRIPT_DIR}/../templates/systemd-npm.service.template"
         # Ensure package install vars are exported for template rendering
-        export OPENCLAW_BIN OPENCLAW_PKG_ROOT
+        export MINION_BIN MINION_PKG_ROOT
     fi
     log_info "Rendering systemd service file (template: $(basename "$service_template"))..."
-    if ! render_template "$service_template" "$temp_dir/openclaw-gateway.service"; then
+    if ! render_template "$service_template" "$temp_dir/minion-gateway.service"; then
         handle_error $? "Failed to render service file" "Configuration Generation"
         return 1
     fi
@@ -126,44 +126,44 @@ AUTHEOF
     # --- Deploy files ---
     log_info "Deploying configuration files..."
 
-    local config_dir="${OPENCLAW_CONFIG_DIR:-${AGENT_HOME_DIR:-$HOME}/.openclaw}"
+    local config_dir="${MINION_CONFIG_DIR:-${AGENT_HOME_DIR:-$HOME}/.minion}"
     local workspace_dir="${WORKSPACE_DIR:-${config_dir}/workspace}"
     local systemd_dir="${AGENT_HOME_DIR:-$HOME}/.config/systemd/user"
 
     if [ "${EXEC_MODE:-local}" = "remote" ]; then
         # Remote: SCP files to staging dir, then place + permission in one batch
-        local remote_tmp="/tmp/openclaw-deploy-$$"
+        local remote_tmp="/tmp/minion-deploy-$$"
         local agent_auth_dir="${config_dir}/agents/main/agent"
 
         run_cmd --as root "mkdir -p '$remote_tmp'"
 
-        copy_file "$temp_dir/openclaw.json" "$remote_tmp/openclaw.json" root
-        copy_file "$temp_dir/openclaw-gateway.service" "$remote_tmp/openclaw-gateway.service" root
+        copy_file "$temp_dir/minion.json" "$remote_tmp/minion.json" root
+        copy_file "$temp_dir/minion-gateway.service" "$remote_tmp/minion-gateway.service" root
         copy_file "$temp_dir/SOUL.md" "$remote_tmp/SOUL.md" root
         copy_file "$temp_dir/auth-profiles.json" "$remote_tmp/auth-profiles.json" root
 
         # Batch all cp/chown/chmod into a single SSH call
         run_cmd --as root "
             mkdir -p '${agent_auth_dir}' &&
-            cp '$remote_tmp/openclaw.json' '${config_dir}/openclaw.json' &&
+            cp '$remote_tmp/minion.json' '${config_dir}/minion.json' &&
             cp '$remote_tmp/SOUL.md' '${workspace_dir}/SOUL.md' &&
-            cp '$remote_tmp/openclaw-gateway.service' '${systemd_dir}/openclaw-gateway.service' &&
+            cp '$remote_tmp/minion-gateway.service' '${systemd_dir}/minion-gateway.service' &&
             cp '$remote_tmp/auth-profiles.json' '${agent_auth_dir}/auth-profiles.json' &&
-            chown ${exec_user}:${exec_user} '${config_dir}/openclaw.json' '${workspace_dir}/SOUL.md' '${systemd_dir}/openclaw-gateway.service' &&
+            chown ${exec_user}:${exec_user} '${config_dir}/minion.json' '${workspace_dir}/SOUL.md' '${systemd_dir}/minion-gateway.service' &&
             chown -R ${exec_user}:${exec_user} '${config_dir}/agents' &&
-            chmod 600 '${config_dir}/openclaw.json' '${agent_auth_dir}/auth-profiles.json' &&
-            chmod 644 '${workspace_dir}/SOUL.md' '${systemd_dir}/openclaw-gateway.service' &&
+            chmod 600 '${config_dir}/minion.json' '${agent_auth_dir}/auth-profiles.json' &&
+            chmod 644 '${workspace_dir}/SOUL.md' '${systemd_dir}/minion-gateway.service' &&
             rm -rf '$remote_tmp'
         "
     else
         # Local: copy directly
-        cp "$temp_dir/openclaw.json" "${config_dir}/openclaw.json"
+        cp "$temp_dir/minion.json" "${config_dir}/minion.json"
         cp "$temp_dir/SOUL.md" "${workspace_dir}/SOUL.md"
-        cp "$temp_dir/openclaw-gateway.service" "${systemd_dir}/openclaw-gateway.service"
+        cp "$temp_dir/minion-gateway.service" "${systemd_dir}/minion-gateway.service"
 
-        chmod 600 "${config_dir}/openclaw.json"
+        chmod 600 "${config_dir}/minion.json"
         chmod 644 "${workspace_dir}/SOUL.md"
-        chmod 644 "${systemd_dir}/openclaw-gateway.service"
+        chmod 644 "${systemd_dir}/minion-gateway.service"
 
         local agent_auth_dir="${config_dir}/agents/main/agent"
         mkdir -p "${agent_auth_dir}"

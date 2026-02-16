@@ -1,74 +1,66 @@
 services:
-  openclaw-gateway:
-    platform: ${OPENCLAW_DOCKER_PLATFORM:-linux/amd64}
-    container_name: ${OPENCLAW_GATEWAY_CONTAINER_NAME:-openclaw_gateway}
-    image: ${OPENCLAW_IMAGE:-openclaw:local}
+  minion-gateway:
+    platform: ${MINION_DOCKER_PLATFORM:-linux/amd64}
+    container_name: ${MINION_GATEWAY_CONTAINER_NAME:-minion_gateway}
+    image: ${MINION_IMAGE:-minion:local}
     build:
       context: .
       dockerfile: Dockerfile
       args:
         # Browser support: Chromium is installed by default (Standard: ~320MB)
-        # To disable: set OPENCLAW_DOCKER_APT_PACKAGES="" in your environment
-        # To use minimal (no fonts): OPENCLAW_DOCKER_APT_PACKAGES="chromium"
-        # To use full (with VNC): OPENCLAW_DOCKER_APT_PACKAGES="chromium fonts-liberation fonts-noto-color-emoji xvfb x11vnc novnc websockify socat"
-        OPENCLAW_DOCKER_APT_PACKAGES: "${OPENCLAW_DOCKER_APT_PACKAGES:-chromium fonts-liberation fonts-noto-color-emoji}"
+        # To disable: set MINION_DOCKER_APT_PACKAGES="" in your environment
+        # To use minimal (no fonts): MINION_DOCKER_APT_PACKAGES="chromium"
+        # To use full (with VNC): MINION_DOCKER_APT_PACKAGES="chromium fonts-liberation fonts-noto-color-emoji xvfb x11vnc novnc websockify socat"
+        MINION_DOCKER_APT_PACKAGES: "${MINION_DOCKER_APT_PACKAGES:-chromium fonts-liberation fonts-noto-color-emoji}"
     environment:
       HOME: /home/node
       TERM: xterm-256color
-      OPENCLAW_ENV: ${OPENCLAW_ENV:-dev}
-      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}
-      OPENCLAW_LOCK_TIMEOUT_MS: ${OPENCLAW_LOCK_TIMEOUT_MS:-30000}
+      MINION_ENV: ${MINION_ENV:-dev}
+      MINION_GATEWAY_TOKEN: ${MINION_GATEWAY_TOKEN}
+      MINION_LOCK_TIMEOUT_MS: ${MINION_LOCK_TIMEOUT_MS:-30000}
       CLAUDE_AI_SESSION_KEY: ${CLAUDE_AI_SESSION_KEY}
       CLAUDE_WEB_SESSION_KEY: ${CLAUDE_WEB_SESSION_KEY}
       CLAUDE_WEB_COOKIE: ${CLAUDE_WEB_COOKIE}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
     volumes:
-      - ${OPENCLAW_CONFIG_DIR:-~/.openclaw}:/home/node/.openclaw
-      - ${OPENCLAW_WORKSPACE_DIR:-~/.openclaw/workspace}:/home/node/.openclaw/workspace
-      - ${OPENCLAW_GOG_CONFIG_DIR:-~/.config/gogcli}:/home/node/.config/gogcli
+      - ${MINION_CONFIG_DIR:-~/.minion}:/home/node/.minion
+      - ${MINION_WORKSPACE_DIR:-~/.minion/workspace}:/home/node/.minion/workspace
+      - ${MINION_GOG_CONFIG_DIR:-~/.config/gogcli}:/home/node/.config/gogcli
       - ${TAILSCALE_SOCKET:-/var/run/tailscale/tailscaled.sock}:/var/run/tailscale/tailscaled.sock
       - ${TAILSCALE_BINARY:-/usr/bin/tailscale}:/usr/bin/tailscale:ro
     ports:
-      - "${OPENCLAW_GATEWAY_PORT:-18789}:18789"
-      - "${OPENCLAW_BRIDGE_PORT:-18790}:18790"
+      - "${MINION_GATEWAY_PORT:-18789}:18789"
+      - "${MINION_BRIDGE_PORT:-18790}:18790"
     init: true
     restart: unless-stopped
     command:
-      [
-        "node",
-        "openclaw.mjs",
-        "gateway",
-        "--bind",
-        "${OPENCLAW_GATEWAY_BIND:-lan}",
-        "--port",
-        "18789",
-      ]
+      ["node", "minion.mjs", "gateway", "--bind", "${MINION_GATEWAY_BIND:-lan}", "--port", "18789"]
 
-  openclaw-cli:
-    platform: ${OPENCLAW_DOCKER_PLATFORM:-linux/amd64}
-    container_name: ${OPENCLAW_CLI_CONTAINER_NAME:-openclaw_cli}
-    image: ${OPENCLAW_IMAGE:-openclaw:local}
+  minion-cli:
+    platform: ${MINION_DOCKER_PLATFORM:-linux/amd64}
+    container_name: ${MINION_CLI_CONTAINER_NAME:-minion_cli}
+    image: ${MINION_IMAGE:-minion:local}
     build:
       context: .
       dockerfile: Dockerfile
       args:
         # Browser support enabled by default (matches gateway configuration)
-        OPENCLAW_DOCKER_APT_PACKAGES: "${OPENCLAW_DOCKER_APT_PACKAGES:-chromium fonts-liberation fonts-noto-color-emoji}"
+        MINION_DOCKER_APT_PACKAGES: "${MINION_DOCKER_APT_PACKAGES:-chromium fonts-liberation fonts-noto-color-emoji}"
     environment:
       HOME: /home/node
       TERM: xterm-256color
-      OPENCLAW_ENV: ${OPENCLAW_ENV:-dev}
-      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}
-      OPENCLAW_LOCK_TIMEOUT_MS: ${OPENCLAW_LOCK_TIMEOUT_MS:-30000}
+      MINION_ENV: ${MINION_ENV:-dev}
+      MINION_GATEWAY_TOKEN: ${MINION_GATEWAY_TOKEN}
+      MINION_LOCK_TIMEOUT_MS: ${MINION_LOCK_TIMEOUT_MS:-30000}
       BROWSER: echo
       CLAUDE_AI_SESSION_KEY: ${CLAUDE_AI_SESSION_KEY}
       CLAUDE_WEB_SESSION_KEY: ${CLAUDE_WEB_SESSION_KEY}
       CLAUDE_WEB_COOKIE: ${CLAUDE_WEB_COOKIE}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
     volumes:
-      - ${OPENCLAW_CONFIG_DIR:-~/.openclaw}:/home/node/.openclaw
-      - ${OPENCLAW_WORKSPACE_DIR:-~/.openclaw/workspace}:/home/node/.openclaw/workspace
-      - ${OPENCLAW_GOG_CONFIG_DIR:-~/.config/gogcli}:/home/node/.config/gogcli
+      - ${MINION_CONFIG_DIR:-~/.minion}:/home/node/.minion
+      - ${MINION_WORKSPACE_DIR:-~/.minion/workspace}:/home/node/.minion/workspace
+      - ${MINION_GOG_CONFIG_DIR:-~/.config/gogcli}:/home/node/.config/gogcli
       - ${TAILSCALE_SOCKET:-/var/run/tailscale/tailscaled.sock}:/var/run/tailscale/tailscaled.sock
       - ${TAILSCALE_BINARY:-/usr/bin/tailscale}:/usr/bin/tailscale:ro
     stdin_open: true
@@ -76,4 +68,4 @@ services:
     init: true
     # Use command instead of entrypoint to ensure entrypoint.sh runs first
     # This ensures consistent initialization (directory creation, default config)
-    command: ["node", "openclaw.mjs"]
+    command: ["node", "minion.mjs"]

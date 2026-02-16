@@ -17,7 +17,7 @@ import {
 
 describe("runCronIsolatedAgentTurn", () => {
   beforeEach(() => {
-    vi.stubEnv("OPENCLAW_TEST_FAST", "1");
+    vi.stubEnv("MINION_TEST_FAST", "1");
     vi.mocked(runEmbeddedPiAgent).mockReset();
     vi.mocked(loadModelCatalog).mockResolvedValue([]);
     vi.mocked(runSubagentAnnounceFlow).mockReset().mockResolvedValue(true);
@@ -81,7 +81,7 @@ describe("runCronIsolatedAgentTurn", () => {
       vi.mocked(runSubagentAnnounceFlow).mockClear();
       vi.mocked(deps.sendMessageTelegram).mockClear();
       vi.mocked(runEmbeddedPiAgent).mockResolvedValue({
-        payloads: [{ text: "HEARTBEAT_OK 🦞" }],
+        payloads: [{ text: "HEARTBEAT_OK 🦑" }],
         meta: {
           durationMs: 5,
           agentMeta: { sessionId: "s", provider: "p", model: "m" },

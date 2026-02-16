@@ -1,12 +1,12 @@
-# OpenClaw Setup Framework - Default Configuration
+# Minion Setup Framework - Default Configuration
 # These values are used when not specified in profiles or command-line arguments
 
 # Install method
 install:
-  method: package # npm install -g @nikolasp98/openclaw (fast, no build step)
-  package_name: "@nikolasp98/openclaw"
+  method: package # npm install -g @nikolasp98/minion (fast, no build step)
+  package_name: "@nikolasp98/minion"
   package_manager: npm # npm, pnpm, or bun
-  repository: NikolasP98/openclaw # used when method=source
+  repository: NikolasP98/minion # used when method=source
   branch: main # used when method=source
 
 # Gateway configuration
@@ -120,7 +120,7 @@ logging:
     - file
     - stdout
   file:
-    path: /tmp/openclaw
+    path: /tmp/minion
     rotation: daily
     compression: gzip
 
@@ -150,7 +150,7 @@ development:
 
 # Upgrade settings
 upgrade:
-  auto_check: true # Check for OpenClaw updates
+  auto_check: true # Check for Minion updates
   auto_upgrade: false # Don't auto-upgrade (require manual)
   backup_before_upgrade: true # Always backup before upgrading
 
@@ -162,7 +162,7 @@ tailscale:
 
 # GitHub integration
 github:
-  repository: NikolasP98/openclaw # Default OpenClaw repository
+  repository: NikolasP98/minion # Default Minion repository
   branch: main # Default branch to pull
   auto_update: false # Don't auto-update from git
 

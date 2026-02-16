@@ -1,13 +1,13 @@
 {
-  "name": "@openclaw/imessage",
+  "name": "@minion/imessage",
   "version": "2026.2.13",
   "private": true,
-  "description": "OpenClaw iMessage channel plugin",
+  "description": "Minion iMessage channel plugin",
   "type": "module",
   "devDependencies": {
-    "openclaw": "workspace:*"
+    "minion": "workspace:*"
   },
-  "openclaw": {
+  "minion": {
     "extensions": [
       "./index.ts"
     ]

@@ -3,8 +3,8 @@
 # name: "Verification"
 # phase: 70
 # description: >
-#   Runs health checks against the deployed OpenClaw instance. Tests the
-#   openclaw wrapper command, gateway health endpoint, configuration
+#   Runs health checks against the deployed Minion instance. Tests the
+#   minion wrapper command, gateway health endpoint, configuration
 #   permissions, and channel status. Prints a deployment summary.
 # when: >
 #   After service is started. Final validation before declaring success.
@@ -34,12 +34,12 @@ verify_deployment() {
     phase_start "Verification" "70"
 
     local exec_user="${AGENT_USERNAME:-$(whoami)}"
-    local config_dir="${OPENCLAW_CONFIG_DIR:-${AGENT_HOME_DIR:-$HOME}/.openclaw}"
+    local config_dir="${MINION_CONFIG_DIR:-${AGENT_HOME_DIR:-$HOME}/.minion}"
     local gateway_port="${GATEWAY_PORT:-18789}"
 
-    # Test openclaw command
+    # Test minion command
     local install_method="${INSTALL_METHOD:-package}"
-    log_info "Testing openclaw command (install method: $install_method)..."
+    log_info "Testing minion command (install method: $install_method)..."
 
     # Ensure PATH includes the relevant bin directories
     if [ "${EXEC_MODE:-local}" = "local" ]; then
@@ -54,26 +54,26 @@ verify_deployment() {
 
     if [ "${EXEC_MODE:-local}" = "remote" ]; then
         local wrapper_output
-        wrapper_output=$(run_cmd --as "$exec_user" "export PATH=\$HOME/.local/bin:\$HOME/.local/share/pnpm:\$HOME/.bun/bin:\$PATH && openclaw --version" 2>/dev/null || echo "failed")
+        wrapper_output=$(run_cmd --as "$exec_user" "export PATH=\$HOME/.local/bin:\$HOME/.local/share/pnpm:\$HOME/.bun/bin:\$PATH && minion --version" 2>/dev/null || echo "failed")
         if [ "$wrapper_output" != "failed" ]; then
-            log_success "openclaw --version: $wrapper_output"
+            log_success "minion --version: $wrapper_output"
         else
-            log_warn "openclaw command test failed (service may still be running)"
+            log_warn "minion command test failed (service may still be running)"
         fi
     else
         local wrapper_output
-        wrapper_output=$(openclaw --version 2>/dev/null || echo "failed")
+        wrapper_output=$(minion --version 2>/dev/null || echo "failed")
         if [ "$wrapper_output" != "failed" ]; then
-            log_success "openclaw --version: $wrapper_output"
+            log_success "minion --version: $wrapper_output"
         else
-            log_warn "openclaw command test failed (service may still be running)"
+            log_warn "minion command test failed (service may still be running)"
         fi
     fi
 
     # Check configuration file permissions
     log_info "Checking configuration file permissions..."
     local config_perms
-    config_perms=$(run_cmd --as "$exec_user" "stat -c '%a' '${config_dir}/openclaw.json'" 2>/dev/null || echo "unknown")
+    config_perms=$(run_cmd --as "$exec_user" "stat -c '%a' '${config_dir}/minion.json'" 2>/dev/null || echo "unknown")
 
     if [ "$config_perms" = "600" ]; then
         log_success "Configuration file permissions are correct (600)"
@@ -127,13 +127,13 @@ verify_deployment() {
     echo -e "${GREEN}╔═══════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${GREEN}║ DEPLOYMENT SUCCESSFUL${NC}"
     echo -e "${GREEN}╠═══════════════════════════════════════════════════════════════╣${NC}"
-    echo -e "${GREEN}║${NC} Agent: ${AGENT_NAME:-openclaw}"
+    echo -e "${GREEN}║${NC} Agent: ${AGENT_NAME:-minion}"
     echo -e "${GREEN}║${NC} User: ${exec_user}"
     echo -e "${GREEN}║${NC} Method: ${install_method}"
     if [ "$install_method" = "source" ]; then
-        echo -e "${GREEN}║${NC} Install: ${OPENCLAW_ROOT:-~/openclaw}"
+        echo -e "${GREEN}║${NC} Install: ${MINION_ROOT:-~/minion}"
     else
-        echo -e "${GREEN}║${NC} Package: @nikolasp98/openclaw (${PACKAGE_MANAGER:-npm})"
+        echo -e "${GREEN}║${NC} Package: @nikolasp98/minion (${PACKAGE_MANAGER:-npm})"
     fi
     echo -e "${GREEN}║${NC} Gateway Port: $gateway_port"
     echo -e "${GREEN}║${NC} Status: Running"
@@ -150,13 +150,13 @@ verify_deployment() {
     step=$((step + 1))
     if [ "${ENABLE_WHATSAPP:-false}" = "true" ]; then
         echo -e "${GREEN}║${NC} ${step}. Pair WhatsApp:"
-        echo -e "${GREEN}║${NC}    openclaw channels whatsapp pair"
+        echo -e "${GREEN}║${NC}    minion channels whatsapp pair"
         step=$((step + 1))
     fi
     if [ "${DM_POLICY:-pairing}" = "pairing" ]; then
         echo -e "${GREEN}║${NC} ${step}. Approve pairing requests:"
-        echo -e "${GREEN}║${NC}    openclaw pairing list"
-        echo -e "${GREEN}║${NC}    openclaw pairing approve <channel> <code>"
+        echo -e "${GREEN}║${NC}    minion pairing list"
+        echo -e "${GREEN}║${NC}    minion pairing approve <channel> <code>"
     fi
     echo -e "${GREEN}║${NC}"
     echo -e "${GREEN}║${NC} Update later with:"
@@ -165,9 +165,9 @@ verify_deployment() {
     else
         local update_cmd
         case "${PACKAGE_MANAGER:-npm}" in
-            npm)  update_cmd="npm update -g @nikolasp98/openclaw" ;;
-            pnpm) update_cmd="pnpm update -g @nikolasp98/openclaw" ;;
-            bun)  update_cmd="bun update -g @nikolasp98/openclaw" ;;
+            npm)  update_cmd="npm update -g @nikolasp98/minion" ;;
+            pnpm) update_cmd="pnpm update -g @nikolasp98/minion" ;;
+            bun)  update_cmd="bun update -g @nikolasp98/minion" ;;
         esac
         echo -e "${GREEN}║${NC}    $update_cmd"
     fi

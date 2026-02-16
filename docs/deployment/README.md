@@ -1,10 +1,11 @@
-# OpenClaw Production Deployment Documentation
+# Minion Production Deployment Documentation
 
-This directory contains comprehensive documentation for deploying OpenClaw to production environments.
+This directory contains comprehensive documentation for deploying Minion to production environments.
 
 ## 📚 Documentation Index
 
 ### Quick Start
+
 - **[QUICKSTART.md](QUICKSTART.md)** - Get from zero to production deployment in 30 minutes
   - Prerequisites checklist
   - Step-by-step setup instructions
@@ -12,6 +13,7 @@ This directory contains comprehensive documentation for deploying OpenClaw to pr
   - Common troubleshooting
 
 ### Full Documentation
+
 - **[auto-deploy-multi-tenant.md](auto-deploy-multi-tenant.md)** - Complete deployment guide
   - Architecture overview (3 phases)
   - Server preparation (detailed)
@@ -27,15 +29,16 @@ Located in [`scripts/deployment/`](../../scripts/deployment/):
 
 - **`generate-deploy-keys.sh`** - Generate SSH keys for GitHub Actions
 - **`setup-server.sh`** - Prepare production server (run as root)
-- **`backup-openclaw.sh`** - Automated backup script for production data
+- **`backup-minion.sh`** - Automated backup script for production data
 
 See [scripts/deployment/README.md](../../scripts/deployment/README.md) for detailed usage.
 
 ## 🏗️ Deployment Architecture
 
-OpenClaw uses a **phased GitHub Actions-based automatic deployment** system:
+Minion uses a **phased GitHub Actions-based automatic deployment** system:
 
 ### Phase 1: Single Server (Implemented)
+
 - **Status**: ✅ Ready to use
 - **Workflow**: `.github/workflows/deploy-prd.yml`
 - **Scales to**: 1 server
@@ -43,6 +46,7 @@ OpenClaw uses a **phased GitHub Actions-based automatic deployment** system:
 - **Best for**: Getting started, single production server
 
 **How it works**:
+
 1. Push to PRD branch triggers Docker Release workflow
 2. Builds and pushes multi-arch images to GitHub Container Registry
 3. Deploy workflow automatically:
@@ -53,6 +57,7 @@ OpenClaw uses a **phased GitHub Actions-based automatic deployment** system:
    - Automatically rolls back on failure
 
 ### Phase 2: Multi-Server with Registry (Prepared)
+
 - **Status**: 🚧 Prepared (disabled by default)
 - **Workflow**: `.github/workflows/deploy-prd-multi.yml`
 - **Server Registry**: `.github/servers/production.json`
@@ -61,6 +66,7 @@ OpenClaw uses a **phased GitHub Actions-based automatic deployment** system:
 - **Best for**: Multi-tenant with manual server provisioning
 
 **How it works**:
+
 - JSON-based server registry defines all production servers
 - GitHub Actions matrix deploys to all servers in parallel
 - Per-tenant isolation (separate containers, configs, credentials)
@@ -68,12 +74,14 @@ OpenClaw uses a **phased GitHub Actions-based automatic deployment** system:
 - Add/remove tenants by updating JSON registry
 
 ### Phase 3: Kubernetes Auto-Scaling (Planned)
+
 - **Status**: 📝 Planned
 - **Scales to**: Unlimited
 - **Timeline**: 1-2 weeks
 - **Best for**: 20+ servers, true auto-scaling, high-scale production
 
 **Features**:
+
 - Namespace-per-tenant isolation
 - Horizontal Pod Autoscaler (automatic scaling based on CPU/memory)
 - GitOps integration (Flux/ArgoCD)
@@ -109,12 +117,14 @@ See full documentation in [auto-deploy-multi-tenant.md](auto-deploy-multi-tenant
 ## 📋 GitHub Workflows
 
 ### Existing Workflows
+
 - **`.github/workflows/docker-release.yml`** - Builds and pushes Docker images (already working)
   - Triggers on PRD/DEV branch push
   - Creates multi-arch images (amd64, arm64)
   - Pushes to GitHub Container Registry
 
 ### New Workflows (Implemented)
+
 - **`.github/workflows/deploy-prd.yml`** - Single server deployment (Phase 1)
   - Triggers when Docker Release completes on PRD branch
   - Deploys to single production server
@@ -128,18 +138,21 @@ See full documentation in [auto-deploy-multi-tenant.md](auto-deploy-multi-tenant
 ## 🔐 Security
 
 ### SSH Key Management
+
 - Generate keys using `generate-deploy-keys.sh`
 - Private key stored in GitHub Secrets (never in repository)
 - Public key added to production servers
 - Rotate keys quarterly for security
 
 ### Server Security
+
 - Deploy user with Docker-only access (no sudo)
 - SSH key authentication only (password auth disabled)
-- Firewall rules for OpenClaw ports only
+- Firewall rules for Minion ports only
 - Environment files with restricted permissions
 
 ### Credential Management
+
 - Credentials stored in `.env` files (not in git)
 - GitHub Secrets for CI/CD access
 - Secure token generation for gateway authentication
@@ -148,54 +161,61 @@ See full documentation in [auto-deploy-multi-tenant.md](auto-deploy-multi-tenant
 ## 📊 Monitoring & Maintenance
 
 ### Daily
+
 - Monitor GitHub Actions for deployment failures
 - Check server health endpoint: `curl http://SERVER_IP:18789/health`
 
 ### Weekly
+
 - Review container logs for errors
 - Check disk usage: `docker system df`
 
 ### Monthly
+
 - Prune unused images: `docker system prune -a`
 - Rotate gateway tokens
 - Review SSH access logs
 
 ### Quarterly
+
 - Rotate SSH deployment keys
 - Update GitHub Secrets
 - Review and update `.env` configuration
 
 ## 🔄 Backup Strategy
 
-Use `scripts/deployment/backup-openclaw.sh` for automated backups:
+Use `scripts/deployment/backup-minion.sh` for automated backups:
 
 - **What it backs up**:
-  - Config directory (`~/.openclaw-prd`)
+  - Config directory (`~/.minion-prd`)
   - Environment file (`.env`)
   - Docker Compose file (`docker-compose.yml`)
 
 - **Retention**: 7 days (configurable)
 - **Schedule**: Daily at 2 AM via cron
-- **Location**: `/var/backups/openclaw`
+- **Location**: `/var/backups/minion`
 
 ## 🆘 Emergency Procedures
 
 ### Deployment Fails
+
 1. Check GitHub Actions logs
 2. SSH to server: `docker compose ps`
 3. Check logs: `docker compose logs`
 4. Automatic rollback will occur if health checks fail
 
 ### Manual Rollback
+
 ```bash
 ssh deploy@SERVER_IP
-cd ~/openclaw-prd
+cd ~/minion-prd
 sed -i 's/:prd/:prd-rollback/g' .env
 docker compose down && docker compose up -d
 sed -i 's/:prd-rollback/:prd/g' .env
 ```
 
 ### Containers Won't Start
+
 ```bash
 # Check Docker service
 sudo systemctl status docker
@@ -210,15 +230,18 @@ sudo systemctl restart docker
 ## 📖 Reference
 
 ### GitHub Repository Files
+
 - **Workflows**: `.github/workflows/deploy-prd*.yml`
 - **Server Registry**: `.github/servers/production.json`
 - **Docker Compose**: `docker-compose.yml`
 
 ### Scripts
+
 - **Deployment Scripts**: `scripts/deployment/`
 - **Script Documentation**: `scripts/deployment/README.md`
 
 ### Documentation
+
 - **Full Guide**: [auto-deploy-multi-tenant.md](auto-deploy-multi-tenant.md)
 - **Quick Start**: [QUICKSTART.md](QUICKSTART.md)
 - **This Index**: [README.md](README.md)
@@ -241,6 +264,7 @@ A: The workflow includes automatic rollback. If health checks fail, it reverts t
 A: Yes! The Docker Release workflow already builds DEV images. You can create a `deploy-dev.yml` workflow using the same pattern, just change `PRD` to `DEV`.
 
 **Q: How much does this cost?**
+
 - Phase 1: ~$10-50/month for VPS
 - Phase 2: ~$10-50/server/month (scales linearly)
 - Phase 3: ~$100-500/month for managed Kubernetes
@@ -276,6 +300,7 @@ How many production servers do you need?
 ## 🤝 Support
 
 If you encounter issues:
+
 1. Check [Troubleshooting section](QUICKSTART.md#troubleshooting) in QUICKSTART.md
 2. Review GitHub Actions logs
 3. Check server logs: `docker compose logs`

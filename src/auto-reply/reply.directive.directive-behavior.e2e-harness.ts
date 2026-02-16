@@ -27,10 +27,10 @@ export async function withTempHome<T>(fn: (home: string) => Promise<T>): Promise
     },
     {
       env: {
-        OPENCLAW_AGENT_DIR: (home) => path.join(home, ".openclaw", "agent"),
-        PI_CODING_AGENT_DIR: (home) => path.join(home, ".openclaw", "agent"),
+        MINION_AGENT_DIR: (home) => path.join(home, ".minion", "agent"),
+        PI_CODING_AGENT_DIR: (home) => path.join(home, ".minion", "agent"),
       },
-      prefix: "openclaw-reply-",
+      prefix: "minion-reply-",
     },
   );
 }
@@ -62,7 +62,7 @@ export function makeRestrictedElevatedDisabledConfig(home: string) {
     agents: {
       defaults: {
         model: "anthropic/claude-opus-4-5",
-        workspace: path.join(home, "openclaw"),
+        workspace: path.join(home, "minion"),
       },
       list: [
         {

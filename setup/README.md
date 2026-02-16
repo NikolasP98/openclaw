@@ -1,7 +1,7 @@
-# OpenClaw Setup Framework
+# Minion Setup Framework
 
 VPS user-level deployment via `git clone` + `pnpm install` + `pnpm build`.
-Deploys OpenClaw as a systemd user service with idempotent, resumable phases.
+Deploys Minion as a systemd user service with idempotent, resumable phases.
 
 ## Table of Contents
 
@@ -82,9 +82,9 @@ No SSH is involved.
 | 00    | `preflight`         | Validate variables, test connectivity, verify tools             | 0.5–1 min |
 | 20    | `user-creation`     | Create agent user/dirs, enable systemd lingering                | 0.5–1 min |
 | 30    | `environment-setup` | Install Node.js, pnpm (corepack), gh CLI, build tools           | 2–5 min   |
-| 40    | `openclaw-install`  | `git clone` + `pnpm install` + `pnpm build`                     | 3–8 min   |
-| 45    | `alias-setup`       | Create `~/.local/bin/openclaw` wrapper, update PATH             | 0.5 min   |
-| 50    | `config-generation` | Render templates → `openclaw.json`, systemd service, `SOUL.md`  | 1–2 min   |
+| 40    | `minion-install`    | `git clone` + `pnpm install` + `pnpm build`                     | 3–8 min   |
+| 45    | `alias-setup`       | Create `~/.local/bin/minion` wrapper, update PATH               | 0.5 min   |
+| 50    | `config-generation` | Render templates → `minion.json`, systemd service, `SOUL.md`    | 1–2 min   |
 | 60    | `service-setup`     | Reload systemd, enable and start gateway service                | 1–2 min   |
 | 70    | `verification`      | Health checks, wrapper test, deployment summary                 | 0.5–1 min |
 | 95    | `decommission`      | Stop service, free disk, preserve config (via `--decommission`) | 0.5 min   |
@@ -120,8 +120,8 @@ Resume from any phase with `--start-from=40` or skip phases with `--skip-phase=3
 
 - Remote mode: creates system user via `useradd`, sets up home directory
 - Local mode: skips user creation (already running as the user), creates directories
-- Creates directories: `~/.openclaw/workspace/`, `~/.openclaw/credentials/`, `~/.local/bin/`, `~/.config/systemd/user/`
-- Sets permissions: `700` on `.openclaw/` and `credentials/`
+- Creates directories: `~/.minion/workspace/`, `~/.minion/credentials/`, `~/.local/bin/`, `~/.config/systemd/user/`
+- Sets permissions: `700` on `.minion/` and `credentials/`
 - Enables systemd lingering via `loginctl enable-linger`
 
 **Inputs:** `AGENT_USERNAME`, `AGENT_HOME_DIR` (derived from `AGENT_NAME`)
@@ -147,36 +147,36 @@ Resume from any phase with `--start-from=40` or skip phases with `--skip-phase=3
 **Outputs:** Node.js 22.x, pnpm, gh CLI, build tools; checkpoint `30-environment-setup`
 **Idempotent:** Yes — package managers skip already-installed packages
 
-#### Phase 40 — OpenClaw Source Install
+#### Phase 40 — Minion Source Install
 
-**Purpose:** Clones the OpenClaw repository and builds from source.
+**Purpose:** Clones the Minion repository and builds from source.
 
 **What it does:**
 
-- Clones `https://github.com/{GITHUB_REPO}.git` to `OPENCLAW_ROOT`
+- Clones `https://github.com/{GITHUB_REPO}.git` to `MINION_ROOT`
 - Checks out `GITHUB_BRANCH`
 - Runs `pnpm install --frozen-lockfile` + `pnpm build`
 - Verifies `dist/entry.js` (or `dist/entry.mjs`) exists
 - In update mode (`--update`): pulls latest and rebuilds instead of cloning
 - If already cloned without `--update`: skips if build exists, rebuilds if missing
 
-**Inputs:** `GITHUB_REPO`, `GITHUB_BRANCH`, `OPENCLAW_ROOT`, `UPDATE_MODE`
-**Outputs:** Built OpenClaw at `OPENCLAW_ROOT`, `NODE_BIN_PATH`; checkpoint `40-openclaw-install`
+**Inputs:** `GITHUB_REPO`, `GITHUB_BRANCH`, `MINION_ROOT`, `UPDATE_MODE`
+**Outputs:** Built Minion at `MINION_ROOT`, `NODE_BIN_PATH`; checkpoint `40-minion-install`
 **Idempotent:** Yes — skips clone if `.git` exists, verifies build before skipping
 
 #### Phase 45 — Alias Setup
 
-**Purpose:** Creates the `openclaw` CLI wrapper for the agent user.
+**Purpose:** Creates the `minion` CLI wrapper for the agent user.
 
 **What it does:**
 
-- Renders the wrapper script from `templates/openclaw-wrapper.sh.template`
-- Deploys to `~/.local/bin/openclaw` with execute permissions
+- Renders the wrapper script from `templates/minion-wrapper.sh.template`
+- Deploys to `~/.local/bin/minion` with execute permissions
 - Ensures `~/.local/bin` is in PATH by appending to `.bashrc`/`.zshrc`
 - Verifies the wrapper is executable
 
-**Inputs:** `OPENCLAW_ROOT`, `OPENCLAW_WRAPPER` path
-**Outputs:** Executable wrapper at `~/.local/bin/openclaw`; checkpoint `45-alias-setup`
+**Inputs:** `MINION_ROOT`, `MINION_WRAPPER` path
+**Outputs:** Executable wrapper at `~/.local/bin/minion`; checkpoint `45-alias-setup`
 **Idempotent:** Yes — checks PATH entry before appending
 
 The wrapper delegates to `scripts/run-node.mjs` which auto-rebuilds TypeScript
@@ -184,8 +184,8 @@ when source files change:
 
 ```bash
 #!/usr/bin/env bash
-OPENCLAW_ROOT="/home/agent/openclaw"
-cd "${OPENCLAW_ROOT}" && exec node scripts/run-node.mjs "$@"
+MINION_ROOT="/home/agent/minion"
+cd "${MINION_ROOT}" && exec node scripts/run-node.mjs "$@"
 ```
 
 #### Phase 50 — Configuration Generation
@@ -194,31 +194,31 @@ cd "${OPENCLAW_ROOT}" && exec node scripts/run-node.mjs "$@"
 
 **What it does:**
 
-- Renders `openclaw.json.template` → `~/.openclaw/openclaw.json` (mode 600)
-- Renders `systemd-user.service.template` → `~/.config/systemd/user/openclaw-gateway.service`
-- Renders `SOUL.md.template` → `~/.openclaw/workspace/SOUL.md`
+- Renders `minion.json.template` → `~/.minion/minion.json` (mode 600)
+- Renders `systemd-user.service.template` → `~/.config/systemd/user/minion-gateway.service`
+- Renders `SOUL.md.template` → `~/.minion/workspace/SOUL.md`
 - Validates rendered JSON with `jq` if available
 - Validates no unresolved `{{PLACEHOLDER}}` patterns remain
 - Sets correct ownership and permissions
 
 **Inputs:** All agent/channel/security/system variables
-**Outputs:** `openclaw.json`, systemd service file, `SOUL.md`; checkpoint `50-config-generation`
+**Outputs:** `minion.json`, systemd service file, `SOUL.md`; checkpoint `50-config-generation`
 **Idempotent:** Yes — overwrites existing files with latest config
 
 #### Phase 60 — Service Setup
 
-**Purpose:** Starts the OpenClaw gateway as a persistent systemd user service.
+**Purpose:** Starts the Minion gateway as a persistent systemd user service.
 
 **What it does:**
 
 - Reloads the systemd user daemon (`daemon-reload`)
-- Enables the `openclaw-gateway.service` for auto-start on boot
+- Enables the `minion-gateway.service` for auto-start on boot
 - Starts the service
 - Waits 5 seconds for stabilization
 - Checks service status; on failure, dumps last 50 journal lines
 
 **Inputs:** Systemd service file from Phase 50
-**Outputs:** Running `openclaw-gateway` service; checkpoint `60-service-setup`
+**Outputs:** Running `minion-gateway` service; checkpoint `60-service-setup`
 **Idempotent:** Yes — `enable` and `start` are idempotent systemd operations
 
 #### Phase 70 — Verification
@@ -227,8 +227,8 @@ cd "${OPENCLAW_ROOT}" && exec node scripts/run-node.mjs "$@"
 
 **What it does:**
 
-- Tests the `openclaw --version` wrapper command
-- Checks `openclaw.json` file permissions (expects 600)
+- Tests the `minion --version` wrapper command
+- Checks `minion.json` file permissions (expects 600)
 - Probes the gateway health endpoint at `http://127.0.0.1:{GATEWAY_PORT}/health`
 - Lists enabled channels
 - Prints a deployment summary with next steps (SSH tunnel, WhatsApp pairing, etc.)
@@ -246,11 +246,11 @@ Triggered via `--decommission` flag. Runs **only this phase** (skips 00–70).
 
 **What it does:**
 
-1. Stops and disables the `openclaw-gateway` systemd service
+1. Stops and disables the `minion-gateway` systemd service
 2. Removes `node_modules/` and `dist/` to free disk space
 3. Opens home directory permissions to 755 (allows other VPS users to browse)
 4. Opens source directory permissions recursively
-5. Preserves credentials (700) and `openclaw.json` (600)
+5. Preserves credentials (700) and `minion.json` (600)
 6. Writes `.decommissioned` marker with timestamp
 7. Prints reactivation instructions
 
@@ -260,10 +260,10 @@ Triggered via `--decommission` flag. Runs **only this phase** (skips 00–70).
 **Reactivation:**
 
 ```bash
-cd ~/openclaw
+cd ~/minion
 pnpm install && pnpm build
-systemctl --user enable openclaw-gateway.service
-systemctl --user start openclaw-gateway.service
+systemctl --user enable minion-gateway.service
+systemctl --user start minion-gateway.service
 rm -f .decommissioned
 ```
 
@@ -277,13 +277,13 @@ Automatically triggered when any phase fails, or run manually via
 **What it does (cascading from last checkpoint):**
 
 - Stops and disables systemd service
-- Removes configuration files (`openclaw.json`, `SOUL.md`, service file)
-- Removes the `openclaw` wrapper and PATH entries
-- Removes the source directory (`OPENCLAW_ROOT`)
+- Removes configuration files (`minion.json`, `SOUL.md`, service file)
+- Removes the `minion` wrapper and PATH entries
+- Removes the source directory (`MINION_ROOT`)
 - Removes gh authentication
 - Remote mode: removes the agent user account entirely
 
-**Inputs:** Checkpoint file at `/tmp/openclaw-setup/checkpoint.txt`
+**Inputs:** Checkpoint file at `/tmp/minion-setup/checkpoint.txt`
 **Outputs:** Clean state as if deployment never happened
 
 ---
@@ -337,12 +337,12 @@ Profile YAML sections:
 Templates use `{{VARIABLE}}` placeholders that are replaced with environment
 variable values at render time.
 
-| Template                        | Output                                            | Purpose                      |
-| ------------------------------- | ------------------------------------------------- | ---------------------------- |
-| `openclaw.json.template`        | `~/.openclaw/openclaw.json`                       | Gateway runtime config       |
-| `systemd-user.service.template` | `~/.config/systemd/user/openclaw-gateway.service` | Service definition           |
-| `SOUL.md.template`              | `~/.openclaw/workspace/SOUL.md`                   | Agent personality/guidelines |
-| `openclaw-wrapper.sh.template`  | `~/.local/bin/openclaw`                           | CLI wrapper script           |
+| Template                        | Output                                          | Purpose                      |
+| ------------------------------- | ----------------------------------------------- | ---------------------------- |
+| `minion.json.template`          | `~/.minion/minion.json`                         | Gateway runtime config       |
+| `systemd-user.service.template` | `~/.config/systemd/user/minion-gateway.service` | Service definition           |
+| `SOUL.md.template`              | `~/.minion/workspace/SOUL.md`                   | Agent personality/guidelines |
+| `minion-wrapper.sh.template`    | `~/.local/bin/minion`                           | CLI wrapper script           |
 
 ### Variable Tiers
 
@@ -404,7 +404,7 @@ cp ~/minions/profiles/customer-support.yaml setup/profiles/customer-support.prof
 ```
 
 A full multi-agent gateway configuration example is available at
-[`minions/examples/openclaw.json.example`](https://github.com/NikolasP98/minions/blob/main/examples/openclaw.json.example).
+[`minions/examples/minion.json.example`](https://github.com/NikolasP98/minions/blob/main/examples/minion.json.example).
 
 ### Profile Schema
 
@@ -442,7 +442,7 @@ Every phase is safe to re-run:
 
 ### Checkpoint / Resume
 
-Each phase saves a checkpoint to `/tmp/openclaw-setup/checkpoint.txt` on success.
+Each phase saves a checkpoint to `/tmp/minion-setup/checkpoint.txt` on success.
 Resume from a specific phase after fixing an issue:
 
 ```bash
@@ -475,7 +475,7 @@ case fall-through (`;;&`).
 `lib/logging.sh` provides dual-output logging:
 
 - **Console:** Color-coded by level (cyan=DEBUG, blue=INFO, yellow=WARN, red=ERROR, green=SUCCESS)
-- **File:** Timestamped plain text at `/tmp/openclaw-setup/setup-YYYYMMDD-HHMMSS.log`
+- **File:** Timestamped plain text at `/tmp/minion-setup/setup-YYYYMMDD-HHMMSS.log`
 - **Levels:** DEBUG (0), INFO (1), WARN (2), ERROR (3) — set via `--verbose` or `VERBOSE=true`
 - **Phase markers:** Box-drawing characters for phase start/end
 - **Error handling:** `handle_error()` prints error box with phase, message, and log file path
@@ -506,7 +506,7 @@ in command substitutions like `$(run_cmd ...)`).
 
 **Environment variables:**
 
-- `LOG_DIR` — log directory (default: `/tmp/openclaw-setup`)
+- `LOG_DIR` — log directory (default: `/tmp/minion-setup`)
 - `LOG_FILE` — log file path (default: `$LOG_DIR/setup-TIMESTAMP.log`)
 - `VERBOSE` — set to `true` for debug-level output
 - `CURRENT_LOG_LEVEL` — numeric level (0=DEBUG, 1=INFO, 2=WARN, 3=ERROR)
@@ -524,12 +524,12 @@ in command substitutions like `$(run_cmd ...)`).
 
 **Key derivations in `derive_system_variables`:**
 
-- `AGENT_USERNAME` ← `openclaw-{AGENT_NAME}` (lowercased, spaces→hyphens)
+- `AGENT_USERNAME` ← `minion-{AGENT_NAME}` (lowercased, spaces→hyphens)
 - `GATEWAY_PORT` ← `18789` (default)
 - `GATEWAY_AUTH_TOKEN` ← `uuidgen` or `/proc/sys/kernel/random/uuid`
 - `AGENT_HOME_DIR` ← `$HOME` (local) or `/home/{AGENT_USERNAME}` (remote)
-- `OPENCLAW_ROOT` ← `{AGENT_HOME_DIR}/openclaw`
-- `OPENCLAW_WRAPPER` ← `{AGENT_HOME_DIR}/.local/bin/openclaw`
+- `MINION_ROOT` ← `{AGENT_HOME_DIR}/minion`
+- `MINION_WRAPPER` ← `{AGENT_HOME_DIR}/.local/bin/minion`
 
 ### `lib/network.sh`
 
@@ -552,17 +552,17 @@ in command substitutions like `$(run_cmd ...)`).
 | `validate_template`         | `validate_template FILE`                   | Check for unresolved `{{VAR}}` placeholders |
 | `render_templates_from_dir` | `render_templates_from_dir DIR OUTPUT_DIR` | Batch-render all `.template` files          |
 
-### `lib/openclaw-env.sh`
+### `lib/minion-env.sh`
 
 Environment derivation for multi-tenant deployments. Source this after setting
 pre-source defaults.
 
 **Derived variables:**
 
-- `OPENCLAW_ENV` — environment name (default: `prd`, forced lowercase, validated)
-- `OPENCLAW_TENANT` — tenant identifier (optional, forced lowercase, validated)
-- `OPENCLAW_CONFIG_DIR` — `~/.openclaw-{env}` or `~/.openclaw-{env}-{tenant}`
-- `OPENCLAW_WORKSPACE_DIR` — `{config_dir}/workspace`
+- `MINION_ENV` — environment name (default: `prd`, forced lowercase, validated)
+- `MINION_TENANT` — tenant identifier (optional, forced lowercase, validated)
+- `MINION_CONFIG_DIR` — `~/.minion-{env}` or `~/.minion-{env}-{tenant}`
+- `MINION_WORKSPACE_DIR` — `{config_dir}/workspace`
 
 ---
 
@@ -571,7 +571,7 @@ pre-source defaults.
 | Script                    | Purpose                                   | Usage                                          |
 | ------------------------- | ----------------------------------------- | ---------------------------------------------- |
 | `add-tenant.sh`           | Interactive helper for multi-tenant setup | `bash setup/utilities/add-tenant.sh`           |
-| `backup-openclaw.sh`      | Config backup with retention policy       | `bash setup/utilities/backup-openclaw.sh`      |
+| `backup-minion.sh`        | Config backup with retention policy       | `bash setup/utilities/backup-minion.sh`        |
 | `generate-deploy-keys.sh` | SSH key generation for CI/CD              | `bash setup/utilities/generate-deploy-keys.sh` |
 
 ---
@@ -584,7 +584,7 @@ All default values for the setup framework. Organized by section:
 
 | Section     | Key defaults                                                   |
 | ----------- | -------------------------------------------------------------- |
-| `install`   | method=source, repo=NikolasP98/openclaw, branch=main           |
+| `install`   | method=source, repo=NikolasP98/minion, branch=main             |
 | `gateway`   | mode=local, bind=127.0.0.1, port_start=18789                   |
 | `security`  | sandbox_mode=non-main, dm_policy=pairing                       |
 | `channels`  | web=enabled, whatsapp/telegram/discord=disabled                |
@@ -622,27 +622,27 @@ setup/
 │   ├── variables.sh                # 4-tier variable classification & validation
 │   ├── network.sh                  # run_cmd/copy_file dual-mode abstraction
 │   ├── templates.sh                # {{VAR}} template rendering
-│   └── openclaw-env.sh             # Environment/tenant derivation
+│   └── minion-env.sh             # Environment/tenant derivation
 ├── phases/
 │   ├── 00-preflight.sh             # Validate variables, test connectivity
 │   ├── 20-user-creation.sh         # Create user/dirs, enable lingering
 │   ├── 30-environment-setup.sh     # Install Node.js, pnpm, gh CLI
-│   ├── 40-openclaw-install.sh      # git clone + pnpm install + pnpm build
-│   ├── 45-alias-setup.sh           # Create openclaw wrapper, update PATH
+│   ├── 40-minion-install.sh      # git clone + pnpm install + pnpm build
+│   ├── 45-alias-setup.sh           # Create minion wrapper, update PATH
 │   ├── 50-config-generation.sh     # Render templates → config files
 │   ├── 60-service-setup.sh         # Enable and start systemd service
 │   ├── 70-verification.sh          # Health checks, deployment summary
 │   ├── 95-decommission.sh          # Non-destructive shutdown (--decommission)
 │   └── 99-rollback.sh              # Cascading cleanup on failure
 ├── templates/
-│   ├── openclaw.json.template      # Gateway runtime configuration
+│   ├── minion.json.template      # Gateway runtime configuration
 │   ├── systemd-user.service.template  # systemd unit file
 │   ├── SOUL.md.template            # Agent personality/guidelines
-│   └── openclaw-wrapper.sh.template   # CLI wrapper script
+│   └── minion-wrapper.sh.template   # CLI wrapper script
 ├── profiles/                       # Local copies (optional, see minions repo)
 ├── utilities/
 │   ├── add-tenant.sh               # Multi-tenant setup helper
-│   ├── backup-openclaw.sh          # Config backup with retention
+│   ├── backup-minion.sh          # Config backup with retention
 │   └── generate-deploy-keys.sh     # SSH key generation for CI/CD
 └── config/
     ├── defaults.yaml               # All default values
@@ -662,12 +662,12 @@ setup/
 
 ### Source Install
 
-| Flag                 | Type    | Default               | Description                    |
-| -------------------- | ------- | --------------------- | ------------------------------ |
-| `--install-dir=PATH` | path    | `~/openclaw`          | Where to clone the repo        |
-| `--repo=REPO`        | string  | `NikolasP98/openclaw` | GitHub repository              |
-| `--branch=BRANCH`    | string  | `main`                | Git branch to checkout         |
-| `--update`           | boolean | false                 | Pull latest source and rebuild |
+| Flag                 | Type    | Default             | Description                    |
+| -------------------- | ------- | ------------------- | ------------------------------ |
+| `--install-dir=PATH` | path    | `~/minion`          | Where to clone the repo        |
+| `--repo=REPO`        | string  | `NikolasP98/minion` | GitHub repository              |
+| `--branch=BRANCH`    | string  | `main`              | Git branch to checkout         |
+| `--update`           | boolean | false               | Pull latest source and rebuild |
 
 ### Configuration
 
@@ -686,7 +686,7 @@ setup/
 
 | Flag                       | Type   | Default         | Description                                    |
 | -------------------------- | ------ | --------------- | ---------------------------------------------- |
-| `--agent-name=NAME`        | string | `openclaw`      | Agent name (used in username, service, config) |
+| `--agent-name=NAME`        | string | `minion`        | Agent name (used in username, service, config) |
 | `--agent-personality=DESC` | string | profile/default | Agent personality description                  |
 | `--sandbox-mode=MODE`      | string | `non-main`      | `off`, `non-main`, `all`                       |
 | `--dm-policy=POLICY`       | string | `pairing`       | `open`, `pairing`                              |
@@ -846,7 +846,7 @@ Deploy from a specific branch to a custom location:
 ./setup/setup.sh \
   --api-key=sk-ant-api03-xxxxxxxxxxxx \
   --agent-name=dev-bot \
-  --install-dir=/opt/openclaw-dev \
+  --install-dir=/opt/minion-dev \
   --branch=DEV \
   --node-method=nvm
 ```
@@ -860,20 +860,20 @@ Deploy from a specific branch to a custom location:
 Check the journal for errors:
 
 ```bash
-journalctl --user -u openclaw-gateway -n 50
-systemctl --user status openclaw-gateway
+journalctl --user -u minion-gateway -n 50
+systemctl --user status minion-gateway
 ```
 
 Common causes:
 
-- Missing `dist/entry.js` — rebuild with `cd ~/openclaw && pnpm install && pnpm build`
+- Missing `dist/entry.js` — rebuild with `cd ~/minion && pnpm install && pnpm build`
 - Port already in use — check with `ss -tuln | grep 18789`
-- Missing API key in `openclaw.json` — verify `~/.openclaw/openclaw.json`
+- Missing API key in `minion.json` — verify `~/.minion/minion.json`
 
 ### Build Fails
 
 ```bash
-cd ~/openclaw
+cd ~/minion
 pnpm install --frozen-lockfile
 pnpm build
 ```
@@ -946,15 +946,15 @@ bash setup/phases/99-rollback.sh
 If the agent was decommissioned via `--decommission`:
 
 ```bash
-cd ~/openclaw
+cd ~/minion
 pnpm install
 pnpm build
-systemctl --user enable openclaw-gateway.service
-systemctl --user start openclaw-gateway.service
+systemctl --user enable minion-gateway.service
+systemctl --user start minion-gateway.service
 rm -f .decommissioned
 
 # Optionally restore home directory permissions
-sudo chmod 750 /home/openclaw-mybot
+sudo chmod 750 /home/minion-mybot
 ```
 
 ### Port Conflicts
@@ -967,7 +967,7 @@ ss -tuln | grep 18789
 
 # Kill the existing process if needed
 # Then restart
-systemctl --user restart openclaw-gateway
+systemctl --user restart minion-gateway
 ```
 
 For multi-agent setups, each agent should use a different port. Configure via
@@ -979,7 +979,7 @@ If configuration generation fails with unresolved placeholders:
 
 ```bash
 # Check which variables are missing
-grep -o '{{[A-Z_]*}}' ~/.openclaw/openclaw.json
+grep -o '{{[A-Z_]*}}' ~/.minion/minion.json
 
 # Re-run config generation with verbose logging
 bash setup/phases/50-config-generation.sh

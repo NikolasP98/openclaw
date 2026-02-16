@@ -2,9 +2,9 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { ensureOpenClawCliOnPath } from "./path-env.js";
+import { ensureMinionCliOnPath } from "./path-env.js";
 
-describe("ensureOpenClawCliOnPath", () => {
+describe("ensureMinionCliOnPath", () => {
   let fixtureRoot = "";
   let fixtureCount = 0;
 
@@ -15,27 +15,27 @@ describe("ensureOpenClawCliOnPath", () => {
   }
 
   beforeAll(async () => {
-    fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-path-"));
+    fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "minion-path-"));
   });
 
   afterAll(async () => {
     await fs.rm(fixtureRoot, { recursive: true, force: true });
   });
 
-  it("prepends the bundled app bin dir when a sibling openclaw exists", async () => {
+  it("prepends the bundled app bin dir when a sibling minion exists", async () => {
     const tmp = await makeTmpDir();
     const appBinDir = path.join(tmp, "AppBin");
     await fs.mkdir(appBinDir);
-    const cliPath = path.join(appBinDir, "openclaw");
+    const cliPath = path.join(appBinDir, "minion");
     await fs.writeFile(cliPath, "#!/bin/sh\necho ok\n", "utf-8");
     await fs.chmod(cliPath, 0o755);
 
     const originalPath = process.env.PATH;
-    const originalFlag = process.env.OPENCLAW_PATH_BOOTSTRAPPED;
+    const originalFlag = process.env.MINION_PATH_BOOTSTRAPPED;
     process.env.PATH = "/usr/bin";
-    delete process.env.OPENCLAW_PATH_BOOTSTRAPPED;
+    delete process.env.MINION_PATH_BOOTSTRAPPED;
     try {
-      ensureOpenClawCliOnPath({
+      ensureMinionCliOnPath({
         execPath: cliPath,
         cwd: tmp,
         homeDir: tmp,
@@ -46,20 +46,20 @@ describe("ensureOpenClawCliOnPath", () => {
     } finally {
       process.env.PATH = originalPath;
       if (originalFlag === undefined) {
-        delete process.env.OPENCLAW_PATH_BOOTSTRAPPED;
+        delete process.env.MINION_PATH_BOOTSTRAPPED;
       } else {
-        process.env.OPENCLAW_PATH_BOOTSTRAPPED = originalFlag;
+        process.env.MINION_PATH_BOOTSTRAPPED = originalFlag;
       }
     }
   });
 
   it("is idempotent", () => {
     const originalPath = process.env.PATH;
-    const originalFlag = process.env.OPENCLAW_PATH_BOOTSTRAPPED;
+    const originalFlag = process.env.MINION_PATH_BOOTSTRAPPED;
     process.env.PATH = "/bin";
-    process.env.OPENCLAW_PATH_BOOTSTRAPPED = "1";
+    process.env.MINION_PATH_BOOTSTRAPPED = "1";
     try {
-      ensureOpenClawCliOnPath({
+      ensureMinionCliOnPath({
         execPath: "/tmp/does-not-matter",
         cwd: "/tmp",
         homeDir: "/tmp",
@@ -69,9 +69,9 @@ describe("ensureOpenClawCliOnPath", () => {
     } finally {
       process.env.PATH = originalPath;
       if (originalFlag === undefined) {
-        delete process.env.OPENCLAW_PATH_BOOTSTRAPPED;
+        delete process.env.MINION_PATH_BOOTSTRAPPED;
       } else {
-        process.env.OPENCLAW_PATH_BOOTSTRAPPED = originalFlag;
+        process.env.MINION_PATH_BOOTSTRAPPED = originalFlag;
       }
     }
   });
@@ -79,12 +79,12 @@ describe("ensureOpenClawCliOnPath", () => {
   it("prepends mise shims when available", async () => {
     const tmp = await makeTmpDir();
     const originalPath = process.env.PATH;
-    const originalFlag = process.env.OPENCLAW_PATH_BOOTSTRAPPED;
+    const originalFlag = process.env.MINION_PATH_BOOTSTRAPPED;
     const originalMiseDataDir = process.env.MISE_DATA_DIR;
     try {
       const appBinDir = path.join(tmp, "AppBin");
       await fs.mkdir(appBinDir);
-      const appCli = path.join(appBinDir, "openclaw");
+      const appCli = path.join(appBinDir, "minion");
       await fs.writeFile(appCli, "#!/bin/sh\necho ok\n", "utf-8");
       await fs.chmod(appCli, 0o755);
 
@@ -93,9 +93,9 @@ describe("ensureOpenClawCliOnPath", () => {
       await fs.mkdir(shimsDir, { recursive: true });
       process.env.MISE_DATA_DIR = miseDataDir;
       process.env.PATH = "/usr/bin";
-      delete process.env.OPENCLAW_PATH_BOOTSTRAPPED;
+      delete process.env.MINION_PATH_BOOTSTRAPPED;
 
-      ensureOpenClawCliOnPath({
+      ensureMinionCliOnPath({
         execPath: appCli,
         cwd: tmp,
         homeDir: tmp,
@@ -111,9 +111,9 @@ describe("ensureOpenClawCliOnPath", () => {
     } finally {
       process.env.PATH = originalPath;
       if (originalFlag === undefined) {
-        delete process.env.OPENCLAW_PATH_BOOTSTRAPPED;
+        delete process.env.MINION_PATH_BOOTSTRAPPED;
       } else {
-        process.env.OPENCLAW_PATH_BOOTSTRAPPED = originalFlag;
+        process.env.MINION_PATH_BOOTSTRAPPED = originalFlag;
       }
       if (originalMiseDataDir === undefined) {
         delete process.env.MISE_DATA_DIR;
@@ -126,24 +126,24 @@ describe("ensureOpenClawCliOnPath", () => {
   it("only appends project-local node_modules/.bin when explicitly enabled", async () => {
     const tmp = await makeTmpDir();
     const originalPath = process.env.PATH;
-    const originalFlag = process.env.OPENCLAW_PATH_BOOTSTRAPPED;
+    const originalFlag = process.env.MINION_PATH_BOOTSTRAPPED;
     try {
       const appBinDir = path.join(tmp, "AppBin");
       await fs.mkdir(appBinDir);
-      const appCli = path.join(appBinDir, "openclaw");
+      const appCli = path.join(appBinDir, "minion");
       await fs.writeFile(appCli, "#!/bin/sh\necho ok\n", "utf-8");
       await fs.chmod(appCli, 0o755);
 
       const localBinDir = path.join(tmp, "node_modules", ".bin");
       await fs.mkdir(localBinDir, { recursive: true });
-      const localCli = path.join(localBinDir, "openclaw");
+      const localCli = path.join(localBinDir, "minion");
       await fs.writeFile(localCli, "#!/bin/sh\necho ok\n", "utf-8");
       await fs.chmod(localCli, 0o755);
 
       process.env.PATH = "/usr/bin";
-      delete process.env.OPENCLAW_PATH_BOOTSTRAPPED;
+      delete process.env.MINION_PATH_BOOTSTRAPPED;
 
-      ensureOpenClawCliOnPath({
+      ensureMinionCliOnPath({
         execPath: appCli,
         cwd: tmp,
         homeDir: tmp,
@@ -153,9 +153,9 @@ describe("ensureOpenClawCliOnPath", () => {
       expect(withoutOptIn.includes(localBinDir)).toBe(false);
 
       process.env.PATH = "/usr/bin";
-      delete process.env.OPENCLAW_PATH_BOOTSTRAPPED;
+      delete process.env.MINION_PATH_BOOTSTRAPPED;
 
-      ensureOpenClawCliOnPath({
+      ensureMinionCliOnPath({
         execPath: appCli,
         cwd: tmp,
         homeDir: tmp,
@@ -170,9 +170,9 @@ describe("ensureOpenClawCliOnPath", () => {
     } finally {
       process.env.PATH = originalPath;
       if (originalFlag === undefined) {
-        delete process.env.OPENCLAW_PATH_BOOTSTRAPPED;
+        delete process.env.MINION_PATH_BOOTSTRAPPED;
       } else {
-        process.env.OPENCLAW_PATH_BOOTSTRAPPED = originalFlag;
+        process.env.MINION_PATH_BOOTSTRAPPED = originalFlag;
       }
     }
   });
@@ -180,7 +180,7 @@ describe("ensureOpenClawCliOnPath", () => {
   it("prepends Linuxbrew dirs when present", async () => {
     const tmp = await makeTmpDir();
     const originalPath = process.env.PATH;
-    const originalFlag = process.env.OPENCLAW_PATH_BOOTSTRAPPED;
+    const originalFlag = process.env.MINION_PATH_BOOTSTRAPPED;
     const originalHomebrewPrefix = process.env.HOMEBREW_PREFIX;
     const originalHomebrewBrewFile = process.env.HOMEBREW_BREW_FILE;
     const originalXdgBinHome = process.env.XDG_BIN_HOME;
@@ -194,12 +194,12 @@ describe("ensureOpenClawCliOnPath", () => {
       await fs.mkdir(linuxbrewSbin, { recursive: true });
 
       process.env.PATH = "/usr/bin";
-      delete process.env.OPENCLAW_PATH_BOOTSTRAPPED;
+      delete process.env.MINION_PATH_BOOTSTRAPPED;
       delete process.env.HOMEBREW_PREFIX;
       delete process.env.HOMEBREW_BREW_FILE;
       delete process.env.XDG_BIN_HOME;
 
-      ensureOpenClawCliOnPath({
+      ensureMinionCliOnPath({
         execPath: path.join(execDir, "node"),
         cwd: tmp,
         homeDir: tmp,
@@ -213,9 +213,9 @@ describe("ensureOpenClawCliOnPath", () => {
     } finally {
       process.env.PATH = originalPath;
       if (originalFlag === undefined) {
-        delete process.env.OPENCLAW_PATH_BOOTSTRAPPED;
+        delete process.env.MINION_PATH_BOOTSTRAPPED;
       } else {
-        process.env.OPENCLAW_PATH_BOOTSTRAPPED = originalFlag;
+        process.env.MINION_PATH_BOOTSTRAPPED = originalFlag;
       }
       if (originalHomebrewPrefix === undefined) {
         delete process.env.HOMEBREW_PREFIX;

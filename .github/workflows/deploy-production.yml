@@ -87,12 +87,12 @@ jobs:
             cd ${{ matrix.server.deployment_path }}
 
             # Get current running image digest
-            CONTAINER_NAME="openclaw_prd_${{ matrix.server.tenant }}_gw"
+            CONTAINER_NAME="minion_prd_${{ matrix.server.tenant }}_gw"
             CURRENT_DIGEST=$(docker inspect $CONTAINER_NAME --format='{{.Image}}' 2>/dev/null || echo "none")
 
             # Pull latest image and get its digest
-            docker compose pull -q openclaw-gateway 2>&1 >/dev/null || true
-            LATEST_DIGEST=$(docker compose images -q openclaw-gateway 2>/dev/null | head -1)
+            docker compose pull -q minion-gateway 2>&1 >/dev/null || true
+            LATEST_DIGEST=$(docker compose images -q minion-gateway 2>/dev/null | head -1)
 
             # Strip sha256: prefix from both for comparison
             CURRENT_SHORT="${CURRENT_DIGEST#sha256:}"
@@ -156,7 +156,7 @@ jobs:
             echo "=== Deploying to ${{ matrix.server.tenant }} (${{ matrix.server.region }}) via GHCR ==="
 
             # Tag current running image as rollback
-            CONTAINER_NAME="openclaw_prd_${{ matrix.server.tenant }}_gw"
+            CONTAINER_NAME="minion_prd_${{ matrix.server.tenant }}_gw"
             CURRENT_IMAGE=$(docker inspect $CONTAINER_NAME --format='{{.Image}}' 2>/dev/null || echo "none")
             if [[ "$CURRENT_IMAGE" != "none" ]]; then
               echo "Tagging current image for rollback"
@@ -165,10 +165,10 @@ jobs:
 
             # Pull new image
             echo "Pulling latest image..."
-            docker compose pull openclaw-gateway openclaw-cli
+            docker compose pull minion-gateway minion-cli
 
             # Verify pulled image matches host architecture
-            PULLED_ARCH=$(docker image inspect $(docker compose images -q openclaw-gateway | head -1) --format='{{.Architecture}}' 2>/dev/null)
+            PULLED_ARCH=$(docker image inspect $(docker compose images -q minion-gateway | head -1) --format='{{.Architecture}}' 2>/dev/null)
             HOST_ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
             if [[ -n "$PULLED_ARCH" && "$PULLED_ARCH" != "$HOST_ARCH" ]]; then
               echo "FATAL: Pulled image is $PULLED_ARCH but host is $HOST_ARCH"
@@ -202,8 +202,8 @@ jobs:
             echo "=== Deploying to ${{ matrix.server.tenant }} (${{ matrix.server.region }}) via local build ==="
 
             # Tag current running image as rollback
-            ROLLBACK_TAG="openclaw:rollback-${{ matrix.server.tenant }}"
-            CONTAINER_NAME="openclaw_prd_${{ matrix.server.tenant }}_gw"
+            ROLLBACK_TAG="minion:rollback-${{ matrix.server.tenant }}"
+            CONTAINER_NAME="minion_prd_${{ matrix.server.tenant }}_gw"
             CURRENT_IMAGE=$(docker inspect $CONTAINER_NAME --format='{{.Image}}' 2>/dev/null || echo "none")
             if [[ "$CURRENT_IMAGE" != "none" ]]; then
               echo "Tagging current image for rollback"
@@ -217,7 +217,7 @@ jobs:
 
             # Build image locally
             echo "Building image locally..."
-            docker compose build openclaw-gateway
+            docker compose build minion-gateway
 
             # Stop containers gracefully
             echo "Stopping containers..."
@@ -244,7 +244,7 @@ jobs:
           ssh -o LogLevel=ERROR -p ${{ matrix.server.port }} ${{ matrix.server.user }}@${{ matrix.server.host }} << 'ENDSSH'
             cd ${{ matrix.server.deployment_path }}
 
-            CONTAINER_NAME="openclaw_prd_${{ matrix.server.tenant }}_gw"
+            CONTAINER_NAME="minion_prd_${{ matrix.server.tenant }}_gw"
 
             # Check container status (suppress docker-compose warnings)
             if ! docker compose ps 2>/dev/null | grep -q "$CONTAINER_NAME.*Up"; then
@@ -254,7 +254,7 @@ jobs:
 
             # Test health endpoint
             for i in {1..3}; do
-              if docker compose exec -T openclaw-gateway wget -q -O- http://localhost:${{ matrix.server.gateway_port }}/health >/dev/null 2>&1; then
+              if docker compose exec -T minion-gateway wget -q -O- http://localhost:${{ matrix.server.gateway_port }}/health >/dev/null 2>&1; then
                 echo "✅ Health check passed for ${{ matrix.server.tenant }}"
                 exit 0
               fi
@@ -284,15 +284,15 @@ jobs:
 
             if [[ "${{ matrix.server.local_build }}" == "true" ]]; then
               # Local build rollback: use locally tagged rollback image
-              ROLLBACK_IMAGE="openclaw:rollback-${{ matrix.server.tenant }}"
+              ROLLBACK_IMAGE="minion:rollback-${{ matrix.server.tenant }}"
             else
               # GHCR rollback: use registry-tagged rollback image
               ROLLBACK_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:prd-rollback-${{ matrix.server.tenant }}"
             fi
 
             if docker image inspect "$ROLLBACK_IMAGE" >/dev/null 2>&1; then
-              OPENCLAW_IMAGE="$ROLLBACK_IMAGE" docker compose down
-              OPENCLAW_IMAGE="$ROLLBACK_IMAGE" docker compose up -d
+              MINION_IMAGE="$ROLLBACK_IMAGE" docker compose down
+              MINION_IMAGE="$ROLLBACK_IMAGE" docker compose up -d
               echo "=== Rollback complete (using $ROLLBACK_IMAGE) ==="
             else
               echo "=== No rollback image available — skipping ==="

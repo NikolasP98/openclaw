@@ -81,7 +81,7 @@ vi.mock("./onboarding.completion.js", () => ({
 describe("runOnboardingWizard", () => {
   it("exits when config is invalid", async () => {
     readConfigFileSnapshot.mockResolvedValueOnce({
-      path: "/tmp/.openclaw/openclaw.json",
+      path: "/tmp/.minion/minion.json",
       exists: true,
       raw: "{}",
       parsed: {},
@@ -181,7 +181,7 @@ describe("runOnboardingWizard", () => {
   }) {
     runTui.mockClear();
 
-    const workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-onboard-"));
+    const workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), "minion-onboard-"));
     try {
       if (params.writeBootstrapFile) {
         await fs.writeFile(path.join(workspaceDir, DEFAULT_BOOTSTRAP_FILENAME), "{}");

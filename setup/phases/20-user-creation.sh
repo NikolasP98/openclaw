@@ -14,7 +14,7 @@
 #   - "AGENT_USERNAME, AGENT_HOME_DIR derived"
 # produces:
 #   - "Agent user account (remote mode)"
-#   - "~/.openclaw/, ~/.openclaw/workspace/, ~/.openclaw/credentials/, ~/.local/bin/"
+#   - "~/.minion/, ~/.minion/workspace/, ~/.minion/credentials/, ~/.local/bin/"
 #   - "systemd lingering enabled"
 # flags:
 #   -v, --verbose: "Enable debug-level logging"
@@ -62,15 +62,15 @@ create_agent_user() {
         fi
 
         log_info "Setting up directory structure..."
-        run_cmd --as root "mkdir -p ${AGENT_HOME_DIR}/.openclaw/workspace"
-        run_cmd --as root "mkdir -p ${AGENT_HOME_DIR}/.openclaw/credentials"
+        run_cmd --as root "mkdir -p ${AGENT_HOME_DIR}/.minion/workspace"
+        run_cmd --as root "mkdir -p ${AGENT_HOME_DIR}/.minion/credentials"
         run_cmd --as root "mkdir -p ${AGENT_HOME_DIR}/.local/bin"
         run_cmd --as root "mkdir -p ${AGENT_HOME_DIR}/.config/systemd/user"
 
         log_info "Setting proper permissions..."
         run_cmd --as root "chown -R ${AGENT_USERNAME}:${AGENT_USERNAME} ${AGENT_HOME_DIR}"
-        run_cmd --as root "chmod 700 ${AGENT_HOME_DIR}/.openclaw"
-        run_cmd --as root "chmod 700 ${AGENT_HOME_DIR}/.openclaw/credentials"
+        run_cmd --as root "chmod 700 ${AGENT_HOME_DIR}/.minion"
+        run_cmd --as root "chmod 700 ${AGENT_HOME_DIR}/.minion/credentials"
 
         log_info "Configuring systemd user lingering..."
         if ! run_cmd --as root "loginctl enable-linger $AGENT_USERNAME"; then
@@ -81,13 +81,13 @@ create_agent_user() {
         # Local mode: just create directories (user already exists)
         log_info "Local mode: creating directory structure for current user..."
 
-        mkdir -p "${AGENT_HOME_DIR}/.openclaw/workspace"
-        mkdir -p "${AGENT_HOME_DIR}/.openclaw/credentials"
+        mkdir -p "${AGENT_HOME_DIR}/.minion/workspace"
+        mkdir -p "${AGENT_HOME_DIR}/.minion/credentials"
         mkdir -p "${AGENT_HOME_DIR}/.local/bin"
         mkdir -p "${AGENT_HOME_DIR}/.config/systemd/user"
 
-        chmod 700 "${AGENT_HOME_DIR}/.openclaw"
-        chmod 700 "${AGENT_HOME_DIR}/.openclaw/credentials"
+        chmod 700 "${AGENT_HOME_DIR}/.minion"
+        chmod 700 "${AGENT_HOME_DIR}/.minion/credentials"
 
         log_info "Configuring systemd user lingering..."
         if command -v loginctl &> /dev/null; then

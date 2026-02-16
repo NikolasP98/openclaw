@@ -89,7 +89,7 @@ function expectChannels(call: Record<string, unknown>, channel: string) {
 }
 
 async function useTempSessionStorePath() {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-gw-"));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "minion-gw-"));
   testState.sessionStorePath = path.join(dir, "sessions.json");
 }
 

@@ -1,8 +1,8 @@
-# OpenClaw Automatic Deployment - Implementation Summary
+# Minion Automatic Deployment - Implementation Summary
 
 ## ✅ What Was Implemented
 
-This document summarizes the automatic multi-tenant production deployment system that has been implemented for OpenClaw.
+This document summarizes the automatic multi-tenant production deployment system that has been implemented for Minion.
 
 **Implementation Date**: 2026-02-09
 **Implementation Status**: ✅ Complete (Phase 1 ready, Phase 2 prepared)
@@ -48,7 +48,7 @@ This document summarizes the automatic multi-tenant production deployment system
    - Creates template .env file
    - **Status**: ✅ Executable and ready to use
 
-6. **`scripts/deployment/backup-openclaw.sh`** - Automated backup script
+6. **`scripts/deployment/backup-minion.sh`** - Automated backup script
    - Backs up config directory, .env, docker-compose.yml
    - 7-day retention (configurable)
    - Can be scheduled via cron
@@ -99,6 +99,7 @@ GitHub Push (PRD) → Docker Release → GHCR → Deploy Workflow → SSH → Se
 ```
 
 **Flow**:
+
 1. Developer pushes to PRD branch
 2. Docker Release workflow builds and pushes images to GHCR
 3. Deploy workflow triggers automatically
@@ -119,6 +120,7 @@ GitHub Push (PRD) → Docker Release → GHCR → Multi-Deploy Workflow → Matr
 ```
 
 **Flow**:
+
 1. Same as Phase 1, but deploys to multiple servers in parallel
 2. Reads server registry (`.github/servers/production.json`)
 3. GitHub Actions matrix creates parallel jobs for each server
@@ -136,6 +138,7 @@ GitHub Push (PRD) → Docker Release → GHCR → GitOps → K8s → Pods (auto-
 ```
 
 **Flow**:
+
 1. Same image build process
 2. GitOps tool (Flux/ArgoCD) detects new image
 3. Updates K8s manifests automatically
@@ -164,6 +167,7 @@ Total time: ~30 minutes
 ### For Deploying Updates
 
 Simply push to PRD branch:
+
 ```bash
 git checkout PRD
 git merge main  # or make changes directly
@@ -197,13 +201,13 @@ Deployment happens automatically. Monitor in GitHub Actions.
 
 Add these secrets to your GitHub repository (`Settings → Secrets and variables → Actions`):
 
-| Secret Name | Description | Example Value |
-|-------------|-------------|---------------|
-| `SSH_PRIVATE_KEY` | Private SSH key for deployment | Contents of `openclaw_deploy_key` |
-| `SSH_HOST` | Production server IP | `100.105.147.99` |
-| `SSH_USER` | Deployment user | `deploy` |
-| `SSH_PORT` | SSH port | `22` |
-| `DEPLOYMENT_PATH` | Deployment directory | `/home/deploy/openclaw-prd` |
+| Secret Name       | Description                    | Example Value                   |
+| ----------------- | ------------------------------ | ------------------------------- |
+| `SSH_PRIVATE_KEY` | Private SSH key for deployment | Contents of `minion_deploy_key` |
+| `SSH_HOST`        | Production server IP           | `100.105.147.99`                |
+| `SSH_USER`        | Deployment user                | `deploy`                        |
+| `SSH_PORT`        | SSH port                       | `22`                            |
+| `DEPLOYMENT_PATH` | Deployment directory           | `/home/deploy/minion-prd`       |
 
 ---
 
@@ -250,15 +254,19 @@ Add these secrets to your GitHub repository (`Settings → Secrets and variables
 ### Common Issues
 
 **Issue**: GitHub Actions workflow not triggered
+
 - **Solution**: Verify PRD branch exists and Docker Release workflow completed successfully
 
 **Issue**: SSH connection fails
+
 - **Solution**: Verify SSH_PRIVATE_KEY secret contains full key (including BEGIN/END lines)
 
 **Issue**: Health check fails
-- **Solution**: SSH to server, check container logs: `docker compose logs openclaw-gateway`
+
+- **Solution**: SSH to server, check container logs: `docker compose logs minion-gateway`
 
 **Issue**: Deployment succeeds but service not accessible
+
 - **Solution**: Check firewall rules, verify ports 18789/18790 are open
 
 ### Getting Help
@@ -274,19 +282,23 @@ Add these secrets to your GitHub repository (`Settings → Secrets and variables
 ## 📈 Monitoring & Maintenance
 
 ### Daily
+
 - Monitor GitHub Actions for deployment failures
 - Check server health: `curl http://SERVER_IP:18789/health`
 
 ### Weekly
+
 - Review container logs: `docker compose logs | grep -i error`
 - Check disk usage: `docker system df`
 
 ### Monthly
+
 - Prune unused images: `docker system prune -a`
 - Rotate gateway tokens
 - Review SSH access logs
 
 ### Quarterly
+
 - Rotate SSH deployment keys
 - Update GitHub Secrets
 - Review `.env` configuration
@@ -306,7 +318,7 @@ scripts/deployment/
 ├── README.md                          # Scripts documentation
 ├── generate-deploy-keys.sh            # SSH key generator
 ├── setup-server.sh                    # Server setup script
-└── backup-openclaw.sh                 # Backup automation script
+└── backup-minion.sh                 # Backup automation script
 
 .github/
 ├── workflows/
@@ -348,11 +360,11 @@ Your deployment is successful when:
 
 ## 📊 Cost Estimate
 
-| Phase | Servers | Monthly Cost | Setup Time |
-|-------|---------|--------------|------------|
-| Phase 1 | 1 | $10-50 | 2-3 hours |
-| Phase 2 | 2-20 | $10-50/server | +4-6 hours |
-| Phase 3 | Unlimited | $100-500 | 1-2 weeks |
+| Phase   | Servers   | Monthly Cost  | Setup Time |
+| ------- | --------- | ------------- | ---------- |
+| Phase 1 | 1         | $10-50        | 2-3 hours  |
+| Phase 2 | 2-20      | $10-50/server | +4-6 hours |
+| Phase 3 | Unlimited | $100-500      | 1-2 weeks  |
 
 ---
 
@@ -372,7 +384,7 @@ MIT License - See LICENSE for details
 
 **Congratulations!** 🎉
 
-You now have a production-ready automatic deployment system for OpenClaw. Follow the Quick Start Guide to get your first deployment running in 30 minutes.
+You now have a production-ready automatic deployment system for Minion. Follow the Quick Start Guide to get your first deployment running in 30 minutes.
 
 For questions or issues, consult the documentation or open an issue on GitHub.
 

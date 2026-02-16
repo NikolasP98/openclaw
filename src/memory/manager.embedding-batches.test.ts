@@ -68,7 +68,7 @@ describe("memory embedding batches", () => {
   }
 
   beforeAll(async () => {
-    fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-mem-"));
+    fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "minion-mem-"));
     workspaceDir = path.join(fixtureRoot, "workspace");
     memoryDir = path.join(workspaceDir, "memory");
     indexPathLarge = path.join(fixtureRoot, "index.large.sqlite");

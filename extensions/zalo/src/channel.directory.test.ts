@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk";
+import type { MinionConfig } from "minion/plugin-sdk";
 import { describe, expect, it } from "vitest";
 import { zaloPlugin } from "./channel.js";
 
@@ -10,7 +10,7 @@ describe("zalo directory", () => {
           allowFrom: ["zalo:123", "zl:234", "345"],
         },
       },
-    } as unknown as OpenClawConfig;
+    } as unknown as MinionConfig;
 
     expect(zaloPlugin.directory).toBeTruthy();
     expect(zaloPlugin.directory?.listPeers).toBeTruthy();

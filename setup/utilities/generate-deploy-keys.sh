@@ -9,8 +9,8 @@
 #   Run once during initial setup to create SSH keys for CI/CD deployment.
 #   Run again to rotate keys (quarterly recommended).
 # produces:
-#   - "SSH private key at OUTPUT_DIR/openclaw_deploy_key"
-#   - "SSH public key at OUTPUT_DIR/openclaw_deploy_key.pub"
+#   - "SSH private key at OUTPUT_DIR/minion_deploy_key"
+#   - "SSH public key at OUTPUT_DIR/minion_deploy_key.pub"
 # flags:
 #   -v, --verbose: "Enable debug-level logging"
 # idempotent: false
@@ -20,11 +20,11 @@
 set -e
 
 # Parse arguments
-OUTPUT_DIR="${1:-$HOME/.ssh/openclaw}"
-KEY_NAME="openclaw_deploy_key"
+OUTPUT_DIR="${1:-$HOME/.ssh/minion}"
+KEY_NAME="minion_deploy_key"
 KEY_PATH="$OUTPUT_DIR/$KEY_NAME"
 
-echo "=== OpenClaw Deployment SSH Key Generator ==="
+echo "=== Minion Deployment SSH Key Generator ==="
 echo "Output directory: $OUTPUT_DIR"
 echo "Key name: $KEY_NAME"
 echo ""
@@ -50,7 +50,7 @@ fi
 
 # Generate SSH key
 echo "Generating SSH key..."
-ssh-keygen -t ed25519 -C "github-actions-openclaw-deploy" -f "$KEY_PATH" -N ""
+ssh-keygen -t ed25519 -C "github-actions-minion-deploy" -f "$KEY_PATH" -N ""
 
 echo ""
 echo "=== SSH Key Generated ==="
@@ -77,7 +77,7 @@ echo "   cat ${KEY_PATH}.pub | ssh root@<server-ip> \\"
 echo "     \"su - <agent-user> -c 'mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys'\""
 echo ""
 echo "3. Test SSH connection:"
-echo "   ssh -i $KEY_PATH <agent-user>@<server-ip> 'openclaw --version'"
+echo "   ssh -i $KEY_PATH <agent-user>@<server-ip> 'minion --version'"
 echo ""
 echo "4. Add other GitHub Secrets:"
 echo "   - SSH_HOST: <server-ip>"

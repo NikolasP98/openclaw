@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "../config/config.js";
+import type { MinionConfig } from "../config/config.js";
 import type { AnyAgentTool } from "./pi-tools.types.js";
 import type { SandboxToolPolicy } from "./sandbox.js";
 import { getChannelDock } from "../channels/dock.js";
@@ -55,7 +55,7 @@ const DEFAULT_SUBAGENT_TOOL_DENY = [
   "memory_get",
 ];
 
-export function resolveSubagentToolPolicy(cfg?: OpenClawConfig): SandboxToolPolicy {
+export function resolveSubagentToolPolicy(cfg?: MinionConfig): SandboxToolPolicy {
   const configured = cfg?.tools?.subagents?.tools;
   const deny = [
     ...DEFAULT_SUBAGENT_TOOL_DENY,
@@ -188,7 +188,7 @@ function resolveProviderToolPolicy(params: {
 }
 
 export function resolveEffectiveToolPolicy(params: {
-  config?: OpenClawConfig;
+  config?: MinionConfig;
   sessionKey?: string;
   modelProvider?: string;
   modelId?: string;
@@ -233,7 +233,7 @@ export function resolveEffectiveToolPolicy(params: {
 }
 
 export function resolveGroupToolPolicy(params: {
-  config?: OpenClawConfig;
+  config?: MinionConfig;
   sessionKey?: string;
   spawnedBy?: string | null;
   messageProvider?: string;

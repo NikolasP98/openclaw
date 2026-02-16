@@ -220,7 +220,7 @@ describe("skills-cli", () => {
     let tempWorkspaceDir = "";
 
     beforeAll(() => {
-      tempWorkspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-skills-test-"));
+      tempWorkspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "minion-skills-test-"));
     });
 
     afterAll(() => {
@@ -236,7 +236,7 @@ describe("skills-cli", () => {
           skill: {
             name: "peekaboo",
             description: "Capture UI screenshots",
-            source: "openclaw-bundled",
+            source: "minion-bundled",
             filePath: path.join(baseDir, "SKILL.md"),
             baseDir,
           } as SkillEntry["skill"],

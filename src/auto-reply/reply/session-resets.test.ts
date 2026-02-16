@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { MinionConfig } from "../../config/config.js";
 import { buildModelAliasIndex } from "../../agents/model-selection.js";
 import { saveSessionStore } from "../../config/sessions.js";
 import { formatZonedTimestamp } from "../../infra/format-time/format-datetime.ts";
@@ -22,7 +22,7 @@ let suiteRoot = "";
 let suiteCase = 0;
 
 beforeAll(async () => {
-  suiteRoot = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-session-resets-suite-"));
+  suiteRoot = await fs.mkdtemp(path.join(os.tmpdir(), "minion-session-resets-suite-"));
 });
 
 afterAll(async () => {
@@ -51,7 +51,7 @@ describe("initSessionState reset triggers in WhatsApp groups", () => {
     });
   }
 
-  function makeCfg(params: { storePath: string; allowFrom: string[] }): OpenClawConfig {
+  function makeCfg(params: { storePath: string; allowFrom: string[] }): MinionConfig {
     return {
       session: { store: params.storePath, idleMinutes: 999 },
       channels: {
@@ -60,11 +60,11 @@ describe("initSessionState reset triggers in WhatsApp groups", () => {
           groupPolicy: "open",
         },
       },
-    } as OpenClawConfig;
+    } as MinionConfig;
   }
 
   it("Reset trigger /new works for authorized sender in WhatsApp group", async () => {
-    const storePath = await createStorePath("openclaw-group-reset-");
+    const storePath = await createStorePath("minion-group-reset-");
     const sessionKey = "agent:main:whatsapp:group:120363406150318674@g.us";
     const existingSessionId = "existing-session-123";
     await seedSessionStore({
@@ -106,7 +106,7 @@ describe("initSessionState reset triggers in WhatsApp groups", () => {
   });
 
   it("Reset trigger /new blocked for unauthorized sender in existing session", async () => {
-    const storePath = await createStorePath("openclaw-group-reset-unauth-");
+    const storePath = await createStorePath("minion-group-reset-unauth-");
     const sessionKey = "agent:main:whatsapp:group:120363406150318674@g.us";
     const existingSessionId = "existing-session-123";
 
@@ -148,7 +148,7 @@ describe("initSessionState reset triggers in WhatsApp groups", () => {
   });
 
   it("Reset trigger works when RawBody is clean but Body has wrapped context", async () => {
-    const storePath = await createStorePath("openclaw-group-rawbody-");
+    const storePath = await createStorePath("minion-group-rawbody-");
     const sessionKey = "agent:main:whatsapp:group:g1";
     const existingSessionId = "existing-session-123";
     await seedSessionStore({
@@ -187,7 +187,7 @@ describe("initSessionState reset triggers in WhatsApp groups", () => {
   });
 
   it("Reset trigger /new works when SenderId is LID but SenderE164 is authorized", async () => {
-    const storePath = await createStorePath("openclaw-group-reset-lid-");
+    const storePath = await createStorePath("minion-group-reset-lid-");
     const sessionKey = "agent:main:whatsapp:group:120363406150318674@g.us";
     const existingSessionId = "existing-session-123";
     await seedSessionStore({
@@ -229,7 +229,7 @@ describe("initSessionState reset triggers in WhatsApp groups", () => {
   });
 
   it("Reset trigger /new blocked when SenderId is LID but SenderE164 is unauthorized", async () => {
-    const storePath = await createStorePath("openclaw-group-reset-lid-unauth-");
+    const storePath = await createStorePath("minion-group-reset-lid-unauth-");
     const sessionKey = "agent:main:whatsapp:group:120363406150318674@g.us";
     const existingSessionId = "existing-session-123";
     await seedSessionStore({
@@ -286,7 +286,7 @@ describe("initSessionState reset triggers in Slack channels", () => {
   }
 
   it("Reset trigger /reset works when Slack message has a leading <@...> mention token", async () => {
-    const storePath = await createStorePath("openclaw-slack-channel-reset-");
+    const storePath = await createStorePath("minion-slack-channel-reset-");
     const sessionKey = "agent:main:slack:channel:c1";
     const existingSessionId = "existing-session-123";
     await seedSessionStore({
@@ -297,7 +297,7 @@ describe("initSessionState reset triggers in Slack channels", () => {
 
     const cfg = {
       session: { store: storePath, idleMinutes: 999 },
-    } as OpenClawConfig;
+    } as MinionConfig;
 
     const channelMessageCtx = {
       Body: "<@U123> /reset",
@@ -326,7 +326,7 @@ describe("initSessionState reset triggers in Slack channels", () => {
   });
 
   it("Reset trigger /new preserves args when Slack message has a leading <@...> mention token", async () => {
-    const storePath = await createStorePath("openclaw-slack-channel-new-");
+    const storePath = await createStorePath("minion-slack-channel-new-");
     const sessionKey = "agent:main:slack:channel:c2";
     const existingSessionId = "existing-session-123";
     await seedSessionStore({
@@ -337,7 +337,7 @@ describe("initSessionState reset triggers in Slack channels", () => {
 
     const cfg = {
       session: { store: storePath, idleMinutes: 999 },
-    } as OpenClawConfig;
+    } as MinionConfig;
 
     const channelMessageCtx = {
       Body: "<@U123> /new take notes",
@@ -368,7 +368,7 @@ describe("initSessionState reset triggers in Slack channels", () => {
 
 describe("applyResetModelOverride", () => {
   it("selects a model hint and strips it from the body", async () => {
-    const cfg = {} as OpenClawConfig;
+    const cfg = {} as MinionConfig;
     const aliasIndex = buildModelAliasIndex({ cfg, defaultProvider: "openai" });
     const sessionEntry = {
       sessionId: "s1",
@@ -398,7 +398,7 @@ describe("applyResetModelOverride", () => {
   });
 
   it("clears auth profile overrides when reset applies a model", async () => {
-    const cfg = {} as OpenClawConfig;
+    const cfg = {} as MinionConfig;
     const aliasIndex = buildModelAliasIndex({ cfg, defaultProvider: "openai" });
     const sessionEntry = {
       sessionId: "s1",
@@ -431,7 +431,7 @@ describe("applyResetModelOverride", () => {
   });
 
   it("skips when resetTriggered is false", async () => {
-    const cfg = {} as OpenClawConfig;
+    const cfg = {} as MinionConfig;
     const aliasIndex = buildModelAliasIndex({ cfg, defaultProvider: "openai" });
     const sessionEntry = {
       sessionId: "s1",
@@ -479,7 +479,7 @@ describe("initSessionState preserves behavior overrides across /new and /reset",
   }
 
   it("/new preserves verboseLevel from previous session", async () => {
-    const storePath = await createStorePath("openclaw-reset-verbose-");
+    const storePath = await createStorePath("minion-reset-verbose-");
     const sessionKey = "agent:main:telegram:dm:user1";
     const existingSessionId = "existing-session-verbose";
     await seedSessionStoreWithOverrides({
@@ -491,7 +491,7 @@ describe("initSessionState preserves behavior overrides across /new and /reset",
 
     const cfg = {
       session: { store: storePath, idleMinutes: 999 },
-    } as OpenClawConfig;
+    } as MinionConfig;
 
     const result = await initSessionState({
       ctx: {
@@ -516,7 +516,7 @@ describe("initSessionState preserves behavior overrides across /new and /reset",
   });
 
   it("/reset preserves thinkingLevel and reasoningLevel from previous session", async () => {
-    const storePath = await createStorePath("openclaw-reset-thinking-");
+    const storePath = await createStorePath("minion-reset-thinking-");
     const sessionKey = "agent:main:telegram:dm:user2";
     const existingSessionId = "existing-session-thinking";
     await seedSessionStoreWithOverrides({
@@ -528,7 +528,7 @@ describe("initSessionState preserves behavior overrides across /new and /reset",
 
     const cfg = {
       session: { store: storePath, idleMinutes: 999 },
-    } as OpenClawConfig;
+    } as MinionConfig;
 
     const result = await initSessionState({
       ctx: {
@@ -553,7 +553,7 @@ describe("initSessionState preserves behavior overrides across /new and /reset",
   });
 
   it("/new preserves ttsAuto from previous session", async () => {
-    const storePath = await createStorePath("openclaw-reset-tts-");
+    const storePath = await createStorePath("minion-reset-tts-");
     const sessionKey = "agent:main:telegram:dm:user3";
     const existingSessionId = "existing-session-tts";
     await seedSessionStoreWithOverrides({
@@ -565,7 +565,7 @@ describe("initSessionState preserves behavior overrides across /new and /reset",
 
     const cfg = {
       session: { store: storePath, idleMinutes: 999 },
-    } as OpenClawConfig;
+    } as MinionConfig;
 
     const result = await initSessionState({
       ctx: {
@@ -588,7 +588,7 @@ describe("initSessionState preserves behavior overrides across /new and /reset",
   });
 
   it("archives previous transcript file on /new reset", async () => {
-    const storePath = await createStorePath("openclaw-reset-archive-");
+    const storePath = await createStorePath("minion-reset-archive-");
     const sessionKey = "agent:main:telegram:dm:user-archive";
     const existingSessionId = "existing-session-archive";
     await seedSessionStoreWithOverrides({
@@ -606,7 +606,7 @@ describe("initSessionState preserves behavior overrides across /new and /reset",
 
     const cfg = {
       session: { store: storePath, idleMinutes: 999 },
-    } as OpenClawConfig;
+    } as MinionConfig;
 
     const result = await initSessionState({
       ctx: {
@@ -631,12 +631,12 @@ describe("initSessionState preserves behavior overrides across /new and /reset",
   });
 
   it("idle-based new session does NOT preserve overrides (no entry to read)", async () => {
-    const storePath = await createStorePath("openclaw-idle-no-preserve-");
+    const storePath = await createStorePath("minion-idle-no-preserve-");
     const sessionKey = "agent:main:telegram:dm:new-user";
 
     const cfg = {
       session: { store: storePath, idleMinutes: 0 },
-    } as OpenClawConfig;
+    } as MinionConfig;
 
     const result = await initSessionState({
       ctx: {
@@ -672,7 +672,7 @@ describe("prependSystemEvents", () => {
       enqueueSystemEvent("Model switched.", { sessionKey: "agent:main:main" });
 
       const result = await prependSystemEvents({
-        cfg: {} as OpenClawConfig,
+        cfg: {} as MinionConfig,
         sessionKey: "agent:main:main",
         isMainSession: false,
         isNewSession: false,

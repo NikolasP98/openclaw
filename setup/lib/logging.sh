@@ -21,7 +21,7 @@ CYAN="${CYAN:-\033[0;36m}"
 NC="${NC:-\033[0m}"
 
 # Log file location
-LOG_DIR="${LOG_DIR:-/tmp/openclaw-setup}"
+LOG_DIR="${LOG_DIR:-/tmp/minion-setup}"
 LOG_FILE="${LOG_FILE:-${LOG_DIR}/setup-$(date +%Y%m%d-%H%M%S).log}"
 
 # Ensure log directory exists

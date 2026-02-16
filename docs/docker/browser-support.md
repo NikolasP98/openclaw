@@ -10,7 +10,7 @@ title: "Browser Support"
 
 # Browser Support
 
-OpenClaw's Docker image includes Chromium browser by default for web automation, screenshot capture, PDF generation, and testing. The **Standard configuration** (Chromium + fonts, ~320MB) provides the best balance of size and functionality.
+Minion's Docker image includes Chromium browser by default for web automation, screenshot capture, PDF generation, and testing. The **Standard configuration** (Chromium + fonts, ~320MB) provides the best balance of size and functionality.
 
 **Want to opt-out?** See [Disabling Browser Support](#disabling-browser-support) to remove Chromium and reduce image size.
 
@@ -24,7 +24,7 @@ OpenClaw's Docker image includes Chromium browser by default for web automation,
 
 ## Default Configuration
 
-By default, OpenClaw includes:
+By default, Minion includes:
 
 - **Chromium** (headless browser)
 - **fonts-liberation** (common web fonts)
@@ -39,7 +39,7 @@ If you don't need browser support, disable it to save ~320MB:
 ### Via Environment Variable
 
 ```bash
-export OPENCLAW_DOCKER_APT_PACKAGES=""
+export MINION_DOCKER_APT_PACKAGES=""
 ./docker-setup.sh
 ```
 
@@ -50,13 +50,13 @@ Edit `docker-compose.yml` and set an empty value:
 ```yaml
 build:
   args:
-    OPENCLAW_DOCKER_APT_PACKAGES: ""
+    MINION_DOCKER_APT_PACKAGES: ""
 ```
 
 ### Via docker build directly
 
 ```bash
-docker build --build-arg OPENCLAW_DOCKER_APT_PACKAGES="" -t openclaw:no-browser .
+docker build --build-arg MINION_DOCKER_APT_PACKAGES="" -t minion:no-browser .
 ```
 
 ## Alternative Configurations
@@ -66,15 +66,16 @@ docker build --build-arg OPENCLAW_DOCKER_APT_PACKAGES="" -t openclaw:no-browser 
 Chromium only, without fonts. Smaller footprint but may have rendering issues:
 
 ```bash
-export OPENCLAW_DOCKER_APT_PACKAGES="chromium"
+export MINION_DOCKER_APT_PACKAGES="chromium"
 ./docker-setup.sh
 ```
 
 Or via docker-compose.yml:
+
 ```yaml
 build:
   args:
-    OPENCLAW_DOCKER_APT_PACKAGES: "chromium"
+    MINION_DOCKER_APT_PACKAGES: "chromium"
 ```
 
 ### Full (~400MB+)
@@ -82,25 +83,26 @@ build:
 Chromium, fonts, and VNC stack for remote viewing and debugging:
 
 ```bash
-export OPENCLAW_DOCKER_APT_PACKAGES="chromium fonts-liberation fonts-noto-color-emoji xvfb x11vnc novnc websockify socat"
+export MINION_DOCKER_APT_PACKAGES="chromium fonts-liberation fonts-noto-color-emoji xvfb x11vnc novnc websockify socat"
 ./docker-setup.sh
 ```
 
 Or via docker-compose.yml:
+
 ```yaml
 build:
   args:
-    OPENCLAW_DOCKER_APT_PACKAGES: "chromium fonts-liberation fonts-noto-color-emoji xvfb x11vnc novnc websockify socat"
+    MINION_DOCKER_APT_PACKAGES: "chromium fonts-liberation fonts-noto-color-emoji xvfb x11vnc novnc websockify socat"
 ```
 
 ## Configuration Comparison
 
-| Configuration | Packages | Size Increase | Use When |
-|---------------|----------|---------------|----------|
-| Disabled | None | 0MB | No browser needed |
-| Minimal | chromium | ~300MB | Basic automation, CI/CD |
-| **Standard (default)** | chromium + fonts | **~320MB** | **Most use cases** |
-| Full (VNC) | chromium + fonts + VNC | ~400MB+ | Debugging, visual verification |
+| Configuration          | Packages               | Size Increase | Use When                       |
+| ---------------------- | ---------------------- | ------------- | ------------------------------ |
+| Disabled               | None                   | 0MB           | No browser needed              |
+| Minimal                | chromium               | ~300MB        | Basic automation, CI/CD        |
+| **Standard (default)** | chromium + fonts       | **~320MB**    | **Most use cases**             |
+| Full (VNC)             | chromium + fonts + VNC | ~400MB+       | Debugging, visual verification |
 
 ## Build Methods
 
@@ -112,22 +114,22 @@ The default configuration includes browser support. To build:
 docker compose build gateway
 ```
 
-To customize, edit `docker-compose.yml` or set `OPENCLAW_DOCKER_APT_PACKAGES` environment variable before building.
+To customize, edit `docker-compose.yml` or set `MINION_DOCKER_APT_PACKAGES` environment variable before building.
 
 ### Via docker build directly
 
 ```bash
 # Default (Standard)
-docker build -t openclaw:local .
+docker build -t minion:local .
 
 # Disabled
-docker build --build-arg OPENCLAW_DOCKER_APT_PACKAGES="" -t openclaw:no-browser .
+docker build --build-arg MINION_DOCKER_APT_PACKAGES="" -t minion:no-browser .
 
 # Minimal
-docker build --build-arg OPENCLAW_DOCKER_APT_PACKAGES="chromium" -t openclaw:minimal .
+docker build --build-arg MINION_DOCKER_APT_PACKAGES="chromium" -t minion:minimal .
 
 # Full (VNC)
-docker build --build-arg OPENCLAW_DOCKER_APT_PACKAGES="chromium fonts-liberation fonts-noto-color-emoji xvfb x11vnc novnc websockify socat" -t openclaw:full .
+docker build --build-arg MINION_DOCKER_APT_PACKAGES="chromium fonts-liberation fonts-noto-color-emoji xvfb x11vnc novnc websockify socat" -t minion:full .
 ```
 
 ### Via docker-setup.sh
@@ -137,11 +139,11 @@ docker build --build-arg OPENCLAW_DOCKER_APT_PACKAGES="chromium fonts-liberation
 ./docker-setup.sh
 
 # Disabled - no browser
-export OPENCLAW_DOCKER_APT_PACKAGES=""
+export MINION_DOCKER_APT_PACKAGES=""
 ./docker-setup.sh
 
 # Full (VNC) - with remote viewing
-export OPENCLAW_DOCKER_APT_PACKAGES="chromium fonts-liberation fonts-noto-color-emoji xvfb x11vnc novnc websockify socat"
+export MINION_DOCKER_APT_PACKAGES="chromium fonts-liberation fonts-noto-color-emoji xvfb x11vnc novnc websockify socat"
 ./docker-setup.sh
 ```
 
@@ -155,13 +157,14 @@ Add to your `docker-compose.yml` or docker run command:
 
 ```yaml
 ports:
-  - "5900:5900"  # VNC
-  - "9222:9222"  # Chrome DevTools Protocol
+  - "5900:5900" # VNC
+  - "9222:9222" # Chrome DevTools Protocol
 ```
 
 Or with docker run:
+
 ```bash
-docker run -p 5900:5900 -p 9222:9222 openclaw:full
+docker run -p 5900:5900 -p 9222:9222 minion:full
 ```
 
 ### Connect to VNC
@@ -182,6 +185,7 @@ environment:
 ```
 
 Common flags:
+
 - `--no-sandbox`: Required when running as non-root
 - `--disable-dev-shm-usage`: Prevents `/dev/shm` issues in containers
 - `--disable-gpu`: Disables GPU acceleration (headless)
@@ -193,10 +197,11 @@ Mount a volume for browser user data:
 
 ```yaml
 volumes:
-  - ${OPENCLAW_BROWSER_DATA:-~/.openclaw/browser-data}:/home/node/.config/chromium
+  - ${MINION_BROWSER_DATA:-~/.minion/browser-data}:/home/node/.config/chromium
 ```
 
 This persists:
+
 - Cookies and session data
 - Browser cache
 - Extensions (if installed)
@@ -209,11 +214,11 @@ This persists:
 Playwright can use system Chromium:
 
 ```typescript
-import { chromium } from 'playwright';
+import { chromium } from "playwright";
 
 const browser = await chromium.launch({
-  executablePath: '/usr/bin/chromium',
-  args: ['--no-sandbox', '--disable-dev-shm-usage']
+  executablePath: "/usr/bin/chromium",
+  args: ["--no-sandbox", "--disable-dev-shm-usage"],
 });
 ```
 
@@ -222,11 +227,11 @@ const browser = await chromium.launch({
 Puppeteer configuration:
 
 ```typescript
-import puppeteer from 'puppeteer';
+import puppeteer from "puppeteer";
 
 const browser = await puppeteer.launch({
-  executablePath: '/usr/bin/chromium',
-  args: ['--no-sandbox', '--disable-setuid-sandbox']
+  executablePath: "/usr/bin/chromium",
+  args: ["--no-sandbox", "--disable-setuid-sandbox"],
 });
 ```
 
@@ -244,13 +249,14 @@ chromium --remote-debugging-port=9222 --remote-debugging-address=0.0.0.0
 
 ```bash
 # Via docker compose
-docker compose run --rm openclaw-cli chromium --version
+docker compose run --rm minion-cli chromium --version
 
 # Via docker run
-docker run --rm openclaw:local chromium --version
+docker run --rm minion:local chromium --version
 ```
 
 Expected output:
+
 ```
 Chromium 131.0.6778.85
 ```
@@ -260,7 +266,7 @@ Chromium 131.0.6778.85
 Simple test script:
 
 ```bash
-docker compose run --rm openclaw-cli bash -c '
+docker compose run --rm minion-cli bash -c '
 chromium --headless --no-sandbox --disable-gpu --screenshot=/tmp/test.png https://example.com
 ls -lh /tmp/test.png
 '
@@ -270,10 +276,10 @@ ls -lh /tmp/test.png
 
 ```bash
 # Start container with VNC
-docker compose up -d openclaw-gateway
+docker compose up -d minion-gateway
 
 # Verify VNC is running
-docker compose exec openclaw-gateway x11vnc -version
+docker compose exec minion-gateway x11vnc -version
 ```
 
 ## Troubleshooting
@@ -281,10 +287,11 @@ docker compose exec openclaw-gateway x11vnc -version
 ### "chromium: command not found"
 
 The browser packages were not installed. This happens if:
-- You explicitly set `OPENCLAW_DOCKER_APT_PACKAGES=""`
+
+- You explicitly set `MINION_DOCKER_APT_PACKAGES=""`
 - You're using a pre-built image without browser support
 
-**Solution**: Rebuild with browser support enabled (default) or set `OPENCLAW_DOCKER_APT_PACKAGES` to include Chromium:
+**Solution**: Rebuild with browser support enabled (default) or set `MINION_DOCKER_APT_PACKAGES` to include Chromium:
 
 ```bash
 docker compose build --no-cache gateway
@@ -299,7 +306,7 @@ Add `--no-sandbox` flag or run as root (not recommended for production).
 If using Minimal configuration, upgrade to Standard (default) to include font packages. Verify fonts are installed:
 
 ```bash
-docker compose run --rm openclaw-cli fc-list
+docker compose run --rm minion-cli fc-list
 ```
 
 ### VNC Connection Refused
@@ -307,8 +314,8 @@ docker compose run --rm openclaw-cli fc-list
 Verify VNC is running and ports are exposed (Full configuration only):
 
 ```bash
-docker compose exec openclaw-gateway ps aux | grep vnc
-docker compose port openclaw-gateway 5900
+docker compose exec minion-gateway ps aux | grep vnc
+docker compose port minion-gateway 5900
 ```
 
 ### Performance Issues
@@ -319,7 +326,7 @@ For heavy browser workloads, increase container resources:
 deploy:
   resources:
     limits:
-      cpus: '2.0'
+      cpus: "2.0"
       memory: 4G
 ```
 
@@ -328,7 +335,7 @@ deploy:
 If the ~320MB increase is too much for your use case, disable browser support:
 
 ```bash
-export OPENCLAW_DOCKER_APT_PACKAGES=""
+export MINION_DOCKER_APT_PACKAGES=""
 docker compose build gateway
 ```
 
@@ -349,7 +356,7 @@ When running browser automation, consider network policies:
 networks:
   browser_net:
     driver: bridge
-    internal: false  # Allow egress for web browsing
+    internal: false # Allow egress for web browsing
 ```
 
 ### Resource Limits
@@ -360,7 +367,7 @@ Prevent resource exhaustion:
 deploy:
   resources:
     limits:
-      cpus: '2.0'
+      cpus: "2.0"
       memory: 4G
     reservations:
       memory: 1G
@@ -414,8 +421,8 @@ DISPLAY=:99 chromium --no-sandbox https://example.com
 
 - Browser support is **enabled by default** (Standard configuration)
 - Adds ~320MB to image size (Chromium + fonts)
-- To disable: set `OPENCLAW_DOCKER_APT_PACKAGES=""`
-- The existing `Dockerfile` already supports this via `OPENCLAW_DOCKER_APT_PACKAGES`
+- To disable: set `MINION_DOCKER_APT_PACKAGES=""`
+- The existing `Dockerfile` already supports this via `MINION_DOCKER_APT_PACKAGES`
 - The `Dockerfile.sandbox-browser` demonstrates this approach works well
 - For production workloads, the default **Standard** configuration is recommended
 - Persistent browser state requires volume mounts for `/home/node/.config/chromium`

@@ -2,19 +2,21 @@
 
 ## What Was Implemented
 
-A complete automatic deployment system for OpenClaw production servers with multi-tenant support.
+A complete automatic deployment system for Minion production servers with multi-tenant support.
 
 ### Core Components
 
 #### 1. GitHub Actions Workflows
 
 **`.github/workflows/deploy-prd.yml`** (Phase 1: Single Server)
+
 - Triggers automatically when PRD branch is updated
 - Deploys to single production server via SSH
 - Includes health checks and automatic rollback
 - Cleans up old Docker images
 
 **`.github/workflows/deploy-prd-multi.yml`** (Phase 2: Multi-Server)
+
 - Matrix-based parallel deployment to multiple servers
 - Loads server configuration from JSON registry
 - Independent health checks per server
@@ -24,6 +26,7 @@ A complete automatic deployment system for OpenClaw production servers with mult
 #### 2. Server Registry
 
 **`.github/servers/production.json`**
+
 - JSON-based server registry for multi-tenant deployments
 - Supports dynamic server addition/removal
 - Per-tenant configuration (paths, ports, container names)
@@ -32,6 +35,7 @@ A complete automatic deployment system for OpenClaw production servers with mult
 #### 3. Automation Scripts
 
 **`scripts/deployment/setup-server.sh`**
+
 - One-command server provisioning
 - Creates deploy user with Docker access
 - Generates/configures SSH keys
@@ -40,7 +44,8 @@ A complete automatic deployment system for OpenClaw production servers with mult
 - Generates secure gateway token
 - Copies docker-compose.yml to server
 
-**`scripts/deployment/backup-openclaw.sh`**
+**`scripts/deployment/backup-minion.sh`**
+
 - Daily backup automation (via cron)
 - Backs up config directories and Docker Compose files
 - Automatic cleanup (keeps last 7 days)
@@ -48,6 +53,7 @@ A complete automatic deployment system for OpenClaw production servers with mult
 #### 4. Documentation
 
 **`docs/deployment/AUTO-DEPLOY-SETUP.md`**
+
 - Complete setup guide for Phase 1 and Phase 2
 - Step-by-step instructions with examples
 - Troubleshooting section
@@ -56,6 +62,7 @@ A complete automatic deployment system for OpenClaw production servers with mult
 - Architecture overview
 
 **`docs/deployment/QUICK-REFERENCE.md`**
+
 - Quick command reference
 - Common operations cheat sheet
 - Troubleshooting tips
@@ -76,7 +83,7 @@ A complete automatic deployment system for OpenClaw production servers with mult
 │  ┌───────────────────┴──────────────────────────────────┐  │
 │  │  Docker Release Workflow                             │  │
 │  │  - Build multi-arch images (amd64, arm64)            │  │
-│  │  - Push to GHCR (ghcr.io/nikolasp98/openclaw:prd)    │  │
+│  │  - Push to GHCR (ghcr.io/nikolasp98/minion:prd)    │  │
 │  └───────────────────┬──────────────────────────────────┘  │
 │                      │                                       │
 │  ┌───────────────────┴──────────────────────────────────┐  │
@@ -98,13 +105,13 @@ A complete automatic deployment system for OpenClaw production servers with mult
          │  100.105.147.99         │
          │  ┌───────────────────┐  │
          │  │ deploy user       │  │
-         │  │ ~/openclaw-prd/   │  │
+         │  │ ~/minion-prd/   │  │
          │  │  - .env           │  │
          │  │  - docker-compose │  │
          │  │                   │  │
          │  │ Containers:       │  │
-         │  │  - openclaw_PRD_gw│  │
-         │  │  - openclaw_PRD_cli│ │
+         │  │  - minion_PRD_gw│  │
+         │  │  - minion_PRD_cli│ │
          │  └───────────────────┘  │
          └─────────────────────────┘
 ```
@@ -145,23 +152,27 @@ A complete automatic deployment system for OpenClaw production servers with mult
 ## Key Features
 
 ### 1. Zero-Downtime Deployments
+
 - Graceful container stops
 - Health endpoint validation
 - Automatic rollback on failure
 - Keeps previous image tagged for rollback
 
 ### 2. Multi-Tenant Support
+
 - Per-tenant isolation (containers, configs, credentials)
 - Independent deployments and health checks
 - Tenant-specific configuration via `.env` files
 - Easy tenant provisioning (add JSON entry, push to PRD)
 
 ### 3. Scalability
+
 - **Phase 1**: 1 server (2-3 hours to implement)
 - **Phase 2**: 2-20 servers (incremental, 4-6 hours)
 - **Phase 3**: Kubernetes for 20+ servers (future, 1-2 weeks)
 
 ### 4. Security
+
 - SSH key-based authentication
 - Dedicated deploy user (no root access required)
 - Optional password authentication disable
@@ -169,6 +180,7 @@ A complete automatic deployment system for OpenClaw production servers with mult
 - Secure gateway token generation
 
 ### 5. Maintenance
+
 - Automatic image cleanup
 - Backup automation with cron
 - Health monitoring
@@ -179,23 +191,27 @@ A complete automatic deployment system for OpenClaw production servers with mult
 ## Files Created/Modified
 
 ### GitHub Actions Workflows
+
 ```
 .github/workflows/deploy-prd.yml          # Single server deployment
 .github/workflows/deploy-prd-multi.yml    # Multi-server deployment
 ```
 
 ### Server Registry
+
 ```
 .github/servers/production.json           # Server configuration registry
 ```
 
 ### Scripts
+
 ```
 scripts/deployment/setup-server.sh        # Server provisioning automation
-scripts/deployment/backup-openclaw.sh     # Backup automation
+scripts/deployment/backup-minion.sh     # Backup automation
 ```
 
 ### Documentation
+
 ```
 docs/deployment/AUTO-DEPLOY-SETUP.md      # Complete setup guide
 docs/deployment/QUICK-REFERENCE.md        # Quick reference
@@ -203,6 +219,7 @@ docs/deployment/IMPLEMENTATION_SUMMARY.md # This file
 ```
 
 ### Configuration (Updated)
+
 ```
 CHANGELOG.md                              # Updated with deployment changes
 ```
@@ -214,17 +231,20 @@ CHANGELOG.md                              # Updated with deployment changes
 ### First-Time Setup (Phase 1)
 
 1. **Run setup script** on local machine:
+
    ```bash
    ./scripts/deployment/setup-server.sh 100.105.147.99 22
    ```
 
 2. **Configure production environment** on server:
+
    ```bash
-   ssh -i ~/.ssh/openclaw/openclaw_deploy_key deploy@100.105.147.99
-   nano ~/openclaw-prd/.env  # Add Claude credentials
+   ssh -i ~/.ssh/minion/minion_deploy_key deploy@100.105.147.99
+   nano ~/minion-prd/.env  # Add Claude credentials
    ```
 
 3. **Test manual deployment**:
+
    ```bash
    docker compose pull && docker compose up -d
    curl http://localhost:18789/health
@@ -245,6 +265,7 @@ CHANGELOG.md                              # Updated with deployment changes
 ### Ongoing Deployments
 
 Simply push to PRD branch:
+
 ```bash
 git checkout PRD
 git merge DEV  # Or make changes directly on PRD
@@ -252,6 +273,7 @@ git push origin PRD
 ```
 
 The deployment happens automatically:
+
 1. Docker Release builds images
 2. Deploy workflow deploys to server(s)
 3. Health checks validate deployment
@@ -262,6 +284,7 @@ The deployment happens automatically:
 ## Scaling to Multi-Server (Phase 2)
 
 1. **Setup additional servers**:
+
    ```bash
    ./setup-server.sh 100.105.148.100 22
    ./setup-server.sh 100.105.149.101 22
@@ -286,13 +309,13 @@ The deployment happens automatically:
 
 ## GitHub Secrets Required
 
-| Secret Name | Description | Example |
-|-------------|-------------|---------|
-| `SSH_PRIVATE_KEY` | Full private SSH key (including BEGIN/END lines) | `cat ~/.ssh/openclaw/openclaw_deploy_key` |
-| `SSH_HOST` | Production server IP or hostname | `100.105.147.99` |
-| `SSH_USER` | Deploy user on server | `deploy` |
-| `SSH_PORT` | SSH port | `22` |
-| `DEPLOYMENT_PATH` | Deployment directory on server | `/home/deploy/openclaw-prd` |
+| Secret Name       | Description                                      | Example                               |
+| ----------------- | ------------------------------------------------ | ------------------------------------- |
+| `SSH_PRIVATE_KEY` | Full private SSH key (including BEGIN/END lines) | `cat ~/.ssh/minion/minion_deploy_key` |
+| `SSH_HOST`        | Production server IP or hostname                 | `100.105.147.99`                      |
+| `SSH_USER`        | Deploy user on server                            | `deploy`                              |
+| `SSH_PORT`        | SSH port                                         | `22`                                  |
+| `DEPLOYMENT_PATH` | Deployment directory on server                   | `/home/deploy/minion-prd`             |
 
 **Note**: These 5 secrets work for both Phase 1 and Phase 2. The same SSH key is used for all servers in Phase 2.
 
@@ -301,6 +324,7 @@ The deployment happens automatically:
 ## Testing
 
 ### Test Single Server Deployment
+
 ```bash
 # Empty commit to trigger deployment
 git commit --allow-empty -m "test: trigger deployment"
@@ -311,6 +335,7 @@ git push origin PRD
 ```
 
 ### Test Multi-Server Deployment
+
 ```bash
 # Add test server to production.json
 git add .github/servers/production.json
@@ -321,10 +346,11 @@ git push origin PRD
 ```
 
 ### Test Rollback
+
 ```bash
 # Manually trigger rollback
 ssh deploy@<server-ip>
-cd ~/openclaw-prd
+cd ~/minion-prd
 sed -i 's/:prd/:prd-rollback/g' .env
 docker compose down && docker compose up -d
 ```
@@ -334,11 +360,13 @@ docker compose down && docker compose up -d
 ## Monitoring
 
 ### GitHub Actions
+
 - Check Actions tab for deployment status
 - Review workflow logs for errors
 - Monitor deployment summaries
 
 ### Server Health
+
 ```bash
 # Check health endpoint
 curl http://<server-ip>:18789/health
@@ -346,10 +374,11 @@ curl http://<server-ip>:18789/health
 # Check containers
 ssh deploy@<server-ip>
 docker compose ps
-docker compose logs -f openclaw-gateway
+docker compose logs -f minion-gateway
 ```
 
 ### Disk Space
+
 ```bash
 # Check disk usage
 docker system df
@@ -363,19 +392,23 @@ docker system prune -a
 ## Maintenance Schedule
 
 **Daily:**
+
 - Monitor GitHub Actions for failures
 - Check server health endpoints
 
 **Weekly:**
+
 - Review container logs for errors
 - Check disk usage
 
 **Monthly:**
+
 - Prune unused images
 - Rotate gateway tokens
 - Review SSH access logs
 
 **Quarterly:**
+
 - Rotate SSH deployment keys
 - Update GitHub Secrets
 - Review and update configurations
@@ -385,18 +418,21 @@ docker system prune -a
 ## Next Steps
 
 ### Immediate (Phase 1)
+
 - [x] Implement single-server automatic deployment
 - [ ] Run setup script on production server
 - [ ] Configure GitHub Secrets
 - [ ] Test automatic deployment
 
 ### Short-term (Phase 2)
+
 - [ ] Setup additional servers for multi-tenant
 - [ ] Configure server registry
 - [ ] Switch to multi-server workflow
 - [ ] Test parallel deployments
 
 ### Long-term (Phase 3)
+
 - [ ] Evaluate Kubernetes for 20+ servers
 - [ ] Design namespace-per-tenant architecture
 - [ ] Implement Horizontal Pod Autoscaler
@@ -407,6 +443,7 @@ docker system prune -a
 ## Support and Troubleshooting
 
 See `docs/deployment/AUTO-DEPLOY-SETUP.md` for:
+
 - Detailed troubleshooting steps
 - Common error solutions
 - Manual rollback procedures
@@ -420,18 +457,21 @@ Quick reference: `docs/deployment/QUICK-REFERENCE.md`
 ## Summary
 
 ✅ **Phase 1 Complete**: Automatic deployment to single server
+
 - 2-3 hours to implement
 - Zero-downtime deployments
 - Health checks and rollback
 - Full automation via GitHub Actions
 
 ✅ **Phase 2 Ready**: Multi-server deployment framework
+
 - JSON-based server registry
 - Parallel deployments
 - Per-tenant isolation
 - Easy scaling (add JSON entry, push to PRD)
 
 🚀 **Phase 3 Planned**: Kubernetes for high-scale production
+
 - 20+ servers
 - True auto-scaling
 - Advanced orchestration
@@ -440,5 +480,5 @@ Quick reference: `docs/deployment/QUICK-REFERENCE.md`
 ---
 
 **Implementation Date**: 2026-02-09  
-**Repository**: OpenClaw Fork (nikolasp98/openclaw)  
+**Repository**: Minion Fork (nikolasp98/minion)  
 **Branch**: DEV → PRD deployment flow

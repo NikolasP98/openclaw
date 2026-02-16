@@ -1,9 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { startBrowserBridgeServer, stopBrowserBridgeServer } from "./bridge-server.js";
-import {
-  DEFAULT_OPENCLAW_BROWSER_COLOR,
-  DEFAULT_OPENCLAW_BROWSER_PROFILE_NAME,
-} from "./constants.js";
+import { DEFAULT_MINION_BROWSER_COLOR, DEFAULT_MINION_BROWSER_PROFILE_NAME } from "./constants.js";
 
 function buildResolvedConfig() {
   return {
@@ -15,16 +12,16 @@ function buildResolvedConfig() {
     cdpIsLoopback: true,
     remoteCdpTimeoutMs: 1500,
     remoteCdpHandshakeTimeoutMs: 3000,
-    color: DEFAULT_OPENCLAW_BROWSER_COLOR,
+    color: DEFAULT_MINION_BROWSER_COLOR,
     executablePath: undefined,
     headless: true,
     noSandbox: false,
     attachOnly: true,
-    defaultProfile: DEFAULT_OPENCLAW_BROWSER_PROFILE_NAME,
+    defaultProfile: DEFAULT_MINION_BROWSER_PROFILE_NAME,
     profiles: {
-      [DEFAULT_OPENCLAW_BROWSER_PROFILE_NAME]: {
+      [DEFAULT_MINION_BROWSER_PROFILE_NAME]: {
         cdpPort: 1,
-        color: DEFAULT_OPENCLAW_BROWSER_COLOR,
+        color: DEFAULT_MINION_BROWSER_COLOR,
       },
     },
   } as const;
@@ -58,7 +55,7 @@ describe("startBrowserBridgeServer auth", () => {
     expect(authed.status).toBe(200);
   });
 
-  it("accepts x-openclaw-password when authPassword is set", async () => {
+  it("accepts x-minion-password when authPassword is set", async () => {
     const bridge = await startBrowserBridgeServer({
       resolved: buildResolvedConfig(),
       authPassword: "secret-password",
@@ -69,7 +66,7 @@ describe("startBrowserBridgeServer auth", () => {
     expect(unauth.status).toBe(401);
 
     const authed = await fetch(`${bridge.baseUrl}/`, {
-      headers: { "x-openclaw-password": "secret-password" },
+      headers: { "x-minion-password": "secret-password" },
     });
     expect(authed.status).toBe(200);
   });

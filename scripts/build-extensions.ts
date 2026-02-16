@@ -5,7 +5,7 @@
  * which invokes Babel on every CLI invocation (~15-25 s overhead).
  *
  * This script bundles each extension into a single `index.js` next to its
- * `index.ts`, with the `openclaw/plugin-sdk` import resolved to the built
+ * `index.ts`, with the `minion/plugin-sdk` import resolved to the built
  * dist output.  The plugin discovery layer then prefers the `.js` file in
  * production, eliminating jiti/Babel overhead entirely.
  */
@@ -50,7 +50,7 @@ for (const name of dirs) {
         "--no-dts",
         "--no-clean",
         "--silent",
-        `--alias.openclaw/plugin-sdk=${JSON.stringify(PLUGIN_SDK_DIST)}`,
+        `--alias.minion/plugin-sdk=${JSON.stringify(PLUGIN_SDK_DIST)}`,
       ].join(" "),
       { cwd: ROOT, stdio: "pipe" },
     );

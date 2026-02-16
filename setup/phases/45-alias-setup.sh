@@ -3,17 +3,17 @@
 # name: "Alias Setup"
 # phase: 45
 # description: >
-#   For source installs: creates the openclaw CLI wrapper script at
-#   ~/.local/bin/openclaw that delegates to run-node.mjs for auto-rebuild support.
+#   For source installs: creates the minion CLI wrapper script at
+#   ~/.local/bin/minion that delegates to run-node.mjs for auto-rebuild support.
 #   For package installs: ensures the package manager's global bin directory
-#   is in PATH so the `openclaw` command is available.
+#   is in PATH so the `minion` command is available.
 # when: >
-#   After OpenClaw is installed (phase 40). Makes the `openclaw` command
+#   After Minion is installed (phase 40). Makes the `minion` command
 #   available system-wide for the agent user.
 # requires:
-#   - "Phase 40 (openclaw install) completed"
+#   - "Phase 40 (minion install) completed"
 # produces:
-#   - "~/.local/bin/openclaw wrapper script (source installs)"
+#   - "~/.local/bin/minion wrapper script (source installs)"
 #   - "PATH updated in shell rc file"
 # flags:
 #   -v, --verbose: "Enable debug-level logging"
@@ -83,7 +83,7 @@ setup_alias_package() {
 
     log_info "Setting up PATH for package install ($pkg_mgr)..."
 
-    # The package manager already created the openclaw binary during install.
+    # The package manager already created the minion binary during install.
     # We just need to ensure its global bin dir is in PATH.
     case "$pkg_mgr" in
         npm)
@@ -116,12 +116,12 @@ setup_alias_package() {
             ;;
     esac
 
-    # Verify the openclaw command is accessible
-    log_info "Verifying openclaw command..."
-    if run_cmd --as "$exec_user" "command -v openclaw" &> /dev/null || command -v openclaw &> /dev/null; then
-        log_success "openclaw command is available in PATH"
+    # Verify the minion command is accessible
+    log_info "Verifying minion command..."
+    if run_cmd --as "$exec_user" "command -v minion" &> /dev/null || command -v minion &> /dev/null; then
+        log_success "minion command is available in PATH"
     else
-        log_warn "openclaw not yet in PATH for current session (will be available after re-login)"
+        log_warn "minion not yet in PATH for current session (will be available after re-login)"
     fi
 }
 
@@ -129,69 +129,69 @@ setup_alias_package() {
 setup_alias_source() {
     local exec_user="${AGENT_USERNAME:-$(whoami)}"
 
-    OPENCLAW_ROOT="${OPENCLAW_ROOT:-${AGENT_HOME_DIR:-$HOME}/openclaw}"
-    OPENCLAW_WRAPPER="${OPENCLAW_WRAPPER:-${AGENT_HOME_DIR:-$HOME}/.local/bin/openclaw}"
+    MINION_ROOT="${MINION_ROOT:-${AGENT_HOME_DIR:-$HOME}/minion}"
+    MINION_WRAPPER="${MINION_WRAPPER:-${AGENT_HOME_DIR:-$HOME}/.local/bin/minion}"
 
     local wrapper_dir
-    wrapper_dir="$(dirname "$OPENCLAW_WRAPPER")"
+    wrapper_dir="$(dirname "$MINION_WRAPPER")"
 
     # Ensure wrapper directory exists
     log_info "Creating wrapper directory: $wrapper_dir"
     run_cmd --as "$exec_user" "mkdir -p '$wrapper_dir'"
 
     # Check if we have a template or generate inline
-    local template_file="${SCRIPT_DIR}/../templates/openclaw-wrapper.sh.template"
+    local template_file="${SCRIPT_DIR}/../templates/minion-wrapper.sh.template"
     if [ -f "$template_file" ]; then
         log_info "Rendering wrapper from template..."
-        local temp_wrapper="/tmp/openclaw-wrapper-$$"
-        export OPENCLAW_ROOT
+        local temp_wrapper="/tmp/minion-wrapper-$$"
+        export MINION_ROOT
         render_template "$template_file" "$temp_wrapper"
 
         # Deploy the wrapper
         if [ "${EXEC_MODE:-local}" = "remote" ]; then
-            copy_file "$temp_wrapper" "$OPENCLAW_WRAPPER" "$exec_user"
-            run_cmd --as root "chown ${exec_user}:${exec_user} '$OPENCLAW_WRAPPER'"
+            copy_file "$temp_wrapper" "$MINION_WRAPPER" "$exec_user"
+            run_cmd --as root "chown ${exec_user}:${exec_user} '$MINION_WRAPPER'"
         else
-            cp "$temp_wrapper" "$OPENCLAW_WRAPPER"
+            cp "$temp_wrapper" "$MINION_WRAPPER"
         fi
         rm -f "$temp_wrapper"
     else
         # Generate wrapper inline
         log_info "Generating wrapper script inline..."
         local wrapper_content="#!/usr/bin/env bash
-# OpenClaw CLI - auto-rebuilds when source changes
-OPENCLAW_ROOT=\"${OPENCLAW_ROOT}\"
-cd \"\${OPENCLAW_ROOT}\" && exec node scripts/run-node.mjs \"\$@\"
+# Minion CLI - auto-rebuilds when source changes
+MINION_ROOT=\"${MINION_ROOT}\"
+cd \"\${MINION_ROOT}\" && exec node scripts/run-node.mjs \"\$@\"
 "
         if [ "${EXEC_MODE:-local}" = "remote" ]; then
-            local temp_wrapper="/tmp/openclaw-wrapper-$$"
+            local temp_wrapper="/tmp/minion-wrapper-$$"
             echo "$wrapper_content" > "$temp_wrapper"
-            copy_file "$temp_wrapper" "$OPENCLAW_WRAPPER" "$exec_user"
-            run_cmd --as root "chown ${exec_user}:${exec_user} '$OPENCLAW_WRAPPER'"
+            copy_file "$temp_wrapper" "$MINION_WRAPPER" "$exec_user"
+            run_cmd --as root "chown ${exec_user}:${exec_user} '$MINION_WRAPPER'"
             rm -f "$temp_wrapper"
         else
-            echo "$wrapper_content" > "$OPENCLAW_WRAPPER"
+            echo "$wrapper_content" > "$MINION_WRAPPER"
         fi
     fi
 
     # Make executable
-    run_cmd --as "$exec_user" "chmod +x '$OPENCLAW_WRAPPER'" 2>/dev/null || \
-        chmod +x "$OPENCLAW_WRAPPER" 2>/dev/null || true
+    run_cmd --as "$exec_user" "chmod +x '$MINION_WRAPPER'" 2>/dev/null || \
+        chmod +x "$MINION_WRAPPER" 2>/dev/null || true
 
     # Ensure ~/.local/bin is in PATH
-    ensure_path_entry "$wrapper_dir" "OpenClaw CLI"
+    ensure_path_entry "$wrapper_dir" "Minion CLI"
 
     # Verify wrapper works
-    log_info "Verifying openclaw wrapper..."
+    log_info "Verifying minion wrapper..."
     if [ "${EXEC_MODE:-local}" = "local" ]; then
-        if [ -x "$OPENCLAW_WRAPPER" ]; then
-            log_success "Wrapper installed at: $OPENCLAW_WRAPPER"
+        if [ -x "$MINION_WRAPPER" ]; then
+            log_success "Wrapper installed at: $MINION_WRAPPER"
         else
             log_warn "Wrapper installed but may not be executable"
         fi
     else
-        if run_cmd --as "$exec_user" "[ -x '$OPENCLAW_WRAPPER' ]" 2>/dev/null; then
-            log_success "Wrapper installed at: $OPENCLAW_WRAPPER"
+        if run_cmd --as "$exec_user" "[ -x '$MINION_WRAPPER' ]" 2>/dev/null; then
+            log_success "Wrapper installed at: $MINION_WRAPPER"
         else
             log_warn "Wrapper installed but may not be executable on remote"
         fi

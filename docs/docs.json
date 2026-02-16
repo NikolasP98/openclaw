@@ -1,14 +1,14 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "name": "OpenClaw",
+  "name": "Minion",
   "description": "Self-hosted gateway that connects WhatsApp, Telegram, Discord, iMessage, and more to AI coding agents. Run a single Gateway process on your own machine and message your AI assistant from anywhere.",
   "theme": "mint",
   "icons": {
     "library": "lucide"
   },
   "logo": {
-    "light": "/assets/pixel-lobster.svg",
-    "dark": "/assets/pixel-lobster.svg"
+    "light": "/assets/pixel-squid.svg",
+    "dark": "/assets/pixel-squid.svg"
   },
   "fonts": {
     "body": {
@@ -18,7 +18,7 @@
       "family": "DM Sans"
     }
   },
-  "favicon": "/assets/pixel-lobster.svg",
+  "favicon": "/assets/pixel-squid.svg",
   "colors": {
     "primary": "#FF5A36",
     "dark": "#FF5A36",
@@ -36,12 +36,12 @@
     "links": [
       {
         "label": "GitHub",
-        "href": "https://github.com/openclaw/openclaw",
+        "href": "https://github.com/minion/minion",
         "icon": "github"
       },
       {
         "label": "Releases",
-        "href": "https://github.com/openclaw/openclaw/releases",
+        "href": "https://github.com/minion/minion/releases",
         "icon": "package"
       }
     ]
@@ -261,15 +261,15 @@
     },
     {
       "source": "/clawd",
-      "destination": "/start/openclaw"
+      "destination": "/start/minion"
     },
     {
       "source": "/start/clawd",
-      "destination": "/start/openclaw"
+      "destination": "/start/minion"
     },
     {
       "source": "/start/clawd/",
-      "destination": "/start/openclaw"
+      "destination": "/start/minion"
     },
     {
       "source": "/clawhub",
@@ -827,7 +827,7 @@
               },
               {
                 "group": "Guides",
-                "pages": ["start/openclaw"]
+                "pages": ["start/minion"]
               }
             ]
           },
@@ -967,7 +967,7 @@
               {
                 "group": "Built-in tools",
                 "pages": [
-                  "tools/lobster",
+                  "tools/squid",
                   "tools/llm-task",
                   "tools/exec",
                   "tools/web",
@@ -1338,7 +1338,7 @@
               },
               {
                 "group": "指南",
-                "pages": ["zh-CN/start/openclaw"]
+                "pages": ["zh-CN/start/minion"]
               }
             ]
           },
@@ -1480,7 +1480,7 @@
               {
                 "group": "内置工具",
                 "pages": [
-                  "zh-CN/tools/lobster",
+                  "zh-CN/tools/squid",
                   "zh-CN/tools/llm-task",
                   "zh-CN/tools/exec",
                   "zh-CN/tools/web",

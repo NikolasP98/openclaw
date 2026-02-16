@@ -1,5 +1,5 @@
 import type { ChatType } from "../channels/chat-type.js";
-import type { OpenClawConfig } from "../config/config.js";
+import type { MinionConfig } from "../config/config.js";
 import { resolveDefaultAgentId } from "../agents/agent-scope.js";
 import { normalizeChatType } from "../channels/chat-type.js";
 import { shouldLogVerbose } from "../globals.js";
@@ -23,7 +23,7 @@ export type RoutePeer = {
 };
 
 export type ResolveAgentRouteInput = {
-  cfg: OpenClawConfig;
+  cfg: MinionConfig;
   channel: string;
   accountId?: string | null;
   peer?: RoutePeer | null;
@@ -104,12 +104,12 @@ export function buildAgentSessionKey(params: {
   });
 }
 
-function listAgents(cfg: OpenClawConfig) {
+function listAgents(cfg: MinionConfig) {
   const agents = cfg.agents?.list;
   return Array.isArray(agents) ? agents : [];
 }
 
-function pickFirstExistingAgentId(cfg: OpenClawConfig, agentId: string): string {
+function pickFirstExistingAgentId(cfg: MinionConfig, agentId: string): string {
   const trimmed = (agentId ?? "").trim();
   if (!trimmed) {
     return sanitizeAgentId(resolveDefaultAgentId(cfg));
@@ -163,15 +163,15 @@ type BindingScope = {
 };
 
 type EvaluatedBindingsCache = {
-  bindingsRef: OpenClawConfig["bindings"];
+  bindingsRef: MinionConfig["bindings"];
   byChannelAccount: Map<string, EvaluatedBinding[]>;
 };
 
-const evaluatedBindingsCacheByCfg = new WeakMap<OpenClawConfig, EvaluatedBindingsCache>();
+const evaluatedBindingsCacheByCfg = new WeakMap<MinionConfig, EvaluatedBindingsCache>();
 const MAX_EVALUATED_BINDINGS_CACHE_KEYS = 2000;
 
 function getEvaluatedBindingsForChannelAccount(
-  cfg: OpenClawConfig,
+  cfg: MinionConfig,
   channel: string,
   accountId: string,
 ): EvaluatedBinding[] {

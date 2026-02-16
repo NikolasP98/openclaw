@@ -123,7 +123,7 @@ describe("trigger handling", () => {
         makeCfg(home),
       );
       const text = Array.isArray(res) ? res[0]?.text : res?.text;
-      expect(text).toContain("OpenClaw");
+      expect(text).toContain("Minion");
       expect(runEmbeddedPiAgentMock).not.toHaveBeenCalled();
     });
   });

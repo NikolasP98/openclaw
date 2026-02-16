@@ -71,5 +71,5 @@
 
 **Deployment Information**
 - Deployed: {{DEPLOYMENT_DATE}}
-- Version: {{OPENCLAW_VERSION}}
+- Version: {{MINION_VERSION}}
 - Environment: {{DEPLOYMENT_ENVIRONMENT}}

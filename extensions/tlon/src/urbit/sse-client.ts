@@ -1,4 +1,4 @@
-import type { LookupFn, SsrFPolicy } from "openclaw/plugin-sdk";
+import type { LookupFn, SsrFPolicy } from "minion/plugin-sdk";
 import { Readable } from "node:stream";
 import { ensureUrbitChannelOpen } from "./channel-ops.js";
 import { getUrbitContext, normalizeUrbitCookie } from "./context.js";

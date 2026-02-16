@@ -8,11 +8,11 @@ import type { PluginHookMessageContext } from "../plugins/hooks.js";
  *
  * Opt-in feature — enable via:
  *   - Config:   gateway.messageLedger.enabled: true
- *   - Env var:  OPENCLAW_MESSAGE_LEDGER=1
+ *   - Env var:  MINION_MESSAGE_LEDGER=1
  *
  * Database path defaults to {workspaceDir}/message-ledger.db but can be overridden:
  *   - Config:   gateway.messageLedger.dbPath
- *   - Env var:  OPENCLAW_MESSAGE_LEDGER_PATH
+ *   - Env var:  MINION_MESSAGE_LEDGER_PATH
  */
 import type {
   PluginHookMessageInboundEvent,

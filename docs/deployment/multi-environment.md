@@ -1,17 +1,18 @@
 # Multi-Environment Docker Deployment
 
-This guide explains how to run OpenClaw in multiple environments (DEV and PRD) using Docker Compose with environment-based configuration.
+This guide explains how to run Minion in multiple environments (DEV and PRD) using Docker Compose with environment-based configuration.
 
 ## Overview
 
 ### Purpose
 
-OpenClaw supports running multiple isolated environments on the same host machine:
+Minion supports running multiple isolated environments on the same host machine:
 
 - **DEV** (Development): For testing new features, experimentation, and development work
 - **PRD** (Production): For stable, production usage
 
 Each environment runs in complete isolation with:
+
 - Separate Docker images (`:dev` vs `:prd` tags)
 - Separate configuration directories
 - Separate ports (no conflicts)
@@ -39,6 +40,7 @@ PRD branch
 ```
 
 **Benefits:**
+
 - No branch divergence → no merge conflicts
 - Single source of truth for Docker configuration
 - Standard Docker best practices
@@ -65,7 +67,7 @@ cp .env.example .env
 docker-compose up -d
 
 # 5. Verify
-docker ps | grep openclaw
+docker ps | grep minion
 ```
 
 ### Running Both Environments Simultaneously
@@ -74,14 +76,14 @@ You can run DEV and PRD at the same time without conflicts:
 
 ```bash
 # Terminal 1 - DEV environment
-cd /path/to/openclaw-dev
+cd /path/to/minion-dev
 git checkout DEV
 cp .env.example .env
 # Edit .env: uncomment DEV section, add real tokens
 docker-compose up -d
 
 # Terminal 2 - PRD environment
-cd /path/to/openclaw-prd
+cd /path/to/minion-prd
 git checkout PRD
 cp .env.example .env
 # Edit .env: uncomment PRD section, add real tokens
@@ -97,21 +99,22 @@ docker-compose up -d
 Development environment configuration (in `.env`):
 
 ```bash
-OPENCLAW_IMAGE=ghcr.io/nikolasp98/openclaw:dev
-OPENCLAW_GATEWAY_CONTAINER_NAME=openclaw_DEV_gw
-OPENCLAW_CLI_CONTAINER_NAME=openclaw_DEV_cli
-OPENCLAW_CONFIG_DIR=/home/nikolas/.openclaw-dev
-OPENCLAW_WORKSPACE_DIR=/home/nikolas/.openclaw-dev/workspace
-OPENCLAW_GATEWAY_PORT=18788
-OPENCLAW_BRIDGE_PORT=18791
-OPENCLAW_GATEWAY_BIND=lan
-OPENCLAW_GATEWAY_TOKEN=<your-dev-token>
+MINION_IMAGE=ghcr.io/nikolasp98/minion:dev
+MINION_GATEWAY_CONTAINER_NAME=minion_DEV_gw
+MINION_CLI_CONTAINER_NAME=minion_DEV_cli
+MINION_CONFIG_DIR=/home/nikolas/.minion-dev
+MINION_WORKSPACE_DIR=/home/nikolas/.minion-dev/workspace
+MINION_GATEWAY_PORT=18788
+MINION_BRIDGE_PORT=18791
+MINION_GATEWAY_BIND=lan
+MINION_GATEWAY_TOKEN=<your-dev-token>
 ```
 
 **Key characteristics:**
+
 - Uses `:dev` image tag (built from `DEV` branch)
 - Non-standard ports (18788, 18791) to avoid conflicts
-- Separate config directory (`~/.openclaw-dev`)
+- Separate config directory (`~/.minion-dev`)
 - Container names include `_DEV_` prefix
 
 ### PRD Environment
@@ -119,21 +122,22 @@ OPENCLAW_GATEWAY_TOKEN=<your-dev-token>
 Production environment configuration (in `.env`):
 
 ```bash
-OPENCLAW_IMAGE=ghcr.io/nikolasp98/openclaw:prd
-OPENCLAW_GATEWAY_CONTAINER_NAME=openclaw_PRD_gw
-OPENCLAW_CLI_CONTAINER_NAME=openclaw_PRD_cli
-OPENCLAW_CONFIG_DIR=/home/nikolas/.openclaw-prd
-OPENCLAW_WORKSPACE_DIR=/home/nikolas/.openclaw-prd/workspace
-OPENCLAW_GATEWAY_PORT=18789
-OPENCLAW_BRIDGE_PORT=18790
-OPENCLAW_GATEWAY_BIND=lan
-OPENCLAW_GATEWAY_TOKEN=<your-prd-token>
+MINION_IMAGE=ghcr.io/nikolasp98/minion:prd
+MINION_GATEWAY_CONTAINER_NAME=minion_PRD_gw
+MINION_CLI_CONTAINER_NAME=minion_PRD_cli
+MINION_CONFIG_DIR=/home/nikolas/.minion-prd
+MINION_WORKSPACE_DIR=/home/nikolas/.minion-prd/workspace
+MINION_GATEWAY_PORT=18789
+MINION_BRIDGE_PORT=18790
+MINION_GATEWAY_BIND=lan
+MINION_GATEWAY_TOKEN=<your-prd-token>
 ```
 
 **Key characteristics:**
+
 - Uses `:prd` image tag (built from `PRD` branch)
 - Standard ports (18789, 18790)
-- Separate config directory (`~/.openclaw-prd`)
+- Separate config directory (`~/.minion-prd`)
 - Container names include `_PRD_` prefix
 
 ### Shared Configuration
@@ -147,7 +151,7 @@ CLAUDE_WEB_SESSION_KEY=<your-web-session-key>
 CLAUDE_WEB_COOKIE=<your-cookie>
 
 # Host-specific paths (optional, use defaults if unset)
-OPENCLAW_GOG_CONFIG_DIR=~/.config/gogcli
+MINION_GOG_CONFIG_DIR=~/.config/gogcli
 TAILSCALE_SOCKET=/var/run/tailscale/tailscaled.sock
 TAILSCALE_BINARY=/usr/bin/tailscale
 ```
@@ -156,30 +160,30 @@ TAILSCALE_BINARY=/usr/bin/tailscale
 
 ### Environment Variables
 
-| Variable | Required | DEV Value | PRD Value | Description |
-|----------|----------|-----------|-----------|-------------|
-| `OPENCLAW_IMAGE` | Yes | `ghcr.io/nikolasp98/openclaw:dev` | `ghcr.io/nikolasp98/openclaw:prd` | Docker image tag |
-| `OPENCLAW_GATEWAY_CONTAINER_NAME` | Yes | `openclaw_DEV_gw` | `openclaw_PRD_gw` | Gateway container name |
-| `OPENCLAW_CLI_CONTAINER_NAME` | Yes | `openclaw_DEV_cli` | `openclaw_PRD_cli` | CLI container name |
-| `OPENCLAW_CONFIG_DIR` | Yes | `/home/nikolas/.openclaw-dev` | `/home/nikolas/.openclaw-prd` | Config directory |
-| `OPENCLAW_WORKSPACE_DIR` | Yes | `/home/nikolas/.openclaw-dev/workspace` | `/home/nikolas/.openclaw-prd/workspace` | Workspace directory |
-| `OPENCLAW_GATEWAY_PORT` | Yes | `18788` | `18789` | External gateway port |
-| `OPENCLAW_BRIDGE_PORT` | Yes | `18791` | `18790` | External bridge port |
-| `OPENCLAW_GATEWAY_BIND` | Yes | `lan` | `lan` | Network binding mode |
-| `OPENCLAW_GATEWAY_TOKEN` | Yes | (unique token) | (unique token) | Auth token for gateway |
-| `CLAUDE_AI_SESSION_KEY` | No | (optional) | (optional) | Claude AI session key |
-| `CLAUDE_WEB_SESSION_KEY` | No | (optional) | (optional) | Claude web session key |
-| `CLAUDE_WEB_COOKIE` | No | (optional) | (optional) | Claude web cookie |
-| `OPENCLAW_GOG_CONFIG_DIR` | No | `~/.config/gogcli` | `~/.config/gogcli` | GOG CLI config dir |
-| `TAILSCALE_SOCKET` | No | `/var/run/tailscale/tailscaled.sock` | `/var/run/tailscale/tailscaled.sock` | Tailscale socket |
-| `TAILSCALE_BINARY` | No | `/usr/bin/tailscale` | `/usr/bin/tailscale` | Tailscale binary |
+| Variable                        | Required | DEV Value                             | PRD Value                             | Description            |
+| ------------------------------- | -------- | ------------------------------------- | ------------------------------------- | ---------------------- |
+| `MINION_IMAGE`                  | Yes      | `ghcr.io/nikolasp98/minion:dev`       | `ghcr.io/nikolasp98/minion:prd`       | Docker image tag       |
+| `MINION_GATEWAY_CONTAINER_NAME` | Yes      | `minion_DEV_gw`                       | `minion_PRD_gw`                       | Gateway container name |
+| `MINION_CLI_CONTAINER_NAME`     | Yes      | `minion_DEV_cli`                      | `minion_PRD_cli`                      | CLI container name     |
+| `MINION_CONFIG_DIR`             | Yes      | `/home/nikolas/.minion-dev`           | `/home/nikolas/.minion-prd`           | Config directory       |
+| `MINION_WORKSPACE_DIR`          | Yes      | `/home/nikolas/.minion-dev/workspace` | `/home/nikolas/.minion-prd/workspace` | Workspace directory    |
+| `MINION_GATEWAY_PORT`           | Yes      | `18788`                               | `18789`                               | External gateway port  |
+| `MINION_BRIDGE_PORT`            | Yes      | `18791`                               | `18790`                               | External bridge port   |
+| `MINION_GATEWAY_BIND`           | Yes      | `lan`                                 | `lan`                                 | Network binding mode   |
+| `MINION_GATEWAY_TOKEN`          | Yes      | (unique token)                        | (unique token)                        | Auth token for gateway |
+| `CLAUDE_AI_SESSION_KEY`         | No       | (optional)                            | (optional)                            | Claude AI session key  |
+| `CLAUDE_WEB_SESSION_KEY`        | No       | (optional)                            | (optional)                            | Claude web session key |
+| `CLAUDE_WEB_COOKIE`             | No       | (optional)                            | (optional)                            | Claude web cookie      |
+| `MINION_GOG_CONFIG_DIR`         | No       | `~/.config/gogcli`                    | `~/.config/gogcli`                    | GOG CLI config dir     |
+| `TAILSCALE_SOCKET`              | No       | `/var/run/tailscale/tailscaled.sock`  | `/var/run/tailscale/tailscaled.sock`  | Tailscale socket       |
+| `TAILSCALE_BINARY`              | No       | `/usr/bin/tailscale`                  | `/usr/bin/tailscale`                  | Tailscale binary       |
 
 ### Port Allocation Strategy
 
-| Environment | Gateway | Bridge | Purpose |
-|-------------|---------|--------|---------|
-| DEV | 18788 | 18791 | Non-standard ports to avoid conflicts |
-| PRD | 18789 | 18790 | Standard OpenClaw ports |
+| Environment | Gateway | Bridge | Purpose                               |
+| ----------- | ------- | ------ | ------------------------------------- |
+| DEV         | 18788   | 18791  | Non-standard ports to avoid conflicts |
+| PRD         | 18789   | 18790  | Standard Minion ports                 |
 
 This allocation allows both environments to run simultaneously without port conflicts.
 
@@ -188,12 +192,12 @@ This allocation allows both environments to run simultaneously without port conf
 Each environment uses separate configuration and workspace directories:
 
 ```
-~/.openclaw-dev/          ← DEV config
+~/.minion-dev/          ← DEV config
 ├── config.json
 ├── sessions/
 └── workspace/
 
-~/.openclaw-prd/          ← PRD config
+~/.minion-prd/          ← PRD config
 ├── config.json
 ├── sessions/
 └── workspace/
@@ -230,7 +234,7 @@ docker-compose down -v
 docker-compose logs -f
 
 # Specific service
-docker-compose logs -f openclaw-gateway
+docker-compose logs -f minion-gateway
 
 # Last 100 lines
 docker-compose logs --tail=100
@@ -266,13 +270,13 @@ docker-compose up -d
 
 ```bash
 # Interactive shell
-docker-compose run --rm openclaw-cli
+docker-compose run --rm minion-cli
 
 # One-off command
-docker-compose run --rm openclaw-cli config list
+docker-compose run --rm minion-cli config list
 
 # Execute in running container
-docker exec -it openclaw_DEV_cli node dist/index.js config list
+docker exec -it minion_DEV_cli node dist/index.js config list
 ```
 
 ## Troubleshooting
@@ -282,47 +286,50 @@ docker exec -it openclaw_DEV_cli node dist/index.js config list
 **Symptom:** `Error starting userland proxy: listen tcp4 0.0.0.0:18789: bind: address already in use`
 
 **Solution:**
+
 ```bash
 # Check what's using the port
 ss -ltnp | grep 18789
 
-# If it's another OpenClaw instance, stop it
+# If it's another Minion instance, stop it
 cd /path/to/other/environment
 docker-compose down
 
 # Or use different ports in .env
-OPENCLAW_GATEWAY_PORT=18799
-OPENCLAW_BRIDGE_PORT=18800
+MINION_GATEWAY_PORT=18799
+MINION_BRIDGE_PORT=18800
 ```
 
 ### Container Name Collisions
 
-**Symptom:** `Error response from daemon: Conflict. The container name "/openclaw_gateway" is already in use`
+**Symptom:** `Error response from daemon: Conflict. The container name "/minion_gateway" is already in use`
 
 **Solution:**
+
 ```bash
 # Check running containers
-docker ps -a | grep openclaw
+docker ps -a | grep minion
 
 # Remove old container
-docker rm -f openclaw_gateway
+docker rm -f minion_gateway
 
 # Or use different container names in .env
-OPENCLAW_GATEWAY_CONTAINER_NAME=openclaw_test_gw
+MINION_GATEWAY_CONTAINER_NAME=minion_test_gw
 ```
 
 ### Volume Permission Issues
 
-**Symptom:** `Error: EACCES: permission denied, open '/home/node/.openclaw/config.json'`
+**Symptom:** `Error: EACCES: permission denied, open '/home/node/.minion/config.json'`
 
 **Solution:**
+
 ```bash
 # Ensure directories exist and have correct permissions
-mkdir -p ~/.openclaw-dev ~/.openclaw-prd
-chmod -R 755 ~/.openclaw-dev ~/.openclaw-prd
+mkdir -p ~/.minion-dev ~/.minion-prd
+chmod -R 755 ~/.minion-dev ~/.minion-prd
 
 # If needed, change ownership (Docker runs as node user, UID 1000)
-chown -R 1000:1000 ~/.openclaw-dev
+chown -R 1000:1000 ~/.minion-dev
 ```
 
 ### Missing Environment Variables
@@ -330,9 +337,10 @@ chown -R 1000:1000 ~/.openclaw-dev
 **Symptom:** Container starts but gateway fails with authentication errors
 
 **Solution:**
+
 ```bash
 # Verify .env file exists and has correct values
-cat .env | grep OPENCLAW_GATEWAY_TOKEN
+cat .env | grep MINION_GATEWAY_TOKEN
 
 # Ensure no typos in variable names
 docker-compose config | grep -A5 environment
@@ -343,18 +351,19 @@ docker-compose down && docker-compose up -d
 
 ### Image Pull Failures
 
-**Symptom:** `Error response from daemon: manifest for ghcr.io/nikolasp98/openclaw:dev not found`
+**Symptom:** `Error response from daemon: manifest for ghcr.io/nikolasp98/minion:dev not found`
 
 **Solution:**
+
 ```bash
 # Check if image tag exists
-docker pull ghcr.io/nikolasp98/openclaw:dev
+docker pull ghcr.io/nikolasp98/minion:dev
 
 # Verify GitHub Container Registry authentication (if private)
 echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
 
 # Use local image for testing
-OPENCLAW_IMAGE=openclaw:local
+MINION_IMAGE=minion:local
 ```
 
 ### Wrong Environment Running
@@ -362,12 +371,13 @@ OPENCLAW_IMAGE=openclaw:local
 **Symptom:** You expected DEV but PRD is running, or vice versa
 
 **Solution:**
+
 ```bash
 # Check which containers are running
 docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Ports}}"
 
 # Verify .env file
-cat .env | grep OPENCLAW_IMAGE
+cat .env | grep MINION_IMAGE
 
 # Check ports
 ss -ltnp | grep -E "1878[89]|1879[01]"
@@ -386,11 +396,11 @@ You can override any default value by adding it to your `.env` file:
 
 ```bash
 # Use custom config directory
-OPENCLAW_CONFIG_DIR=/mnt/storage/openclaw-dev
+MINION_CONFIG_DIR=/mnt/storage/minion-dev
 
 # Use custom ports
-OPENCLAW_GATEWAY_PORT=19999
-OPENCLAW_BRIDGE_PORT=20000
+MINION_GATEWAY_PORT=19999
+MINION_BRIDGE_PORT=20000
 
 # Use different Tailscale socket
 TAILSCALE_SOCKET=/var/lib/tailscale/tailscaled.sock
@@ -401,17 +411,20 @@ TAILSCALE_SOCKET=/var/lib/tailscale/tailscaled.sock
 To add new environment variables:
 
 1. Add them to `docker-compose.yml`:
+
 ```yaml
 environment:
   NEW_VAR: ${NEW_VAR}
 ```
 
 2. Document in `.env.example`:
+
 ```bash
 # NEW_VAR=default-value
 ```
 
 3. Set in your local `.env`:
+
 ```bash
 NEW_VAR=my-value
 ```
@@ -438,7 +451,7 @@ For a complete reset (destroys data):
 docker-compose down -v
 
 # Remove config directories
-rm -rf ~/.openclaw-dev ~/.openclaw-prd
+rm -rf ~/.minion-dev ~/.minion-prd
 
 # Start fresh
 cp .env.example .env
@@ -450,13 +463,13 @@ docker-compose up -d
 
 ```bash
 # Check containers
-docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Ports}}" | grep openclaw
+docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Ports}}" | grep minion
 
 # Expected output:
-# openclaw_DEV_gw    ghcr.io/nikolasp98/openclaw:dev    18788->18789, 18791->18790
-# openclaw_DEV_cli   ghcr.io/nikolasp98/openclaw:dev
-# openclaw_PRD_gw    ghcr.io/nikolasp98/openclaw:prd    18789->18789, 18790->18790
-# openclaw_PRD_cli   ghcr.io/nikolasp98/openclaw:prd
+# minion_DEV_gw    ghcr.io/nikolasp98/minion:dev    18788->18789, 18791->18790
+# minion_DEV_cli   ghcr.io/nikolasp98/minion:dev
+# minion_PRD_gw    ghcr.io/nikolasp98/minion:prd    18789->18789, 18790->18790
+# minion_PRD_cli   ghcr.io/nikolasp98/minion:prd
 
 # Check ports
 ss -ltnp | grep -E "1878[89]|1879[01]"
@@ -468,7 +481,7 @@ ss -ltnp | grep -E "1878[89]|1879[01]"
 # tcp LISTEN 0.0.0.0:18790 (PRD bridge)
 
 # Check config directories
-ls -la ~/.openclaw-dev ~/.openclaw-prd
+ls -la ~/.minion-dev ~/.minion-prd
 
 # Test connectivity
 curl http://localhost:18788/health  # DEV
@@ -479,9 +492,9 @@ curl http://localhost:18789/health  # PRD
 
 The GitHub Actions workflow automatically builds environment-specific images:
 
-- Pushes to `DEV` branch → `ghcr.io/nikolasp98/openclaw:dev`
-- Pushes to `PRD` branch → `ghcr.io/nikolasp98/openclaw:prd`
-- Pushes to `main` branch → `ghcr.io/nikolasp98/openclaw:main`
+- Pushes to `DEV` branch → `ghcr.io/nikolasp98/minion:dev`
+- Pushes to `PRD` branch → `ghcr.io/nikolasp98/minion:prd`
+- Pushes to `main` branch → `ghcr.io/nikolasp98/minion:main`
 
 After pushing to a branch, wait for the workflow to complete, then pull the new image:
 
@@ -501,6 +514,6 @@ docker-compose up -d
 
 ## Related Documentation
 
-- [OpenClaw Docker Installation](../install/docker.md) - Basic Docker setup
+- [Minion Docker Installation](../install/docker.md) - Basic Docker setup
 - [Gateway Configuration](../gateway/configuration.md) - Gateway options
 - [CLI Profile System](../cli/profiles.md) - Alternative multi-environment approach

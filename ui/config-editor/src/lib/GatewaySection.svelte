@@ -1,11 +1,11 @@
 <script lang="ts">
-  import type { OpenClawConfig } from '../types';
+  import type { MinionConfig } from '../types';
 
-  let { config }: { config: OpenClawConfig } = $props();
+  let { config }: { config: MinionConfig } = $props();
 
   $effect(() => {
-    if (!config.gateway) config.gateway = {};
-    if (!config.gateway.reload) config.gateway.reload = {};
+    if (!config.gateway) {config.gateway = {};}
+    if (!config.gateway.reload) {config.gateway.reload = {};}
   });
 </script>
 

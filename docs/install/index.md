@@ -1,5 +1,5 @@
 ---
-summary: "Install OpenClaw — installer script, npm/pnpm, from source, Docker, and more"
+summary: "Install Minion — installer script, npm/pnpm, from source, Docker, and more"
 read_when:
   - You need an install method other than the Getting Started quickstart
   - You want to deploy to a cloud platform
@@ -18,13 +18,13 @@ Already followed [Getting Started](/start/getting-started)? You're all set — t
 - `pnpm` (recommended package manager; npm also works)
 
 <Note>
-On Windows, we strongly recommend running OpenClaw under [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install).
+On Windows, we strongly recommend running Minion under [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install).
 </Note>
 
 ## Install methods
 
 <Tip>
-The **installer script** is the recommended way to install OpenClaw. It handles Node detection, installation, and onboarding in one step.
+The **installer script** is the recommended way to install Minion. It handles Node detection, installation, and onboarding in one step.
 </Tip>
 
 <AccordionGroup>
@@ -34,12 +34,12 @@ The **installer script** is the recommended way to install OpenClaw. It handles 
     <Tabs>
       <Tab title="macOS / Linux / WSL2">
         ```bash
-        curl -fsSL https://openclaw.ai/install.sh | bash
+        curl -fsSL https://minion.ai/install.sh | bash
         ```
       </Tab>
       <Tab title="Windows (PowerShell)">
         ```powershell
-        iwr -useb https://openclaw.ai/install.ps1 | iex
+        iwr -useb https://minion.ai/install.ps1 | iex
         ```
       </Tab>
     </Tabs>
@@ -51,12 +51,12 @@ The **installer script** is the recommended way to install OpenClaw. It handles 
     <Tabs>
       <Tab title="macOS / Linux / WSL2">
         ```bash
-        curl -fsSL https://openclaw.ai/install.sh | bash -s -- --no-onboard
+        curl -fsSL https://minion.ai/install.sh | bash -s -- --no-onboard
         ```
       </Tab>
       <Tab title="Windows (PowerShell)">
         ```powershell
-        & ([scriptblock]::Create((iwr -useb https://openclaw.ai/install.ps1))) -NoOnboard
+        & ([scriptblock]::Create((iwr -useb https://minion.ai/install.ps1))) -NoOnboard
         ```
       </Tab>
     </Tabs>
@@ -71,9 +71,9 @@ The **installer script** is the recommended way to install OpenClaw. It handles 
     <Tabs>
       <Tab title="pnpm (recommended)">
         ```bash
-        pnpm add -g openclaw@latest
-        pnpm approve-builds -g        # approve openclaw, node-llama-cpp, sharp, etc.
-        openclaw onboard --install-daemon
+        pnpm add -g minion@latest
+        pnpm approve-builds -g        # approve minion, node-llama-cpp, sharp, etc.
+        minion onboard --install-daemon
         ```
 
         <Note>
@@ -82,15 +82,15 @@ The **installer script** is the recommended way to install OpenClaw. It handles 
       </Tab>
       <Tab title="npm">
         ```bash
-        npm install -g openclaw@latest
-        openclaw onboard --install-daemon
+        npm install -g minion@latest
+        minion onboard --install-daemon
         ```
 
         <Accordion title="sharp build errors?">
           If you have libvips installed globally (common on macOS via Homebrew) and `sharp` fails, force prebuilt binaries:
 
           ```bash
-          SHARP_IGNORE_GLOBAL_LIBVIPS=1 npm install -g openclaw@latest
+          SHARP_IGNORE_GLOBAL_LIBVIPS=1 npm install -g minion@latest
           ```
 
           If you see `sharp: Please add node-gyp to your dependencies`, either install build tooling (macOS: Xcode CLT + `npm install -g node-gyp`) or use the env var above.
@@ -105,28 +105,28 @@ The **installer script** is the recommended way to install OpenClaw. It handles 
 
     <Steps>
       <Step title="Clone and build">
-        Clone the [OpenClaw repo](https://github.com/openclaw/openclaw) and build:
+        Clone the [Minion repo](https://github.com/minion/minion) and build:
 
         ```bash
-        git clone https://github.com/openclaw/openclaw.git
-        cd openclaw
+        git clone https://github.com/minion/minion.git
+        cd minion
         pnpm install
         pnpm ui:build
         pnpm build
         ```
       </Step>
       <Step title="Link the CLI">
-        Make the `openclaw` command available globally:
+        Make the `minion` command available globally:
 
         ```bash
         pnpm link --global
         ```
 
-        Alternatively, skip the link and run commands via `pnpm openclaw ...` from inside the repo.
+        Alternatively, skip the link and run commands via `pnpm minion ...` from inside the repo.
       </Step>
       <Step title="Run onboarding">
         ```bash
-        openclaw onboard --install-daemon
+        minion onboard --install-daemon
         ```
       </Step>
     </Steps>
@@ -161,20 +161,20 @@ The **installer script** is the recommended way to install OpenClaw. It handles 
 Verify everything is working:
 
 ```bash
-openclaw doctor         # check for config issues
-openclaw status         # gateway status
-openclaw dashboard      # open the browser UI
+minion doctor         # check for config issues
+minion status         # gateway status
+minion dashboard      # open the browser UI
 ```
 
 If you need custom runtime paths, use:
 
-- `OPENCLAW_HOME` for home-directory based internal paths
-- `OPENCLAW_STATE_DIR` for mutable state location
-- `OPENCLAW_CONFIG_PATH` for config file location
+- `MINION_HOME` for home-directory based internal paths
+- `MINION_STATE_DIR` for mutable state location
+- `MINION_CONFIG_PATH` for config file location
 
 See [Environment vars](/help/environment) for precedence and full details.
 
-## Troubleshooting: `openclaw` not found
+## Troubleshooting: `minion` not found
 
 <Accordion title="PATH diagnosis and fix">
   Quick diagnosis:
@@ -186,7 +186,7 @@ npm prefix -g
 echo "$PATH"
 ```
 
-If `$(npm prefix -g)/bin` (macOS/Linux) or `$(npm prefix -g)` (Windows) is **not** in your `$PATH`, your shell can't find global npm binaries (including `openclaw`).
+If `$(npm prefix -g)/bin` (macOS/Linux) or `$(npm prefix -g)` (Windows) is **not** in your `$PATH`, your shell can't find global npm binaries (including `minion`).
 
 Fix — add it to your shell startup file (`~/.zshrc` or `~/.bashrc`):
 
@@ -203,12 +203,12 @@ Then open a new terminal (or `rehash` in zsh / `hash -r` in bash).
 
 <CardGroup cols={3}>
   <Card title="Updating" href="/install/updating" icon="refresh-cw">
-    Keep OpenClaw up to date.
+    Keep Minion up to date.
   </Card>
   <Card title="Migrating" href="/install/migrating" icon="arrow-right">
     Move to a new machine.
   </Card>
   <Card title="Uninstall" href="/install/uninstall" icon="trash-2">
-    Remove OpenClaw completely.
+    Remove Minion completely.
   </Card>
 </CardGroup>

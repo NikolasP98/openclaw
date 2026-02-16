@@ -11,7 +11,7 @@ import {
   recordOutboundMessage,
 } from "./message-ledger.js";
 
-const PLUGIN_ID = "openclaw:message-ledger";
+const PLUGIN_ID = "minion:message-ledger";
 
 export function registerMessageLedgerHooks(registry: PluginRegistry, dbPath: string): void {
   registry.typedHooks.push(

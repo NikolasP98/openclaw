@@ -48,7 +48,7 @@ jobs:
             echo "=== Starting deployment ==="
 
             # Tag current running image as rollback (if exists)
-            CURRENT_IMAGE=$(docker inspect openclaw_PRD_gw --format='{{.Image}}' 2>/dev/null || echo "none")
+            CURRENT_IMAGE=$(docker inspect minion_PRD_gw --format='{{.Image}}' 2>/dev/null || echo "none")
             if [[ "$CURRENT_IMAGE" != "none" ]]; then
               echo "Tagging current image for rollback: $CURRENT_IMAGE"
               docker tag $CURRENT_IMAGE ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:prd-rollback || true
@@ -56,7 +56,7 @@ jobs:
 
             # Pull new image
             echo "Pulling latest image..."
-            docker compose pull openclaw-gateway openclaw-cli
+            docker compose pull minion-gateway minion-cli
 
             # Stop containers gracefully
             echo "Stopping containers..."
@@ -80,7 +80,7 @@ jobs:
             cd ${{ secrets.DEPLOYMENT_PATH }}
 
             # Check container status
-            if ! docker compose ps | grep -q "openclaw_PRD_gw.*Up"; then
+            if ! docker compose ps | grep -q "minion_PRD_gw.*Up"; then
               echo "ERROR: Gateway container is not running!"
               exit 1
             fi
@@ -89,7 +89,7 @@ jobs:
 
             # Test health endpoint (retry 3 times)
             for i in {1..3}; do
-              if docker compose exec -T openclaw-gateway wget -q -O- http://localhost:18789/health >/dev/null 2>&1; then
+              if docker compose exec -T minion-gateway wget -q -O- http://localhost:18789/health >/dev/null 2>&1; then
                 echo "✅ Health check passed"
                 exit 0
               fi
@@ -129,7 +129,7 @@ jobs:
             # Remove dangling images
             docker image prune -f
 
-            # Keep only last 3 openclaw images
+            # Keep only last 3 minion images
             docker images ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} --format "{{.ID}} {{.CreatedAt}}" | \
               tail -n +4 | \
               awk '{print $1}' | \

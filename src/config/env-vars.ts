@@ -1,6 +1,6 @@
-import type { OpenClawConfig } from "./types.js";
+import type { MinionConfig } from "./types.js";
 
-export function collectConfigEnvVars(cfg?: OpenClawConfig): Record<string, string> {
+export function collectConfigEnvVars(cfg?: MinionConfig): Record<string, string> {
   const envConfig = cfg?.env;
   if (!envConfig) {
     return {};
@@ -30,10 +30,7 @@ export function collectConfigEnvVars(cfg?: OpenClawConfig): Record<string, strin
   return entries;
 }
 
-export function applyConfigEnvVars(
-  cfg: OpenClawConfig,
-  env: NodeJS.ProcessEnv = process.env,
-): void {
+export function applyConfigEnvVars(cfg: MinionConfig, env: NodeJS.ProcessEnv = process.env): void {
   const entries = collectConfigEnvVars(cfg);
   for (const [key, value] of Object.entries(entries)) {
     if (env[key]?.trim()) {

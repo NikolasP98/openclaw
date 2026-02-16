@@ -16,8 +16,8 @@ type HeldLock = {
 
 const CLEANUP_SIGNALS = ["SIGINT", "SIGTERM", "SIGQUIT", "SIGABRT"] as const;
 type CleanupSignal = (typeof CLEANUP_SIGNALS)[number];
-const CLEANUP_STATE_KEY = Symbol.for("openclaw.sessionWriteLockCleanupState");
-const HELD_LOCKS_KEY = Symbol.for("openclaw.sessionWriteLockHeldLocks");
+const CLEANUP_STATE_KEY = Symbol.for("minion.sessionWriteLockCleanupState");
+const HELD_LOCKS_KEY = Symbol.for("minion.sessionWriteLockHeldLocks");
 
 type CleanupState = {
   registered: boolean;
@@ -150,7 +150,7 @@ export async function acquireSessionWriteLock(params: {
   release: () => Promise<void>;
 }> {
   registerCleanupHandlers();
-  const timeoutMs = params.timeoutMs ?? (Number(process.env.OPENCLAW_LOCK_TIMEOUT_MS) || 30_000);
+  const timeoutMs = params.timeoutMs ?? (Number(process.env.MINION_LOCK_TIMEOUT_MS) || 30_000);
   const staleMs = params.staleMs ?? 30 * 60 * 1000;
   const sessionFile = path.resolve(params.sessionFile);
   const sessionDir = path.dirname(sessionFile);

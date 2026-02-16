@@ -1,12 +1,12 @@
 {
-  "name": "@openclaw/irc",
+  "name": "@minion/irc",
   "version": "2026.2.13",
-  "description": "OpenClaw IRC channel plugin",
+  "description": "Minion IRC channel plugin",
   "type": "module",
   "devDependencies": {
-    "openclaw": "workspace:*"
+    "minion": "workspace:*"
   },
-  "openclaw": {
+  "minion": {
     "extensions": [
       "./index.ts"
     ]

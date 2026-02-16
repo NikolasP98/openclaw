@@ -93,7 +93,7 @@ const MemorySchema = z
   .strict()
   .optional();
 
-export const OpenClawSchema = z
+export const MinionSchema = z
   .object({
     $schema: z.string().optional(),
     meta: z

@@ -1,10 +1,11 @@
 # Automatic Multi-Tenant Production Deployment
 
-This document describes the automatic deployment system for OpenClaw production servers.
+This document describes the automatic deployment system for Minion production servers.
 
 ## Overview
 
-OpenClaw uses a **phased GitHub Actions-based automatic deployment** system that:
+Minion uses a **phased GitHub Actions-based automatic deployment** system that:
+
 - Triggers automatically when the PRD branch is pushed
 - Builds and pushes Docker images to GHCR (GitHub Container Registry)
 - Deploys to production servers via SSH
@@ -21,6 +22,7 @@ OpenClaw uses a **phased GitHub Actions-based automatic deployment** system that
 **Scales to**: 1 server
 
 Automatic deployment to a single production server (100.105.147.99):
+
 1. Docker Release workflow builds and pushes images to GHCR
 2. Deploy workflow triggers on PRD branch push
 3. Copies `docker-compose.yml` to server
@@ -37,6 +39,7 @@ Automatic deployment to a single production server (100.105.147.99):
 **Scales to**: 2-20 servers
 
 Multi-tenant deployment using JSON-based server registry:
+
 - Deploy to multiple servers in parallel
 - Per-tenant isolation (containers, configs, credentials)
 - Independent health checks and rollbacks per tenant
@@ -48,6 +51,7 @@ Multi-tenant deployment using JSON-based server registry:
 **Scales to**: Unlimited
 
 True auto-scaling with Kubernetes:
+
 - Namespace-per-tenant isolation
 - Horizontal Pod Autoscaler (HPA)
 - GitOps integration (Flux/ArgoCD)
@@ -75,59 +79,59 @@ chmod 700 ~/.ssh
 
 ```bash
 # On your local machine
-ssh-keygen -t ed25519 -C "github-actions-openclaw-deploy" -f ./openclaw_deploy_key -N ""
+ssh-keygen -t ed25519 -C "github-actions-minion-deploy" -f ./minion_deploy_key -N ""
 
 # Copy public key to server
-cat openclaw_deploy_key.pub | ssh root@100.105.147.99 "su - deploy -c 'cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys'"
+cat minion_deploy_key.pub | ssh root@100.105.147.99 "su - deploy -c 'cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys'"
 
 # Test SSH connection
-ssh -i openclaw_deploy_key deploy@100.105.147.99 "docker ps"
+ssh -i minion_deploy_key deploy@100.105.147.99 "docker ps"
 ```
 
 ### 3. Create Production Directory Structure
 
 ```bash
 # SSH as deploy user
-ssh -i openclaw_deploy_key deploy@100.105.147.99
+ssh -i minion_deploy_key deploy@100.105.147.99
 
 # Create deployment directory
-mkdir -p ~/openclaw-prd
-cd ~/openclaw-prd
+mkdir -p ~/minion-prd
+cd ~/minion-prd
 
 # Create persistent data directories
-mkdir -p ~/.openclaw-prd/{workspace,agents,canvas,credentials,devices,identity,media,memory,cron,sessions}
+mkdir -p ~/.minion-prd/{workspace,agents,canvas,credentials,devices,identity,media,memory,cron,sessions}
 mkdir -p ~/.config/gogcli
 ```
 
 ### 4. Create Production Environment File
 
 ```bash
-# Create ~/openclaw-prd/.env on server
-cat > ~/openclaw-prd/.env <<'EOF'
+# Create ~/minion-prd/.env on server
+cat > ~/minion-prd/.env <<'EOF'
 # Docker Configuration
-OPENCLAW_IMAGE=ghcr.io/nikolasp98/openclaw:prd
-OPENCLAW_GATEWAY_CONTAINER_NAME=openclaw_PRD_gw
-OPENCLAW_CLI_CONTAINER_NAME=openclaw_PRD_cli
-OPENCLAW_ENV=PRD
+MINION_IMAGE=ghcr.io/nikolasp98/minion:prd
+MINION_GATEWAY_CONTAINER_NAME=minion_PRD_gw
+MINION_CLI_CONTAINER_NAME=minion_PRD_cli
+MINION_ENV=PRD
 
 # Paths (using deploy user's home)
-OPENCLAW_CONFIG_DIR=/home/deploy/.openclaw-prd
-OPENCLAW_WORKSPACE_DIR=/home/deploy/.openclaw-prd/workspace
-OPENCLAW_GOG_CONFIG_DIR=/home/deploy/.config/gogcli
+MINION_CONFIG_DIR=/home/deploy/.minion-prd
+MINION_WORKSPACE_DIR=/home/deploy/.minion-prd/workspace
+MINION_GOG_CONFIG_DIR=/home/deploy/.config/gogcli
 
 # Network Configuration
-OPENCLAW_GATEWAY_PORT=18789
-OPENCLAW_BRIDGE_PORT=18790
-OPENCLAW_GATEWAY_BIND=lan
+MINION_GATEWAY_PORT=18789
+MINION_BRIDGE_PORT=18790
+MINION_GATEWAY_BIND=lan
 
 # Authentication (REPLACE WITH SECURE VALUES)
-OPENCLAW_GATEWAY_TOKEN=REPLACE_WITH_SECURE_TOKEN
+MINION_GATEWAY_TOKEN=REPLACE_WITH_SECURE_TOKEN
 CLAUDE_AI_SESSION_KEY=REPLACE_WITH_YOUR_KEY
 CLAUDE_WEB_SESSION_KEY=REPLACE_WITH_YOUR_KEY
 CLAUDE_WEB_COOKIE=REPLACE_WITH_YOUR_COOKIE
 
 # Optional: Browser support
-OPENCLAW_DOCKER_APT_PACKAGES=chromium fonts-liberation fonts-noto-color-emoji
+MINION_DOCKER_APT_PACKAGES=chromium fonts-liberation fonts-noto-color-emoji
 
 # Tailscale (if using)
 TAILSCALE_SOCKET=/var/run/tailscale/tailscaled.sock
@@ -135,7 +139,7 @@ TAILSCALE_BINARY=/usr/bin/tailscale
 EOF
 
 # Generate secure gateway token
-echo "OPENCLAW_GATEWAY_TOKEN=$(openssl rand -base64 32)" >> ~/.openclaw-prd/.env.token
+echo "MINION_GATEWAY_TOKEN=$(openssl rand -base64 32)" >> ~/.minion-prd/.env.token
 # Then manually copy this token to .env and delete .env.token
 ```
 
@@ -143,17 +147,17 @@ echo "OPENCLAW_GATEWAY_TOKEN=$(openssl rand -base64 32)" >> ~/.openclaw-prd/.env
 
 ```bash
 # From your local machine
-scp -i openclaw_deploy_key docker-compose.yml deploy@100.105.147.99:~/openclaw-prd/
+scp -i minion_deploy_key docker-compose.yml deploy@100.105.147.99:~/minion-prd/
 ```
 
 ### 6. Initial Manual Deployment (Verify Setup)
 
 ```bash
 # SSH to server
-ssh -i openclaw_deploy_key deploy@100.105.147.99
+ssh -i minion_deploy_key deploy@100.105.147.99
 
 # Navigate to deployment directory
-cd ~/openclaw-prd
+cd ~/minion-prd
 
 # Pull images
 docker compose pull
@@ -165,7 +169,7 @@ docker compose up -d
 docker compose ps
 
 # Check logs
-docker compose logs -f openclaw-gateway
+docker compose logs -f minion-gateway
 
 # Test health endpoint (in another terminal)
 curl http://localhost:18789/health
@@ -179,13 +183,13 @@ Navigate to: `Repository → Settings → Secrets and variables → Actions → 
 
 Add the following secrets:
 
-| Secret Name | Value |
-|-------------|-------|
-| `SSH_PRIVATE_KEY` | Contents of `openclaw_deploy_key` file (entire file including headers) |
-| `SSH_HOST` | `100.105.147.99` |
-| `SSH_USER` | `deploy` |
-| `SSH_PORT` | `22` |
-| `DEPLOYMENT_PATH` | `/home/deploy/openclaw-prd` |
+| Secret Name       | Value                                                                |
+| ----------------- | -------------------------------------------------------------------- |
+| `SSH_PRIVATE_KEY` | Contents of `minion_deploy_key` file (entire file including headers) |
+| `SSH_HOST`        | `100.105.147.99`                                                     |
+| `SSH_USER`        | `deploy`                                                             |
+| `SSH_PORT`        | `22`                                                                 |
+| `DEPLOYMENT_PATH` | `/home/deploy/minion-prd`                                            |
 
 ### 2. Deployment Workflow
 
@@ -229,20 +233,20 @@ git push origin PRD
 
 ```bash
 # SSH to server
-ssh -i openclaw_deploy_key deploy@100.105.147.99
+ssh -i minion_deploy_key deploy@100.105.147.99
 
 # Check running containers
-docker ps | grep openclaw
+docker ps | grep minion
 
 # Check logs
-cd ~/openclaw-prd
-docker compose logs --tail=50 openclaw-gateway
+cd ~/minion-prd
+docker compose logs --tail=50 minion-gateway
 
 # Test health endpoint
 curl http://localhost:18789/health
 
 # Check image version
-docker images | grep openclaw
+docker images | grep minion
 ```
 
 ## Scaling to Multi-Tenant (Phase 2)
@@ -250,11 +254,13 @@ docker images | grep openclaw
 ### Activating Multi-Server Deployment
 
 1. **Disable Phase 1 workflow**:
+
    ```bash
    mv .github/workflows/deploy-prd.yml .github/workflows/deploy-prd-single.yml.disabled
    ```
 
 2. **Enable Phase 2 workflow**:
+
    ```bash
    mv .github/workflows/deploy-prd-multi.yml .github/workflows/deploy-prd.yml
    ```
@@ -279,7 +285,7 @@ Edit `.github/servers/production.json`:
       "host": "100.105.147.99",
       "user": "deploy",
       "port": 22,
-      "deployment_path": "/home/deploy/openclaw-prd-acme",
+      "deployment_path": "/home/deploy/minion-prd-acme",
       "container_prefix": "acme",
       "gateway_port": 18789,
       "bridge_port": 18790,
@@ -291,7 +297,7 @@ Edit `.github/servers/production.json`:
       "host": "<new-server-ip>",
       "user": "deploy",
       "port": 22,
-      "deployment_path": "/home/deploy/openclaw-prd-newtenant",
+      "deployment_path": "/home/deploy/minion-prd-newtenant",
       "container_prefix": "newtenant",
       "gateway_port": 18789,
       "bridge_port": 18790,
@@ -330,7 +336,7 @@ git push origin PRD
 
 ```bash
 ssh deploy@<server-ip>
-cd /home/deploy/openclaw-prd-oldtenant
+cd /home/deploy/minion-prd-oldtenant
 docker compose down
 ```
 
@@ -338,8 +344,8 @@ docker compose down
 
 ```bash
 # Remove deployment directory
-rm -rf ~/openclaw-prd-oldtenant
-rm -rf ~/.openclaw-prd-oldtenant
+rm -rf ~/minion-prd-oldtenant
+rm -rf ~/.minion-prd-oldtenant
 
 # Prune unused images
 docker system prune -a
@@ -365,55 +371,59 @@ systemctl restart sshd
 
 # Configure firewall (if using UFW)
 ufw allow 22/tcp      # SSH
-ufw allow 18789/tcp   # OpenClaw Gateway
-ufw allow 18790/tcp   # OpenClaw Bridge
+ufw allow 18789/tcp   # Minion Gateway
+ufw allow 18790/tcp   # Minion Bridge
 ufw enable
 ```
 
 ## Monitoring and Maintenance
 
 ### Daily
+
 - Monitor GitHub Actions for deployment failures
 - Check server health endpoint: `curl http://100.105.147.99:18789/health`
 
 ### Weekly
+
 - Review container logs: `docker compose logs | grep -i error`
 - Check disk usage: `docker system df`
 
 ### Monthly
+
 - Prune unused images: `docker system prune -a --volumes`
-- Rotate `OPENCLAW_GATEWAY_TOKEN`
+- Rotate `MINION_GATEWAY_TOKEN`
 - Review SSH access logs
 
 ### Quarterly
+
 - Rotate SSH deployment keys
 - Update secrets in GitHub Actions
 - Review and update `.env` configuration
 
 ## Backup Strategy
 
-Create backup script on server (`~/backup-openclaw.sh`):
+Create backup script on server (`~/backup-minion.sh`):
 
 ```bash
 #!/bin/bash
-BACKUP_DIR="/var/backups/openclaw"
+BACKUP_DIR="/var/backups/minion"
 DATE=$(date +%Y%m%d-%H%M%S)
 mkdir -p $BACKUP_DIR
 
 # Backup config directory
-tar -czf $BACKUP_DIR/openclaw-prd-$DATE.tar.gz ~/.openclaw-prd
+tar -czf $BACKUP_DIR/minion-prd-$DATE.tar.gz ~/.minion-prd
 
 # Backup .env and docker-compose.yml
-cp ~/openclaw-prd/.env $BACKUP_DIR/env-$DATE
-cp ~/openclaw-prd/docker-compose.yml $BACKUP_DIR/docker-compose-$DATE.yml
+cp ~/minion-prd/.env $BACKUP_DIR/env-$DATE
+cp ~/minion-prd/docker-compose.yml $BACKUP_DIR/docker-compose-$DATE.yml
 
 # Keep only last 7 days
 find $BACKUP_DIR -type f -mtime +7 -delete
 
-echo "Backup completed: $BACKUP_DIR/openclaw-prd-$DATE.tar.gz"
+echo "Backup completed: $BACKUP_DIR/minion-prd-$DATE.tar.gz"
 ```
 
-Add to crontab: `0 2 * * * /home/deploy/backup-openclaw.sh`
+Add to crontab: `0 2 * * * /home/deploy/backup-minion.sh`
 
 ## Emergency Procedures
 
@@ -428,7 +438,7 @@ Add to crontab: `0 2 * * * /home/deploy/backup-openclaw.sh`
 
 ```bash
 ssh deploy@100.105.147.99
-cd ~/openclaw-prd
+cd ~/minion-prd
 sed -i 's/:prd/:prd-rollback/g' .env
 docker compose down && docker compose up -d
 sed -i 's/:prd-rollback/:prd/g' .env  # Restore .env after rollback
@@ -456,7 +466,7 @@ After implementing this system, verify:
 
 - [ ] Deploy user created on server with Docker access
 - [ ] SSH key authentication working
-- [ ] Production directory structure created (`~/openclaw-prd`)
+- [ ] Production directory structure created (`~/minion-prd`)
 - [ ] Production `.env` file configured with secure credentials
 - [ ] `docker-compose.yml` copied to server
 - [ ] Initial manual deployment successful (`docker compose up -d`)
@@ -478,9 +488,10 @@ After implementing this system, verify:
 **Problem**: `Permission denied (publickey)` error
 
 **Solution**:
+
 ```bash
 # Verify SSH key is added to server
-ssh -i openclaw_deploy_key deploy@100.105.147.99 "cat ~/.ssh/authorized_keys"
+ssh -i minion_deploy_key deploy@100.105.147.99 "cat ~/.ssh/authorized_keys"
 
 # Verify GitHub secret contains full private key (including BEGIN/END lines)
 # Check GitHub Actions logs for SSH errors
@@ -491,13 +502,14 @@ ssh -i openclaw_deploy_key deploy@100.105.147.99 "cat ~/.ssh/authorized_keys"
 **Problem**: Container is running but health check fails
 
 **Solution**:
+
 ```bash
 # SSH to server
 ssh deploy@100.105.147.99
 
 # Check container logs
-cd ~/openclaw-prd
-docker compose logs openclaw-gateway
+cd ~/minion-prd
+docker compose logs minion-gateway
 
 # Test health endpoint manually
 curl -v http://localhost:18789/health
@@ -517,6 +529,7 @@ netstat -tlnp | grep 18789
 **Problem**: Disk space running low due to old images
 
 **Solution**:
+
 ```bash
 # SSH to server
 ssh deploy@100.105.147.99
@@ -534,4 +547,4 @@ df -h
 - **Docker Compose**: https://docs.docker.com/compose/
 - **GitHub Actions**: https://docs.github.com/en/actions
 - **SSH Agent Action**: https://github.com/webfactory/ssh-agent
-- **OpenClaw Repository**: https://github.com/nikolasp98/openclaw
+- **Minion Repository**: https://github.com/nikolasp98/minion
