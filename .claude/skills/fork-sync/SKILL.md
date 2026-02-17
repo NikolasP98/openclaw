@@ -342,71 +342,58 @@ git commit -m "feat(fork-sync): Phase 1.7 — generate conflict resolution scrip
 
 **If the script already exists**: overwrite it — the shopping list may have been updated by a delta update.
 
-### Phase 2: Update DEV Branch
+### Phase 2: Update DEV Branch (Worktree Method)
 
-**Goal**: Merge updated mirror into DEV using the strategy from Phase 1.5 evaluation
+**Goal**: Merge updated mirror into DEV using an isolated git worktree — immune to parallel git sessions in the main workspace.
+
+**Prerequisite**: Phase 1.7 resolution script exists at `.claude/skills/fork-sync/scripts/resolve-conflicts.sh`. Run Phase 1.7 first if it doesn't.
 
 ```bash
-git checkout DEV
+# Step 1: Verify resolution script is present
+ls .claude/skills/fork-sync/scripts/resolve-conflicts.sh
 
-# Merge updated mirror
-git merge mirror -m "Merge upstream changes from mirror"
+# Step 2: Create isolated worktree pointing at DEV
+git worktree add ../openclaw-merge-worktree DEV
+
+# Step 3: Merge mirror into worktree (--no-commit to allow pre-commit resolution)
+git -C ../openclaw-merge-worktree merge mirror --no-commit --no-ff
+
+# Step 4: Run resolution script from within the worktree directory
+# (script uses relative git commands, must run from worktree root)
+cd ../openclaw-merge-worktree
+bash ../<repo-dir>/.claude/skills/fork-sync/scripts/resolve-conflicts.sh
+
+# Step 5: Manually resolve manualMerge files listed by the script
+# Inspect each, resolve hunks per the script's comment notes
+# Common files: package.json, .github/workflows/ci.yml, .github/workflows/docker-release.yml
+
+# Step 6: Commit the merge
+git -C ../openclaw-merge-worktree commit -m "Merge upstream changes from mirror"
+
+# Step 7: Push DEV
+git -C ../openclaw-merge-worktree push origin DEV
+
+# Step 8: Cleanup
+git worktree remove ../openclaw-merge-worktree
 ```
 
-**If conflicts occur**: Use feature-by-feature resolution strategy
+**Why worktrees prevent interruption**: The main workspace can be on any branch. Commits, checkouts, and stash pops in the main workspace have zero effect on the worktree. The active merge state lives in `../openclaw-merge-worktree/.git/MERGE_HEAD` — a completely separate directory.
 
-1. **Triage conflicts by category**:
+**Recovery if interrupted** (session ends, error, parallel git activity):
 
-   ```bash
-   # List all conflicts
-   git status --short | grep "^UU\|^DU\|^UD\|^AA\|^AU\|^UA"
+```bash
+# Full reset in ~30 seconds
+git worktree remove --force ../openclaw-merge-worktree
+git worktree add ../openclaw-merge-worktree DEV
+git -C ../openclaw-merge-worktree merge mirror --no-commit --no-ff
+cd ../openclaw-merge-worktree
+bash ../<repo-dir>/.claude/skills/fork-sync/scripts/resolve-conflicts.sh
+# ... then Step 5 (manualMerge), Step 6 (commit), Step 7 (push), Step 8 (cleanup)
+```
 
-   # Group by type
-   # - Package files (package.json, pnpm-lock.yaml)
-   # - Config files (tsconfig, workflows, docker)
-   # - Source code (src/, extensions/)
-   # - Tests (*.test.ts)
-   # - Documentation (docs/, *.md)
-   ```
+**Expected**: Resolution script resolves ~925 of 928 conflicts in under 60 seconds. Claude manually handles the 3 `manualMerge` files only.
 
-2. **Resolve systematically feature-by-feature**:
-   - **Start with infrastructure**: package.json, workflows, build config
-     - For package.json: accept upstream versions, keep fork-specific dependencies
-     - For workflows: upstream is source of truth unless we added custom steps
-
-   - **Then core features**: Process related files together
-     - If upstream refactored auth → resolve all auth-related conflicts together
-     - If upstream added new tool → review entire tool implementation
-     - Keep fork features that don't conflict, adapt those that do
-
-   - **Handle deletions carefully**:
-     - Files deleted upstream but modified in fork (UD/DU conflicts)
-     - Check if fork actually uses them: `git log --oneline -- <file>`
-     - If fork changes were already upstreamed differently → accept deletion
-     - If fork still needs the file → keep it (but verify it still works)
-
-   - **Update tests last**: After source changes are resolved
-     - Accept upstream test changes unless they break fork features
-     - Update fork tests to match new upstream patterns
-
-3. **Validate after each category**:
-
-   ```bash
-   # After resolving a group of files
-   git add <resolved-files>
-   pnpm build  # Quick smoke test
-   ```
-
-4. **Complete merge**:
-   ```bash
-   git add .  # Stage all resolutions
-   git commit  # Use the merge commit message
-   git push origin DEV
-   ```
-
-**Expected**: Systematic conflict resolution, not all-at-once
-
-**Note**: This is the final automated phase. Feature branches and main (production) are not auto-synced.
+**Note**: Feature branches and main (production) are not synced automatically. Update them manually when needed.
 
 ## Safety Checks
 
