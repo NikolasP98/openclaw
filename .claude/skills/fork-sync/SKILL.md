@@ -523,38 +523,6 @@ When upstream has a critical fix you need immediately:
 2. Cherry-pick to DEV if urgent: `git cherry-pick <commit-sha>`
 3. Or run full workflow if you have time
 
-## Quick Sync Script
-
-For routine syncs (assumes mirror is already clean):
-
-```bash
-#!/bin/bash
-# Quick sync script
-
-set -e  # Exit on error
-
-echo "🔄 Starting fork sync workflow..."
-
-# Fetch upstream
-git fetch upstream
-
-# Phase 1: Sync mirror
-echo "📥 Phase 1: Syncing mirror with upstream..."
-git checkout mirror
-git merge --ff-only upstream/main
-git push origin mirror
-
-# Phase 2: Update DEV
-echo "🔧 Phase 2: Updating DEV branch..."
-git checkout DEV
-git merge mirror -m "Merge upstream changes from mirror"
-git push origin DEV
-
-echo "✅ Fork sync complete!"
-echo "💡 Feature branches and main (production) are not auto-synced. Update them manually when needed."
-git log --oneline --graph --all --decorate -10
-```
-
 ## Best Practices
 
 1. **Keep mirror clean**: NEVER commit custom work to mirror
@@ -620,13 +588,19 @@ git push origin <branch-name>
 │ 1.6. Systematic evaluation  → "evaluate upstream" (resumable)   │
 │      (large gaps only)        Module-by-module categorization    │
 │                                Builds merge shopping list        │
+│                                Delta-updates when mirror advances│
 │                                See evaluation-reference.md       │
 ├──────────────────────────────────────────────────────────────────┤
-│ 2. Update DEV               → git checkout DEV                  │
-│                                git merge mirror                  │
-│                                Resolve conflicts feature-by-     │
-│                                feature (not all-at-once)         │
-│                                git push origin DEV               │
+│ 1.7. Generate script         → Read evaluation.json             │
+│      (after 1.6 completes)     Write scripts/resolve-conflicts.sh│
+│                                chmod +x && commit               │
+├──────────────────────────────────────────────────────────────────┤
+│ 2. Update DEV (worktree)     → git worktree add ../merge-wt DEV │
+│                                git -C ../merge-wt merge mirror  │
+│                                bash .../resolve-conflicts.sh    │
+│                                Resolve manualMerge files (N)    │
+│                                git -C ../merge-wt commit + push │
+│                                git worktree remove ../merge-wt  │
 ├──────────────────────────────────────────────────────────────────┤
 │ Verify:                     → git log mirror..upstream/main     │
 │                                (should be empty)                 │
@@ -652,6 +626,6 @@ Invoke this skill when:
 
 ---
 
-**Skill Version**: 4.0.0
-**Last Updated**: 2026-02-16
+**Skill Version**: 5.0.0
+**Last Updated**: 2026-02-17
 **Maintained By**: Nikolas P. (NikolasP98)
