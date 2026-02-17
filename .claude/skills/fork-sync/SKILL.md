@@ -7,6 +7,10 @@ triggers:
   - sync with upstream
   - update branches
   - fork workflow
+  - evaluate upstream
+  - upstream evaluation
+  - review upstream commits
+  - resume evaluation
 ---
 
 # Fork Sync Workflow
@@ -158,6 +162,92 @@ git diff main..mirror --name-status | sort
 **Expected time**: 5-10 minutes for review
 
 **Output**: Clear understanding of what's changing and plan for Phase 2 merge
+
+### Phase 1.6: Systematic Upstream Evaluation
+
+**When to use**: Gap exceeds ~50 commits, or a bulk merge produced too many conflicts to resolve in one session.
+
+**Goal**: Build a module-by-module merge shopping list — a conflict resolution playbook that guides Phase 2.
+
+**Core principle**: Full merge (`git merge mirror`) remains the integration strategy. The evaluation produces a plan for **how to resolve each conflict**, not which commits to cherry-pick.
+
+**State file**: `.claude/skills/fork-sync/state/evaluation.json`
+**Reference**: See `evaluation-reference.md` for detailed heuristics, schema, and module presentation format.
+
+#### Resumability
+
+On invocation, check for existing state:
+
+1. If `state/evaluation.json` exists and `snapshot.mirrorHead` matches current `mirror` HEAD → **resume** from `cursor.currentModuleIndex`
+2. If state exists but mirror has advanced → warn user, offer incremental update or fresh start
+3. If no state file → run initialization (Steps 1–3)
+
+#### Step 1: Initialize
+
+Snapshot current branch state and build the commit inventory.
+
+```bash
+# Record snapshot
+MERGE_BASE=$(git merge-base mirror DEV)
+MIRROR_HEAD=$(git rev-parse mirror)
+DEV_HEAD=$(git rev-parse DEV)
+UPSTREAM_COUNT=$(git rev-list --count $MERGE_BASE..mirror)
+FORK_COUNT=$(git rev-list --count $MERGE_BASE..DEV)
+
+# Build full commit list grouped by module (src/ subdirectory)
+git log --oneline --name-only $MERGE_BASE..mirror
+```
+
+#### Step 2: Build Fork Feature Index
+
+Identify which files have actual fork functionality (not just rebrand renames). This determines conflict risk per module.
+
+```bash
+# Files changed in fork
+git diff --name-only $MERGE_BASE..DEV
+
+# For each: classify as rebrand-only, config-only, or functional
+git diff $MERGE_BASE..DEV -- <file>
+```
+
+Record functional changes in `forkFeatureIndex` with fork commit SHAs, feature description, and recommended resolution.
+
+#### Step 3: Auto-Categorize
+
+Apply heuristic tiers (see `evaluation-reference.md` Section B) to tag each commit:
+
+- **Tier 1** — Commit message patterns (test/docs/style → skip, feat/fix → review, security → accept)
+- **Tier 2** — File path overrides (native apps → accept, fork-feature files → review)
+- **Tier 3** — Combination rules (resolve Tier 1/2 conflicts)
+
+Expected: ~87% of commits auto-categorized, ~13% need manual review.
+
+#### Step 4: Interactive Module Evaluation
+
+Present each module to the user in priority order (see `evaluation-reference.md` Section C). For each module show:
+
+- Commit count and conflict file count
+- Fork features at risk (from `forkFeatureIndex`)
+- Auto-categorization breakdown
+- Commits needing manual review
+
+User decides per module: **Accept all** | **Review individually** | **Defer** | **Skip module**
+
+Save state after each module decision. This step is **resumable** — the user can stop and resume across sessions.
+
+#### Step 5: Generate Merge Plan
+
+After all modules are evaluated, compile the merge shopping list:
+
+- **keepOurs**: Files where fork version wins
+- **acceptWithRebrand**: Files needing only name substitution after merge
+- **extensionPackageJson**: Accept upstream + fix `@nikolasp98/minion` dep
+- **manualMerge**: Files needing hunk-by-hunk resolution (with notes)
+- **autoAccept**: Files that merge cleanly
+
+Export to `UPSTREAM_MERGE_EVALUATION.md` at project root. This document becomes the playbook for Phase 2.
+
+**Expected time**: 15–30 minutes for first run (initialization + high-priority modules), 5–10 minutes per resumed session
 
 ### Phase 2: Update DEV Branch
 
@@ -444,6 +534,11 @@ git push origin <branch-name>
 │                                Review changes per-file           │
 │                                Plan conflict resolution strategy │
 ├──────────────────────────────────────────────────────────────────┤
+│ 1.6. Systematic evaluation  → "evaluate upstream" (resumable)   │
+│      (large gaps only)        Module-by-module categorization    │
+│                                Builds merge shopping list        │
+│                                See evaluation-reference.md       │
+├──────────────────────────────────────────────────────────────────┤
 │ 2. Update DEV               → git checkout DEV                  │
 │                                git merge mirror                  │
 │                                Resolve conflicts feature-by-     │
@@ -467,11 +562,13 @@ Invoke this skill when:
 - "Update all branches"
 - "Sync DEV with upstream"
 - "Fork workflow" or "fork-sync"
+- "Evaluate upstream" or "resume evaluation" (Phase 1.6)
 - Before starting major feature work (to start from latest upstream)
 - After seeing mirror has diverged from upstream
+- When a bulk merge produces too many conflicts (triggers Phase 1.6)
 
 ---
 
-**Skill Version**: 3.1.0
+**Skill Version**: 4.0.0
 **Last Updated**: 2026-02-16
 **Maintained By**: Nikolas P. (NikolasP98)

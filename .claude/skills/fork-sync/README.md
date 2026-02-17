@@ -8,6 +8,7 @@ This skill manages the complete fork synchronization workflow for the Minion for
 
 - Syncing `mirror` with `upstream/main`
 - Updating `DEV` (integration) branch with upstream changes
+- **Systematic upstream evaluation** (Phase 1.6) for large gaps — module-by-module categorization with persistent, resumable state
 - Handling merge conflicts
 - Validating sync success
 
@@ -17,10 +18,13 @@ This skill manages the complete fork synchronization workflow for the Minion for
 
 ```
 .claude/skills/fork-sync/
-├── SKILL.md              # Main skill documentation and procedures
-├── README.md             # This file
+├── SKILL.md                    # Main skill documentation and procedures
+├── README.md                   # This file
+├── evaluation-reference.md     # Detailed heuristics, schema, and module format for Phase 1.6
+├── state/                      # Persistent evaluation state (gitignored)
+│   └── evaluation.json         # Generated during Phase 1.6 evaluation
 └── scripts/
-    └── quick-sync.sh     # Automated sync script with safety checks
+    └── quick-sync.sh           # Automated sync script with safety checks
 ```
 
 ## Quick Start
@@ -34,6 +38,7 @@ Simply invoke the skill by mentioning:
 - "sync with upstream"
 - "update branches"
 - "fork workflow"
+- "evaluate upstream" / "resume evaluation" (Phase 1.6)
 
 ### Using the Script Directly
 
@@ -72,6 +77,7 @@ Full workflow details: `docs/fork-workflow.md`
 - **Before major work**: Start new features from latest upstream
 - **After upstream hotfix**: Pull critical fixes quickly
 - **Before releases**: Ensure all latest fixes are included
+- **Large gap (50+ commits)**: Use Phase 1.6 evaluation to build a merge plan before attempting Phase 2
 
 ## Safety Features
 
@@ -93,9 +99,9 @@ See SKILL.md for detailed conflict resolution procedures.
 
 ## Version
 
-- **Version**: 2.0.0
+- **Version**: 3.0.0
 - **Created**: 2026-02-01
-- **Last Updated**: 2026-02-15
+- **Last Updated**: 2026-02-16
 - **Maintained By**: Nikolas P. (NikolasP98)
 
 ## Branch Management Notes
