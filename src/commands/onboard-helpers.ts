@@ -98,7 +98,7 @@ export function validateGatewayPasswordInput(value: unknown): string | undefined
 }
 
 export function printWizardHeader(runtime: RuntimeEnv) {
-  const header = formatCliBannerArt({ richTty: runtime.isTty });
+  const header = formatCliBannerArt();
   runtime.log(header);
 }
 

@@ -241,7 +241,7 @@ export async function listCredentials(agentId: string): Promise<GogCredentials[]
           const creds: GogCredentials = JSON.parse(data);
           creds.filePath = credPath;
           credentials.push(creds);
-        } catch {
+        } catch (error) {
           console.error(`Failed to load credentials file ${file}:`, error);
         }
       }
