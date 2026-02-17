@@ -265,19 +265,50 @@ if [ -f "$STATE_FILE" ]; then
 fi
 ```
 
-### Invalidation
+### Delta Update Protocol
 
-State becomes invalid when:
+When `snapshot.mirrorHead` doesn't match current `mirror` HEAD (mirror has advanced since evaluation), run the automatic delta update — do NOT ask the user whether to re-evaluate:
 
-- `mirror` HEAD changes (new upstream sync happened)
-- User manually modifies evaluation.json
-- Schema version doesn't match expected version
+**Steps:**
 
-On invalidation, offer three options:
+1. **Compute delta commits**:
 
-1. **Incremental update**: Keep completed module decisions, re-evaluate only new/changed commits
-2. **Fresh start**: Discard state, run full initialization
-3. **Force resume**: Continue anyway (for minor mirror advances)
+   ```bash
+   OLD_HEAD=<snapshot.mirrorHead from evaluation.json>
+   NEW_HEAD=$(git rev-parse mirror)
+   git log --oneline --name-only $OLD_HEAD..$NEW_HEAD
+   ```
+
+2. **Categorize new commits** using Tier 1/2/3 heuristics (Section B). For each new commit, identify affected files and apply tiered categorization.
+
+3. **Resolve per file** — apply the first matching rule:
+   - File belongs to a completed module in `modules[]` → inherit that module's `decision`
+   - File is in `forkFeatureIndex` → add to `manualMerge` with a note
+   - File matches `extensions/*/package.json` → add to `extensionPackageJson`
+   - File in `docs/`, `apps/`, `test/` → add to `autoAccept`
+   - File in `src/`, `ui/`, `extensions/*.ts` → add to `acceptWithRebrand`
+   - Fallback → add to `autoAccept`
+
+4. **Update `mergeShoppingList`**: append new file entries to each category.
+
+5. **Update state file**:
+
+   ```json
+   {
+     "snapshot": { "mirrorHead": "<NEW_HEAD>" },
+     "updated": "<ISO-8601 now>"
+   }
+   ```
+
+6. **Re-run Phase 1.7** to regenerate `resolve-conflicts.sh` with the updated shopping list.
+
+**When to do a fresh start instead** (rare):
+
+- Schema version mismatch in the state file
+- More than 500 new commits since last evaluation (implies a major gap — redo)
+- User explicitly requests a fresh start
+
+**Expected time**: ~30 seconds for incremental advances under 200 commits. Zero human interaction unless new files touch `forkFeatureIndex` entries.
 
 ---
 
