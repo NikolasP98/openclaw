@@ -357,7 +357,19 @@ importers:
         specifier: workspace:*
         version: link:../..
 
+  extensions/linq:
+    devDependencies:
+      '@nikolasp98/minion':
+        specifier: workspace:*
+        version: link:../..
+
   extensions/llm-task:
+    devDependencies:
+      '@nikolasp98/minion':
+        specifier: workspace:*
+        version: link:../..
+
+  extensions/lobster:
     devDependencies:
       '@nikolasp98/minion':
         specifier: workspace:*
@@ -458,6 +470,12 @@ importers:
         version: link:../..
 
   extensions/open-prose:
+    devDependencies:
+      '@nikolasp98/minion':
+        specifier: workspace:*
+        version: link:../..
+
+  extensions/openai-codex-auth:
     devDependencies:
       '@nikolasp98/minion':
         specifier: workspace:*

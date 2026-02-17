@@ -5,7 +5,7 @@
   "description": "OpenAI Codex CLI auth provider plugin - use ChatGPT Plus/Pro subscription for OpenAI models",
   "type": "module",
   "devDependencies": {
-    "openclaw": "workspace:*"
+    "@nikolasp98/minion": "workspace:*"
   },
   "openclaw": {
     "extensions": [

@@ -5,7 +5,7 @@
   "description": "OpenClaw Linq iMessage channel plugin",
   "type": "module",
   "devDependencies": {
-    "openclaw": "workspace:*"
+    "@nikolasp98/minion": "workspace:*"
   },
   "openclaw": {
     "extensions": [
