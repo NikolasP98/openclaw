@@ -272,8 +272,9 @@ Read `evaluation.json`'s `mergeShoppingList`. Produce a script with this structu
 # DO NOT EDIT — regenerate via Phase 1.7
 
 set -e
+# NOTE: Requires GNU sed (Linux default). On macOS: brew install gnu-sed && alias sed=gsed
 
-REBRAND='s/from '"'"'openclaw'"'"'/from '"'"'@nikolasp98\/minion'"'"'/g; s/require('"'"'openclaw'"'"')/require('"'"'@nikolasp98\/minion'"'"')/g'
+REBRAND='s/from '"'"'openclaw'"'"'/from '"'"'@nikolasp98\/minion'"'"'/g; s/from "openclaw"/from "@nikolasp98\/minion"/g; s/require('"'"'openclaw'"'"')/require('"'"'@nikolasp98\/minion'"'"')/g; s/require("openclaw")/require("@nikolasp98\/minion")/g'
 EXT_PKG='s/"openclaw": "workspace:\*"/"@nikolasp98\/minion": "workspace:*"/g'
 
 resolve() {
@@ -286,6 +287,7 @@ resolve() {
     rebrand) git checkout --theirs "$f" 2>/dev/null && sed -i "$REBRAND" "$f" && git add "$f" && echo "✓ rebrand: $f" ;;
     extpkg)  git checkout --theirs "$f" 2>/dev/null && sed -i "$EXT_PKG" "$f" && git add "$f" && echo "✓ extpkg:  $f" ;;
     rm)      git rm -f "$f" 2>/dev/null && echo "✓ removed: $f" || true ;;
+    *) echo "ERROR: unknown strategy '$strategy' for '$f'" >&2; return 1 ;;
   esac
 }
 
