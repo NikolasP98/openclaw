@@ -361,11 +361,14 @@ git -C ../openclaw-merge-worktree merge mirror --no-commit --no-ff
 # Step 4: Run resolution script from within the worktree directory
 # (script uses relative git commands, must run from worktree root)
 cd ../openclaw-merge-worktree
-bash ../<repo-dir>/.claude/skills/fork-sync/scripts/resolve-conflicts.sh
+bash .claude/skills/fork-sync/scripts/resolve-conflicts.sh
 
 # Step 5: Manually resolve manualMerge files listed by the script
 # Inspect each, resolve hunks per the script's comment notes
 # Common files: package.json, .github/workflows/ci.yml, .github/workflows/docker-release.yml
+
+# After resolving each file:
+git -C ../openclaw-merge-worktree add package.json .github/workflows/ci.yml .github/workflows/docker-release.yml
 
 # Step 6: Commit the merge
 git -C ../openclaw-merge-worktree commit -m "Merge upstream changes from mirror"
@@ -387,7 +390,7 @@ git worktree remove --force ../openclaw-merge-worktree
 git worktree add ../openclaw-merge-worktree DEV
 git -C ../openclaw-merge-worktree merge mirror --no-commit --no-ff
 cd ../openclaw-merge-worktree
-bash ../<repo-dir>/.claude/skills/fork-sync/scripts/resolve-conflicts.sh
+bash .claude/skills/fork-sync/scripts/resolve-conflicts.sh
 # ... then Step 5 (manualMerge), Step 6 (commit), Step 7 (push), Step 8 (cleanup)
 ```
 
