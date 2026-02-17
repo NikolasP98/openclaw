@@ -1,0 +1,421 @@
+# Fork-Sync v2 Implementation Plan
+
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+
+**Goal:** Improve the fork-sync skill with interrupt-proof worktree merges, auto-generated resolution scripts, and evaluation delta updates — as designed in `docs/plans/2026-02-17-fork-sync-efficiency-design.md`.
+
+**Architecture:** Pure documentation/skill edits. Three skill files change: `SKILL.md` (add Phase 1.7, rewrite Phase 2, update Quick Reference), `evaluation-reference.md` (delta-update protocol replaces stale-state invalidation). One file deleted: `scripts/quick-sync.sh`. No application code changed.
+
+**Tech Stack:** Markdown editing, bash script template embedded in skill docs.
+
+---
+
+## Task 1: Add Delta-Update Protocol to evaluation-reference.md
+
+**Files:**
+
+- Modify: `.claude/skills/fork-sync/evaluation-reference.md`
+
+The current "Invalidation" subsection (Section E, under "On Invocation") offers three static options when mirror advances. Replace it with an automatic delta-update protocol.
+
+**Step 1: Locate the section to replace**
+
+In `evaluation-reference.md`, find this block (around line 268):
+
+```
+### Invalidation
+
+State becomes invalid when:
+
+- `mirror` HEAD changes (new upstream sync happened)
+- User manually modifies evaluation.json
+- Schema version doesn't match expected version
+
+On invalidation, offer three options:
+
+1. **Incremental update**: Keep completed module decisions, re-evaluate only new/changed commits
+2. **Fresh start**: Discard state, run full initialization
+3. **Force resume**: Continue anyway (for minor mirror advances)
+```
+
+**Step 2: Replace with the delta-update protocol**
+
+Replace the entire `### Invalidation` subsection with:
+
+````markdown
+### Delta Update Protocol
+
+When `snapshot.mirrorHead` doesn't match current `mirror` HEAD (mirror has advanced since evaluation), run the automatic delta update — do NOT ask the user whether to re-evaluate:
+
+**Steps:**
+
+1. **Compute delta commits**:
+   ```bash
+   OLD_HEAD=<snapshot.mirrorHead from evaluation.json>
+   NEW_HEAD=$(git rev-parse mirror)
+   git log --oneline --name-only $OLD_HEAD..$NEW_HEAD
+   ```
+````
+
+2. **Categorize new commits** using Tier 1/2/3 heuristics (Section B). For each new commit, identify affected files and apply tiered categorization.
+
+3. **Resolve per file** — apply the first matching rule:
+   - File belongs to a completed module in `modules[]` → inherit that module's `decision`
+   - File is in `forkFeatureIndex` → add to `manualMerge` with a note
+   - File matches `extensions/*/package.json` → add to `extensionPackageJson`
+   - File in `docs/`, `apps/`, `test/` → add to `autoAccept`
+   - File in `src/`, `ui/`, `extensions/*.ts` → add to `acceptWithRebrand`
+   - Fallback → add to `autoAccept`
+
+4. **Update `mergeShoppingList`**: append new file entries to each category.
+
+5. **Update state file**:
+
+   ```json
+   {
+     "snapshot": { "mirrorHead": "<NEW_HEAD>" },
+     "updated": "<ISO-8601 now>"
+   }
+   ```
+
+6. **Re-run Phase 1.7** to regenerate `resolve-conflicts.sh` with the updated shopping list.
+
+**When to do a fresh start instead** (rare):
+
+- Schema version mismatch in the state file
+- More than 500 new commits since last evaluation (implies a major gap — redo)
+- User explicitly requests a fresh start
+
+**Expected time**: ~30 seconds for incremental advances under 200 commits. Zero human interaction unless new files touch `forkFeatureIndex` entries.
+
+````
+
+**Step 3: Verify the edit**
+
+Read the file back and confirm:
+- `### Invalidation` heading is gone
+- `### Delta Update Protocol` is present with the 6 numbered steps
+- The "When to do a fresh start" block is present
+
+**Step 4: Commit**
+
+```bash
+git add .claude/skills/fork-sync/evaluation-reference.md
+git commit -m "feat(fork-sync): replace staleness invalidation with automatic delta-update protocol"
+````
+
+---
+
+## Task 2: Insert Phase 1.7 into SKILL.md
+
+**Files:**
+
+- Modify: `.claude/skills/fork-sync/SKILL.md`
+
+Phase 1.7 slots between Phase 1.6 Step 5 and Phase 2. Find the anchor: `**Expected time**: 15–30 minutes` (last line of Phase 1.6). Insert the new section immediately after.
+
+**Step 1: Locate insertion point**
+
+In `SKILL.md`, find the line (around line 250):
+
+```
+**Expected time**: 15–30 minutes for first run (initialization + high-priority modules), 5–10 minutes per resumed session
+```
+
+**Step 2: Insert Phase 1.7 after that line**
+
+````markdown
+### Phase 1.7: Generate Resolution Script
+
+**Trigger:** Run immediately after Phase 1.6 Step 5 (shopping list finalized). Always run before Phase 2.
+
+**Goal**: Convert the evaluation shopping list into a deterministic bash script that resolves all mechanical merge conflicts in seconds.
+
+**Output**: `.claude/skills/fork-sync/scripts/resolve-conflicts.sh`
+
+**Generation instructions:**
+
+Read `evaluation.json`'s `mergeShoppingList`. Produce a script with this structure — emit one `resolve` call per file in each category:
+
+```bash
+#!/bin/bash
+# Auto-generated by fork-sync Phase 1.7
+# Generated: <ISO-8601>
+# Mirror head: <git rev-parse mirror>
+# Counts: <keepOurs N> keepOurs, <manualMerge N> manualMerge,
+#         <acceptWithRebrand N> acceptWithRebrand, <extensionPackageJson N> extpkg,
+#         <acceptDeletion N> deletions, <autoAccept N> autoAccept
+# DO NOT EDIT — regenerate via Phase 1.7
+
+set -e
+
+REBRAND='s/from '"'"'openclaw'"'"'/from '"'"'@nikolasp98\/minion'"'"'/g; s/require('"'"'openclaw'"'"')/require('"'"'@nikolasp98\/minion'"'"')/g'
+EXT_PKG='s/"openclaw": "workspace:\*"/"@nikolasp98\/minion": "workspace:*"/g'
+
+resolve() {
+  local f="$1" strategy="$2"
+  # Idempotent: skip if not currently conflicted
+  git ls-files -u -- "$f" | grep -q . || return 0
+  case "$strategy" in
+    ours)    git checkout --ours "$f" 2>/dev/null && git add "$f" && echo "✓ ours:    $f" ;;
+    theirs)  git checkout --theirs "$f" 2>/dev/null && git add "$f" && echo "✓ theirs:  $f" ;;
+    rebrand) git checkout --theirs "$f" 2>/dev/null && sed -i "$REBRAND" "$f" && git add "$f" && echo "✓ rebrand: $f" ;;
+    extpkg)  git checkout --theirs "$f" 2>/dev/null && sed -i "$EXT_PKG" "$f" && git add "$f" && echo "✓ extpkg:  $f" ;;
+    rm)      git rm -f "$f" 2>/dev/null && echo "✓ removed: $f" || true ;;
+  esac
+}
+
+# === keepOurs (<N> files) ===
+resolve "Dockerfile" ours
+# ... one line per file in keepOurs
+
+# === acceptWithRebrand (<N> files) ===
+resolve "src/agents/minion-tools.ts" rebrand
+# ... one line per file in acceptWithRebrand
+
+# === extensionPackageJson (<N> files) ===
+resolve "extensions/bluebubbles/package.json" extpkg
+# ... one line per file in extensionPackageJson
+
+# === acceptDeletion (<N> files) ===
+resolve ".agents/AGENT_SUBMISSION_CONTROL_POLICY.md" rm
+# ... one line per file in acceptDeletion
+
+# === autoAccept (<N> files) ===
+resolve "docs/channels/telegram.md" theirs
+# ... one line per file in autoAccept
+
+# === MANUAL MERGE REQUIRED (<N> files) ===
+# NOT resolved by this script — Claude handles these in Phase 2 Step 5.
+# <file>: <notes from mergeShoppingList>
+
+echo ""
+echo "✓ Auto-resolution complete."
+echo "MANUAL: Resolve these files, then: git add . && git merge --continue"
+# list manualMerge files here as echo lines
+```
+````
+
+**Category → strategy mapping:**
+
+| Shopping list category | Script strategy |
+| ---------------------- | --------------- |
+| `keepOurs`             | `ours`          |
+| `acceptWithRebrand`    | `rebrand`       |
+| `extensionPackageJson` | `extpkg`        |
+| `acceptDeletion`       | `rm`            |
+| `autoAccept`           | `theirs`        |
+| `manualMerge`          | comment only    |
+
+**Save and commit:**
+
+```bash
+chmod +x .claude/skills/fork-sync/scripts/resolve-conflicts.sh
+git add .claude/skills/fork-sync/scripts/resolve-conflicts.sh
+git commit -m "feat(fork-sync): Phase 1.7 — generate conflict resolution script"
+```
+
+**If the script already exists**: overwrite it — the shopping list may have been updated by a delta update.
+
+````
+
+**Step 3: Verify**
+
+Read `SKILL.md` and confirm Phase 1.7 appears between Phase 1.6's closing line and the `### Phase 2` heading.
+
+**Step 4: Commit**
+
+```bash
+git add .claude/skills/fork-sync/SKILL.md
+git commit -m "feat(fork-sync): add Phase 1.7 (generate resolution script) to SKILL.md"
+````
+
+---
+
+## Task 3: Rewrite Phase 2 in SKILL.md (Worktree Method)
+
+**Files:**
+
+- Modify: `.claude/skills/fork-sync/SKILL.md`
+
+Replace the entire `### Phase 2: Update DEV Branch` section (from its heading through `**Note**: This is the final automated phase.`) with the worktree-based workflow.
+
+**Step 1: Find the section boundaries**
+
+Start: `### Phase 2: Update DEV Branch` (around line 252)
+End: `**Note**: This is the final automated phase. Feature branches and main (production) are not auto-synced.`
+
+**Step 2: Replace with the new Phase 2**
+
+````markdown
+### Phase 2: Update DEV Branch (Worktree Method)
+
+**Goal**: Merge updated mirror into DEV using an isolated git worktree — immune to parallel git sessions in the main workspace.
+
+**Prerequisite**: Phase 1.7 resolution script exists at `.claude/skills/fork-sync/scripts/resolve-conflicts.sh`. Run Phase 1.7 first if it doesn't.
+
+```bash
+# Step 1: Verify resolution script is present
+ls .claude/skills/fork-sync/scripts/resolve-conflicts.sh
+
+# Step 2: Create isolated worktree pointing at DEV
+git worktree add ../openclaw-merge-worktree DEV
+
+# Step 3: Merge mirror into worktree (--no-commit to allow pre-commit resolution)
+git -C ../openclaw-merge-worktree merge mirror --no-commit --no-ff
+
+# Step 4: Run resolution script from within the worktree directory
+# (script uses relative git commands, must run from worktree root)
+cd ../openclaw-merge-worktree
+bash ../<repo-dir>/.claude/skills/fork-sync/scripts/resolve-conflicts.sh
+
+# Step 5: Manually resolve manualMerge files listed by the script
+# Inspect each, resolve hunks per the script's comment notes
+# Common files: package.json, .github/workflows/ci.yml, .github/workflows/docker-release.yml
+
+# Step 6: Commit the merge
+git -C ../openclaw-merge-worktree commit -m "Merge upstream changes from mirror"
+
+# Step 7: Push DEV
+git -C ../openclaw-merge-worktree push origin DEV
+
+# Step 8: Cleanup
+git worktree remove ../openclaw-merge-worktree
+```
+````
+
+**Why worktrees prevent interruption**: The main workspace can be on any branch. Commits, checkouts, and stash pops in the main workspace have zero effect on the worktree. The active merge state lives in `../openclaw-merge-worktree/.git/MERGE_HEAD` — a completely separate directory.
+
+**Recovery if interrupted** (session ends, error, parallel git activity):
+
+```bash
+# Full reset in ~30 seconds
+git worktree remove --force ../openclaw-merge-worktree
+git worktree add ../openclaw-merge-worktree DEV
+git -C ../openclaw-merge-worktree merge mirror --no-commit --no-ff
+cd ../openclaw-merge-worktree
+bash ../<repo-dir>/.claude/skills/fork-sync/scripts/resolve-conflicts.sh
+# ... then Step 5 (manualMerge), Step 6 (commit), Step 7 (push), Step 8 (cleanup)
+```
+
+**Expected**: Resolution script resolves ~925 of 928 conflicts in under 60 seconds. Claude manually handles the 3 `manualMerge` files only.
+
+**Note**: Feature branches and main (production) are not synced automatically. Update them manually when needed.
+
+````
+
+**Step 3: Verify**
+
+Read the Phase 2 section and confirm:
+- Worktree commands are present
+- Old direct-checkout DEV instructions are gone
+- Recovery path is present
+- manualMerge step is called out
+
+**Step 4: Commit**
+
+```bash
+git add .claude/skills/fork-sync/SKILL.md
+git commit -m "feat(fork-sync): rewrite Phase 2 to use git worktree (interrupt-proof)"
+````
+
+---
+
+## Task 4: Update Quick Reference Card and Remove quick-sync.sh
+
+**Files:**
+
+- Modify: `.claude/skills/fork-sync/SKILL.md`
+- Delete: `.claude/skills/fork-sync/scripts/quick-sync.sh`
+
+**Step 1: Update the Quick Reference card**
+
+Find the card (around line 519) — the `┌─...─┐` ASCII table. Replace the `1.6` and `2.` rows, and add a `1.7` row between them:
+
+Replace the 1.6 and 2. rows with:
+
+```
+├──────────────────────────────────────────────────────────────────┤
+│ 1.6. Systematic evaluation  → "evaluate upstream" (resumable)   │
+│      (large gaps only)        Module-by-module categorization    │
+│                                Builds merge shopping list        │
+│                                Delta-updates when mirror advances│
+│                                See evaluation-reference.md       │
+├──────────────────────────────────────────────────────────────────┤
+│ 1.7. Generate script         → Read evaluation.json             │
+│      (after 1.6 completes)     Write scripts/resolve-conflicts.sh│
+│                                chmod +x && commit               │
+├──────────────────────────────────────────────────────────────────┤
+│ 2. Update DEV (worktree)     → git worktree add ../merge-wt DEV │
+│                                git -C ../merge-wt merge mirror  │
+│                                bash .../resolve-conflicts.sh    │
+│                                Resolve manualMerge files (N)    │
+│                                git -C ../merge-wt commit + push │
+│                                git worktree remove ../merge-wt  │
+```
+
+**Step 2: Remove the "Quick Sync Script" inline section**
+
+Find the `## Quick Sync Script` section (around line 443) which contains an inline bash script block. Remove the entire section — it's superseded by the worktree approach and was only useful for zero-conflict syncs.
+
+**Step 3: Delete quick-sync.sh**
+
+```bash
+git rm .claude/skills/fork-sync/scripts/quick-sync.sh
+```
+
+**Step 4: Bump version in SKILL.md footer**
+
+Find `**Skill Version**: 4.0.0` at the bottom and change to `5.0.0`. Update `**Last Updated**` to `2026-02-17`.
+
+**Step 5: Verify**
+
+Read the bottom of SKILL.md and confirm:
+
+- Version is 5.0.0
+- Quick Reference card has 1.7 row and updated 2. row
+- "Quick Sync Script" section is gone
+
+**Step 6: Commit all**
+
+```bash
+git add .claude/skills/fork-sync/SKILL.md
+git commit -m "feat(fork-sync): v5.0.0 — update Quick Reference, remove quick-sync.sh"
+```
+
+---
+
+## Task 5: Final Verification
+
+**Step 1: Read all three modified files end-to-end**
+
+```bash
+# Confirm Phase 1.7 is present in SKILL.md
+grep -n "Phase 1.7" .claude/skills/fork-sync/SKILL.md
+
+# Confirm Phase 2 uses worktree
+grep -n "worktree" .claude/skills/fork-sync/SKILL.md
+
+# Confirm delta-update protocol in evaluation-reference.md
+grep -n "Delta Update Protocol" .claude/skills/fork-sync/evaluation-reference.md
+
+# Confirm quick-sync.sh is gone
+ls .claude/skills/fork-sync/scripts/
+```
+
+Expected output:
+
+- `Phase 1.7` appears at least 5 times in SKILL.md
+- `worktree` appears in Phase 2 section
+- `Delta Update Protocol` heading exists in evaluation-reference.md
+- `scripts/` directory contains only `.gitkeep` and any generated `resolve-conflicts.sh`
+
+**Step 2: Confirm success criteria from design doc**
+
+Manually verify each success criterion in `docs/plans/2026-02-17-fork-sync-efficiency-design.md` is addressed by the skill text:
+
+- [ ] Worktree isolation prevents parallel-session interruption → Phase 2 worktree method
+- [ ] Resolution script runs 928 conflicts in <60s → Phase 1.7 script generation
+- [ ] Recovery path documented → Phase 2 recovery block
+- [ ] Delta updates preserve module decisions → evaluation-reference.md Section E
+- [ ] Only 3 manualMerge files need Claude attention → script comments + Phase 2 Step 5
