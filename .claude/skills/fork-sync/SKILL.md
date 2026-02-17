@@ -592,12 +592,12 @@ git push origin <branch-name>
 │                                See evaluation-reference.md       │
 ├──────────────────────────────────────────────────────────────────┤
 │ 1.7. Generate script         → Read evaluation.json             │
-│      (after 1.6 completes)     Write scripts/resolve-conflicts.sh│
+│      (after 1.6 completes)     Write resolve-conflicts.sh       │
 │                                chmod +x && commit               │
 ├──────────────────────────────────────────────────────────────────┤
 │ 2. Update DEV (worktree)     → git worktree add ../merge-wt DEV │
 │                                git -C ../merge-wt merge mirror  │
-│                                bash .../resolve-conflicts.sh    │
+│                                bash scripts/resolve-conflicts.sh│
 │                                Resolve manualMerge files (N)    │
 │                                git -C ../merge-wt commit + push │
 │                                git worktree remove ../merge-wt  │
