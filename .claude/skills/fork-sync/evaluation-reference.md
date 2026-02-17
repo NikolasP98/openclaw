@@ -236,7 +236,7 @@ Priority: #5 of 28
 2. **If exists**: Verify `snapshot.mirrorHead` matches current `mirror` HEAD
    - **Match** → Resume from `cursor.currentModuleIndex`
    - **Mismatch** → Warn user: "Mirror has advanced since last evaluation"
-     - Offer: recalculate (incremental update) or start fresh
+     → Run **Delta Update Protocol** automatically (see subsection below)
 3. **If not exists** → Run initialization (Steps 1–3 from Phase 1.6)
 
 ### Save Points
@@ -274,7 +274,7 @@ When `snapshot.mirrorHead` doesn't match current `mirror` HEAD (mirror has advan
 1. **Compute delta commits**:
 
    ```bash
-   OLD_HEAD=<snapshot.mirrorHead from evaluation.json>
+   OLD_HEAD=$(jq -r '.snapshot.mirrorHead' .claude/skills/fork-sync/state/evaluation.json)
    NEW_HEAD=$(git rev-parse mirror)
    git log --oneline --name-only $OLD_HEAD..$NEW_HEAD
    ```
@@ -285,8 +285,8 @@ When `snapshot.mirrorHead` doesn't match current `mirror` HEAD (mirror has advan
    - File belongs to a completed module in `modules[]` → inherit that module's `decision`
    - File is in `forkFeatureIndex` → add to `manualMerge` with a note
    - File matches `extensions/*/package.json` → add to `extensionPackageJson`
-   - File in `docs/`, `apps/`, `test/` → add to `autoAccept`
-   - File in `src/`, `ui/`, `extensions/*.ts` → add to `acceptWithRebrand`
+   - File in `docs/`, `apps/`, `test/` → add to `autoAccept` (`test/` files: include upstream test changes without re-evaluation)
+   - File in `src/`, `ui/`, `extensions/**/*.ts` → add to `acceptWithRebrand`
    - Fallback → add to `autoAccept`
 
 4. **Update `mergeShoppingList`**: append new file entries to each category.
