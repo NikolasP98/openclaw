@@ -1,7 +1,6 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
-import type { MinionConfig } from "../../config/config.js";
-import { resolveMinionAgentDir } from "../../agents/agent-paths.js";
+import { resolveOpenClawAgentDir } from "../../agents/agent-paths.js";
 import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "../../agents/agent-scope.js";
 import {
   ensureAuthProfileStore,
@@ -12,9 +11,14 @@ import {
 import { describeFailoverError } from "../../agents/failover-error.js";
 import { getCustomProviderApiKey, resolveEnvApiKey } from "../../agents/model-auth.js";
 import { loadModelCatalog } from "../../agents/model-catalog.js";
-import { normalizeProviderId, parseModelRef } from "../../agents/model-selection.js";
+import {
+  findNormalizedProviderValue,
+  normalizeProviderId,
+  parseModelRef,
+} from "../../agents/model-selection.js";
 import { runEmbeddedPiAgent } from "../../agents/pi-embedded.js";
 import { resolveDefaultAgentWorkspaceDir } from "../../agents/workspace.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import {
   resolveSessionTranscriptPath,
   resolveSessionTranscriptsDirForAgent,
@@ -134,7 +138,7 @@ function selectProbeModel(params: {
 }
 
 function buildProbeTargets(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   providers: string[];
   modelCandidates: string[];
   options: AuthProbeOptions;
@@ -164,23 +168,10 @@ function buildProbeTargets(params: {
 
       const profileIds = listProfilesForProvider(store, providerKey);
       const explicitOrder = (() => {
-        const order = store.order;
-        if (order) {
-          for (const [key, value] of Object.entries(order)) {
-            if (normalizeProviderId(key) === providerKey) {
-              return value;
-            }
-          }
-        }
-        const cfgOrder = cfg?.auth?.order;
-        if (cfgOrder) {
-          for (const [key, value] of Object.entries(cfgOrder)) {
-            if (normalizeProviderId(key) === providerKey) {
-              return value;
-            }
-          }
-        }
-        return undefined;
+        return (
+          findNormalizedProviderValue(store.order, providerKey) ??
+          findNormalizedProviderValue(cfg?.auth?.order, providerKey)
+        );
       })();
       const allowedProfiles =
         explicitOrder && explicitOrder.length > 0
@@ -287,7 +278,7 @@ function buildProbeTargets(params: {
 }
 
 async function probeTarget(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   agentId: string;
   agentDir: string;
   workspaceDir: string;
@@ -363,7 +354,7 @@ async function probeTarget(params: {
 }
 
 async function runTargetsWithConcurrency(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   targets: AuthProbeTarget[];
   timeoutMs: number;
   maxTokens: number;
@@ -374,7 +365,7 @@ async function runTargetsWithConcurrency(params: {
   const concurrency = Math.max(1, Math.min(targets.length || 1, params.concurrency));
 
   const agentId = resolveDefaultAgentId(cfg);
-  const agentDir = resolveMinionAgentDir();
+  const agentDir = resolveOpenClawAgentDir();
   const workspaceDir = resolveAgentWorkspaceDir(cfg, agentId) ?? resolveDefaultAgentWorkspaceDir();
   const sessionDir = resolveSessionTranscriptsDirForAgent(agentId);
 
@@ -419,7 +410,7 @@ async function runTargetsWithConcurrency(params: {
 }
 
 export async function runAuthProbes(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   providers: string[];
   modelCandidates: string[];
   options: AuthProbeOptions;

@@ -1,38 +1,29 @@
-import JSZip from "jszip";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import JSZip from "jszip";
 import sharp from "sharp";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { isPathWithinBase } from "../../test/helpers/paths.js";
+import { captureEnv } from "../test-utils/env.js";
 
 describe("media store", () => {
   let store: typeof import("./store.js");
   let home = "";
-  const envSnapshot: Record<string, string | undefined> = {};
-
-  const snapshotEnv = () => {
-    for (const key of ["HOME", "USERPROFILE", "HOMEDRIVE", "HOMEPATH", "MINION_STATE_DIR"]) {
-      envSnapshot[key] = process.env[key];
-    }
-  };
-
-  const restoreEnv = () => {
-    for (const [key, value] of Object.entries(envSnapshot)) {
-      if (value === undefined) {
-        delete process.env[key];
-      } else {
-        process.env[key] = value;
-      }
-    }
-  };
+  let envSnapshot: ReturnType<typeof captureEnv>;
 
   beforeAll(async () => {
-    snapshotEnv();
-    home = await fs.mkdtemp(path.join(os.tmpdir(), "minion-test-home-"));
+    envSnapshot = captureEnv([
+      "HOME",
+      "USERPROFILE",
+      "HOMEDRIVE",
+      "HOMEPATH",
+      "OPENCLAW_STATE_DIR",
+    ]);
+    home = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-test-home-"));
     process.env.HOME = home;
     process.env.USERPROFILE = home;
-    process.env.MINION_STATE_DIR = path.join(home, ".minion");
+    process.env.OPENCLAW_STATE_DIR = path.join(home, ".openclaw");
     if (process.platform === "win32") {
       const match = home.match(/^([A-Za-z]:)(.*)$/);
       if (match) {
@@ -40,12 +31,12 @@ describe("media store", () => {
         process.env.HOMEPATH = match[2] || "\\";
       }
     }
-    await fs.mkdir(path.join(home, ".minion"), { recursive: true });
+    await fs.mkdir(path.join(home, ".openclaw"), { recursive: true });
     store = await import("./store.js");
   });
 
   afterAll(async () => {
-    restoreEnv();
+    envSnapshot.restore();
     try {
       await fs.rm(home, { recursive: true, force: true });
     } catch {
@@ -63,7 +54,7 @@ describe("media store", () => {
     await withTempStore(async (store, home) => {
       const dir = await store.ensureMediaDir();
       expect(isPathWithinBase(home, dir)).toBe(true);
-      expect(path.normalize(dir)).toContain(`${path.sep}.minion${path.sep}media`);
+      expect(path.normalize(dir)).toContain(`${path.sep}.openclaw${path.sep}media`);
       const stat = await fs.stat(dir);
       expect(stat.isDirectory()).toBe(true);
     });
@@ -108,6 +99,21 @@ describe("media store", () => {
       await fs.utimes(saved.path, past / 1000, past / 1000);
       await store.cleanOldMedia(1);
       await expect(fs.stat(saved.path)).rejects.toThrow();
+    });
+  });
+
+  it("cleans old media files in first-level subdirectories", async () => {
+    await withTempStore(async (store) => {
+      const saved = await store.saveMediaBuffer(Buffer.from("nested"), "text/plain", "inbound");
+      const inboundDir = path.dirname(saved.path);
+      const past = Date.now() - 10_000;
+      await fs.utimes(saved.path, past / 1000, past / 1000);
+
+      await store.cleanOldMedia(1);
+
+      await expect(fs.stat(saved.path)).rejects.toThrow();
+      const inboundStat = await fs.stat(inboundDir);
+      expect(inboundStat.isDirectory()).toBe(true);
     });
   });
 
@@ -161,6 +167,29 @@ describe("media store", () => {
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       );
       expect(path.extname(saved.path)).toBe(".xlsx");
+    });
+  });
+
+  it("prefers header mime extension when sniffed mime lacks mapping", async () => {
+    await withTempStore(async (_store, home) => {
+      vi.resetModules();
+      vi.doMock("./mime.js", async () => {
+        const actual = await vi.importActual<typeof import("./mime.js")>("./mime.js");
+        return {
+          ...actual,
+          detectMime: vi.fn(async () => "audio/opus"),
+        };
+      });
+
+      try {
+        const storeWithMock = await import("./store.js");
+        const buf = Buffer.from("fake-audio");
+        const saved = await storeWithMock.saveMediaBuffer(buf, "audio/ogg; codecs=opus");
+        expect(path.extname(saved.path)).toBe(".ogg");
+        expect(saved.path.startsWith(home)).toBe(true);
+      } finally {
+        vi.doUnmock("./mime.js");
+      }
     });
   });
 

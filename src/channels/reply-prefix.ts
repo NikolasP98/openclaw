@@ -1,10 +1,10 @@
-import type { GetReplyOptions } from "../auto-reply/types.js";
-import type { MinionConfig } from "../config/config.js";
 import { resolveEffectiveMessagesConfig, resolveIdentityName } from "../agents/identity.js";
 import {
   extractShortModelName,
   type ResponsePrefixContext,
 } from "../auto-reply/reply/response-prefix-template.js";
+import type { GetReplyOptions } from "../auto-reply/types.js";
+import type { OpenClawConfig } from "../config/config.js";
 
 type ModelSelectionContext = Parameters<NonNullable<GetReplyOptions["onModelSelected"]>>[0];
 
@@ -21,7 +21,7 @@ export type ReplyPrefixOptions = Pick<
 >;
 
 export function createReplyPrefixContext(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   agentId: string;
   channel?: string;
   accountId?: string;
@@ -51,7 +51,7 @@ export function createReplyPrefixContext(params: {
 }
 
 export function createReplyPrefixOptions(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   agentId: string;
   channel?: string;
   accountId?: string;

@@ -7,10 +7,9 @@ import {
   normalizeAccountId,
   setAccountEnabledInConfigSection,
   type ChannelPlugin,
-  type MinionConfig,
+  type OpenClawConfig,
   type ChannelSetupInput,
-} from "minion/plugin-sdk";
-import type { CoreConfig } from "./types.js";
+} from "openclaw/plugin-sdk";
 import {
   listNextcloudTalkAccountIds,
   resolveDefaultNextcloudTalkAccountId,
@@ -27,6 +26,7 @@ import { nextcloudTalkOnboardingAdapter } from "./onboarding.js";
 import { resolveNextcloudTalkGroupToolPolicy } from "./policy.js";
 import { getNextcloudTalkRuntime } from "./runtime.js";
 import { sendMessageNextcloudTalk } from "./send.js";
+import type { CoreConfig } from "./types.js";
 
 const meta = {
   id: "nextcloud-talk",
@@ -222,7 +222,7 @@ export const nextcloudTalkPlugin: ChannelPlugin<ResolvedNextcloudTalkAccount> = 
                     : {}),
             },
           },
-        } as MinionConfig;
+        } as OpenClawConfig;
       }
       return {
         ...namedConfig,
@@ -246,7 +246,7 @@ export const nextcloudTalkPlugin: ChannelPlugin<ResolvedNextcloudTalkAccount> = 
             },
           },
         },
-      } as MinionConfig;
+      } as OpenClawConfig;
     },
   },
   outbound: {
@@ -328,7 +328,7 @@ export const nextcloudTalkPlugin: ChannelPlugin<ResolvedNextcloudTalkAccount> = 
       return { stop };
     },
     logoutAccount: async ({ accountId, cfg }) => {
-      const nextCfg = { ...cfg } as MinionConfig;
+      const nextCfg = { ...cfg } as OpenClawConfig;
       const nextSection = cfg.channels?.["nextcloud-talk"]
         ? { ...cfg.channels["nextcloud-talk"] }
         : undefined;
@@ -382,7 +382,7 @@ export const nextcloudTalkPlugin: ChannelPlugin<ResolvedNextcloudTalkAccount> = 
           const nextChannels = { ...nextCfg.channels } as Record<string, unknown>;
           delete nextChannels["nextcloud-talk"];
           if (Object.keys(nextChannels).length > 0) {
-            nextCfg.channels = nextChannels as MinionConfig["channels"];
+            nextCfg.channels = nextChannels as OpenClawConfig["channels"];
           } else {
             delete nextCfg.channels;
           }

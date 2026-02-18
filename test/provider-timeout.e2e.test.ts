@@ -3,10 +3,8 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { GatewayClient } from "../src/gateway/client.js";
-import { startGatewayServer } from "../src/gateway/server.js";
-import { getDeterministicFreePortBlock } from "../src/test-utils/ports.js";
-import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../src/utils/message-channel.js";
+import { startGatewayWithClient } from "../src/gateway/test-helpers.e2e.js";
+import { buildOpenAiResponsesProviderConfig } from "../src/gateway/test-openai-responses-model.js";
 
 type OpenAIResponseStreamEvent =
   | { type: "response.output_item.added"; item: Record<string, unknown> }
@@ -77,44 +75,6 @@ function extractPayloadText(result: unknown): string {
   return texts.join("\n").trim();
 }
 
-async function connectClient(params: { url: string; token: string }) {
-  return await new Promise<InstanceType<typeof GatewayClient>>((resolve, reject) => {
-    let settled = false;
-    const stop = (err?: Error, client?: InstanceType<typeof GatewayClient>) => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      clearTimeout(timer);
-      if (err) {
-        reject(err);
-      } else {
-        resolve(client as InstanceType<typeof GatewayClient>);
-      }
-    };
-    const client = new GatewayClient({
-      url: params.url,
-      connectDelayMs: 0,
-      token: params.token,
-      clientName: GATEWAY_CLIENT_NAMES.TEST,
-      clientDisplayName: "vitest-timeout-fallback",
-      clientVersion: "dev",
-      mode: GATEWAY_CLIENT_MODES.TEST,
-      onHelloOk: () => stop(undefined, client),
-      onConnectError: (err) => stop(err),
-      onClose: (code, reason) =>
-        stop(new Error(`gateway closed during connect (${code}): ${reason}`)),
-    });
-    const timer = setTimeout(() => stop(new Error("gateway connect timeout")), 10_000);
-    timer.unref();
-    client.start();
-  });
-}
-
-async function getFreeGatewayPort(): Promise<number> {
-  return await getDeterministicFreePortBlock({ offsets: [0, 1, 2, 3, 4] });
-}
-
 describe("provider timeouts (e2e)", () => {
   it(
     "falls back when the primary provider aborts with a timeout-like AbortError",
@@ -122,12 +82,12 @@ describe("provider timeouts (e2e)", () => {
     async () => {
       const prev = {
         home: process.env.HOME,
-        configPath: process.env.MINION_CONFIG_PATH,
-        token: process.env.MINION_GATEWAY_TOKEN,
-        skipChannels: process.env.MINION_SKIP_CHANNELS,
-        skipGmail: process.env.MINION_SKIP_GMAIL_WATCHER,
-        skipCron: process.env.MINION_SKIP_CRON,
-        skipCanvas: process.env.MINION_SKIP_CANVAS_HOST,
+        configPath: process.env.OPENCLAW_CONFIG_PATH,
+        token: process.env.OPENCLAW_GATEWAY_TOKEN,
+        skipChannels: process.env.OPENCLAW_SKIP_CHANNELS,
+        skipGmail: process.env.OPENCLAW_SKIP_GMAIL_WATCHER,
+        skipCron: process.env.OPENCLAW_SKIP_CRON,
+        skipCanvas: process.env.OPENCLAW_SKIP_CANVAS_HOST,
       };
 
       const originalFetch = globalThis.fetch;
@@ -157,19 +117,19 @@ describe("provider timeouts (e2e)", () => {
       };
       (globalThis as unknown as { fetch: unknown }).fetch = fetchImpl;
 
-      const tempHome = await fs.mkdtemp(path.join(os.tmpdir(), "minion-timeout-e2e-"));
+      const tempHome = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-timeout-e2e-"));
       process.env.HOME = tempHome;
-      process.env.MINION_SKIP_CHANNELS = "1";
-      process.env.MINION_SKIP_GMAIL_WATCHER = "1";
-      process.env.MINION_SKIP_CRON = "1";
-      process.env.MINION_SKIP_CANVAS_HOST = "1";
+      process.env.OPENCLAW_SKIP_CHANNELS = "1";
+      process.env.OPENCLAW_SKIP_GMAIL_WATCHER = "1";
+      process.env.OPENCLAW_SKIP_CRON = "1";
+      process.env.OPENCLAW_SKIP_CANVAS_HOST = "1";
 
       const token = `test-${randomUUID()}`;
-      process.env.MINION_GATEWAY_TOKEN = token;
+      process.env.OPENCLAW_GATEWAY_TOKEN = token;
 
-      const configDir = path.join(tempHome, ".minion");
+      const configDir = path.join(tempHome, ".openclaw");
       await fs.mkdir(configDir, { recursive: true });
-      const configPath = path.join(configDir, "minion.json");
+      const configPath = path.join(configDir, "openclaw.json");
 
       const cfg = {
         agents: {
@@ -183,58 +143,18 @@ describe("provider timeouts (e2e)", () => {
         models: {
           mode: "replace",
           providers: {
-            primary: {
-              baseUrl: primaryBaseUrl,
-              apiKey: "test",
-              api: "openai-responses",
-              models: [
-                {
-                  id: "gpt-5.2",
-                  name: "gpt-5.2",
-                  api: "openai-responses",
-                  reasoning: false,
-                  input: ["text"],
-                  cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-                  contextWindow: 128_000,
-                  maxTokens: 4096,
-                },
-              ],
-            },
-            fallback: {
-              baseUrl: fallbackBaseUrl,
-              apiKey: "test",
-              api: "openai-responses",
-              models: [
-                {
-                  id: "gpt-5.2",
-                  name: "gpt-5.2",
-                  api: "openai-responses",
-                  reasoning: false,
-                  input: ["text"],
-                  cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-                  contextWindow: 128_000,
-                  maxTokens: 4096,
-                },
-              ],
-            },
+            primary: buildOpenAiResponsesProviderConfig(primaryBaseUrl),
+            fallback: buildOpenAiResponsesProviderConfig(fallbackBaseUrl),
           },
         },
         gateway: { auth: { token } },
       };
 
-      await fs.writeFile(configPath, `${JSON.stringify(cfg, null, 2)}\n`);
-      process.env.MINION_CONFIG_PATH = configPath;
-
-      const port = await getFreeGatewayPort();
-      const server = await startGatewayServer(port, {
-        bind: "loopback",
-        auth: { mode: "token", token },
-        controlUiEnabled: false,
-      });
-
-      const client = await connectClient({
-        url: `ws://127.0.0.1:${port}`,
+      const { server, client } = await startGatewayWithClient({
+        cfg,
+        configPath,
         token,
+        clientDisplayName: "vitest-timeout-fallback",
       });
 
       try {
@@ -275,34 +195,34 @@ describe("provider timeouts (e2e)", () => {
           process.env.HOME = prev.home;
         }
         if (prev.configPath === undefined) {
-          delete process.env.MINION_CONFIG_PATH;
+          delete process.env.OPENCLAW_CONFIG_PATH;
         } else {
-          process.env.MINION_CONFIG_PATH = prev.configPath;
+          process.env.OPENCLAW_CONFIG_PATH = prev.configPath;
         }
         if (prev.token === undefined) {
-          delete process.env.MINION_GATEWAY_TOKEN;
+          delete process.env.OPENCLAW_GATEWAY_TOKEN;
         } else {
-          process.env.MINION_GATEWAY_TOKEN = prev.token;
+          process.env.OPENCLAW_GATEWAY_TOKEN = prev.token;
         }
         if (prev.skipChannels === undefined) {
-          delete process.env.MINION_SKIP_CHANNELS;
+          delete process.env.OPENCLAW_SKIP_CHANNELS;
         } else {
-          process.env.MINION_SKIP_CHANNELS = prev.skipChannels;
+          process.env.OPENCLAW_SKIP_CHANNELS = prev.skipChannels;
         }
         if (prev.skipGmail === undefined) {
-          delete process.env.MINION_SKIP_GMAIL_WATCHER;
+          delete process.env.OPENCLAW_SKIP_GMAIL_WATCHER;
         } else {
-          process.env.MINION_SKIP_GMAIL_WATCHER = prev.skipGmail;
+          process.env.OPENCLAW_SKIP_GMAIL_WATCHER = prev.skipGmail;
         }
         if (prev.skipCron === undefined) {
-          delete process.env.MINION_SKIP_CRON;
+          delete process.env.OPENCLAW_SKIP_CRON;
         } else {
-          process.env.MINION_SKIP_CRON = prev.skipCron;
+          process.env.OPENCLAW_SKIP_CRON = prev.skipCron;
         }
         if (prev.skipCanvas === undefined) {
-          delete process.env.MINION_SKIP_CANVAS_HOST;
+          delete process.env.OPENCLAW_SKIP_CANVAS_HOST;
         } else {
-          process.env.MINION_SKIP_CANVAS_HOST = prev.skipCanvas;
+          process.env.OPENCLAW_SKIP_CANVAS_HOST = prev.skipCanvas;
         }
       }
     },

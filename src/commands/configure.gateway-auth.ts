@@ -1,7 +1,7 @@
-import type { MinionConfig, GatewayAuthConfig } from "../config/config.js";
+import { ensureAuthProfileStore } from "../agents/auth-profiles.js";
+import type { OpenClawConfig, GatewayAuthConfig } from "../config/config.js";
 import type { RuntimeEnv } from "../runtime.js";
 import type { WizardPrompter } from "../wizard/prompts.js";
-import { ensureAuthProfileStore } from "../agents/auth-profiles.js";
 import { promptAuthChoiceGrouped } from "./auth-choice-prompt.js";
 import { applyAuthChoice, resolvePreferredProviderForAuthChoice } from "./auth-choice.js";
 import {
@@ -71,10 +71,10 @@ export function buildGatewayAuthConfig(params: {
 }
 
 export async function promptAuthConfig(
-  cfg: MinionConfig,
+  cfg: OpenClawConfig,
   runtime: RuntimeEnv,
   prompter: WizardPrompter,
-): Promise<MinionConfig> {
+): Promise<OpenClawConfig> {
   const authChoice = await promptAuthChoiceGrouped({
     prompter,
     store: ensureAuthProfileStore(undefined, {

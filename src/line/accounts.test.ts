@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import type { MinionConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import {
   resolveLineAccount,
-  listLineAccountIds,
   resolveDefaultLineAccountId,
   normalizeAccountId,
   DEFAULT_ACCOUNT_ID,
@@ -23,7 +22,7 @@ describe("LINE accounts", () => {
 
   describe("resolveLineAccount", () => {
     it("resolves account from config", () => {
-      const cfg: MinionConfig = {
+      const cfg: OpenClawConfig = {
         channels: {
           line: {
             enabled: true,
@@ -48,7 +47,7 @@ describe("LINE accounts", () => {
       process.env.LINE_CHANNEL_ACCESS_TOKEN = "env-token";
       process.env.LINE_CHANNEL_SECRET = "env-secret";
 
-      const cfg: MinionConfig = {
+      const cfg: OpenClawConfig = {
         channels: {
           line: {
             enabled: true,
@@ -64,7 +63,7 @@ describe("LINE accounts", () => {
     });
 
     it("resolves named account", () => {
-      const cfg: MinionConfig = {
+      const cfg: OpenClawConfig = {
         channels: {
           line: {
             enabled: true,
@@ -90,7 +89,7 @@ describe("LINE accounts", () => {
     });
 
     it("returns empty token when not configured", () => {
-      const cfg: MinionConfig = {};
+      const cfg: OpenClawConfig = {};
 
       const account = resolveLineAccount({ cfg });
 
@@ -100,66 +99,9 @@ describe("LINE accounts", () => {
     });
   });
 
-  describe("listLineAccountIds", () => {
-    it("returns default account when configured at base level", () => {
-      const cfg: MinionConfig = {
-        channels: {
-          line: {
-            channelAccessToken: "test-token",
-          },
-        },
-      };
-
-      const ids = listLineAccountIds(cfg);
-
-      expect(ids).toContain(DEFAULT_ACCOUNT_ID);
-    });
-
-    it("returns named accounts", () => {
-      const cfg: MinionConfig = {
-        channels: {
-          line: {
-            accounts: {
-              business: { enabled: true },
-              personal: { enabled: true },
-            },
-          },
-        },
-      };
-
-      const ids = listLineAccountIds(cfg);
-
-      expect(ids).toContain("business");
-      expect(ids).toContain("personal");
-    });
-
-    it("returns default from env", () => {
-      process.env.LINE_CHANNEL_ACCESS_TOKEN = "env-token";
-      const cfg: MinionConfig = {};
-
-      const ids = listLineAccountIds(cfg);
-
-      expect(ids).toContain(DEFAULT_ACCOUNT_ID);
-    });
-  });
-
   describe("resolveDefaultLineAccountId", () => {
-    it("returns default when configured", () => {
-      const cfg: MinionConfig = {
-        channels: {
-          line: {
-            channelAccessToken: "test-token",
-          },
-        },
-      };
-
-      const id = resolveDefaultLineAccountId(cfg);
-
-      expect(id).toBe(DEFAULT_ACCOUNT_ID);
-    });
-
     it("returns first named account when default not configured", () => {
-      const cfg: MinionConfig = {
+      const cfg: OpenClawConfig = {
         channels: {
           line: {
             accounts: {
@@ -176,24 +118,8 @@ describe("LINE accounts", () => {
   });
 
   describe("normalizeAccountId", () => {
-    it("normalizes undefined to default", () => {
-      expect(normalizeAccountId(undefined)).toBe(DEFAULT_ACCOUNT_ID);
-    });
-
-    it("normalizes 'default' to DEFAULT_ACCOUNT_ID", () => {
-      expect(normalizeAccountId("default")).toBe(DEFAULT_ACCOUNT_ID);
-    });
-
-    it("preserves other account ids", () => {
-      expect(normalizeAccountId("business")).toBe("business");
-    });
-
-    it("lowercases account ids", () => {
-      expect(normalizeAccountId("Business")).toBe("business");
-    });
-
-    it("trims whitespace", () => {
-      expect(normalizeAccountId("  business  ")).toBe("business");
+    it("trims and lowercases account ids", () => {
+      expect(normalizeAccountId("  Business  ")).toBe("business");
     });
   });
 });

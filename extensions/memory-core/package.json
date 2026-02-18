@@ -1,16 +1,16 @@
 {
-  "name": "@minion/memory-core",
-  "version": "2026.2.13",
+  "name": "@openclaw/memory-core",
+  "version": "2026.2.16",
   "private": true,
-  "description": "Minion core memory search plugin",
+  "description": "OpenClaw core memory search plugin",
   "type": "module",
   "devDependencies": {
     "@nikolasp98/minion": "workspace:*"
   },
   "peerDependencies": {
-    "@nikolasp98/minion": ">=2026.1.26"
+    "openclaw": ">=2026.1.26"
   },
-  "minion": {
+  "openclaw": {
     "extensions": [
       "./index.ts"
     ]

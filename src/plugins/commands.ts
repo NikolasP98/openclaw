@@ -5,15 +5,15 @@
  * These commands are processed before built-in commands and before agent invocation.
  */
 
-import type { MinionConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
+import { logVerbose } from "../globals.js";
 import type {
-  MinionPluginCommandDefinition,
+  OpenClawPluginCommandDefinition,
   PluginCommandContext,
   PluginCommandResult,
 } from "./types.js";
-import { logVerbose } from "../globals.js";
 
-type RegisteredPluginCommand = MinionPluginCommandDefinition & {
+type RegisteredPluginCommand = OpenClawPluginCommandDefinition & {
   pluginId: string;
 };
 
@@ -51,6 +51,9 @@ const RESERVED_COMMANDS = new Set([
   // Agent control
   "skill",
   "subagents",
+  "kill",
+  "steer",
+  "tell",
   "model",
   "models",
   "queue",
@@ -104,7 +107,7 @@ export type CommandRegistrationResult = {
  */
 export function registerPluginCommand(
   pluginId: string,
-  command: MinionPluginCommandDefinition,
+  command: OpenClawPluginCommandDefinition,
 ): CommandRegistrationResult {
   // Prevent registration while commands are being processed
   if (registryLocked) {
@@ -232,7 +235,7 @@ export async function executePluginCommand(params: {
   channelId?: PluginCommandContext["channelId"];
   isAuthorizedSender: boolean;
   commandBody: string;
-  config: MinionConfig;
+  config: OpenClawConfig;
   from?: PluginCommandContext["from"];
   to?: PluginCommandContext["to"];
   accountId?: PluginCommandContext["accountId"];

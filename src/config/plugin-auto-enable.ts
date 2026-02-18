@@ -1,4 +1,3 @@
-import type { MinionConfig } from "./config.js";
 import { normalizeProviderId } from "../agents/model-selection.js";
 import {
   getChannelPluginCatalogEntry,
@@ -11,6 +10,8 @@ import {
 } from "../channels/registry.js";
 import { isRecord } from "../utils.js";
 import { hasAnyWhatsAppAuth } from "../web/accounts.js";
+import type { OpenClawConfig } from "./config.js";
+import { ensurePluginAllowlisted } from "./plugins-allowlist.js";
 
 type PluginEnableChange = {
   pluginId: string;
@@ -18,7 +19,7 @@ type PluginEnableChange = {
 };
 
 export type PluginAutoEnableResult = {
-  config: MinionConfig;
+  config: OpenClawConfig;
   changes: string[];
 };
 
@@ -63,7 +64,7 @@ function accountsHaveKeys(value: unknown, keys: string[]): boolean {
 }
 
 function resolveChannelConfig(
-  cfg: MinionConfig,
+  cfg: OpenClawConfig,
   channelId: string,
 ): Record<string, unknown> | null {
   const channels = cfg.channels as Record<string, unknown> | undefined;
@@ -71,7 +72,7 @@ function resolveChannelConfig(
   return isRecord(entry) ? entry : null;
 }
 
-function isTelegramConfigured(cfg: MinionConfig, env: NodeJS.ProcessEnv): boolean {
+function isTelegramConfigured(cfg: OpenClawConfig, env: NodeJS.ProcessEnv): boolean {
   if (hasNonEmptyString(env.TELEGRAM_BOT_TOKEN)) {
     return true;
   }
@@ -88,7 +89,7 @@ function isTelegramConfigured(cfg: MinionConfig, env: NodeJS.ProcessEnv): boolea
   return recordHasKeys(entry);
 }
 
-function isDiscordConfigured(cfg: MinionConfig, env: NodeJS.ProcessEnv): boolean {
+function isDiscordConfigured(cfg: OpenClawConfig, env: NodeJS.ProcessEnv): boolean {
   if (hasNonEmptyString(env.DISCORD_BOT_TOKEN)) {
     return true;
   }
@@ -105,7 +106,7 @@ function isDiscordConfigured(cfg: MinionConfig, env: NodeJS.ProcessEnv): boolean
   return recordHasKeys(entry);
 }
 
-function isIrcConfigured(cfg: MinionConfig, env: NodeJS.ProcessEnv): boolean {
+function isIrcConfigured(cfg: OpenClawConfig, env: NodeJS.ProcessEnv): boolean {
   if (hasNonEmptyString(env.IRC_HOST) && hasNonEmptyString(env.IRC_NICK)) {
     return true;
   }
@@ -122,7 +123,7 @@ function isIrcConfigured(cfg: MinionConfig, env: NodeJS.ProcessEnv): boolean {
   return recordHasKeys(entry);
 }
 
-function isSlackConfigured(cfg: MinionConfig, env: NodeJS.ProcessEnv): boolean {
+function isSlackConfigured(cfg: OpenClawConfig, env: NodeJS.ProcessEnv): boolean {
   if (
     hasNonEmptyString(env.SLACK_BOT_TOKEN) ||
     hasNonEmptyString(env.SLACK_APP_TOKEN) ||
@@ -147,7 +148,7 @@ function isSlackConfigured(cfg: MinionConfig, env: NodeJS.ProcessEnv): boolean {
   return recordHasKeys(entry);
 }
 
-function isSignalConfigured(cfg: MinionConfig): boolean {
+function isSignalConfigured(cfg: OpenClawConfig): boolean {
   const entry = resolveChannelConfig(cfg, "signal");
   if (!entry) {
     return false;
@@ -167,7 +168,7 @@ function isSignalConfigured(cfg: MinionConfig): boolean {
   return recordHasKeys(entry);
 }
 
-function isIMessageConfigured(cfg: MinionConfig): boolean {
+function isIMessageConfigured(cfg: OpenClawConfig): boolean {
   const entry = resolveChannelConfig(cfg, "imessage");
   if (!entry) {
     return false;
@@ -178,7 +179,7 @@ function isIMessageConfigured(cfg: MinionConfig): boolean {
   return recordHasKeys(entry);
 }
 
-function isWhatsAppConfigured(cfg: MinionConfig): boolean {
+function isWhatsAppConfigured(cfg: OpenClawConfig): boolean {
   if (hasAnyWhatsAppAuth(cfg)) {
     return true;
   }
@@ -189,13 +190,13 @@ function isWhatsAppConfigured(cfg: MinionConfig): boolean {
   return recordHasKeys(entry);
 }
 
-function isGenericChannelConfigured(cfg: MinionConfig, channelId: string): boolean {
+function isGenericChannelConfigured(cfg: OpenClawConfig, channelId: string): boolean {
   const entry = resolveChannelConfig(cfg, channelId);
   return recordHasKeys(entry);
 }
 
 export function isChannelConfigured(
-  cfg: MinionConfig,
+  cfg: OpenClawConfig,
   channelId: string,
   env: NodeJS.ProcessEnv = process.env,
 ): boolean {
@@ -219,7 +220,7 @@ export function isChannelConfigured(
   }
 }
 
-function collectModelRefs(cfg: MinionConfig): string[] {
+function collectModelRefs(cfg: OpenClawConfig): string[] {
   const refs: string[] = [];
   const pushModelRef = (value: unknown) => {
     if (typeof value === "string" && value.trim()) {
@@ -273,7 +274,7 @@ function extractProviderFromModelRef(value: string): string | null {
   return normalizeProviderId(trimmed.slice(0, slash));
 }
 
-function isProviderConfigured(cfg: MinionConfig, providerId: string): boolean {
+function isProviderConfigured(cfg: OpenClawConfig, providerId: string): boolean {
   const normalized = normalizeProviderId(providerId);
 
   const profiles = cfg.auth?.profiles;
@@ -309,7 +310,10 @@ function isProviderConfigured(cfg: MinionConfig, providerId: string): boolean {
   return false;
 }
 
-function resolveConfiguredPlugins(cfg: MinionConfig, env: NodeJS.ProcessEnv): PluginEnableChange[] {
+function resolveConfiguredPlugins(
+  cfg: OpenClawConfig,
+  env: NodeJS.ProcessEnv,
+): PluginEnableChange[] {
   const changes: PluginEnableChange[] = [];
   const channelIds = new Set(CHANNEL_PLUGIN_IDS);
   const configuredChannels = cfg.channels as Record<string, unknown> | undefined;
@@ -343,12 +347,12 @@ function resolveConfiguredPlugins(cfg: MinionConfig, env: NodeJS.ProcessEnv): Pl
   return changes;
 }
 
-function isPluginExplicitlyDisabled(cfg: MinionConfig, pluginId: string): boolean {
+function isPluginExplicitlyDisabled(cfg: OpenClawConfig, pluginId: string): boolean {
   const entry = cfg.plugins?.entries?.[pluginId];
   return entry?.enabled === false;
 }
 
-function isPluginDenied(cfg: MinionConfig, pluginId: string): boolean {
+function isPluginDenied(cfg: OpenClawConfig, pluginId: string): boolean {
   const deny = cfg.plugins?.deny;
   return Array.isArray(deny) && deny.includes(pluginId);
 }
@@ -363,7 +367,7 @@ function resolvePreferredOverIds(pluginId: string): string[] {
 }
 
 function shouldSkipPreferredPluginAutoEnable(
-  cfg: MinionConfig,
+  cfg: OpenClawConfig,
   entry: PluginEnableChange,
   configured: PluginEnableChange[],
 ): boolean {
@@ -385,21 +389,7 @@ function shouldSkipPreferredPluginAutoEnable(
   return false;
 }
 
-function ensureAllowlisted(cfg: MinionConfig, pluginId: string): MinionConfig {
-  const allow = cfg.plugins?.allow;
-  if (!Array.isArray(allow) || allow.includes(pluginId)) {
-    return cfg;
-  }
-  return {
-    ...cfg,
-    plugins: {
-      ...cfg.plugins,
-      allow: [...allow, pluginId],
-    },
-  };
-}
-
-function registerPluginEntry(cfg: MinionConfig, pluginId: string): MinionConfig {
+function registerPluginEntry(cfg: OpenClawConfig, pluginId: string): OpenClawConfig {
   const entries = {
     ...cfg.plugins?.entries,
     [pluginId]: {
@@ -427,7 +417,7 @@ function formatAutoEnableChange(entry: PluginEnableChange): string {
 }
 
 export function applyPluginAutoEnable(params: {
-  config: MinionConfig;
+  config: OpenClawConfig;
   env?: NodeJS.ProcessEnv;
 }): PluginAutoEnableResult {
   const env = params.env ?? process.env;
@@ -460,7 +450,7 @@ export function applyPluginAutoEnable(params: {
       continue;
     }
     next = registerPluginEntry(next, entry.pluginId);
-    next = ensureAllowlisted(next, entry.pluginId);
+    next = ensurePluginAllowlisted(next, entry.pluginId);
     changes.push(formatAutoEnableChange(entry));
   }
 

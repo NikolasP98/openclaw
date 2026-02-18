@@ -1,4 +1,4 @@
-import type { MinionConfig } from "minion/plugin-sdk";
+import type { OpenClawConfig } from "openclaw/plugin-sdk";
 import {
   formatDocsLink,
   promptAccountId,
@@ -6,7 +6,8 @@ import {
   normalizeAccountId,
   type ChannelOnboardingAdapter,
   type WizardPrompter,
-} from "minion/plugin-sdk";
+} from "openclaw/plugin-sdk";
+import { buildTlonAccountFields } from "./account-fields.js";
 import type { TlonResolvedAccount } from "./types.js";
 import { listTlonAccountIds, resolveTlonAccount } from "./types.js";
 import { isBlockedUrbitHostname, validateUrbitBaseUrl } from "./urbit/base-url.js";
@@ -18,7 +19,7 @@ function isConfigured(account: TlonResolvedAccount): boolean {
 }
 
 function applyAccountConfig(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   accountId: string;
   input: {
     name?: string;
@@ -30,10 +31,15 @@ function applyAccountConfig(params: {
     dmAllowlist?: string[];
     autoDiscoverChannels?: boolean;
   };
-}): MinionConfig {
+}): OpenClawConfig {
   const { cfg, accountId, input } = params;
   const useDefault = accountId === DEFAULT_ACCOUNT_ID;
   const base = cfg.channels?.tlon ?? {};
+  const nextValues = {
+    enabled: true,
+    ...(input.name ? { name: input.name } : {}),
+    ...buildTlonAccountFields(input),
+  };
 
   if (useDefault) {
     return {
@@ -42,19 +48,7 @@ function applyAccountConfig(params: {
         ...cfg.channels,
         tlon: {
           ...base,
-          enabled: true,
-          ...(input.name ? { name: input.name } : {}),
-          ...(input.ship ? { ship: input.ship } : {}),
-          ...(input.url ? { url: input.url } : {}),
-          ...(input.code ? { code: input.code } : {}),
-          ...(typeof input.allowPrivateNetwork === "boolean"
-            ? { allowPrivateNetwork: input.allowPrivateNetwork }
-            : {}),
-          ...(input.groupChannels ? { groupChannels: input.groupChannels } : {}),
-          ...(input.dmAllowlist ? { dmAllowlist: input.dmAllowlist } : {}),
-          ...(typeof input.autoDiscoverChannels === "boolean"
-            ? { autoDiscoverChannels: input.autoDiscoverChannels }
-            : {}),
+          ...nextValues,
         },
       },
     };
@@ -73,19 +67,7 @@ function applyAccountConfig(params: {
             ...(base as { accounts?: Record<string, Record<string, unknown>> }).accounts?.[
               accountId
             ],
-            enabled: true,
-            ...(input.name ? { name: input.name } : {}),
-            ...(input.ship ? { ship: input.ship } : {}),
-            ...(input.url ? { url: input.url } : {}),
-            ...(input.code ? { code: input.code } : {}),
-            ...(typeof input.allowPrivateNetwork === "boolean"
-              ? { allowPrivateNetwork: input.allowPrivateNetwork }
-              : {}),
-            ...(input.groupChannels ? { groupChannels: input.groupChannels } : {}),
-            ...(input.dmAllowlist ? { dmAllowlist: input.dmAllowlist } : {}),
-            ...(typeof input.autoDiscoverChannels === "boolean"
-              ? { autoDiscoverChannels: input.autoDiscoverChannels }
-              : {}),
+            ...nextValues,
           },
         },
       },

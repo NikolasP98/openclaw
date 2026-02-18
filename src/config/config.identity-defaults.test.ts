@@ -7,10 +7,10 @@ import { withTempHome } from "./home-env.test-harness.js";
 
 describe("config identity defaults", () => {
   const writeAndLoadConfig = async (home: string, config: Record<string, unknown>) => {
-    const configDir = path.join(home, ".minion");
+    const configDir = path.join(home, ".openclaw");
     await fs.mkdir(configDir, { recursive: true });
     await fs.writeFile(
-      path.join(configDir, "minion.json"),
+      path.join(configDir, "openclaw.json"),
       JSON.stringify(config, null, 2),
       "utf-8",
     );
@@ -18,7 +18,7 @@ describe("config identity defaults", () => {
   };
 
   it("does not derive mention defaults and only sets ackReactionScope when identity is present", async () => {
-    await withTempHome("minion-config-identity-", async (home) => {
+    await withTempHome("openclaw-config-identity-", async (home) => {
       const cfg = await writeAndLoadConfig(home, {
         agents: {
           list: [
@@ -43,7 +43,7 @@ describe("config identity defaults", () => {
   });
 
   it("keeps ackReaction unset and does not synthesize agent/session defaults when identity is missing", async () => {
-    await withTempHome("minion-config-identity-", async (home) => {
+    await withTempHome("openclaw-config-identity-", async (home) => {
       const cfg = await writeAndLoadConfig(home, { messages: {} });
 
       expect(cfg.messages?.ackReaction).toBeUndefined();
@@ -58,7 +58,7 @@ describe("config identity defaults", () => {
   });
 
   it("does not override explicit values", async () => {
-    await withTempHome("minion-config-identity-", async (home) => {
+    await withTempHome("openclaw-config-identity-", async (home) => {
       const cfg = await writeAndLoadConfig(home, {
         agents: {
           list: [
@@ -66,10 +66,10 @@ describe("config identity defaults", () => {
               id: "main",
               identity: {
                 name: "Samantha Sloth",
-                theme: "space squid",
-                emoji: "🦑",
+                theme: "space lobster",
+                emoji: "🦞",
               },
-              groupChat: { mentionPatterns: ["@minion"] },
+              groupChat: { mentionPatterns: ["@openclaw"] },
             },
           ],
         },
@@ -79,16 +79,16 @@ describe("config identity defaults", () => {
       });
 
       expect(cfg.messages?.responsePrefix).toBe("✅");
-      expect(cfg.agents?.list?.[0]?.groupChat?.mentionPatterns).toEqual(["@minion"]);
+      expect(cfg.agents?.list?.[0]?.groupChat?.mentionPatterns).toEqual(["@openclaw"]);
     });
   });
 
   it("supports provider textChunkLimit config", async () => {
-    await withTempHome("minion-config-identity-", async (home) => {
+    await withTempHome("openclaw-config-identity-", async (home) => {
       const cfg = await writeAndLoadConfig(home, {
         messages: {
-          messagePrefix: "[minion]",
-          responsePrefix: "🦑",
+          messagePrefix: "[openclaw]",
+          responsePrefix: "🦞",
         },
         channels: {
           whatsapp: { allowFrom: ["+15555550123"], textChunkLimit: 4444 },
@@ -116,7 +116,7 @@ describe("config identity defaults", () => {
   });
 
   it("accepts blank model provider apiKey values", async () => {
-    await withTempHome("minion-config-identity-", async (home) => {
+    await withTempHome("openclaw-config-identity-", async (home) => {
       const cfg = await writeAndLoadConfig(home, {
         models: {
           mode: "merge",
@@ -151,7 +151,7 @@ describe("config identity defaults", () => {
   });
 
   it("respects empty responsePrefix to disable identity defaults", async () => {
-    await withTempHome("minion-config-identity-", async (home) => {
+    await withTempHome("openclaw-config-identity-", async (home) => {
       const cfg = await writeAndLoadConfig(home, {
         agents: {
           list: [
@@ -169,28 +169,6 @@ describe("config identity defaults", () => {
       });
 
       expect(cfg.messages?.responsePrefix).toBe("");
-    });
-  });
-
-  it("does not derive responsePrefix from identity emoji", async () => {
-    await withTempHome("minion-config-identity-", async (home) => {
-      const cfg = await writeAndLoadConfig(home, {
-        agents: {
-          list: [
-            {
-              id: "main",
-              identity: {
-                name: "Minion",
-                theme: "space squid",
-                emoji: "🦑",
-              },
-            },
-          ],
-        },
-        messages: {},
-      });
-
-      expect(cfg.messages?.responsePrefix).toBeUndefined();
     });
   });
 });

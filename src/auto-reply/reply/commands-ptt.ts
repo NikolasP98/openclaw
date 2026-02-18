@@ -1,7 +1,7 @@
-import type { MinionConfig } from "../../config/config.js";
-import type { CommandHandler } from "./commands-types.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { callGateway, randomIdempotencyKey } from "../../gateway/call.js";
 import { logVerbose } from "../../globals.js";
+import type { CommandHandler } from "./commands-types.js";
 
 type NodeSummary = {
   nodeId: string;
@@ -38,7 +38,7 @@ function isIOSNode(node: NodeSummary): boolean {
   );
 }
 
-async function loadNodes(cfg: MinionConfig): Promise<NodeSummary[]> {
+async function loadNodes(cfg: OpenClawConfig): Promise<NodeSummary[]> {
   try {
     const res = await callGateway<{ nodes?: NodeSummary[] }>({
       method: "node.list",

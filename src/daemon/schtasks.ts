@@ -1,31 +1,27 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { GatewayServiceRuntime } from "./service-runtime.js";
-import { colorize, isRich, theme } from "../terminal/theme.js";
-import { formatGatewayServiceDescription, resolveGatewayWindowsTaskName } from "./constants.js";
+import { splitArgsPreservingQuotes } from "./arg-split.js";
+import { resolveGatewayServiceDescription, resolveGatewayWindowsTaskName } from "./constants.js";
+import { formatLine } from "./output.js";
 import { resolveGatewayStateDir } from "./paths.js";
 import { parseKeyValueOutput } from "./runtime-parse.js";
 import { execSchtasks } from "./schtasks-exec.js";
-
-const formatLine = (label: string, value: string) => {
-  const rich = isRich();
-  return `${colorize(rich, theme.muted, `${label}:`)} ${colorize(rich, theme.command, value)}`;
-};
+import type { GatewayServiceRuntime } from "./service-runtime.js";
 
 function resolveTaskName(env: Record<string, string | undefined>): string {
-  const override = env.MINION_WINDOWS_TASK_NAME?.trim();
+  const override = env.OPENCLAW_WINDOWS_TASK_NAME?.trim();
   if (override) {
     return override;
   }
-  return resolveGatewayWindowsTaskName(env.MINION_PROFILE);
+  return resolveGatewayWindowsTaskName(env.OPENCLAW_PROFILE);
 }
 
 export function resolveTaskScriptPath(env: Record<string, string | undefined>): string {
-  const override = env.MINION_TASK_SCRIPT?.trim();
+  const override = env.OPENCLAW_TASK_SCRIPT?.trim();
   if (override) {
     return override;
   }
-  const scriptName = env.MINION_TASK_SCRIPT_NAME?.trim() || "gateway.cmd";
+  const scriptName = env.OPENCLAW_TASK_SCRIPT_NAME?.trim() || "gateway.cmd";
   const stateDir = resolveGatewayStateDir(env);
   return path.join(stateDir, scriptName);
 }
@@ -53,36 +49,9 @@ function resolveTaskUser(env: Record<string, string | undefined>): string | null
 }
 
 function parseCommandLine(value: string): string[] {
-  const args: string[] = [];
-  let current = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < value.length; i++) {
-    const char = value[i];
-    // `buildTaskScript` only escapes quotes (`\"`).
-    // Keep all other backslashes literal so drive and UNC paths are preserved.
-    if (char === "\\" && i + 1 < value.length && value[i + 1] === '"') {
-      current += value[i + 1];
-      i++;
-      continue;
-    }
-    if (char === '"') {
-      inQuotes = !inQuotes;
-      continue;
-    }
-    if (!inQuotes && /\s/.test(char)) {
-      if (current) {
-        args.push(current);
-        current = "";
-      }
-      continue;
-    }
-    current += char;
-  }
-  if (current) {
-    args.push(current);
-  }
-  return args;
+  // `buildTaskScript` only escapes quotes (`\"`).
+  // Keep all other backslashes literal so drive and UNC paths are preserved.
+  return splitArgsPreservingQuotes(value, { escapeMode: "backslash-quote-only" });
 }
 
 export async function readScheduledTaskCommand(env: Record<string, string | undefined>): Promise<{
@@ -221,12 +190,7 @@ export async function installScheduledTask({
   await assertSchtasksAvailable();
   const scriptPath = resolveTaskScriptPath(env);
   await fs.mkdir(path.dirname(scriptPath), { recursive: true });
-  const taskDescription =
-    description ??
-    formatGatewayServiceDescription({
-      profile: env.MINION_PROFILE,
-      version: environment?.MINION_SERVICE_VERSION ?? env.MINION_SERVICE_VERSION,
-    });
+  const taskDescription = resolveGatewayServiceDescription({ env, environment, description });
   const script = buildTaskScript({
     description: taskDescription,
     programArguments,

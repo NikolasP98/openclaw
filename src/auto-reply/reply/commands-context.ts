@@ -1,13 +1,13 @@
-import type { MinionConfig } from "../../config/config.js";
-import type { MsgContext } from "../templating.js";
-import type { CommandContext } from "./commands-types.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { resolveCommandAuthorization } from "../command-auth.js";
 import { normalizeCommandBody } from "../commands-registry.js";
+import type { MsgContext } from "../templating.js";
+import type { CommandContext } from "./commands-types.js";
 import { stripMentions } from "./mentions.js";
 
 export function buildCommandContext(params: {
   ctx: MsgContext;
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   agentId?: string;
   sessionKey?: string;
   isGroup: boolean;

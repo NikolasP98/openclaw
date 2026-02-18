@@ -10,9 +10,9 @@ import {
 installPwToolsCoreTestHooks();
 const sessionMocks = getPwToolsCoreSessionMocks();
 const tmpDirMocks = vi.hoisted(() => ({
-  resolvePreferredMinionTmpDir: vi.fn(() => "/tmp/minion"),
+  resolvePreferredOpenClawTmpDir: vi.fn(() => "/tmp/openclaw"),
 }));
-vi.mock("../infra/tmp-minion-dir.js", () => tmpDirMocks);
+vi.mock("../infra/tmp-openclaw-dir.js", () => tmpDirMocks);
 const mod = await import("./pw-tools-core.js");
 
 describe("pw-tools-core", () => {
@@ -20,8 +20,40 @@ describe("pw-tools-core", () => {
     for (const fn of Object.values(tmpDirMocks)) {
       fn.mockClear();
     }
-    tmpDirMocks.resolvePreferredMinionTmpDir.mockReturnValue("/tmp/minion");
+    tmpDirMocks.resolvePreferredOpenClawTmpDir.mockReturnValue("/tmp/openclaw");
   });
+
+  async function waitForImplicitDownloadOutput(params: {
+    downloadUrl: string;
+    suggestedFilename: string;
+  }) {
+    let downloadHandler: ((download: unknown) => void) | undefined;
+    const on = vi.fn((event: string, handler: (download: unknown) => void) => {
+      if (event === "download") {
+        downloadHandler = handler;
+      }
+    });
+    const off = vi.fn();
+    const saveAs = vi.fn(async () => {});
+    setPwToolsCoreCurrentPage({ on, off });
+
+    const p = mod.waitForDownloadViaPlaywright({
+      cdpUrl: "http://127.0.0.1:18792",
+      targetId: "T1",
+      timeoutMs: 1000,
+    });
+
+    await Promise.resolve();
+    downloadHandler?.({
+      url: () => params.downloadUrl,
+      suggestedFilename: () => params.suggestedFilename,
+      saveAs,
+    });
+
+    const res = await p;
+    const outPath = (vi.mocked(saveAs).mock.calls as unknown as Array<[string]>)[0]?.[0];
+    return { res, outPath };
+  }
 
   it("waits for the next download and saves it", async () => {
     let downloadHandler: ((download: unknown) => void) | undefined;
@@ -98,81 +130,38 @@ describe("pw-tools-core", () => {
     expect(res.path).toBe(targetPath);
   });
   it("uses preferred tmp dir when waiting for download without explicit path", async () => {
-    let downloadHandler: ((download: unknown) => void) | undefined;
-    const on = vi.fn((event: string, handler: (download: unknown) => void) => {
-      if (event === "download") {
-        downloadHandler = handler;
-      }
+    tmpDirMocks.resolvePreferredOpenClawTmpDir.mockReturnValue("/tmp/openclaw-preferred");
+    const { res, outPath } = await waitForImplicitDownloadOutput({
+      downloadUrl: "https://example.com/file.bin",
+      suggestedFilename: "file.bin",
     });
-    const off = vi.fn();
-
-    const saveAs = vi.fn(async () => {});
-    const download = {
-      url: () => "https://example.com/file.bin",
-      suggestedFilename: () => "file.bin",
-      saveAs,
-    };
-
-    tmpDirMocks.resolvePreferredMinionTmpDir.mockReturnValue("/tmp/minion-preferred");
-    setPwToolsCoreCurrentPage({ on, off });
-
-    const p = mod.waitForDownloadViaPlaywright({
-      cdpUrl: "http://127.0.0.1:18792",
-      targetId: "T1",
-      timeoutMs: 1000,
-    });
-
-    await Promise.resolve();
-    downloadHandler?.(download);
-
-    const res = await p;
-    const outPath = vi.mocked(saveAs).mock.calls[0]?.[0];
     expect(typeof outPath).toBe("string");
-    const expectedRootedDownloadsDir = path.join(path.sep, "tmp", "minion-preferred", "downloads");
-    const expectedDownloadsTail = `${path.join("tmp", "minion-preferred", "downloads")}${path.sep}`;
+    const expectedRootedDownloadsDir = path.join(
+      path.sep,
+      "tmp",
+      "openclaw-preferred",
+      "downloads",
+    );
+    const expectedDownloadsTail = `${path.join("tmp", "openclaw-preferred", "downloads")}${path.sep}`;
     expect(path.dirname(String(outPath))).toBe(expectedRootedDownloadsDir);
     expect(path.basename(String(outPath))).toMatch(/-file\.bin$/);
     expect(path.normalize(res.path)).toContain(path.normalize(expectedDownloadsTail));
-    expect(tmpDirMocks.resolvePreferredMinionTmpDir).toHaveBeenCalled();
+    expect(tmpDirMocks.resolvePreferredOpenClawTmpDir).toHaveBeenCalled();
   });
 
   it("sanitizes suggested download filenames to prevent traversal escapes", async () => {
-    let downloadHandler: ((download: unknown) => void) | undefined;
-    const on = vi.fn((event: string, handler: (download: unknown) => void) => {
-      if (event === "download") {
-        downloadHandler = handler;
-      }
+    tmpDirMocks.resolvePreferredOpenClawTmpDir.mockReturnValue("/tmp/openclaw-preferred");
+    const { res, outPath } = await waitForImplicitDownloadOutput({
+      downloadUrl: "https://example.com/evil",
+      suggestedFilename: "../../../../etc/passwd",
     });
-    const off = vi.fn();
-
-    const saveAs = vi.fn(async () => {});
-    const download = {
-      url: () => "https://example.com/evil",
-      suggestedFilename: () => "../../../../etc/passwd",
-      saveAs,
-    };
-
-    tmpDirMocks.resolvePreferredMinionTmpDir.mockReturnValue("/tmp/minion-preferred");
-    setPwToolsCoreCurrentPage({ on, off });
-
-    const p = mod.waitForDownloadViaPlaywright({
-      cdpUrl: "http://127.0.0.1:18792",
-      targetId: "T1",
-      timeoutMs: 1000,
-    });
-
-    await Promise.resolve();
-    downloadHandler?.(download);
-
-    const res = await p;
-    const outPath = vi.mocked(saveAs).mock.calls[0]?.[0];
     expect(typeof outPath).toBe("string");
     expect(path.dirname(String(outPath))).toBe(
-      path.join(path.sep, "tmp", "minion-preferred", "downloads"),
+      path.join(path.sep, "tmp", "openclaw-preferred", "downloads"),
     );
     expect(path.basename(String(outPath))).toMatch(/-passwd$/);
     expect(path.normalize(res.path)).toContain(
-      path.normalize(`${path.join("tmp", "minion-preferred", "downloads")}${path.sep}`),
+      path.normalize(`${path.join("tmp", "openclaw-preferred", "downloads")}${path.sep}`),
     );
   });
   it("waits for a matching response and returns its body", async () => {

@@ -1,4 +1,9 @@
-import type { MinionConfig, PluginRuntime } from "minion/plugin-sdk";
+import type {
+  OpenClawConfig,
+  PluginRuntime,
+  ResolvedLineAccount,
+  RuntimeEnv,
+} from "openclaw/plugin-sdk";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { linePlugin } from "./channel.js";
 import { setLineRuntime } from "./runtime.js";
@@ -13,7 +18,7 @@ type LineRuntimeMocks = {
 function createRuntime(): { runtime: PluginRuntime; mocks: LineRuntimeMocks } {
   const writeConfigFile = vi.fn(async () => {});
   const resolveLineAccount = vi.fn(
-    ({ cfg, accountId }: { cfg: MinionConfig; accountId?: string }) => {
+    ({ cfg, accountId }: { cfg: OpenClawConfig; accountId?: string }) => {
       const lineConfig = (cfg.channels?.line ?? {}) as {
         tokenFile?: string;
         secretFile?: string;
@@ -51,7 +56,7 @@ describe("linePlugin gateway.logoutAccount", () => {
     const { runtime, mocks } = createRuntime();
     setLineRuntime(runtime);
 
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       channels: {
         line: {
           tokenFile: "/tmp/token",
@@ -59,10 +64,27 @@ describe("linePlugin gateway.logoutAccount", () => {
         },
       },
     };
+    const runtimeEnv: RuntimeEnv = {
+      log: vi.fn(),
+      error: vi.fn(),
+      exit: vi.fn((code: number): never => {
+        throw new Error(`exit ${code}`);
+      }),
+    };
+    const resolveAccount = mocks.resolveLineAccount as unknown as (params: {
+      cfg: OpenClawConfig;
+      accountId?: string;
+    }) => ResolvedLineAccount;
+    const account = resolveAccount({
+      cfg,
+      accountId: DEFAULT_ACCOUNT_ID,
+    });
 
-    const result = await linePlugin.gateway.logoutAccount({
+    const result = await linePlugin.gateway!.logoutAccount!({
       accountId: DEFAULT_ACCOUNT_ID,
       cfg,
+      account,
+      runtime: runtimeEnv,
     });
 
     expect(result.cleared).toBe(true);
@@ -74,7 +96,7 @@ describe("linePlugin gateway.logoutAccount", () => {
     const { runtime, mocks } = createRuntime();
     setLineRuntime(runtime);
 
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       channels: {
         line: {
           accounts: {
@@ -86,10 +108,27 @@ describe("linePlugin gateway.logoutAccount", () => {
         },
       },
     };
+    const runtimeEnv: RuntimeEnv = {
+      log: vi.fn(),
+      error: vi.fn(),
+      exit: vi.fn((code: number): never => {
+        throw new Error(`exit ${code}`);
+      }),
+    };
+    const resolveAccount = mocks.resolveLineAccount as unknown as (params: {
+      cfg: OpenClawConfig;
+      accountId?: string;
+    }) => ResolvedLineAccount;
+    const account = resolveAccount({
+      cfg,
+      accountId: "primary",
+    });
 
-    const result = await linePlugin.gateway.logoutAccount({
+    const result = await linePlugin.gateway!.logoutAccount!({
       accountId: "primary",
       cfg,
+      account,
+      runtime: runtimeEnv,
     });
 
     expect(result.cleared).toBe(true);

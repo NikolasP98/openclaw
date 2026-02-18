@@ -1,10 +1,37 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { __test__ } from "./schema.hints.js";
-import { MinionSchema } from "./zod-schema.js";
+import { __test__, isSensitiveConfigPath } from "./schema.hints.js";
+import { OpenClawSchema } from "./zod-schema.js";
 import { sensitive } from "./zod-schema.sensitive.js";
 
 const { mapSensitivePaths } = __test__;
+
+describe("isSensitiveConfigPath", () => {
+  it("matches whitelist suffixes case-insensitively", () => {
+    const whitelistedPaths = [
+      "maxTokens",
+      "maxOutputTokens",
+      "maxInputTokens",
+      "maxCompletionTokens",
+      "contextTokens",
+      "totalTokens",
+      "tokenCount",
+      "tokenLimit",
+      "tokenBudget",
+      "channels.irc.nickserv.passwordFile",
+    ];
+    for (const path of whitelistedPaths) {
+      expect(isSensitiveConfigPath(path)).toBe(false);
+      expect(isSensitiveConfigPath(path.toUpperCase())).toBe(false);
+    }
+  });
+
+  it("keeps true sensitive keys redacted", () => {
+    expect(isSensitiveConfigPath("channels.slack.token")).toBe(true);
+    expect(isSensitiveConfigPath("models.providers.openai.apiKey")).toBe(true);
+    expect(isSensitiveConfigPath("channels.irc.nickserv.password")).toBe(true);
+  });
+});
 
 describe("mapSensitivePaths", () => {
   it("should detect sensitive fields nested inside all structural Zod types", () => {
@@ -72,12 +99,12 @@ describe("mapSensitivePaths", () => {
   });
 
   it("main schema yields correct hints (samples)", () => {
-    const schema = MinionSchema.toJSONSchema({
+    const schema = OpenClawSchema.toJSONSchema({
       target: "draft-07",
       unrepresentable: "any",
     });
-    schema.title = "MinionConfig";
-    const hints = mapSensitivePaths(MinionSchema, "", {});
+    schema.title = "OpenClawConfig";
+    const hints = mapSensitivePaths(OpenClawSchema, "", {});
 
     expect(hints["agents.defaults.memorySearch.remote.apiKey"]?.sensitive).toBe(true);
     expect(hints["agents.list[].memorySearch.remote.apiKey"]?.sensitive).toBe(true);

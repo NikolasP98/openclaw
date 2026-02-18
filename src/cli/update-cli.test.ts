@@ -2,7 +2,9 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import type { OpenClawConfig, ConfigFileSnapshot } from "../config/types.openclaw.js";
 import type { UpdateRunResult } from "../infra/update-runner.js";
+import { captureEnv } from "../test-utils/env.js";
 
 const confirm = vi.fn();
 const select = vi.fn();
@@ -12,6 +14,9 @@ const isCancel = (value: unknown) => value === "cancel";
 const readPackageName = vi.fn();
 const readPackageVersion = vi.fn();
 const resolveGlobalManager = vi.fn();
+const serviceLoaded = vi.fn();
+const prepareRestartScript = vi.fn();
+const runRestartScript = vi.fn();
 
 vi.mock("@clack/prompts", () => ({
   confirm,
@@ -25,8 +30,8 @@ vi.mock("../infra/update-runner.js", () => ({
   runGatewayUpdate: vi.fn(),
 }));
 
-vi.mock("../infra/minion-root.js", () => ({
-  resolveMinionPackageRoot: vi.fn(),
+vi.mock("../infra/openclaw-root.js", () => ({
+  resolveOpenClawPackageRoot: vi.fn(),
 }));
 
 vi.mock("../config/config.js", () => ({
@@ -34,46 +39,10 @@ vi.mock("../config/config.js", () => ({
   writeConfigFile: vi.fn(),
 }));
 
-vi.mock("../infra/update-check.js", () => {
-  const parseSemver = (
-    value: string | null,
-  ): { major: number; minor: number; patch: number } | null => {
-    if (!value) {
-      return null;
-    }
-    const m = /^(\d+)\.(\d+)\.(\d+)/.exec(value);
-    if (!m) {
-      return null;
-    }
-    const major = Number(m[1]);
-    const minor = Number(m[2]);
-    const patch = Number(m[3]);
-    if (!Number.isFinite(major) || !Number.isFinite(minor) || !Number.isFinite(patch)) {
-      return null;
-    }
-    return { major, minor, patch };
-  };
-
-  const compareSemverStrings = (a: string | null, b: string | null): number | null => {
-    const pa = parseSemver(a);
-    const pb = parseSemver(b);
-    if (!pa || !pb) {
-      return null;
-    }
-    if (pa.major !== pb.major) {
-      return pa.major < pb.major ? -1 : 1;
-    }
-    if (pa.minor !== pb.minor) {
-      return pa.minor < pb.minor ? -1 : 1;
-    }
-    if (pa.patch !== pb.patch) {
-      return pa.patch < pb.patch ? -1 : 1;
-    }
-    return 0;
-  };
-
+vi.mock("../infra/update-check.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../infra/update-check.js")>();
   return {
-    compareSemverStrings,
+    ...actual,
     checkUpdateStatus: vi.fn(),
     fetchNpmTagVersion: vi.fn(),
     resolveNpmChannelTag: vi.fn(),
@@ -109,6 +78,17 @@ vi.mock("./update-cli/shared.js", async (importOriginal) => {
   };
 });
 
+vi.mock("../daemon/service.js", () => ({
+  resolveGatewayService: vi.fn(() => ({
+    isLoaded: (...args: unknown[]) => serviceLoaded(...args),
+  })),
+}));
+
+vi.mock("./update-cli/restart-helper.js", () => ({
+  prepareRestartScript: (...args: unknown[]) => prepareRestartScript(...args),
+  runRestartScript: (...args: unknown[]) => runRestartScript(...args),
+}));
+
 // Mock doctor (heavy module; should not run in unit tests)
 vi.mock("../commands/doctor.js", () => ({
   doctorCommand: vi.fn(),
@@ -128,12 +108,13 @@ vi.mock("../runtime.js", () => ({
 }));
 
 const { runGatewayUpdate } = await import("../infra/update-runner.js");
-const { resolveMinionPackageRoot } = await import("../infra/minion-root.js");
+const { resolveOpenClawPackageRoot } = await import("../infra/openclaw-root.js");
 const { readConfigFileSnapshot, writeConfigFile } = await import("../config/config.js");
 const { checkUpdateStatus, fetchNpmTagVersion, resolveNpmChannelTag } =
   await import("../infra/update-check.js");
 const { runCommandWithTimeout } = await import("../process/exec.js");
 const { runDaemonRestart } = await import("./daemon-cli.js");
+const { doctorCommand } = await import("../commands/doctor.js");
 const { defaultRuntime } = await import("../runtime.js");
 const { updateCommand, registerUpdateCli, updateStatusCommand, updateWizardCommand } =
   await import("./update-cli.js");
@@ -144,23 +125,31 @@ describe("update-cli", () => {
 
   const createCaseDir = async (prefix: string) => {
     const dir = path.join(fixtureRoot, `${prefix}-${fixtureCount++}`);
-    await fs.mkdir(dir, { recursive: true });
+    // Tests only need a stable path; the directory does not have to exist because all I/O is mocked.
     return dir;
   };
 
   beforeAll(async () => {
-    fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "minion-update-tests-"));
+    fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-update-tests-"));
   });
 
   afterAll(async () => {
     await fs.rm(fixtureRoot, { recursive: true, force: true });
   });
 
-  const baseSnapshot = {
+  const baseConfig = {} as OpenClawConfig;
+  const baseSnapshot: ConfigFileSnapshot = {
+    path: "/tmp/openclaw-config.json",
+    exists: true,
+    raw: "{}",
+    parsed: {},
+    resolved: baseConfig,
     valid: true,
-    config: {},
+    config: baseConfig,
     issues: [],
-  } as const;
+    warnings: [],
+    legacyIssues: [],
+  };
 
   const setTty = (value: boolean | undefined) => {
     Object.defineProperty(process.stdin, "isTTY", {
@@ -177,11 +166,11 @@ describe("update-cli", () => {
   };
 
   const setupNonInteractiveDowngrade = async () => {
-    const tempDir = await createCaseDir("minion-update");
+    const tempDir = await createCaseDir("openclaw-update");
     setTty(false);
     readPackageVersion.mockResolvedValue("2.0.0");
 
-    vi.mocked(resolveMinionPackageRoot).mockResolvedValue(tempDir);
+    vi.mocked(resolveOpenClawPackageRoot).mockResolvedValue(tempDir);
     vi.mocked(checkUpdateStatus).mockResolvedValue({
       root: tempDir,
       installKind: "package",
@@ -213,7 +202,7 @@ describe("update-cli", () => {
     confirm.mockReset();
     select.mockReset();
     vi.mocked(runGatewayUpdate).mockReset();
-    vi.mocked(resolveMinionPackageRoot).mockReset();
+    vi.mocked(resolveOpenClawPackageRoot).mockReset();
     vi.mocked(readConfigFileSnapshot).mockReset();
     vi.mocked(writeConfigFile).mockReset();
     vi.mocked(checkUpdateStatus).mockReset();
@@ -221,13 +210,17 @@ describe("update-cli", () => {
     vi.mocked(resolveNpmChannelTag).mockReset();
     vi.mocked(runCommandWithTimeout).mockReset();
     vi.mocked(runDaemonRestart).mockReset();
+    vi.mocked(doctorCommand).mockReset();
     vi.mocked(defaultRuntime.log).mockReset();
     vi.mocked(defaultRuntime.error).mockReset();
     vi.mocked(defaultRuntime.exit).mockReset();
     readPackageName.mockReset();
     readPackageVersion.mockReset();
     resolveGlobalManager.mockReset();
-    vi.mocked(resolveMinionPackageRoot).mockResolvedValue(process.cwd());
+    serviceLoaded.mockReset();
+    prepareRestartScript.mockReset();
+    runRestartScript.mockReset();
+    vi.mocked(resolveOpenClawPackageRoot).mockResolvedValue(process.cwd());
     vi.mocked(readConfigFileSnapshot).mockResolvedValue(baseSnapshot);
     vi.mocked(fetchNpmTagVersion).mockResolvedValue({
       tag: "latest",
@@ -268,10 +261,14 @@ describe("update-cli", () => {
       code: 0,
       signal: null,
       killed: false,
+      termination: "exit",
     });
-    readPackageName.mockResolvedValue("minion");
+    readPackageName.mockResolvedValue("openclaw");
     readPackageVersion.mockResolvedValue("1.0.0");
     resolveGlobalManager.mockResolvedValue("npm");
+    serviceLoaded.mockResolvedValue(false);
+    prepareRestartScript.mockResolvedValue("/tmp/openclaw-restart-test.sh");
+    runRestartScript.mockResolvedValue(undefined);
     setTty(false);
     setStdoutTty(false);
   });
@@ -313,7 +310,7 @@ describe("update-cli", () => {
     await updateStatusCommand({ json: false });
 
     const logs = vi.mocked(defaultRuntime.log).mock.calls.map((call) => call[0]);
-    expect(logs.join("\n")).toContain("Minion update status");
+    expect(logs.join("\n")).toContain("OpenClaw update status");
   });
 
   it("updateStatusCommand emits JSON", async () => {
@@ -340,9 +337,9 @@ describe("update-cli", () => {
   });
 
   it("defaults to stable channel for package installs when unset", async () => {
-    const tempDir = await createCaseDir("minion-update");
+    const tempDir = await createCaseDir("openclaw-update");
 
-    vi.mocked(resolveMinionPackageRoot).mockResolvedValue(tempDir);
+    vi.mocked(resolveOpenClawPackageRoot).mockResolvedValue(tempDir);
     vi.mocked(checkUpdateStatus).mockResolvedValue({
       root: tempDir,
       installKind: "package",
@@ -371,7 +368,7 @@ describe("update-cli", () => {
   it("uses stored beta channel when configured", async () => {
     vi.mocked(readConfigFileSnapshot).mockResolvedValue({
       ...baseSnapshot,
-      config: { update: { channel: "beta" } },
+      config: { update: { channel: "beta" } } as OpenClawConfig,
     });
     vi.mocked(runGatewayUpdate).mockResolvedValue({
       status: "ok",
@@ -387,12 +384,12 @@ describe("update-cli", () => {
   });
 
   it("falls back to latest when beta tag is older than release", async () => {
-    const tempDir = await createCaseDir("minion-update");
+    const tempDir = await createCaseDir("openclaw-update");
 
-    vi.mocked(resolveMinionPackageRoot).mockResolvedValue(tempDir);
+    vi.mocked(resolveOpenClawPackageRoot).mockResolvedValue(tempDir);
     vi.mocked(readConfigFileSnapshot).mockResolvedValue({
       ...baseSnapshot,
-      config: { update: { channel: "beta" } },
+      config: { update: { channel: "beta" } } as OpenClawConfig,
     });
     vi.mocked(checkUpdateStatus).mockResolvedValue({
       root: tempDir,
@@ -424,9 +421,9 @@ describe("update-cli", () => {
   });
 
   it("honors --tag override", async () => {
-    const tempDir = await createCaseDir("minion-update");
+    const tempDir = await createCaseDir("openclaw-update");
 
-    vi.mocked(resolveMinionPackageRoot).mockResolvedValue(tempDir);
+    vi.mocked(resolveOpenClawPackageRoot).mockResolvedValue(tempDir);
     vi.mocked(runGatewayUpdate).mockResolvedValue({
       status: "ok",
       mode: "npm",
@@ -496,6 +493,41 @@ describe("update-cli", () => {
     await updateCommand({});
 
     expect(runDaemonRestart).toHaveBeenCalled();
+  });
+
+  it("updateCommand continues after doctor sub-step and clears update flag", async () => {
+    const mockResult: UpdateRunResult = {
+      status: "ok",
+      mode: "git",
+      steps: [],
+      durationMs: 100,
+    };
+
+    const envSnapshot = captureEnv(["OPENCLAW_UPDATE_IN_PROGRESS"]);
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0);
+    try {
+      delete process.env.OPENCLAW_UPDATE_IN_PROGRESS;
+      vi.mocked(runGatewayUpdate).mockResolvedValue(mockResult);
+      vi.mocked(runDaemonRestart).mockResolvedValue(true);
+      vi.mocked(doctorCommand).mockResolvedValue(undefined);
+      vi.mocked(defaultRuntime.log).mockClear();
+
+      await updateCommand({});
+
+      expect(doctorCommand).toHaveBeenCalledWith(
+        defaultRuntime,
+        expect.objectContaining({ nonInteractive: true }),
+      );
+      expect(process.env.OPENCLAW_UPDATE_IN_PROGRESS).toBeUndefined();
+
+      const logLines = vi.mocked(defaultRuntime.log).mock.calls.map((call) => String(call[0]));
+      expect(
+        logLines.some((line) => line.includes("Leveled up! New skills unlocked. You're welcome.")),
+      ).toBe(true);
+    } finally {
+      randomSpy.mockRestore();
+      envSnapshot.restore();
+    }
   });
 
   it("updateCommand skips restart when --no-restart is set", async () => {
@@ -596,11 +628,11 @@ describe("update-cli", () => {
   });
 
   it("updateWizardCommand offers dev checkout and forwards selections", async () => {
-    const tempDir = await createCaseDir("minion-update-wizard");
-    const previousGitDir = process.env.MINION_GIT_DIR;
+    const tempDir = await createCaseDir("openclaw-update-wizard");
+    const envSnapshot = captureEnv(["OPENCLAW_GIT_DIR"]);
     try {
       setTty(true);
-      process.env.MINION_GIT_DIR = tempDir;
+      process.env.OPENCLAW_GIT_DIR = tempDir;
 
       vi.mocked(checkUpdateStatus).mockResolvedValue({
         root: "/test/path",
@@ -627,7 +659,7 @@ describe("update-cli", () => {
       const call = vi.mocked(runGatewayUpdate).mock.calls[0]?.[0];
       expect(call?.channel).toBe("dev");
     } finally {
-      process.env.MINION_GIT_DIR = previousGitDir;
+      envSnapshot.restore();
     }
   });
 });

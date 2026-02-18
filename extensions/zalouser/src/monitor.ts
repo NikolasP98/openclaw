@@ -1,14 +1,19 @@
-import type { MinionConfig, MarkdownTableMode, RuntimeEnv } from "minion/plugin-sdk";
 import type { ChildProcess } from "node:child_process";
-import { createReplyPrefixOptions, mergeAllowlist, summarizeMapping } from "minion/plugin-sdk";
-import type { ResolvedZalouserAccount, ZcaFriend, ZcaGroup, ZcaMessage } from "./types.js";
+import type { OpenClawConfig, MarkdownTableMode, RuntimeEnv } from "openclaw/plugin-sdk";
+import {
+  createReplyPrefixOptions,
+  mergeAllowlist,
+  resolveSenderCommandAuthorization,
+  summarizeMapping,
+} from "openclaw/plugin-sdk";
 import { getZalouserRuntime } from "./runtime.js";
 import { sendMessageZalouser } from "./send.js";
+import type { ResolvedZalouserAccount, ZcaFriend, ZcaGroup, ZcaMessage } from "./types.js";
 import { parseJsonOutput, runZca, runZcaStreaming } from "./zca.js";
 
 export type ZalouserMonitorOptions = {
   account: ResolvedZalouserAccount;
-  config: MinionConfig;
+  config: OpenClawConfig;
   runtime: RuntimeEnv;
   abortSignal: AbortSignal;
   statusSink?: (patch: { lastInboundAt?: number; lastOutboundAt?: number }) => void;
@@ -156,7 +161,7 @@ function startZcaListener(
 async function processMessage(
   message: ZcaMessage,
   account: ResolvedZalouserAccount,
-  config: MinionConfig,
+  config: OpenClawConfig,
   core: ZalouserCoreRuntime,
   runtime: RuntimeEnv,
   statusSink?: (patch: { lastInboundAt?: number; lastOutboundAt?: number }) => void,
@@ -192,22 +197,20 @@ async function processMessage(
   const dmPolicy = account.config.dmPolicy ?? "pairing";
   const configAllowFrom = (account.config.allowFrom ?? []).map((v) => String(v));
   const rawBody = content.trim();
-  const shouldComputeAuth = core.channel.commands.shouldComputeCommandAuthorized(rawBody, config);
-  const storeAllowFrom =
-    !isGroup && (dmPolicy !== "open" || shouldComputeAuth)
-      ? await core.channel.pairing.readAllowFromStore("zalouser").catch(() => [])
-      : [];
-  const effectiveAllowFrom = [...configAllowFrom, ...storeAllowFrom];
-  const useAccessGroups = config.commands?.useAccessGroups !== false;
-  const senderAllowedForCommands = isSenderAllowed(senderId, effectiveAllowFrom);
-  const commandAuthorized = shouldComputeAuth
-    ? core.channel.commands.resolveCommandAuthorizedFromAuthorizers({
-        useAccessGroups,
-        authorizers: [
-          { configured: effectiveAllowFrom.length > 0, allowed: senderAllowedForCommands },
-        ],
-      })
-    : undefined;
+  const { senderAllowedForCommands, commandAuthorized } = await resolveSenderCommandAuthorization({
+    cfg: config,
+    rawBody,
+    isGroup,
+    dmPolicy,
+    configuredAllowFrom: configAllowFrom,
+    senderId,
+    isSenderAllowed,
+    readAllowFromStore: () => core.channel.pairing.readAllowFromStore("zalouser"),
+    shouldComputeCommandAuthorized: (body, cfg) =>
+      core.channel.commands.shouldComputeCommandAuthorized(body, cfg),
+    resolveCommandAuthorizedFromAuthorizers: (params) =>
+      core.channel.commands.resolveCommandAuthorizedFromAuthorizers(params),
+  });
 
   if (!isGroup) {
     if (dmPolicy === "disabled") {
@@ -382,7 +385,7 @@ async function deliverZalouserReply(params: {
   isGroup: boolean;
   runtime: RuntimeEnv;
   core: ZalouserCoreRuntime;
-  config: MinionConfig;
+  config: OpenClawConfig;
   accountId?: string;
   statusSink?: (patch: { lastInboundAt?: number; lastOutboundAt?: number }) => void;
   tableMode?: MarkdownTableMode;

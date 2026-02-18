@@ -1,5 +1,3 @@
-import type { MinionApp } from "./app.ts";
-import type { AgentsListResult } from "./types.ts";
 import { refreshChat } from "./app-chat.ts";
 import {
   startLogsPolling,
@@ -8,6 +6,7 @@ import {
   stopDebugPolling,
 } from "./app-polling.ts";
 import { scheduleChatScroll, scheduleLogsScroll } from "./app-scroll.ts";
+import type { OpenClawApp } from "./app.ts";
 import { loadAgentIdentities, loadAgentIdentity } from "./controllers/agent-identity.ts";
 import { loadAgentSkills } from "./controllers/agent-skills.ts";
 import { loadAgents } from "./controllers/agents.ts";
@@ -33,6 +32,7 @@ import {
 import { saveSettings, type UiSettings } from "./storage.ts";
 import { startThemeTransition, type ThemeTransitionContext } from "./theme-transition.ts";
 import { resolveTheme, type ResolvedTheme, type ThemeMode } from "./theme.ts";
+import type { AgentsListResult } from "./types.ts";
 
 type SettingsHost = {
   settings: UiSettings;
@@ -106,10 +106,7 @@ export function applySettingsFromUrl(host: SettingsHost) {
   }
 
   if (passwordRaw != null) {
-    const password = passwordRaw.trim();
-    if (password) {
-      (host as { password: string }).password = password;
-    }
+    // Never hydrate password from URL params; strip only.
     params.delete("password");
     hashParams.delete("password");
     shouldCleanUrl = true;
@@ -189,33 +186,33 @@ export async function refreshActiveTab(host: SettingsHost) {
     await loadChannelsTab(host);
   }
   if (host.tab === "instances") {
-    await loadPresence(host as unknown as MinionApp);
+    await loadPresence(host as unknown as OpenClawApp);
   }
   if (host.tab === "sessions") {
-    await loadSessions(host as unknown as MinionApp);
+    await loadSessions(host as unknown as OpenClawApp);
   }
   if (host.tab === "cron") {
     await loadCron(host);
   }
   if (host.tab === "skills") {
-    await loadSkills(host as unknown as MinionApp);
+    await loadSkills(host as unknown as OpenClawApp);
   }
   if (host.tab === "agents") {
-    await loadAgents(host as unknown as MinionApp);
-    await loadConfig(host as unknown as MinionApp);
+    await loadAgents(host as unknown as OpenClawApp);
+    await loadConfig(host as unknown as OpenClawApp);
     const agentIds = host.agentsList?.agents?.map((entry) => entry.id) ?? [];
     if (agentIds.length > 0) {
-      void loadAgentIdentities(host as unknown as MinionApp, agentIds);
+      void loadAgentIdentities(host as unknown as OpenClawApp, agentIds);
     }
     const agentId =
       host.agentsSelectedId ?? host.agentsList?.defaultId ?? host.agentsList?.agents?.[0]?.id;
     if (agentId) {
-      void loadAgentIdentity(host as unknown as MinionApp, agentId);
+      void loadAgentIdentity(host as unknown as OpenClawApp, agentId);
       if (host.agentsPanel === "skills") {
-        void loadAgentSkills(host as unknown as MinionApp, agentId);
+        void loadAgentSkills(host as unknown as OpenClawApp, agentId);
       }
       if (host.agentsPanel === "channels") {
-        void loadChannels(host as unknown as MinionApp, false);
+        void loadChannels(host as unknown as OpenClawApp, false);
       }
       if (host.agentsPanel === "cron") {
         void loadCron(host);
@@ -223,10 +220,10 @@ export async function refreshActiveTab(host: SettingsHost) {
     }
   }
   if (host.tab === "nodes") {
-    await loadNodes(host as unknown as MinionApp);
-    await loadDevices(host as unknown as MinionApp);
-    await loadConfig(host as unknown as MinionApp);
-    await loadExecApprovals(host as unknown as MinionApp);
+    await loadNodes(host as unknown as OpenClawApp);
+    await loadDevices(host as unknown as OpenClawApp);
+    await loadConfig(host as unknown as OpenClawApp);
+    await loadExecApprovals(host as unknown as OpenClawApp);
   }
   if (host.tab === "chat") {
     await refreshChat(host as unknown as Parameters<typeof refreshChat>[0]);
@@ -236,16 +233,16 @@ export async function refreshActiveTab(host: SettingsHost) {
     );
   }
   if (host.tab === "config") {
-    await loadConfigSchema(host as unknown as MinionApp);
-    await loadConfig(host as unknown as MinionApp);
+    await loadConfigSchema(host as unknown as OpenClawApp);
+    await loadConfig(host as unknown as OpenClawApp);
   }
   if (host.tab === "debug") {
-    await loadDebug(host as unknown as MinionApp);
+    await loadDebug(host as unknown as OpenClawApp);
     host.eventLog = host.eventLogBuffer;
   }
   if (host.tab === "logs") {
     host.logsAtBottom = true;
-    await loadLogs(host as unknown as MinionApp, { reset: true });
+    await loadLogs(host as unknown as OpenClawApp, { reset: true });
     scheduleLogsScroll(host as unknown as Parameters<typeof scheduleLogsScroll>[0], true);
   }
 }
@@ -254,7 +251,7 @@ export function inferBasePath() {
   if (typeof window === "undefined") {
     return "";
   }
-  const configured = window.__MINION_CONTROL_UI_BASE_PATH__;
+  const configured = window.__OPENCLAW_CONTROL_UI_BASE_PATH__;
   if (typeof configured === "string" && configured.trim()) {
     return normalizeBasePath(configured);
   }
@@ -407,26 +404,26 @@ export function syncUrlWithSessionKey(host: SettingsHost, sessionKey: string, re
 
 export async function loadOverview(host: SettingsHost) {
   await Promise.all([
-    loadChannels(host as unknown as MinionApp, false),
-    loadPresence(host as unknown as MinionApp),
-    loadSessions(host as unknown as MinionApp),
-    loadCronStatus(host as unknown as MinionApp),
-    loadDebug(host as unknown as MinionApp),
+    loadChannels(host as unknown as OpenClawApp, false),
+    loadPresence(host as unknown as OpenClawApp),
+    loadSessions(host as unknown as OpenClawApp),
+    loadCronStatus(host as unknown as OpenClawApp),
+    loadDebug(host as unknown as OpenClawApp),
   ]);
 }
 
 export async function loadChannelsTab(host: SettingsHost) {
   await Promise.all([
-    loadChannels(host as unknown as MinionApp, true),
-    loadConfigSchema(host as unknown as MinionApp),
-    loadConfig(host as unknown as MinionApp),
+    loadChannels(host as unknown as OpenClawApp, true),
+    loadConfigSchema(host as unknown as OpenClawApp),
+    loadConfig(host as unknown as OpenClawApp),
   ]);
 }
 
 export async function loadCron(host: SettingsHost) {
   await Promise.all([
-    loadChannels(host as unknown as MinionApp, false),
-    loadCronStatus(host as unknown as MinionApp),
-    loadCronJobs(host as unknown as MinionApp),
+    loadChannels(host as unknown as OpenClawApp, false),
+    loadCronStatus(host as unknown as OpenClawApp),
+    loadCronJobs(host as unknown as OpenClawApp),
   ]);
 }

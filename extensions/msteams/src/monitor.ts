@@ -3,13 +3,13 @@ import {
   DEFAULT_WEBHOOK_MAX_BODY_BYTES,
   mergeAllowlist,
   summarizeMapping,
-  type MinionConfig,
+  type OpenClawConfig,
   type RuntimeEnv,
-} from "minion/plugin-sdk";
-import type { MSTeamsConversationStore } from "./conversation-store.js";
-import type { MSTeamsAdapter } from "./messenger.js";
+} from "openclaw/plugin-sdk";
 import { createMSTeamsConversationStoreFs } from "./conversation-store-fs.js";
+import type { MSTeamsConversationStore } from "./conversation-store.js";
 import { formatUnknownError } from "./errors.js";
+import type { MSTeamsAdapter } from "./messenger.js";
 import { registerMSTeamsHandlers, type MSTeamsActivityHandler } from "./monitor-handler.js";
 import { createMSTeamsPollStoreFs, type MSTeamsPollStore } from "./polls.js";
 import {
@@ -21,7 +21,7 @@ import { createMSTeamsAdapter, loadMSTeamsSdkWithAuth } from "./sdk.js";
 import { resolveMSTeamsCredentials } from "./token.js";
 
 export type MonitorMSTeamsOpts = {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   runtime?: RuntimeEnv;
   abortSignal?: AbortSignal;
   conversationStore?: MSTeamsConversationStore;

@@ -1,6 +1,6 @@
-import type { ProviderPlugin } from "./types.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
-import { loadMinionPlugins, type PluginLoadOptions } from "./loader.js";
+import { loadOpenClawPlugins, type PluginLoadOptions } from "./loader.js";
+import type { ProviderPlugin } from "./types.js";
 
 const log = createSubsystemLogger("plugins");
 
@@ -8,7 +8,7 @@ export function resolvePluginProviders(params: {
   config?: PluginLoadOptions["config"];
   workspaceDir?: string;
 }): ProviderPlugin[] {
-  const registry = loadMinionPlugins({
+  const registry = loadOpenClawPlugins({
     config: params.config,
     workspaceDir: params.workspaceDir,
     logger: {

@@ -1,7 +1,7 @@
-import type { MinionConfig, PluginRuntime } from "minion/plugin-sdk";
-import type { IncomingMessage, ServerResponse } from "node:http";
-import { removeAckReactionAfterReply, shouldAckReaction } from "minion/plugin-sdk";
 import { EventEmitter } from "node:events";
+import type { IncomingMessage, ServerResponse } from "node:http";
+import type { OpenClawConfig, PluginRuntime } from "openclaw/plugin-sdk";
+import { removeAckReactionAfterReply, shouldAckReaction } from "openclaw/plugin-sdk";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResolvedBlueBubblesAccount } from "./accounts.js";
 import {
@@ -52,9 +52,22 @@ const mockBuildMentionRegexes = vi.fn(() => [/\bbert\b/i]);
 const mockMatchesMentionPatterns = vi.fn((text: string, regexes: RegExp[]) =>
   regexes.some((r) => r.test(text)),
 );
+const mockMatchesMentionWithExplicit = vi.fn(
+  (params: { text: string; mentionRegexes: RegExp[]; explicitWasMentioned?: boolean }) => {
+    if (params.explicitWasMentioned) {
+      return true;
+    }
+    return params.mentionRegexes.some((regex) => regex.test(params.text));
+  },
+);
 const mockResolveRequireMention = vi.fn(() => false);
 const mockResolveGroupPolicy = vi.fn(() => "open");
-const mockDispatchReplyWithBufferedBlockDispatcher = vi.fn(async () => undefined);
+type DispatchReplyParams = Parameters<
+  PluginRuntime["channel"]["reply"]["dispatchReplyWithBufferedBlockDispatcher"]
+>[0];
+const mockDispatchReplyWithBufferedBlockDispatcher = vi.fn(
+  async (_params: DispatchReplyParams): Promise<void> => undefined,
+);
 const mockHasControlCommand = vi.fn(() => false);
 const mockResolveCommandAuthorizedFromAuthorizers = vi.fn(() => false);
 const mockSaveMediaBuffer = vi.fn().mockResolvedValue({
@@ -69,6 +82,10 @@ const mockResolveEnvelopeFormatOptions = vi.fn(() => ({
 const mockFormatAgentEnvelope = vi.fn((opts: { body: string }) => opts.body);
 const mockFormatInboundEnvelope = vi.fn((opts: { body: string }) => opts.body);
 const mockChunkMarkdownText = vi.fn((text: string) => [text]);
+const mockChunkByNewline = vi.fn((text: string) => (text ? [text] : []));
+const mockChunkTextWithMode = vi.fn((text: string) => (text ? [text] : []));
+const mockChunkMarkdownTextWithMode = vi.fn((text: string) => (text ? [text] : []));
+const mockResolveChunkMode = vi.fn(() => "length");
 
 function createMockRuntime(): PluginRuntime {
   return {
@@ -81,6 +98,9 @@ function createMockRuntime(): PluginRuntime {
       enqueueSystemEvent:
         mockEnqueueSystemEvent as unknown as PluginRuntime["system"]["enqueueSystemEvent"],
       runCommandWithTimeout: vi.fn() as unknown as PluginRuntime["system"]["runCommandWithTimeout"],
+      formatNativeDependencyHint: vi.fn(
+        () => "",
+      ) as unknown as PluginRuntime["system"]["formatNativeDependencyHint"],
     },
     media: {
       loadWebMedia: vi.fn() as unknown as PluginRuntime["media"]["loadWebMedia"],
@@ -90,6 +110,9 @@ function createMockRuntime(): PluginRuntime {
         vi.fn() as unknown as PluginRuntime["media"]["isVoiceCompatibleAudio"],
       getImageMetadata: vi.fn() as unknown as PluginRuntime["media"]["getImageMetadata"],
       resizeToJpeg: vi.fn() as unknown as PluginRuntime["media"]["resizeToJpeg"],
+    },
+    tts: {
+      textToSpeechTelephony: vi.fn() as unknown as PluginRuntime["tts"]["textToSpeechTelephony"],
     },
     tools: {
       createMemoryGetTool: vi.fn() as unknown as PluginRuntime["tools"]["createMemoryGetTool"],
@@ -102,6 +125,14 @@ function createMockRuntime(): PluginRuntime {
         chunkMarkdownText:
           mockChunkMarkdownText as unknown as PluginRuntime["channel"]["text"]["chunkMarkdownText"],
         chunkText: vi.fn() as unknown as PluginRuntime["channel"]["text"]["chunkText"],
+        chunkByNewline:
+          mockChunkByNewline as unknown as PluginRuntime["channel"]["text"]["chunkByNewline"],
+        chunkMarkdownTextWithMode:
+          mockChunkMarkdownTextWithMode as unknown as PluginRuntime["channel"]["text"]["chunkMarkdownTextWithMode"],
+        chunkTextWithMode:
+          mockChunkTextWithMode as unknown as PluginRuntime["channel"]["text"]["chunkTextWithMode"],
+        resolveChunkMode:
+          mockResolveChunkMode as unknown as PluginRuntime["channel"]["text"]["resolveChunkMode"],
         resolveTextChunkLimit: vi.fn(
           () => 4000,
         ) as unknown as PluginRuntime["channel"]["text"]["resolveTextChunkLimit"],
@@ -170,6 +201,8 @@ function createMockRuntime(): PluginRuntime {
           mockBuildMentionRegexes as unknown as PluginRuntime["channel"]["mentions"]["buildMentionRegexes"],
         matchesMentionPatterns:
           mockMatchesMentionPatterns as unknown as PluginRuntime["channel"]["mentions"]["matchesMentionPatterns"],
+        matchesMentionWithExplicit:
+          mockMatchesMentionWithExplicit as unknown as PluginRuntime["channel"]["mentions"]["matchesMentionWithExplicit"],
       },
       reactions: {
         shouldAckReaction,
@@ -206,6 +239,8 @@ function createMockRuntime(): PluginRuntime {
           vi.fn() as unknown as PluginRuntime["channel"]["commands"]["shouldHandleTextCommands"],
       },
       discord: {} as PluginRuntime["channel"]["discord"],
+      activity: {} as PluginRuntime["channel"]["activity"],
+      line: {} as PluginRuntime["channel"]["line"],
       slack: {} as PluginRuntime["channel"]["slack"],
       telegram: {} as PluginRuntime["channel"]["telegram"],
       signal: {} as PluginRuntime["channel"]["signal"],
@@ -225,7 +260,7 @@ function createMockRuntime(): PluginRuntime {
     },
     state: {
       resolveStateDir: vi.fn(
-        () => "/tmp/minion",
+        () => "/tmp/openclaw",
       ) as unknown as PluginRuntime["state"]["resolveStateDir"],
     },
   };
@@ -305,6 +340,14 @@ const flushAsync = async () => {
   }
 };
 
+function getFirstDispatchCall(): DispatchReplyParams {
+  const callArgs = mockDispatchReplyWithBufferedBlockDispatcher.mock.calls[0]?.[0];
+  if (!callArgs) {
+    throw new Error("expected dispatch call arguments");
+  }
+  return callArgs;
+}
+
 describe("BlueBubbles webhook monitor", () => {
   let unregister: () => void;
 
@@ -329,7 +372,7 @@ describe("BlueBubbles webhook monitor", () => {
   describe("webhook parsing + auth handling", () => {
     it("rejects non-POST requests", async () => {
       const account = createMockAccount();
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -352,7 +395,7 @@ describe("BlueBubbles webhook monitor", () => {
 
     it("accepts POST requests with valid JSON payload", async () => {
       const account = createMockAccount();
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -388,7 +431,7 @@ describe("BlueBubbles webhook monitor", () => {
 
     it("rejects requests with invalid JSON", async () => {
       const account = createMockAccount();
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -413,7 +456,7 @@ describe("BlueBubbles webhook monitor", () => {
       vi.useFakeTimers();
       try {
         const account = createMockAccount();
-        const config: MinionConfig = {};
+        const config: OpenClawConfig = {};
         const core = createMockRuntime();
         setBlueBubblesRuntime(core);
 
@@ -453,7 +496,7 @@ describe("BlueBubbles webhook monitor", () => {
 
     it("authenticates via password query parameter", async () => {
       const account = createMockAccount({ password: "secret-token" });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -489,7 +532,7 @@ describe("BlueBubbles webhook monitor", () => {
 
     it("authenticates via x-password header", async () => {
       const account = createMockAccount({ password: "secret-token" });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -529,7 +572,7 @@ describe("BlueBubbles webhook monitor", () => {
 
     it("rejects unauthorized requests with wrong password", async () => {
       const account = createMockAccount({ password: "secret-token" });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -565,7 +608,7 @@ describe("BlueBubbles webhook monitor", () => {
     it("rejects ambiguous routing when multiple targets match the same password", async () => {
       const accountA = createMockAccount({ password: "secret-token" });
       const accountB = createMockAccount({ password: "secret-token" });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -619,7 +662,7 @@ describe("BlueBubbles webhook monitor", () => {
     it("does not route to passwordless targets when a password-authenticated target matches", async () => {
       const accountStrict = createMockAccount({ password: "secret-token" });
       const accountFallback = createMockAccount({ password: undefined });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -672,7 +715,7 @@ describe("BlueBubbles webhook monitor", () => {
 
     it("requires authentication for loopback requests when password is configured", async () => {
       const account = createMockAccount({ password: "secret-token" });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
       for (const remoteAddress of ["127.0.0.1", "::1", "::ffff:127.0.0.1"]) {
@@ -709,7 +752,7 @@ describe("BlueBubbles webhook monitor", () => {
 
     it("rejects passwordless targets when the request looks proxied (has forwarding headers)", async () => {
       const account = createMockAccount({ password: undefined });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -748,7 +791,7 @@ describe("BlueBubbles webhook monitor", () => {
 
     it("accepts passwordless targets for direct localhost loopback requests (no forwarding headers)", async () => {
       const account = createMockAccount({ password: undefined });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -794,7 +837,7 @@ describe("BlueBubbles webhook monitor", () => {
       vi.mocked(resolveChatGuidForTarget).mockClear();
 
       const account = createMockAccount({ groupPolicy: "open" });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -842,7 +885,7 @@ describe("BlueBubbles webhook monitor", () => {
       });
 
       const account = createMockAccount({ groupPolicy: "open" });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -888,7 +931,7 @@ describe("BlueBubbles webhook monitor", () => {
         dmPolicy: "allowlist",
         allowFrom: ["+15551234567"],
       });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -929,7 +972,7 @@ describe("BlueBubbles webhook monitor", () => {
         dmPolicy: "allowlist",
         allowFrom: ["+15559999999"], // Different number
       });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -970,7 +1013,7 @@ describe("BlueBubbles webhook monitor", () => {
         dmPolicy: "pairing",
         allowFrom: ["+15559999999"], // Different number than sender
       });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -1013,7 +1056,7 @@ describe("BlueBubbles webhook monitor", () => {
         dmPolicy: "pairing",
         allowFrom: ["+15559999999"], // Different number than sender
       });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -1054,7 +1097,7 @@ describe("BlueBubbles webhook monitor", () => {
         dmPolicy: "open",
         allowFrom: [],
       });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -1091,7 +1134,7 @@ describe("BlueBubbles webhook monitor", () => {
       const account = createMockAccount({
         dmPolicy: "disabled",
       });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -1130,7 +1173,7 @@ describe("BlueBubbles webhook monitor", () => {
       const account = createMockAccount({
         groupPolicy: "open",
       });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -1168,7 +1211,7 @@ describe("BlueBubbles webhook monitor", () => {
       const account = createMockAccount({
         groupPolicy: "disabled",
       });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -1207,7 +1250,7 @@ describe("BlueBubbles webhook monitor", () => {
         groupPolicy: "allowlist",
         dmPolicy: "open",
       });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -1246,7 +1289,7 @@ describe("BlueBubbles webhook monitor", () => {
         groupPolicy: "allowlist",
         groupAllowFrom: ["chat_guid:iMessage;+;chat123456"],
       });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -1287,7 +1330,7 @@ describe("BlueBubbles webhook monitor", () => {
       mockMatchesMentionPatterns.mockReturnValue(true);
 
       const account = createMockAccount({ groupPolicy: "open" });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -1319,7 +1362,7 @@ describe("BlueBubbles webhook monitor", () => {
       await flushAsync();
 
       expect(mockDispatchReplyWithBufferedBlockDispatcher).toHaveBeenCalled();
-      const callArgs = mockDispatchReplyWithBufferedBlockDispatcher.mock.calls[0][0];
+      const callArgs = getFirstDispatchCall();
       expect(callArgs.ctx.WasMentioned).toBe(true);
     });
 
@@ -1328,7 +1371,7 @@ describe("BlueBubbles webhook monitor", () => {
       mockMatchesMentionPatterns.mockReturnValue(false);
 
       const account = createMockAccount({ groupPolicy: "open" });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -1366,7 +1409,7 @@ describe("BlueBubbles webhook monitor", () => {
       mockResolveRequireMention.mockReturnValue(false);
 
       const account = createMockAccount({ groupPolicy: "open" });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -1404,7 +1447,7 @@ describe("BlueBubbles webhook monitor", () => {
   describe("group metadata", () => {
     it("includes group subject + members in ctx", async () => {
       const account = createMockAccount({ groupPolicy: "open" });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -1441,7 +1484,7 @@ describe("BlueBubbles webhook monitor", () => {
       await flushAsync();
 
       expect(mockDispatchReplyWithBufferedBlockDispatcher).toHaveBeenCalled();
-      const callArgs = mockDispatchReplyWithBufferedBlockDispatcher.mock.calls[0][0];
+      const callArgs = getFirstDispatchCall();
       expect(callArgs.ctx.GroupSubject).toBe("Family");
       expect(callArgs.ctx.GroupMembers).toBe("Alice (+15551234567), Bob (+15557654321)");
     });
@@ -1450,7 +1493,7 @@ describe("BlueBubbles webhook monitor", () => {
   describe("group sender identity in envelope", () => {
     it("includes sender in envelope body and group label as from for group messages", async () => {
       const account = createMockAccount({ groupPolicy: "open" });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -1492,7 +1535,7 @@ describe("BlueBubbles webhook monitor", () => {
         }),
       );
       // ConversationLabel should be the group label + id, not the sender
-      const callArgs = mockDispatchReplyWithBufferedBlockDispatcher.mock.calls[0][0];
+      const callArgs = getFirstDispatchCall();
       expect(callArgs.ctx.ConversationLabel).toBe("Family Chat id:iMessage;+;chat123456");
       expect(callArgs.ctx.SenderName).toBe("Alice");
       // BodyForAgent should be raw text, not the envelope-formatted body
@@ -1501,7 +1544,7 @@ describe("BlueBubbles webhook monitor", () => {
 
     it("falls back to group:peerId when chatName is missing", async () => {
       const account = createMockAccount({ groupPolicy: "open" });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -1543,7 +1586,7 @@ describe("BlueBubbles webhook monitor", () => {
 
     it("uses sender as from label for DM messages", async () => {
       const account = createMockAccount();
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -1581,7 +1624,7 @@ describe("BlueBubbles webhook monitor", () => {
           sender: { name: "Alice", id: "+15551234567" },
         }),
       );
-      const callArgs = mockDispatchReplyWithBufferedBlockDispatcher.mock.calls[0][0];
+      const callArgs = getFirstDispatchCall();
       expect(callArgs.ctx.ConversationLabel).toBe("Alice id:+15551234567");
     });
   });
@@ -1591,7 +1634,7 @@ describe("BlueBubbles webhook monitor", () => {
       vi.useFakeTimers();
       try {
         const account = createMockAccount({ dmPolicy: "open" });
-        const config: MinionConfig = {};
+        const config: OpenClawConfig = {};
         const core = createMockRuntime();
 
         // Use a timing-aware debouncer test double that respects debounceMs/buildKey/shouldDebounce.
@@ -1716,7 +1759,7 @@ describe("BlueBubbles webhook monitor", () => {
         await vi.advanceTimersByTimeAsync(600);
 
         expect(mockDispatchReplyWithBufferedBlockDispatcher).toHaveBeenCalledTimes(1);
-        const callArgs = mockDispatchReplyWithBufferedBlockDispatcher.mock.calls[0][0];
+        const callArgs = getFirstDispatchCall();
         expect(callArgs.ctx.MediaPaths).toEqual(["/tmp/test-media.jpg"]);
         expect(callArgs.ctx.Body).toContain("hello");
       } finally {
@@ -1728,7 +1771,7 @@ describe("BlueBubbles webhook monitor", () => {
   describe("reply metadata", () => {
     it("surfaces reply fields in ctx when provided", async () => {
       const account = createMockAccount({ dmPolicy: "open" });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -1765,7 +1808,7 @@ describe("BlueBubbles webhook monitor", () => {
       await flushAsync();
 
       expect(mockDispatchReplyWithBufferedBlockDispatcher).toHaveBeenCalled();
-      const callArgs = mockDispatchReplyWithBufferedBlockDispatcher.mock.calls[0][0];
+      const callArgs = getFirstDispatchCall();
       // ReplyToId is the full UUID since it wasn't previously cached
       expect(callArgs.ctx.ReplyToId).toBe("msg-0");
       expect(callArgs.ctx.ReplyToBody).toBe("original message");
@@ -1776,7 +1819,7 @@ describe("BlueBubbles webhook monitor", () => {
 
     it("preserves part index prefixes in reply tags when short IDs are unavailable", async () => {
       const account = createMockAccount({ dmPolicy: "open" });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -1813,7 +1856,7 @@ describe("BlueBubbles webhook monitor", () => {
       await flushAsync();
 
       expect(mockDispatchReplyWithBufferedBlockDispatcher).toHaveBeenCalled();
-      const callArgs = mockDispatchReplyWithBufferedBlockDispatcher.mock.calls[0][0];
+      const callArgs = getFirstDispatchCall();
       expect(callArgs.ctx.ReplyToId).toBe("p:1/msg-0");
       expect(callArgs.ctx.ReplyToIdFull).toBe("p:1/msg-0");
       expect(callArgs.ctx.Body).toContain("[[reply_to:p:1/msg-0]]");
@@ -1821,7 +1864,7 @@ describe("BlueBubbles webhook monitor", () => {
 
     it("hydrates missing reply sender/body from the recent-message cache", async () => {
       const account = createMockAccount({ dmPolicy: "open", groupPolicy: "open" });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -1879,7 +1922,7 @@ describe("BlueBubbles webhook monitor", () => {
       await flushAsync();
 
       expect(mockDispatchReplyWithBufferedBlockDispatcher).toHaveBeenCalled();
-      const callArgs = mockDispatchReplyWithBufferedBlockDispatcher.mock.calls[0][0];
+      const callArgs = getFirstDispatchCall();
       // ReplyToId uses short ID "1" (first cached message) for token savings
       expect(callArgs.ctx.ReplyToId).toBe("1");
       expect(callArgs.ctx.ReplyToIdFull).toBe("cache-msg-0");
@@ -1891,7 +1934,7 @@ describe("BlueBubbles webhook monitor", () => {
 
     it("falls back to threadOriginatorGuid when reply metadata is absent", async () => {
       const account = createMockAccount({ dmPolicy: "open" });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -1924,7 +1967,7 @@ describe("BlueBubbles webhook monitor", () => {
       await flushAsync();
 
       expect(mockDispatchReplyWithBufferedBlockDispatcher).toHaveBeenCalled();
-      const callArgs = mockDispatchReplyWithBufferedBlockDispatcher.mock.calls[0][0];
+      const callArgs = getFirstDispatchCall();
       expect(callArgs.ctx.ReplyToId).toBe("msg-0");
     });
   });
@@ -1932,7 +1975,7 @@ describe("BlueBubbles webhook monitor", () => {
   describe("tapback text parsing", () => {
     it("does not rewrite tapback-like text without metadata", async () => {
       const account = createMockAccount({ dmPolicy: "open" });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -1964,7 +2007,7 @@ describe("BlueBubbles webhook monitor", () => {
       await flushAsync();
 
       expect(mockDispatchReplyWithBufferedBlockDispatcher).toHaveBeenCalled();
-      const callArgs = mockDispatchReplyWithBufferedBlockDispatcher.mock.calls[0][0];
+      const callArgs = getFirstDispatchCall();
       expect(callArgs.ctx.RawBody).toBe("Loved this idea");
       expect(callArgs.ctx.Body).toContain("Loved this idea");
       expect(callArgs.ctx.Body).not.toContain("reacted with");
@@ -1972,7 +2015,7 @@ describe("BlueBubbles webhook monitor", () => {
 
     it("parses tapback text with custom emoji when metadata is present", async () => {
       const account = createMockAccount({ dmPolicy: "open" });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -2004,7 +2047,7 @@ describe("BlueBubbles webhook monitor", () => {
       await flushAsync();
 
       expect(mockDispatchReplyWithBufferedBlockDispatcher).toHaveBeenCalled();
-      const callArgs = mockDispatchReplyWithBufferedBlockDispatcher.mock.calls[0][0];
+      const callArgs = getFirstDispatchCall();
       expect(callArgs.ctx.RawBody).toBe("reacted with 😅");
       expect(callArgs.ctx.Body).toContain("reacted with 😅");
       expect(callArgs.ctx.Body).not.toContain("[[reply_to:");
@@ -2017,7 +2060,7 @@ describe("BlueBubbles webhook monitor", () => {
       vi.mocked(sendBlueBubblesReaction).mockClear();
 
       const account = createMockAccount({ dmPolicy: "open" });
-      const config: MinionConfig = {
+      const config: OpenClawConfig = {
         messages: {
           ackReaction: "❤️",
           ackReactionScope: "direct",
@@ -2075,7 +2118,7 @@ describe("BlueBubbles webhook monitor", () => {
         groupPolicy: "open",
         allowFrom: ["+15551234567"],
       });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -2118,7 +2161,7 @@ describe("BlueBubbles webhook monitor", () => {
         groupPolicy: "open",
         allowFrom: [], // No one authorized
       });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -2161,7 +2204,7 @@ describe("BlueBubbles webhook monitor", () => {
       const account = createMockAccount({
         sendReadReceipts: true,
       });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -2202,7 +2245,7 @@ describe("BlueBubbles webhook monitor", () => {
       const account = createMockAccount({
         sendReadReceipts: false,
       });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -2241,7 +2284,7 @@ describe("BlueBubbles webhook monitor", () => {
       vi.mocked(sendBlueBubblesTyping).mockClear();
 
       const account = createMockAccount();
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -2289,7 +2332,7 @@ describe("BlueBubbles webhook monitor", () => {
       vi.mocked(sendBlueBubblesTyping).mockClear();
 
       const account = createMockAccount();
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -2338,7 +2381,7 @@ describe("BlueBubbles webhook monitor", () => {
       vi.mocked(sendBlueBubblesTyping).mockClear();
 
       const account = createMockAccount();
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -2388,7 +2431,7 @@ describe("BlueBubbles webhook monitor", () => {
       });
 
       const account = createMockAccount();
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -2427,6 +2470,149 @@ describe("BlueBubbles webhook monitor", () => {
         }),
       );
     });
+
+    it("falls back to from-me webhook when send response has no message id", async () => {
+      mockEnqueueSystemEvent.mockClear();
+
+      const { sendMessageBlueBubbles } = await import("./send.js");
+      vi.mocked(sendMessageBlueBubbles).mockResolvedValueOnce({ messageId: "ok" });
+
+      mockDispatchReplyWithBufferedBlockDispatcher.mockImplementationOnce(async (params) => {
+        await params.dispatcherOptions.deliver({ text: "replying now" }, { kind: "final" });
+      });
+
+      const account = createMockAccount();
+      const config: OpenClawConfig = {};
+      const core = createMockRuntime();
+      setBlueBubblesRuntime(core);
+
+      unregister = registerBlueBubblesWebhookTarget({
+        account,
+        config,
+        runtime: { log: vi.fn(), error: vi.fn() },
+        core,
+        path: "/bluebubbles-webhook",
+      });
+
+      const inboundPayload = {
+        type: "new-message",
+        data: {
+          text: "hello",
+          handle: { address: "+15551234567" },
+          isGroup: false,
+          isFromMe: false,
+          guid: "msg-1",
+          chatGuid: "iMessage;-;+15551234567",
+          date: Date.now(),
+        },
+      };
+
+      const inboundReq = createMockRequest("POST", "/bluebubbles-webhook", inboundPayload);
+      const inboundRes = createMockResponse();
+
+      await handleBlueBubblesWebhookRequest(inboundReq, inboundRes);
+      await flushAsync();
+
+      // Send response did not include a message id, so nothing should be enqueued yet.
+      expect(mockEnqueueSystemEvent).not.toHaveBeenCalled();
+
+      const fromMePayload = {
+        type: "new-message",
+        data: {
+          text: "replying now",
+          handle: { address: "+15557654321" },
+          isGroup: false,
+          isFromMe: true,
+          guid: "msg-out-456",
+          chatGuid: "iMessage;-;+15551234567",
+          date: Date.now(),
+        },
+      };
+
+      const fromMeReq = createMockRequest("POST", "/bluebubbles-webhook", fromMePayload);
+      const fromMeRes = createMockResponse();
+
+      await handleBlueBubblesWebhookRequest(fromMeReq, fromMeRes);
+      await flushAsync();
+
+      expect(mockEnqueueSystemEvent).toHaveBeenCalledWith(
+        'Assistant sent "replying now" [message_id:2]',
+        expect.objectContaining({
+          sessionKey: "agent:main:bluebubbles:dm:+15551234567",
+        }),
+      );
+    });
+
+    it("matches from-me fallback by chatIdentifier when chatGuid is missing", async () => {
+      mockEnqueueSystemEvent.mockClear();
+
+      const { sendMessageBlueBubbles } = await import("./send.js");
+      vi.mocked(sendMessageBlueBubbles).mockResolvedValueOnce({ messageId: "ok" });
+
+      mockDispatchReplyWithBufferedBlockDispatcher.mockImplementationOnce(async (params) => {
+        await params.dispatcherOptions.deliver({ text: "replying now" }, { kind: "final" });
+      });
+
+      const account = createMockAccount();
+      const config: OpenClawConfig = {};
+      const core = createMockRuntime();
+      setBlueBubblesRuntime(core);
+
+      unregister = registerBlueBubblesWebhookTarget({
+        account,
+        config,
+        runtime: { log: vi.fn(), error: vi.fn() },
+        core,
+        path: "/bluebubbles-webhook",
+      });
+
+      const inboundPayload = {
+        type: "new-message",
+        data: {
+          text: "hello",
+          handle: { address: "+15551234567" },
+          isGroup: false,
+          isFromMe: false,
+          guid: "msg-1",
+          chatGuid: "iMessage;-;+15551234567",
+          date: Date.now(),
+        },
+      };
+
+      const inboundReq = createMockRequest("POST", "/bluebubbles-webhook", inboundPayload);
+      const inboundRes = createMockResponse();
+
+      await handleBlueBubblesWebhookRequest(inboundReq, inboundRes);
+      await flushAsync();
+
+      expect(mockEnqueueSystemEvent).not.toHaveBeenCalled();
+
+      const fromMePayload = {
+        type: "new-message",
+        data: {
+          text: "replying now",
+          handle: { address: "+15557654321" },
+          isGroup: false,
+          isFromMe: true,
+          guid: "msg-out-789",
+          chatIdentifier: "+15551234567",
+          date: Date.now(),
+        },
+      };
+
+      const fromMeReq = createMockRequest("POST", "/bluebubbles-webhook", fromMePayload);
+      const fromMeRes = createMockResponse();
+
+      await handleBlueBubblesWebhookRequest(fromMeReq, fromMeRes);
+      await flushAsync();
+
+      expect(mockEnqueueSystemEvent).toHaveBeenCalledWith(
+        'Assistant sent "replying now" [message_id:2]',
+        expect.objectContaining({
+          sessionKey: "agent:main:bluebubbles:dm:+15551234567",
+        }),
+      );
+    });
   });
 
   describe("reaction events", () => {
@@ -2434,7 +2620,7 @@ describe("BlueBubbles webhook monitor", () => {
       mockEnqueueSystemEvent.mockClear();
 
       const account = createMockAccount();
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -2474,7 +2660,7 @@ describe("BlueBubbles webhook monitor", () => {
       mockEnqueueSystemEvent.mockClear();
 
       const account = createMockAccount();
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -2514,7 +2700,7 @@ describe("BlueBubbles webhook monitor", () => {
       mockEnqueueSystemEvent.mockClear();
 
       const account = createMockAccount();
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -2551,7 +2737,7 @@ describe("BlueBubbles webhook monitor", () => {
       mockEnqueueSystemEvent.mockClear();
 
       const account = createMockAccount();
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -2592,7 +2778,7 @@ describe("BlueBubbles webhook monitor", () => {
   describe("short message ID mapping", () => {
     it("assigns sequential short IDs to messages", async () => {
       const account = createMockAccount({ dmPolicy: "open" });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -2624,7 +2810,7 @@ describe("BlueBubbles webhook monitor", () => {
       await flushAsync();
 
       expect(mockDispatchReplyWithBufferedBlockDispatcher).toHaveBeenCalled();
-      const callArgs = mockDispatchReplyWithBufferedBlockDispatcher.mock.calls[0][0];
+      const callArgs = getFirstDispatchCall();
       // MessageSid should be short ID "1" instead of full UUID
       expect(callArgs.ctx.MessageSid).toBe("1");
       expect(callArgs.ctx.MessageSidFull).toBe("p:1/msg-uuid-12345");
@@ -2632,7 +2818,7 @@ describe("BlueBubbles webhook monitor", () => {
 
     it("resolves short ID back to UUID", async () => {
       const account = createMockAccount({ dmPolicy: "open" });
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 
@@ -2685,7 +2871,7 @@ describe("BlueBubbles webhook monitor", () => {
   describe("fromMe messages", () => {
     it("ignores messages from self (fromMe=true)", async () => {
       const account = createMockAccount();
-      const config: MinionConfig = {};
+      const config: OpenClawConfig = {};
       const core = createMockRuntime();
       setBlueBubblesRuntime(core);
 

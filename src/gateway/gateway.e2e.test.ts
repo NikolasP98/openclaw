@@ -8,8 +8,10 @@ import {
   connectDeviceAuthReq,
   connectGatewayClient,
   getFreeGatewayPort,
+  startGatewayWithClient,
 } from "./test-helpers.e2e.js";
 import { installOpenAiResponsesMock } from "./test-helpers.openai-mock.js";
+import { buildOpenAiResponsesProviderConfig } from "./test-openai-responses-model.js";
 
 function extractPayloadText(result: unknown): string {
   const record = result as Record<string, unknown>;
@@ -27,79 +29,54 @@ describe("gateway e2e", () => {
     async () => {
       const prev = {
         home: process.env.HOME,
-        configPath: process.env.MINION_CONFIG_PATH,
-        token: process.env.MINION_GATEWAY_TOKEN,
-        skipChannels: process.env.MINION_SKIP_CHANNELS,
-        skipGmail: process.env.MINION_SKIP_GMAIL_WATCHER,
-        skipCron: process.env.MINION_SKIP_CRON,
-        skipCanvas: process.env.MINION_SKIP_CANVAS_HOST,
-        skipBrowser: process.env.MINION_SKIP_BROWSER_CONTROL_SERVER,
+        configPath: process.env.OPENCLAW_CONFIG_PATH,
+        token: process.env.OPENCLAW_GATEWAY_TOKEN,
+        skipChannels: process.env.OPENCLAW_SKIP_CHANNELS,
+        skipGmail: process.env.OPENCLAW_SKIP_GMAIL_WATCHER,
+        skipCron: process.env.OPENCLAW_SKIP_CRON,
+        skipCanvas: process.env.OPENCLAW_SKIP_CANVAS_HOST,
+        skipBrowser: process.env.OPENCLAW_SKIP_BROWSER_CONTROL_SERVER,
       };
 
       const { baseUrl: openaiBaseUrl, restore } = installOpenAiResponsesMock();
 
-      const tempHome = await fs.mkdtemp(path.join(os.tmpdir(), "minion-gw-mock-home-"));
+      const tempHome = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-gw-mock-home-"));
       process.env.HOME = tempHome;
-      process.env.MINION_SKIP_CHANNELS = "1";
-      process.env.MINION_SKIP_GMAIL_WATCHER = "1";
-      process.env.MINION_SKIP_CRON = "1";
-      process.env.MINION_SKIP_CANVAS_HOST = "1";
-      process.env.MINION_SKIP_BROWSER_CONTROL_SERVER = "1";
+      process.env.OPENCLAW_SKIP_CHANNELS = "1";
+      process.env.OPENCLAW_SKIP_GMAIL_WATCHER = "1";
+      process.env.OPENCLAW_SKIP_CRON = "1";
+      process.env.OPENCLAW_SKIP_CANVAS_HOST = "1";
+      process.env.OPENCLAW_SKIP_BROWSER_CONTROL_SERVER = "1";
 
       const token = `test-${randomUUID()}`;
-      process.env.MINION_GATEWAY_TOKEN = token;
+      process.env.OPENCLAW_GATEWAY_TOKEN = token;
 
-      const workspaceDir = path.join(tempHome, "minion");
+      const workspaceDir = path.join(tempHome, "openclaw");
       await fs.mkdir(workspaceDir, { recursive: true });
 
       const nonceA = randomUUID();
       const nonceB = randomUUID();
-      const toolProbePath = path.join(workspaceDir, `.minion-tool-probe.${nonceA}.txt`);
+      const toolProbePath = path.join(workspaceDir, `.openclaw-tool-probe.${nonceA}.txt`);
       await fs.writeFile(toolProbePath, `nonceA=${nonceA}\nnonceB=${nonceB}\n`);
 
-      const configDir = path.join(tempHome, ".minion");
+      const configDir = path.join(tempHome, ".openclaw");
       await fs.mkdir(configDir, { recursive: true });
-      const configPath = path.join(configDir, "minion.json");
+      const configPath = path.join(configDir, "openclaw.json");
 
       const cfg = {
         agents: { defaults: { workspace: workspaceDir } },
         models: {
           mode: "replace",
           providers: {
-            openai: {
-              baseUrl: openaiBaseUrl,
-              apiKey: "test",
-              api: "openai-responses",
-              models: [
-                {
-                  id: "gpt-5.2",
-                  name: "gpt-5.2",
-                  api: "openai-responses",
-                  reasoning: false,
-                  input: ["text"],
-                  cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-                  contextWindow: 128_000,
-                  maxTokens: 4096,
-                },
-              ],
-            },
+            openai: buildOpenAiResponsesProviderConfig(openaiBaseUrl),
           },
         },
         gateway: { auth: { token } },
       };
 
-      await fs.writeFile(configPath, `${JSON.stringify(cfg, null, 2)}\n`);
-      process.env.MINION_CONFIG_PATH = configPath;
-
-      const port = await getFreeGatewayPort();
-      const server = await startGatewayServer(port, {
-        bind: "loopback",
-        auth: { mode: "token", token },
-        controlUiEnabled: false,
-      });
-
-      const client = await connectGatewayClient({
-        url: `ws://127.0.0.1:${port}`,
+      const { server, client } = await startGatewayWithClient({
+        cfg,
+        configPath,
         token,
         clientDisplayName: "vitest-mock-openai",
       });
@@ -139,13 +116,13 @@ describe("gateway e2e", () => {
         await fs.rm(tempHome, { recursive: true, force: true });
         restore();
         process.env.HOME = prev.home;
-        process.env.MINION_CONFIG_PATH = prev.configPath;
-        process.env.MINION_GATEWAY_TOKEN = prev.token;
-        process.env.MINION_SKIP_CHANNELS = prev.skipChannels;
-        process.env.MINION_SKIP_GMAIL_WATCHER = prev.skipGmail;
-        process.env.MINION_SKIP_CRON = prev.skipCron;
-        process.env.MINION_SKIP_CANVAS_HOST = prev.skipCanvas;
-        process.env.MINION_SKIP_BROWSER_CONTROL_SERVER = prev.skipBrowser;
+        process.env.OPENCLAW_CONFIG_PATH = prev.configPath;
+        process.env.OPENCLAW_GATEWAY_TOKEN = prev.token;
+        process.env.OPENCLAW_SKIP_CHANNELS = prev.skipChannels;
+        process.env.OPENCLAW_SKIP_GMAIL_WATCHER = prev.skipGmail;
+        process.env.OPENCLAW_SKIP_CRON = prev.skipCron;
+        process.env.OPENCLAW_SKIP_CANVAS_HOST = prev.skipCanvas;
+        process.env.OPENCLAW_SKIP_BROWSER_CONTROL_SERVER = prev.skipBrowser;
       }
     },
   );
@@ -153,27 +130,27 @@ describe("gateway e2e", () => {
   it("runs wizard over ws and writes auth token config", { timeout: 90_000 }, async () => {
     const prev = {
       home: process.env.HOME,
-      stateDir: process.env.MINION_STATE_DIR,
-      configPath: process.env.MINION_CONFIG_PATH,
-      token: process.env.MINION_GATEWAY_TOKEN,
-      skipChannels: process.env.MINION_SKIP_CHANNELS,
-      skipGmail: process.env.MINION_SKIP_GMAIL_WATCHER,
-      skipCron: process.env.MINION_SKIP_CRON,
-      skipCanvas: process.env.MINION_SKIP_CANVAS_HOST,
-      skipBrowser: process.env.MINION_SKIP_BROWSER_CONTROL_SERVER,
+      stateDir: process.env.OPENCLAW_STATE_DIR,
+      configPath: process.env.OPENCLAW_CONFIG_PATH,
+      token: process.env.OPENCLAW_GATEWAY_TOKEN,
+      skipChannels: process.env.OPENCLAW_SKIP_CHANNELS,
+      skipGmail: process.env.OPENCLAW_SKIP_GMAIL_WATCHER,
+      skipCron: process.env.OPENCLAW_SKIP_CRON,
+      skipCanvas: process.env.OPENCLAW_SKIP_CANVAS_HOST,
+      skipBrowser: process.env.OPENCLAW_SKIP_BROWSER_CONTROL_SERVER,
     };
 
-    process.env.MINION_SKIP_CHANNELS = "1";
-    process.env.MINION_SKIP_GMAIL_WATCHER = "1";
-    process.env.MINION_SKIP_CRON = "1";
-    process.env.MINION_SKIP_CANVAS_HOST = "1";
-    process.env.MINION_SKIP_BROWSER_CONTROL_SERVER = "1";
-    delete process.env.MINION_GATEWAY_TOKEN;
+    process.env.OPENCLAW_SKIP_CHANNELS = "1";
+    process.env.OPENCLAW_SKIP_GMAIL_WATCHER = "1";
+    process.env.OPENCLAW_SKIP_CRON = "1";
+    process.env.OPENCLAW_SKIP_CANVAS_HOST = "1";
+    process.env.OPENCLAW_SKIP_BROWSER_CONTROL_SERVER = "1";
+    delete process.env.OPENCLAW_GATEWAY_TOKEN;
 
-    const tempHome = await fs.mkdtemp(path.join(os.tmpdir(), "minion-wizard-home-"));
+    const tempHome = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-wizard-home-"));
     process.env.HOME = tempHome;
-    delete process.env.MINION_STATE_DIR;
-    delete process.env.MINION_CONFIG_PATH;
+    delete process.env.OPENCLAW_STATE_DIR;
+    delete process.env.OPENCLAW_CONFIG_PATH;
 
     const wizardToken = `wiz-${randomUUID()}`;
     const port = await getFreeGatewayPort();
@@ -265,14 +242,14 @@ describe("gateway e2e", () => {
       await server2.close({ reason: "wizard auth verify" });
       await fs.rm(tempHome, { recursive: true, force: true });
       process.env.HOME = prev.home;
-      process.env.MINION_STATE_DIR = prev.stateDir;
-      process.env.MINION_CONFIG_PATH = prev.configPath;
-      process.env.MINION_GATEWAY_TOKEN = prev.token;
-      process.env.MINION_SKIP_CHANNELS = prev.skipChannels;
-      process.env.MINION_SKIP_GMAIL_WATCHER = prev.skipGmail;
-      process.env.MINION_SKIP_CRON = prev.skipCron;
-      process.env.MINION_SKIP_CANVAS_HOST = prev.skipCanvas;
-      process.env.MINION_SKIP_BROWSER_CONTROL_SERVER = prev.skipBrowser;
+      process.env.OPENCLAW_STATE_DIR = prev.stateDir;
+      process.env.OPENCLAW_CONFIG_PATH = prev.configPath;
+      process.env.OPENCLAW_GATEWAY_TOKEN = prev.token;
+      process.env.OPENCLAW_SKIP_CHANNELS = prev.skipChannels;
+      process.env.OPENCLAW_SKIP_GMAIL_WATCHER = prev.skipGmail;
+      process.env.OPENCLAW_SKIP_CRON = prev.skipCron;
+      process.env.OPENCLAW_SKIP_CANVAS_HOST = prev.skipCanvas;
+      process.env.OPENCLAW_SKIP_BROWSER_CONTROL_SERVER = prev.skipBrowser;
     }
   });
 });

@@ -1,7 +1,7 @@
-import { SILENT_REPLY_TOKEN, type PluginRuntime } from "minion/plugin-sdk";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { SILENT_REPLY_TOKEN, type PluginRuntime } from "minion/plugin-sdk";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { StoredConversationReference } from "./conversation-store.js";
 const graphUploadMockState = vi.hoisted(() => ({
@@ -125,6 +125,7 @@ describe("msteams messenger", () => {
 
       const adapter: MSTeamsAdapter = {
         continueConversation: async () => {},
+        process: async () => {},
       };
 
       const ids = await sendMSTeamsMessages({
@@ -154,6 +155,7 @@ describe("msteams messenger", () => {
             },
           });
         },
+        process: async () => {},
       };
 
       const ids = await sendMSTeamsMessages({
@@ -191,6 +193,7 @@ describe("msteams messenger", () => {
 
         const adapter: MSTeamsAdapter = {
           continueConversation: async () => {},
+          process: async () => {},
         };
 
         const ids = await sendMSTeamsMessages({
@@ -250,6 +253,7 @@ describe("msteams messenger", () => {
 
       const adapter: MSTeamsAdapter = {
         continueConversation: async () => {},
+        process: async () => {},
       };
 
       const ids = await sendMSTeamsMessages({
@@ -277,6 +281,7 @@ describe("msteams messenger", () => {
 
       const adapter: MSTeamsAdapter = {
         continueConversation: async () => {},
+        process: async () => {},
       };
 
       await expect(
@@ -310,6 +315,7 @@ describe("msteams messenger", () => {
             },
           });
         },
+        process: async () => {},
       };
 
       const ids = await sendMSTeamsMessages({

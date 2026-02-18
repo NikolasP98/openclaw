@@ -1,6 +1,6 @@
-import type { MinionConfig } from "../config/config.js";
-import type { ProviderAuthMethod, ProviderPlugin } from "../plugins/types.js";
 import { normalizeProviderId } from "../agents/model-selection.js";
+import type { OpenClawConfig } from "../config/config.js";
+import type { ProviderAuthMethod, ProviderPlugin } from "../plugins/types.js";
 
 export function resolveProviderMatch(
   providers: ProviderPlugin[],
@@ -58,7 +58,7 @@ export function mergeConfigPatch<T>(base: T, patch: unknown): T {
   return next as T;
 }
 
-export function applyDefaultModel(cfg: MinionConfig, model: string): MinionConfig {
+export function applyDefaultModel(cfg: OpenClawConfig, model: string): OpenClawConfig {
   const models = { ...cfg.agents?.defaults?.models };
   models[model] = models[model] ?? {};
 

@@ -1,11 +1,5 @@
-import type { EventLogEntry } from "./app-events.ts";
-import type { MinionApp } from "./app.ts";
-import type { ExecApprovalRequest } from "./controllers/exec-approval.ts";
-import type { GatewayEventFrame, GatewayHelloOk } from "./gateway.ts";
-import type { Tab } from "./navigation.ts";
-import type { UiSettings } from "./storage.ts";
-import type { AgentsListResult, PresenceEntry, HealthSnapshot, StatusSummary } from "./types.ts";
 import { CHAT_SESSIONS_ACTIVE_MINUTES, flushChatQueueForEvent } from "./app-chat.ts";
+import type { EventLogEntry } from "./app-events.ts";
 import {
   applySettings,
   loadCron,
@@ -13,11 +7,13 @@ import {
   setLastActiveSessionKey,
 } from "./app-settings.ts";
 import { handleAgentEvent, resetToolStream, type AgentEventPayload } from "./app-tool-stream.ts";
+import type { OpenClawApp } from "./app.ts";
 import { loadAgents } from "./controllers/agents.ts";
 import { loadAssistantIdentity } from "./controllers/assistant-identity.ts";
 import { loadChatHistory } from "./controllers/chat.ts";
 import { handleChatEvent, type ChatEventPayload } from "./controllers/chat.ts";
 import { loadDevices } from "./controllers/devices.ts";
+import type { ExecApprovalRequest } from "./controllers/exec-approval.ts";
 import {
   addExecApproval,
   parseExecApprovalRequested,
@@ -26,7 +22,11 @@ import {
 } from "./controllers/exec-approval.ts";
 import { loadNodes } from "./controllers/nodes.ts";
 import { loadSessions } from "./controllers/sessions.ts";
+import type { GatewayEventFrame, GatewayHelloOk } from "./gateway.ts";
 import { GatewayBrowserClient } from "./gateway.ts";
+import type { Tab } from "./navigation.ts";
+import type { UiSettings } from "./storage.ts";
+import type { AgentsListResult, PresenceEntry, HealthSnapshot, StatusSummary } from "./types.ts";
 
 type GatewayHost = {
   settings: UiSettings;
@@ -127,7 +127,7 @@ export function connectGateway(host: GatewayHost) {
     url: host.settings.gatewayUrl,
     token: host.settings.token.trim() ? host.settings.token : undefined,
     password: host.password.trim() ? host.password : undefined,
-    clientName: "minion-control-ui",
+    clientName: "openclaw-control-ui",
     mode: "webchat",
     onHello: (hello) => {
       if (host.client !== client) {
@@ -143,10 +143,10 @@ export function connectGateway(host: GatewayHost) {
       (host as unknown as { chatStream: string | null }).chatStream = null;
       (host as unknown as { chatStreamStartedAt: number | null }).chatStreamStartedAt = null;
       resetToolStream(host as unknown as Parameters<typeof resetToolStream>[0]);
-      void loadAssistantIdentity(host as unknown as MinionApp);
-      void loadAgents(host as unknown as MinionApp);
-      void loadNodes(host as unknown as MinionApp, { quiet: true });
-      void loadDevices(host as unknown as MinionApp, { quiet: true });
+      void loadAssistantIdentity(host as unknown as OpenClawApp);
+      void loadAgents(host as unknown as OpenClawApp);
+      void loadNodes(host as unknown as OpenClawApp, { quiet: true });
+      void loadDevices(host as unknown as OpenClawApp, { quiet: true });
       void refreshActiveTab(host as unknown as Parameters<typeof refreshActiveTab>[0]);
     },
     onClose: ({ code, reason }) => {
@@ -213,7 +213,7 @@ function handleGatewayEventUnsafe(host: GatewayHost, evt: GatewayEventFrame) {
         payload.sessionKey,
       );
     }
-    const state = handleChatEvent(host as unknown as MinionApp, payload);
+    const state = handleChatEvent(host as unknown as OpenClawApp, payload);
     if (state === "final" || state === "error" || state === "aborted") {
       resetToolStream(host as unknown as Parameters<typeof resetToolStream>[0]);
       void flushChatQueueForEvent(host as unknown as Parameters<typeof flushChatQueueForEvent>[0]);
@@ -221,14 +221,14 @@ function handleGatewayEventUnsafe(host: GatewayHost, evt: GatewayEventFrame) {
       if (runId && host.refreshSessionsAfterChat.has(runId)) {
         host.refreshSessionsAfterChat.delete(runId);
         if (state === "final") {
-          void loadSessions(host as unknown as MinionApp, {
+          void loadSessions(host as unknown as OpenClawApp, {
             activeMinutes: CHAT_SESSIONS_ACTIVE_MINUTES,
           });
         }
       }
     }
     if (state === "final") {
-      void loadChatHistory(host as unknown as MinionApp);
+      void loadChatHistory(host as unknown as OpenClawApp);
     }
     return;
   }
@@ -248,7 +248,7 @@ function handleGatewayEventUnsafe(host: GatewayHost, evt: GatewayEventFrame) {
   }
 
   if (evt.event === "device.pair.requested" || evt.event === "device.pair.resolved") {
-    void loadDevices(host as unknown as MinionApp, { quiet: true });
+    void loadDevices(host as unknown as OpenClawApp, { quiet: true });
   }
 
   if (evt.event === "exec.approval.requested") {

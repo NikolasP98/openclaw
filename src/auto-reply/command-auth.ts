@@ -1,9 +1,10 @@
 import type { ChannelDock } from "../channels/dock.js";
-import type { ChannelId } from "../channels/plugins/types.js";
-import type { MinionConfig } from "../config/config.js";
-import type { MsgContext } from "./templating.js";
 import { getChannelDock, listChannelDocks } from "../channels/dock.js";
+import type { ChannelId } from "../channels/plugins/types.js";
 import { normalizeAnyChannelId } from "../channels/registry.js";
+import type { OpenClawConfig } from "../config/config.js";
+import { INTERNAL_MESSAGE_CHANNEL, normalizeMessageChannel } from "../utils/message-channel.js";
+import type { MsgContext } from "./templating.js";
 
 export type CommandAuthorization = {
   providerId?: ChannelId;
@@ -15,8 +16,16 @@ export type CommandAuthorization = {
   to?: string;
 };
 
-function resolveProviderFromContext(ctx: MsgContext, cfg: MinionConfig): ChannelId | undefined {
+function resolveProviderFromContext(ctx: MsgContext, cfg: OpenClawConfig): ChannelId | undefined {
+  const explicitMessageChannel =
+    normalizeMessageChannel(ctx.Provider) ??
+    normalizeMessageChannel(ctx.Surface) ??
+    normalizeMessageChannel(ctx.OriginatingChannel);
+  if (explicitMessageChannel === INTERNAL_MESSAGE_CHANNEL) {
+    return undefined;
+  }
   const direct =
+    normalizeAnyChannelId(explicitMessageChannel ?? undefined) ??
     normalizeAnyChannelId(ctx.Provider) ??
     normalizeAnyChannelId(ctx.Surface) ??
     normalizeAnyChannelId(ctx.OriginatingChannel);
@@ -27,7 +36,13 @@ function resolveProviderFromContext(ctx: MsgContext, cfg: MinionConfig): Channel
     .filter((value): value is string => Boolean(value?.trim()))
     .flatMap((value) => value.split(":").map((part) => part.trim()));
   for (const candidate of candidates) {
-    const normalized = normalizeAnyChannelId(candidate);
+    const normalizedCandidateChannel = normalizeMessageChannel(candidate);
+    if (normalizedCandidateChannel === INTERNAL_MESSAGE_CHANNEL) {
+      return undefined;
+    }
+    const normalized =
+      normalizeAnyChannelId(normalizedCandidateChannel ?? undefined) ??
+      normalizeAnyChannelId(candidate);
     if (normalized) {
       return normalized;
     }
@@ -55,7 +70,7 @@ function resolveProviderFromContext(ctx: MsgContext, cfg: MinionConfig): Channel
 
 function formatAllowFromList(params: {
   dock?: ChannelDock;
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
   allowFrom: Array<string | number>;
 }): string[] {
@@ -71,7 +86,7 @@ function formatAllowFromList(params: {
 
 function normalizeAllowFromEntry(params: {
   dock?: ChannelDock;
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
   value: string;
 }): string[] {
@@ -86,7 +101,7 @@ function normalizeAllowFromEntry(params: {
 
 function resolveOwnerAllowFromList(params: {
   dock?: ChannelDock;
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
   providerId?: ChannelId;
   allowFrom?: Array<string | number>;
@@ -133,7 +148,7 @@ function resolveOwnerAllowFromList(params: {
  */
 function resolveCommandsAllowFromList(params: {
   dock?: ChannelDock;
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
   providerId?: ChannelId;
 }): string[] | null {
@@ -164,7 +179,7 @@ function resolveCommandsAllowFromList(params: {
 function resolveSenderCandidates(params: {
   dock?: ChannelDock;
   providerId?: ChannelId;
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
   senderId?: string | null;
   senderE164?: string | null;
@@ -202,7 +217,7 @@ function resolveSenderCandidates(params: {
 
 export function resolveCommandAuthorization(params: {
   ctx: MsgContext;
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   commandAuthorized: boolean;
 }): CommandAuthorization {
   const { ctx, cfg, commandAuthorized } = params;

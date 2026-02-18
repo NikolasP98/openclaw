@@ -1,4 +1,3 @@
-import type { MinionConfig } from "../../config/config.js";
 import {
   isProfileInCooldown,
   resolveAuthProfileDisplayLabel,
@@ -10,7 +9,8 @@ import {
   resolveAuthProfileOrder,
   resolveEnvApiKey,
 } from "../../agents/model-auth.js";
-import { normalizeProviderId } from "../../agents/model-selection.js";
+import { findNormalizedProviderValue, normalizeProviderId } from "../../agents/model-selection.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { shortenHomePath } from "../../utils.js";
 
 export type ModelAuthDetailMode = "compact" | "verbose";
@@ -28,7 +28,7 @@ const maskApiKey = (value: string): string => {
 
 export const resolveAuthLabel = async (
   provider: string,
-  cfg: MinionConfig,
+  cfg: OpenClawConfig,
   modelsPath: string,
   agentDir?: string,
   mode: ModelAuthDetailMode = "compact",
@@ -39,18 +39,7 @@ export const resolveAuthLabel = async (
   });
   const order = resolveAuthProfileOrder({ cfg, store, provider });
   const providerKey = normalizeProviderId(provider);
-  const lastGood = (() => {
-    const map = store.lastGood;
-    if (!map) {
-      return undefined;
-    }
-    for (const [key, value] of Object.entries(map)) {
-      if (normalizeProviderId(key) === providerKey) {
-        return value;
-      }
-    }
-    return undefined;
-  })();
+  const lastGood = findNormalizedProviderValue(store.lastGood, providerKey);
   const nextProfileId = order[0];
   const now = Date.now();
 
@@ -223,7 +212,7 @@ export const formatAuthLabel = (auth: { label: string; source: string }) => {
 export const resolveProfileOverride = (params: {
   rawProfile?: string;
   provider: string;
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   agentDir?: string;
 }): { profileId?: string; error?: string } => {
   const raw = params.rawProfile?.trim();

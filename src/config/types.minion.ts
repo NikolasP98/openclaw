@@ -109,6 +109,9 @@ export type LegacyConfigIssue = {
   message: string;
 };
 
+/** @deprecated Alias for backward compatibility — prefer MinionConfig */
+export type OpenClawConfig = MinionConfig;
+
 export type ConfigFileSnapshot = {
   path: string;
   exists: boolean;

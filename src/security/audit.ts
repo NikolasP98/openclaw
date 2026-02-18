@@ -1,12 +1,12 @@
-import type { MinionConfig } from "../config/config.js";
-import type { ExecFn } from "./windows-acl.js";
 import { resolveBrowserConfig, resolveProfile } from "../browser/config.js";
 import { resolveBrowserControlAuth } from "../browser/control-auth.js";
 import { listChannelPlugins } from "../channels/plugins/index.js";
 import { formatCliCommand } from "../cli/command-format.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { resolveConfigPath, resolveStateDir } from "../config/paths.js";
 import { resolveGatewayAuth } from "../gateway/auth.js";
 import { buildGatewayConnectionDetails } from "../gateway/call.js";
+import { resolveGatewayProbeAuth } from "../gateway/probe-auth.js";
 import { probeGateway } from "../gateway/probe.js";
 import { collectChannelSecurityFindings } from "./audit-channel.js";
 import {
@@ -20,6 +20,7 @@ import {
   collectModelHygieneFindings,
   collectNodeDenyCommandPatternFindings,
   collectSmallModelRiskFindings,
+  collectSandboxDangerousConfigFindings,
   collectSandboxDockerNoopFindings,
   collectPluginsTrustFindings,
   collectSecretsInConfigFindings,
@@ -34,6 +35,7 @@ import {
   inspectPathPermissions,
 } from "./audit-fs.js";
 import { DEFAULT_GATEWAY_HTTP_TOOL_DENY } from "./dangerous-tools.js";
+import type { ExecFn } from "./windows-acl.js";
 
 export type SecurityAuditSeverity = "info" | "warn" | "critical";
 
@@ -67,7 +69,7 @@ export type SecurityAuditReport = {
 };
 
 export type SecurityAuditOptions = {
-  config: MinionConfig;
+  config: OpenClawConfig;
   env?: NodeJS.ProcessEnv;
   platform?: NodeJS.Platform;
   deep?: boolean;
@@ -138,7 +140,7 @@ async function collectFilesystemFindings(params: {
         checkId: "fs.state_dir.perms_world_writable",
         severity: "critical",
         title: "State dir is world-writable",
-        detail: `${formatPermissionDetail(params.stateDir, stateDirPerms)}; other users can write into your Minion state.`,
+        detail: `${formatPermissionDetail(params.stateDir, stateDirPerms)}; other users can write into your OpenClaw state.`,
         remediation: formatPermissionRemediation({
           targetPath: params.stateDir,
           perms: stateDirPerms,
@@ -152,7 +154,7 @@ async function collectFilesystemFindings(params: {
         checkId: "fs.state_dir.perms_group_writable",
         severity: "warn",
         title: "State dir is group-writable",
-        detail: `${formatPermissionDetail(params.stateDir, stateDirPerms)}; group users can write into your Minion state.`,
+        detail: `${formatPermissionDetail(params.stateDir, stateDirPerms)}; group users can write into your OpenClaw state.`,
         remediation: formatPermissionRemediation({
           targetPath: params.stateDir,
           perms: stateDirPerms,
@@ -241,7 +243,7 @@ async function collectFilesystemFindings(params: {
 }
 
 function collectGatewayConfigFindings(
-  cfg: MinionConfig,
+  cfg: OpenClawConfig,
   env: NodeJS.ProcessEnv,
 ): SecurityAuditFinding[] {
   const findings: SecurityAuditFinding[] = [];
@@ -449,7 +451,7 @@ function collectGatewayConfigFindings(
 }
 
 function collectBrowserControlFindings(
-  cfg: MinionConfig,
+  cfg: OpenClawConfig,
   env: NodeJS.ProcessEnv,
 ): SecurityAuditFinding[] {
   const findings: SecurityAuditFinding[] = [];
@@ -463,7 +465,7 @@ function collectBrowserControlFindings(
       severity: "warn",
       title: "Browser control config looks invalid",
       detail: String(err),
-      remediation: `Fix browser.cdpUrl in ${resolveConfigPath()} and re-run "${formatCliCommand("minion security audit --deep")}".`,
+      remediation: `Fix browser.cdpUrl in ${resolveConfigPath()} and re-run "${formatCliCommand("openclaw security audit --deep")}".`,
     });
     return findings;
   }
@@ -511,7 +513,7 @@ function collectBrowserControlFindings(
   return findings;
 }
 
-function collectLoggingFindings(cfg: MinionConfig): SecurityAuditFinding[] {
+function collectLoggingFindings(cfg: OpenClawConfig): SecurityAuditFinding[] {
   const redact = cfg.logging?.redactSensitive;
   if (redact !== "off") {
     return [];
@@ -527,7 +529,7 @@ function collectLoggingFindings(cfg: MinionConfig): SecurityAuditFinding[] {
   ];
 }
 
-function collectElevatedFindings(cfg: MinionConfig): SecurityAuditFinding[] {
+function collectElevatedFindings(cfg: OpenClawConfig): SecurityAuditFinding[] {
   const findings: SecurityAuditFinding[] = [];
   const enabled = cfg.tools?.elevated?.enabled;
   const allowFrom = cfg.tools?.elevated?.allowFrom ?? {};
@@ -563,7 +565,7 @@ function collectElevatedFindings(cfg: MinionConfig): SecurityAuditFinding[] {
 }
 
 async function maybeProbeGateway(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   timeoutMs: number;
   probe: typeof probeGateway;
 }): Promise<SecurityAuditReport["deep"]> {
@@ -574,30 +576,10 @@ async function maybeProbeGateway(params: {
     typeof params.cfg.gateway?.remote?.url === "string" ? params.cfg.gateway.remote.url.trim() : "";
   const remoteUrlMissing = isRemoteMode && !remoteUrlRaw;
 
-  const resolveAuth = (mode: "local" | "remote") => {
-    const authToken = params.cfg.gateway?.auth?.token;
-    const authPassword = params.cfg.gateway?.auth?.password;
-    const remote = params.cfg.gateway?.remote;
-    const token =
-      mode === "remote"
-        ? typeof remote?.token === "string" && remote.token.trim()
-          ? remote.token.trim()
-          : undefined
-        : process.env.MINION_GATEWAY_TOKEN?.trim() ||
-          (typeof authToken === "string" && authToken.trim() ? authToken.trim() : undefined);
-    const password =
-      process.env.MINION_GATEWAY_PASSWORD?.trim() ||
-      (mode === "remote"
-        ? typeof remote?.password === "string" && remote.password.trim()
-          ? remote.password.trim()
-          : undefined
-        : typeof authPassword === "string" && authPassword.trim()
-          ? authPassword.trim()
-          : undefined);
-    return { token, password };
-  };
-
-  const auth = !isRemoteMode || remoteUrlMissing ? resolveAuth("local") : resolveAuth("remote");
+  const auth =
+    !isRemoteMode || remoteUrlMissing
+      ? resolveGatewayProbeAuth({ cfg: params.cfg, mode: "local" })
+      : resolveGatewayProbeAuth({ cfg: params.cfg, mode: "remote" });
   const res = await params.probe({ url, auth, timeoutMs: params.timeoutMs }).catch((err) => ({
     ok: false,
     url,
@@ -640,6 +622,7 @@ export async function runSecurityAudit(opts: SecurityAuditOptions): Promise<Secu
   findings.push(...collectHooksHardeningFindings(cfg, env));
   findings.push(...collectGatewayHttpSessionKeyOverrideFindings(cfg));
   findings.push(...collectSandboxDockerNoopFindings(cfg));
+  findings.push(...collectSandboxDangerousConfigFindings(cfg));
   findings.push(...collectNodeDenyCommandPatternFindings(cfg));
   findings.push(...collectMinimalProfileOverrideFindings(cfg));
   findings.push(...collectSecretsInConfigFindings(cfg));
@@ -697,7 +680,7 @@ export async function runSecurityAudit(opts: SecurityAuditOptions): Promise<Secu
       severity: "warn",
       title: "Gateway probe failed (deep)",
       detail: deep.gateway.error ?? "gateway unreachable",
-      remediation: `Run "${formatCliCommand("minion status --all")}" to debug connectivity/auth, then re-run "${formatCliCommand("minion security audit --deep")}".`,
+      remediation: `Run "${formatCliCommand("openclaw status --all")}" to debug connectivity/auth, then re-run "${formatCliCommand("openclaw security audit --deep")}".`,
     });
   }
 

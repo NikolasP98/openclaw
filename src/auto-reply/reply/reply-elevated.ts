@@ -1,10 +1,10 @@
-import type { AgentElevatedAllowFromConfig, MinionConfig } from "../../config/config.js";
-import type { MsgContext } from "../templating.js";
 import { resolveAgentConfig } from "../../agents/agent-scope.js";
 import { getChannelDock } from "../../channels/dock.js";
 import { normalizeChannelId } from "../../channels/plugins/index.js";
 import { CHAT_CHANNEL_ORDER } from "../../channels/registry.js";
+import type { AgentElevatedAllowFromConfig, OpenClawConfig } from "../../config/config.js";
 import { INTERNAL_MESSAGE_CHANNEL } from "../../utils/message-channel.js";
+import type { MsgContext } from "../templating.js";
 export { formatElevatedUnavailableMessage } from "./elevated-unavailable.js";
 
 function normalizeAllowToken(value?: string) {
@@ -132,7 +132,7 @@ function isApprovedElevatedSender(params: {
 }
 
 export function resolveElevatedPermissions(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   agentId: string;
   ctx: MsgContext;
   provider: string;

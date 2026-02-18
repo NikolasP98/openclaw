@@ -1,8 +1,8 @@
 {
-  "name": "@minion/googlechat",
-  "version": "2026.2.13",
+  "name": "@openclaw/googlechat",
+  "version": "2026.2.16",
   "private": true,
-  "description": "Minion Google Chat channel plugin",
+  "description": "OpenClaw Google Chat channel plugin",
   "type": "module",
   "dependencies": {
     "google-auth-library": "^10.5.0"
@@ -11,9 +11,9 @@
     "@nikolasp98/minion": "workspace:*"
   },
   "peerDependencies": {
-    "@nikolasp98/minion": ">=2026.1.26"
+    "openclaw": ">=2026.1.26"
   },
-  "minion": {
+  "openclaw": {
     "extensions": [
       "./index.ts"
     ],
@@ -32,7 +32,7 @@
       "order": 55
     },
     "install": {
-      "npmSpec": "@minion/googlechat",
+      "npmSpec": "@openclaw/googlechat",
       "localPath": "extensions/googlechat",
       "defaultChoice": "npm"
     }

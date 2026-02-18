@@ -1,8 +1,9 @@
-import type { Api, Model } from "@mariozechner/pi-ai";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import type { Api, Model } from "@mariozechner/pi-ai";
 import { describe, expect, it } from "vitest";
+import { captureEnv } from "../test-utils/env.js";
 import { ensureAuthProfileStore } from "./auth-profiles.js";
 import { getApiKeyForModel, resolveApiKeyForProvider, resolveEnvApiKey } from "./model-auth.js";
 
@@ -13,17 +14,72 @@ const oauthFixture = {
   accountId: "acct_123",
 };
 
+const BEDROCK_PROVIDER_CFG = {
+  models: {
+    providers: {
+      "amazon-bedrock": {
+        baseUrl: "https://bedrock-runtime.us-east-1.amazonaws.com",
+        api: "bedrock-converse-stream",
+        auth: "aws-sdk",
+        models: [],
+      },
+    },
+  },
+} as const;
+
+function captureBedrockEnv() {
+  return {
+    bearer: process.env.AWS_BEARER_TOKEN_BEDROCK,
+    access: process.env.AWS_ACCESS_KEY_ID,
+    secret: process.env.AWS_SECRET_ACCESS_KEY,
+    profile: process.env.AWS_PROFILE,
+  };
+}
+
+function restoreBedrockEnv(previous: ReturnType<typeof captureBedrockEnv>) {
+  if (previous.bearer === undefined) {
+    delete process.env.AWS_BEARER_TOKEN_BEDROCK;
+  } else {
+    process.env.AWS_BEARER_TOKEN_BEDROCK = previous.bearer;
+  }
+  if (previous.access === undefined) {
+    delete process.env.AWS_ACCESS_KEY_ID;
+  } else {
+    process.env.AWS_ACCESS_KEY_ID = previous.access;
+  }
+  if (previous.secret === undefined) {
+    delete process.env.AWS_SECRET_ACCESS_KEY;
+  } else {
+    process.env.AWS_SECRET_ACCESS_KEY = previous.secret;
+  }
+  if (previous.profile === undefined) {
+    delete process.env.AWS_PROFILE;
+  } else {
+    process.env.AWS_PROFILE = previous.profile;
+  }
+}
+
+async function resolveBedrockProvider() {
+  return resolveApiKeyForProvider({
+    provider: "amazon-bedrock",
+    store: { version: 1, profiles: {} },
+    cfg: BEDROCK_PROVIDER_CFG as never,
+  });
+}
+
 describe("getApiKeyForModel", () => {
   it("migrates legacy oauth.json into auth-profiles.json", async () => {
-    const previousStateDir = process.env.MINION_STATE_DIR;
-    const previousAgentDir = process.env.MINION_AGENT_DIR;
-    const previousPiAgentDir = process.env.PI_CODING_AGENT_DIR;
-    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "minion-oauth-"));
+    const envSnapshot = captureEnv([
+      "OPENCLAW_STATE_DIR",
+      "OPENCLAW_AGENT_DIR",
+      "PI_CODING_AGENT_DIR",
+    ]);
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-oauth-"));
 
     try {
-      process.env.MINION_STATE_DIR = tempDir;
-      process.env.MINION_AGENT_DIR = path.join(tempDir, "agent");
-      process.env.PI_CODING_AGENT_DIR = process.env.MINION_AGENT_DIR;
+      process.env.OPENCLAW_STATE_DIR = tempDir;
+      process.env.OPENCLAW_AGENT_DIR = path.join(tempDir, "agent");
+      process.env.PI_CODING_AGENT_DIR = process.env.OPENCLAW_AGENT_DIR;
 
       const oauthDir = path.join(tempDir, "credentials");
       await fs.mkdir(oauthDir, { recursive: true, mode: 0o700 });
@@ -39,7 +95,7 @@ describe("getApiKeyForModel", () => {
         api: "openai-codex-responses",
       } as Model<Api>;
 
-      const store = ensureAuthProfileStore(process.env.MINION_AGENT_DIR, {
+      const store = ensureAuthProfileStore(process.env.OPENCLAW_AGENT_DIR, {
         allowKeychainPrompt: false,
       });
       const apiKey = await getApiKeyForModel({
@@ -55,7 +111,7 @@ describe("getApiKeyForModel", () => {
           },
         },
         store,
-        agentDir: process.env.MINION_AGENT_DIR,
+        agentDir: process.env.OPENCLAW_AGENT_DIR,
       });
       expect(apiKey.apiKey).toBe(oauthFixture.access);
 
@@ -73,37 +129,25 @@ describe("getApiKeyForModel", () => {
         },
       });
     } finally {
-      if (previousStateDir === undefined) {
-        delete process.env.MINION_STATE_DIR;
-      } else {
-        process.env.MINION_STATE_DIR = previousStateDir;
-      }
-      if (previousAgentDir === undefined) {
-        delete process.env.MINION_AGENT_DIR;
-      } else {
-        process.env.MINION_AGENT_DIR = previousAgentDir;
-      }
-      if (previousPiAgentDir === undefined) {
-        delete process.env.PI_CODING_AGENT_DIR;
-      } else {
-        process.env.PI_CODING_AGENT_DIR = previousPiAgentDir;
-      }
+      envSnapshot.restore();
       await fs.rm(tempDir, { recursive: true, force: true });
     }
   });
 
   it("suggests openai-codex when only Codex OAuth is configured", async () => {
-    const previousStateDir = process.env.MINION_STATE_DIR;
-    const previousAgentDir = process.env.MINION_AGENT_DIR;
-    const previousPiAgentDir = process.env.PI_CODING_AGENT_DIR;
-    const previousOpenAiKey = process.env.OPENAI_API_KEY;
-    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "minion-auth-"));
+    const envSnapshot = captureEnv([
+      "OPENAI_API_KEY",
+      "OPENCLAW_STATE_DIR",
+      "OPENCLAW_AGENT_DIR",
+      "PI_CODING_AGENT_DIR",
+    ]);
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-auth-"));
 
     try {
       delete process.env.OPENAI_API_KEY;
-      process.env.MINION_STATE_DIR = tempDir;
-      process.env.MINION_AGENT_DIR = path.join(tempDir, "agent");
-      process.env.PI_CODING_AGENT_DIR = process.env.MINION_AGENT_DIR;
+      process.env.OPENCLAW_STATE_DIR = tempDir;
+      process.env.OPENCLAW_AGENT_DIR = path.join(tempDir, "agent");
+      process.env.PI_CODING_AGENT_DIR = process.env.OPENCLAW_AGENT_DIR;
 
       const authProfilesPath = path.join(tempDir, "agent", "auth-profiles.json");
       await fs.mkdir(path.dirname(authProfilesPath), {
@@ -137,26 +181,7 @@ describe("getApiKeyForModel", () => {
       }
       expect(String(error)).toContain("openai-codex/gpt-5.3-codex");
     } finally {
-      if (previousOpenAiKey === undefined) {
-        delete process.env.OPENAI_API_KEY;
-      } else {
-        process.env.OPENAI_API_KEY = previousOpenAiKey;
-      }
-      if (previousStateDir === undefined) {
-        delete process.env.MINION_STATE_DIR;
-      } else {
-        process.env.MINION_STATE_DIR = previousStateDir;
-      }
-      if (previousAgentDir === undefined) {
-        delete process.env.MINION_AGENT_DIR;
-      } else {
-        process.env.MINION_AGENT_DIR = previousAgentDir;
-      }
-      if (previousPiAgentDir === undefined) {
-        delete process.env.PI_CODING_AGENT_DIR;
-      } else {
-        process.env.PI_CODING_AGENT_DIR = previousPiAgentDir;
-      }
+      envSnapshot.restore();
       await fs.rm(tempDir, { recursive: true, force: true });
     }
   });
@@ -286,12 +311,7 @@ describe("getApiKeyForModel", () => {
   });
 
   it("prefers Bedrock bearer token over access keys and profile", async () => {
-    const previous = {
-      bearer: process.env.AWS_BEARER_TOKEN_BEDROCK,
-      access: process.env.AWS_ACCESS_KEY_ID,
-      secret: process.env.AWS_SECRET_ACCESS_KEY,
-      profile: process.env.AWS_PROFILE,
-    };
+    const previous = captureBedrockEnv();
 
     try {
       process.env.AWS_BEARER_TOKEN_BEDROCK = "bedrock-token";
@@ -299,57 +319,18 @@ describe("getApiKeyForModel", () => {
       process.env.AWS_SECRET_ACCESS_KEY = "secret-key";
       process.env.AWS_PROFILE = "profile";
 
-      const resolved = await resolveApiKeyForProvider({
-        provider: "amazon-bedrock",
-        store: { version: 1, profiles: {} },
-        cfg: {
-          models: {
-            providers: {
-              "amazon-bedrock": {
-                baseUrl: "https://bedrock-runtime.us-east-1.amazonaws.com",
-                api: "bedrock-converse-stream",
-                auth: "aws-sdk",
-                models: [],
-              },
-            },
-          },
-        } as never,
-      });
+      const resolved = await resolveBedrockProvider();
 
       expect(resolved.mode).toBe("aws-sdk");
       expect(resolved.apiKey).toBeUndefined();
       expect(resolved.source).toContain("AWS_BEARER_TOKEN_BEDROCK");
     } finally {
-      if (previous.bearer === undefined) {
-        delete process.env.AWS_BEARER_TOKEN_BEDROCK;
-      } else {
-        process.env.AWS_BEARER_TOKEN_BEDROCK = previous.bearer;
-      }
-      if (previous.access === undefined) {
-        delete process.env.AWS_ACCESS_KEY_ID;
-      } else {
-        process.env.AWS_ACCESS_KEY_ID = previous.access;
-      }
-      if (previous.secret === undefined) {
-        delete process.env.AWS_SECRET_ACCESS_KEY;
-      } else {
-        process.env.AWS_SECRET_ACCESS_KEY = previous.secret;
-      }
-      if (previous.profile === undefined) {
-        delete process.env.AWS_PROFILE;
-      } else {
-        process.env.AWS_PROFILE = previous.profile;
-      }
+      restoreBedrockEnv(previous);
     }
   });
 
   it("prefers Bedrock access keys over profile", async () => {
-    const previous = {
-      bearer: process.env.AWS_BEARER_TOKEN_BEDROCK,
-      access: process.env.AWS_ACCESS_KEY_ID,
-      secret: process.env.AWS_SECRET_ACCESS_KEY,
-      profile: process.env.AWS_PROFILE,
-    };
+    const previous = captureBedrockEnv();
 
     try {
       delete process.env.AWS_BEARER_TOKEN_BEDROCK;
@@ -357,57 +338,18 @@ describe("getApiKeyForModel", () => {
       process.env.AWS_SECRET_ACCESS_KEY = "secret-key";
       process.env.AWS_PROFILE = "profile";
 
-      const resolved = await resolveApiKeyForProvider({
-        provider: "amazon-bedrock",
-        store: { version: 1, profiles: {} },
-        cfg: {
-          models: {
-            providers: {
-              "amazon-bedrock": {
-                baseUrl: "https://bedrock-runtime.us-east-1.amazonaws.com",
-                api: "bedrock-converse-stream",
-                auth: "aws-sdk",
-                models: [],
-              },
-            },
-          },
-        } as never,
-      });
+      const resolved = await resolveBedrockProvider();
 
       expect(resolved.mode).toBe("aws-sdk");
       expect(resolved.apiKey).toBeUndefined();
       expect(resolved.source).toContain("AWS_ACCESS_KEY_ID");
     } finally {
-      if (previous.bearer === undefined) {
-        delete process.env.AWS_BEARER_TOKEN_BEDROCK;
-      } else {
-        process.env.AWS_BEARER_TOKEN_BEDROCK = previous.bearer;
-      }
-      if (previous.access === undefined) {
-        delete process.env.AWS_ACCESS_KEY_ID;
-      } else {
-        process.env.AWS_ACCESS_KEY_ID = previous.access;
-      }
-      if (previous.secret === undefined) {
-        delete process.env.AWS_SECRET_ACCESS_KEY;
-      } else {
-        process.env.AWS_SECRET_ACCESS_KEY = previous.secret;
-      }
-      if (previous.profile === undefined) {
-        delete process.env.AWS_PROFILE;
-      } else {
-        process.env.AWS_PROFILE = previous.profile;
-      }
+      restoreBedrockEnv(previous);
     }
   });
 
   it("uses Bedrock profile when access keys are missing", async () => {
-    const previous = {
-      bearer: process.env.AWS_BEARER_TOKEN_BEDROCK,
-      access: process.env.AWS_ACCESS_KEY_ID,
-      secret: process.env.AWS_SECRET_ACCESS_KEY,
-      profile: process.env.AWS_PROFILE,
-    };
+    const previous = captureBedrockEnv();
 
     try {
       delete process.env.AWS_BEARER_TOKEN_BEDROCK;
@@ -415,47 +357,13 @@ describe("getApiKeyForModel", () => {
       delete process.env.AWS_SECRET_ACCESS_KEY;
       process.env.AWS_PROFILE = "profile";
 
-      const resolved = await resolveApiKeyForProvider({
-        provider: "amazon-bedrock",
-        store: { version: 1, profiles: {} },
-        cfg: {
-          models: {
-            providers: {
-              "amazon-bedrock": {
-                baseUrl: "https://bedrock-runtime.us-east-1.amazonaws.com",
-                api: "bedrock-converse-stream",
-                auth: "aws-sdk",
-                models: [],
-              },
-            },
-          },
-        } as never,
-      });
+      const resolved = await resolveBedrockProvider();
 
       expect(resolved.mode).toBe("aws-sdk");
       expect(resolved.apiKey).toBeUndefined();
       expect(resolved.source).toContain("AWS_PROFILE");
     } finally {
-      if (previous.bearer === undefined) {
-        delete process.env.AWS_BEARER_TOKEN_BEDROCK;
-      } else {
-        process.env.AWS_BEARER_TOKEN_BEDROCK = previous.bearer;
-      }
-      if (previous.access === undefined) {
-        delete process.env.AWS_ACCESS_KEY_ID;
-      } else {
-        process.env.AWS_ACCESS_KEY_ID = previous.access;
-      }
-      if (previous.secret === undefined) {
-        delete process.env.AWS_SECRET_ACCESS_KEY;
-      } else {
-        process.env.AWS_SECRET_ACCESS_KEY = previous.secret;
-      }
-      if (previous.profile === undefined) {
-        delete process.env.AWS_PROFILE;
-      } else {
-        process.env.AWS_PROFILE = previous.profile;
-      }
+      restoreBedrockEnv(previous);
     }
   });
 

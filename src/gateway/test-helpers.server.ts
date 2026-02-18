@@ -4,7 +4,6 @@ import os from "node:os";
 import path from "node:path";
 import { afterAll, afterEach, beforeAll, beforeEach, expect, vi } from "vitest";
 import { WebSocket } from "ws";
-import type { GatewayServerOptions } from "./server.js";
 import { resolveMainSessionKeyFromConfig, type SessionEntry } from "../config/sessions.js";
 import { resetAgentRunContextForTest } from "../infra/agent-events.js";
 import {
@@ -16,10 +15,12 @@ import { drainSystemEvents, peekSystemEvents } from "../infra/system-events.js";
 import { rawDataToString } from "../infra/ws.js";
 import { resetLogger, setLoggerOverride } from "../logging.js";
 import { DEFAULT_AGENT_ID, toAgentStoreSessionKey } from "../routing/session-key.js";
+import { captureEnv } from "../test-utils/env.js";
 import { getDeterministicFreePortBlock } from "../test-utils/ports.js";
 import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../utils/message-channel.js";
 import { buildDeviceAuthPayload } from "./device-auth.js";
 import { PROTOCOL_VERSION } from "./protocol/index.js";
+import type { GatewayServerOptions } from "./server.js";
 import {
   agentCommand,
   cronIsolatedRun,
@@ -88,34 +89,34 @@ export async function writeSessionStore(params: {
 async function setupGatewayTestHome() {
   previousHome = process.env.HOME;
   previousUserProfile = process.env.USERPROFILE;
-  previousStateDir = process.env.MINION_STATE_DIR;
-  previousConfigPath = process.env.MINION_CONFIG_PATH;
-  previousSkipBrowserControl = process.env.MINION_SKIP_BROWSER_CONTROL_SERVER;
-  previousSkipGmailWatcher = process.env.MINION_SKIP_GMAIL_WATCHER;
-  previousSkipCanvasHost = process.env.MINION_SKIP_CANVAS_HOST;
-  previousBundledPluginsDir = process.env.MINION_BUNDLED_PLUGINS_DIR;
-  previousSkipChannels = process.env.MINION_SKIP_CHANNELS;
-  previousSkipProviders = process.env.MINION_SKIP_PROVIDERS;
-  previousSkipCron = process.env.MINION_SKIP_CRON;
-  previousMinimalGateway = process.env.MINION_TEST_MINIMAL_GATEWAY;
-  tempHome = await fs.mkdtemp(path.join(os.tmpdir(), "minion-gateway-home-"));
+  previousStateDir = process.env.OPENCLAW_STATE_DIR;
+  previousConfigPath = process.env.OPENCLAW_CONFIG_PATH;
+  previousSkipBrowserControl = process.env.OPENCLAW_SKIP_BROWSER_CONTROL_SERVER;
+  previousSkipGmailWatcher = process.env.OPENCLAW_SKIP_GMAIL_WATCHER;
+  previousSkipCanvasHost = process.env.OPENCLAW_SKIP_CANVAS_HOST;
+  previousBundledPluginsDir = process.env.OPENCLAW_BUNDLED_PLUGINS_DIR;
+  previousSkipChannels = process.env.OPENCLAW_SKIP_CHANNELS;
+  previousSkipProviders = process.env.OPENCLAW_SKIP_PROVIDERS;
+  previousSkipCron = process.env.OPENCLAW_SKIP_CRON;
+  previousMinimalGateway = process.env.OPENCLAW_TEST_MINIMAL_GATEWAY;
+  tempHome = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-gateway-home-"));
   process.env.HOME = tempHome;
   process.env.USERPROFILE = tempHome;
-  process.env.MINION_STATE_DIR = path.join(tempHome, ".minion");
-  delete process.env.MINION_CONFIG_PATH;
+  process.env.OPENCLAW_STATE_DIR = path.join(tempHome, ".openclaw");
+  delete process.env.OPENCLAW_CONFIG_PATH;
 }
 
 function applyGatewaySkipEnv() {
-  process.env.MINION_SKIP_BROWSER_CONTROL_SERVER = "1";
-  process.env.MINION_SKIP_GMAIL_WATCHER = "1";
-  process.env.MINION_SKIP_CANVAS_HOST = "1";
-  process.env.MINION_SKIP_CHANNELS = "1";
-  process.env.MINION_SKIP_PROVIDERS = "1";
-  process.env.MINION_SKIP_CRON = "1";
-  process.env.MINION_TEST_MINIMAL_GATEWAY = "1";
-  process.env.MINION_BUNDLED_PLUGINS_DIR = tempHome
-    ? path.join(tempHome, "minion-test-no-bundled-extensions")
-    : "minion-test-no-bundled-extensions";
+  process.env.OPENCLAW_SKIP_BROWSER_CONTROL_SERVER = "1";
+  process.env.OPENCLAW_SKIP_GMAIL_WATCHER = "1";
+  process.env.OPENCLAW_SKIP_CANVAS_HOST = "1";
+  process.env.OPENCLAW_SKIP_CHANNELS = "1";
+  process.env.OPENCLAW_SKIP_PROVIDERS = "1";
+  process.env.OPENCLAW_SKIP_CRON = "1";
+  process.env.OPENCLAW_TEST_MINIMAL_GATEWAY = "1";
+  process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = tempHome
+    ? path.join(tempHome, "openclaw-test-no-bundled-extensions")
+    : "openclaw-test-no-bundled-extensions";
 }
 
 async function resetGatewayTestState(options: { uniqueConfigRoot: boolean }) {
@@ -127,9 +128,9 @@ async function resetGatewayTestState(options: { uniqueConfigRoot: boolean }) {
   }
   applyGatewaySkipEnv();
   if (options.uniqueConfigRoot) {
-    tempConfigRoot = await fs.mkdtemp(path.join(tempHome, "minion-test-"));
+    tempConfigRoot = await fs.mkdtemp(path.join(tempHome, "openclaw-test-"));
   } else {
-    tempConfigRoot = path.join(tempHome, ".minion-test");
+    tempConfigRoot = path.join(tempHome, ".openclaw-test");
     await fs.rm(tempConfigRoot, { recursive: true, force: true });
     await fs.mkdir(tempConfigRoot, { recursive: true });
   }
@@ -186,54 +187,54 @@ async function cleanupGatewayTestHome(options: { restoreEnv: boolean }) {
       process.env.USERPROFILE = previousUserProfile;
     }
     if (previousStateDir === undefined) {
-      delete process.env.MINION_STATE_DIR;
+      delete process.env.OPENCLAW_STATE_DIR;
     } else {
-      process.env.MINION_STATE_DIR = previousStateDir;
+      process.env.OPENCLAW_STATE_DIR = previousStateDir;
     }
     if (previousConfigPath === undefined) {
-      delete process.env.MINION_CONFIG_PATH;
+      delete process.env.OPENCLAW_CONFIG_PATH;
     } else {
-      process.env.MINION_CONFIG_PATH = previousConfigPath;
+      process.env.OPENCLAW_CONFIG_PATH = previousConfigPath;
     }
     if (previousSkipBrowserControl === undefined) {
-      delete process.env.MINION_SKIP_BROWSER_CONTROL_SERVER;
+      delete process.env.OPENCLAW_SKIP_BROWSER_CONTROL_SERVER;
     } else {
-      process.env.MINION_SKIP_BROWSER_CONTROL_SERVER = previousSkipBrowserControl;
+      process.env.OPENCLAW_SKIP_BROWSER_CONTROL_SERVER = previousSkipBrowserControl;
     }
     if (previousSkipGmailWatcher === undefined) {
-      delete process.env.MINION_SKIP_GMAIL_WATCHER;
+      delete process.env.OPENCLAW_SKIP_GMAIL_WATCHER;
     } else {
-      process.env.MINION_SKIP_GMAIL_WATCHER = previousSkipGmailWatcher;
+      process.env.OPENCLAW_SKIP_GMAIL_WATCHER = previousSkipGmailWatcher;
     }
     if (previousSkipCanvasHost === undefined) {
-      delete process.env.MINION_SKIP_CANVAS_HOST;
+      delete process.env.OPENCLAW_SKIP_CANVAS_HOST;
     } else {
-      process.env.MINION_SKIP_CANVAS_HOST = previousSkipCanvasHost;
+      process.env.OPENCLAW_SKIP_CANVAS_HOST = previousSkipCanvasHost;
     }
     if (previousBundledPluginsDir === undefined) {
-      delete process.env.MINION_BUNDLED_PLUGINS_DIR;
+      delete process.env.OPENCLAW_BUNDLED_PLUGINS_DIR;
     } else {
-      process.env.MINION_BUNDLED_PLUGINS_DIR = previousBundledPluginsDir;
+      process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = previousBundledPluginsDir;
     }
     if (previousSkipChannels === undefined) {
-      delete process.env.MINION_SKIP_CHANNELS;
+      delete process.env.OPENCLAW_SKIP_CHANNELS;
     } else {
-      process.env.MINION_SKIP_CHANNELS = previousSkipChannels;
+      process.env.OPENCLAW_SKIP_CHANNELS = previousSkipChannels;
     }
     if (previousSkipProviders === undefined) {
-      delete process.env.MINION_SKIP_PROVIDERS;
+      delete process.env.OPENCLAW_SKIP_PROVIDERS;
     } else {
-      process.env.MINION_SKIP_PROVIDERS = previousSkipProviders;
+      process.env.OPENCLAW_SKIP_PROVIDERS = previousSkipProviders;
     }
     if (previousSkipCron === undefined) {
-      delete process.env.MINION_SKIP_CRON;
+      delete process.env.OPENCLAW_SKIP_CRON;
     } else {
-      process.env.MINION_SKIP_CRON = previousSkipCron;
+      process.env.OPENCLAW_SKIP_CRON = previousSkipCron;
     }
     if (previousMinimalGateway === undefined) {
-      delete process.env.MINION_TEST_MINIMAL_GATEWAY;
+      delete process.env.OPENCLAW_TEST_MINIMAL_GATEWAY;
     } else {
-      process.env.MINION_TEST_MINIMAL_GATEWAY = previousMinimalGateway;
+      process.env.OPENCLAW_TEST_MINIMAL_GATEWAY = previousMinimalGateway;
     }
   }
   if (options.restoreEnv && tempHome) {
@@ -295,9 +296,20 @@ export async function occupyPort(): Promise<{
   });
 }
 
-export function onceMessage<T = unknown>(
+type GatewayTestMessage = {
+  type?: string;
+  id?: string;
+  ok?: boolean;
+  event?: string;
+  payload?: Record<string, unknown> | null;
+  seq?: number;
+  stateVersion?: Record<string, unknown>;
+  [key: string]: unknown;
+};
+
+export function onceMessage<T extends GatewayTestMessage = GatewayTestMessage>(
   ws: WebSocket,
-  filter: (obj: unknown) => boolean,
+  filter: (obj: T) => boolean,
   // Full-suite runs can saturate the event loop (581+ files). Keep this high
   // enough to avoid flaky RPC timeouts, but still fail fast when a response
   // never arrives.
@@ -311,12 +323,12 @@ export function onceMessage<T = unknown>(
       reject(new Error(`closed ${code}: ${reason.toString()}`));
     };
     const handler = (data: WebSocket.RawData) => {
-      const obj = JSON.parse(rawDataToString(data));
+      const obj = JSON.parse(rawDataToString(data)) as T;
       if (filter(obj)) {
         clearTimeout(timer);
         ws.off("message", handler);
         ws.off("close", closeHandler);
-        resolve(obj as T);
+        resolve(obj);
       }
     };
     ws.on("message", handler);
@@ -331,13 +343,51 @@ export async function startGatewayServer(port: number, opts?: GatewayServerOptio
   return await mod.startGatewayServer(port, resolvedOpts);
 }
 
+async function startGatewayServerWithRetries(params: {
+  port: number;
+  opts?: GatewayServerOptions;
+}): Promise<{ port: number; server: Awaited<ReturnType<typeof startGatewayServer>> }> {
+  let port = params.port;
+  for (let attempt = 0; attempt < 10; attempt++) {
+    try {
+      return {
+        port,
+        server: await startGatewayServer(port, params.opts),
+      };
+    } catch (err) {
+      const code = (err as { cause?: { code?: string } }).cause?.code;
+      if (code !== "EADDRINUSE") {
+        throw err;
+      }
+      port = await getFreePort();
+    }
+  }
+  throw new Error("failed to start gateway server after retries");
+}
+
+export async function withGatewayServer<T>(
+  fn: (ctx: { port: number; server: Awaited<ReturnType<typeof startGatewayServer>> }) => Promise<T>,
+  opts?: { port?: number; serverOptions?: GatewayServerOptions },
+): Promise<T> {
+  const started = await startGatewayServerWithRetries({
+    port: opts?.port ?? (await getFreePort()),
+    opts: opts?.serverOptions,
+  });
+  try {
+    return await fn({ port: started.port, server: started.server });
+  } finally {
+    await started.server.close();
+  }
+}
+
 export async function startServerWithClient(
   token?: string,
   opts?: GatewayServerOptions & { wsHeaders?: Record<string, string> },
 ) {
   const { wsHeaders, ...gatewayOpts } = opts ?? {};
   let port = await getFreePort();
-  const prev = process.env.MINION_GATEWAY_TOKEN;
+  const envSnapshot = captureEnv(["OPENCLAW_GATEWAY_TOKEN"]);
+  const prev = process.env.OPENCLAW_GATEWAY_TOKEN;
   if (typeof token === "string") {
     testState.gatewayAuth = { mode: "token", token };
   }
@@ -347,27 +397,14 @@ export async function startServerWithClient(
       ? (testState.gatewayAuth as { token?: string }).token
       : undefined);
   if (fallbackToken === undefined) {
-    delete process.env.MINION_GATEWAY_TOKEN;
+    delete process.env.OPENCLAW_GATEWAY_TOKEN;
   } else {
-    process.env.MINION_GATEWAY_TOKEN = fallbackToken;
+    process.env.OPENCLAW_GATEWAY_TOKEN = fallbackToken;
   }
 
-  let server: Awaited<ReturnType<typeof startGatewayServer>> | null = null;
-  for (let attempt = 0; attempt < 10; attempt++) {
-    try {
-      server = await startGatewayServer(port, gatewayOpts);
-      break;
-    } catch (err) {
-      const code = (err as { cause?: { code?: string } }).cause?.code;
-      if (code !== "EADDRINUSE") {
-        throw err;
-      }
-      port = await getFreePort();
-    }
-  }
-  if (!server) {
-    throw new Error("failed to start gateway server after retries");
-  }
+  const started = await startGatewayServerWithRetries({ port, opts: gatewayOpts });
+  port = started.port;
+  const server = started.server;
 
   const ws = new WebSocket(
     `ws://127.0.0.1:${port}`,
@@ -397,14 +434,14 @@ export async function startServerWithClient(
     ws.once("error", onError);
     ws.once("close", onClose);
   });
-  return { server, ws, port, prevToken: prev };
+  return { server, ws, port, prevToken: prev, envSnapshot };
 }
 
 type ConnectResponse = {
   type: "res";
   id: string;
   ok: boolean;
-  payload?: unknown;
+  payload?: Record<string, unknown>;
   error?: { message?: string };
 };
 
@@ -454,13 +491,13 @@ export async function connectReq(
       ? undefined
       : typeof (testState.gatewayAuth as { token?: unknown } | undefined)?.token === "string"
         ? ((testState.gatewayAuth as { token?: string }).token ?? undefined)
-        : process.env.MINION_GATEWAY_TOKEN;
+        : process.env.OPENCLAW_GATEWAY_TOKEN;
   const defaultPassword =
     opts?.skipDefaultAuth === true
       ? undefined
       : typeof (testState.gatewayAuth as { password?: unknown } | undefined)?.password === "string"
         ? ((testState.gatewayAuth as { password?: string }).password ?? undefined)
-        : process.env.MINION_GATEWAY_PASSWORD;
+        : process.env.OPENCLAW_GATEWAY_PASSWORD;
   const token = opts?.token ?? defaultToken;
   const password = opts?.password ?? defaultPassword;
   const requestedScopes = Array.isArray(opts?.scopes)
@@ -536,7 +573,7 @@ export async function connectOk(ws: WebSocket, opts?: Parameters<typeof connectR
   return res.payload as { type: "hello-ok" };
 }
 
-export async function rpcReq<T = unknown>(
+export async function rpcReq<T extends Record<string, unknown>>(
   ws: WebSocket,
   method: string,
   params?: unknown,
@@ -549,7 +586,7 @@ export async function rpcReq<T = unknown>(
     type: "res";
     id: string;
     ok: boolean;
-    payload?: T;
+    payload?: T | null | undefined;
     error?: { message?: string; code?: string };
   }>(
     ws,

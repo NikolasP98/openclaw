@@ -1,43 +1,24 @@
 import type { Client } from "@buape/carbon";
-import type { HistoryEntry } from "../../auto-reply/reply/history.js";
-import type { ReplyToMode } from "../../config/config.js";
-import type { RuntimeEnv } from "../../runtime.js";
-import type { DiscordGuildEntryResolved } from "./allow-list.js";
-import type { DiscordMessageEvent, DiscordMessageHandler } from "./listeners.js";
 import { hasControlCommand } from "../../auto-reply/command-detection.js";
 import {
   createInboundDebouncer,
   resolveInboundDebounceMs,
 } from "../../auto-reply/inbound-debounce.js";
 import { danger } from "../../globals.js";
-import { getGlobalHookRunner } from "../../plugins/hook-runner-global.js";
+import type { DiscordMessageEvent, DiscordMessageHandler } from "./listeners.js";
 import { preflightDiscordMessage } from "./message-handler.preflight.js";
+import type { DiscordMessagePreflightParams } from "./message-handler.preflight.types.js";
 import { processDiscordMessage } from "./message-handler.process.js";
-import { resolveDiscordMessageText } from "./message-utils.js";
+import { resolveDiscordMessageChannelId, resolveDiscordMessageText } from "./message-utils.js";
 
-type LoadedConfig = ReturnType<typeof import("../../config/config.js").loadConfig>;
-type DiscordConfig = NonNullable<
-  import("../../config/config.js").MinionConfig["channels"]
->["discord"];
+type DiscordMessageHandlerParams = Omit<
+  DiscordMessagePreflightParams,
+  "ackReactionScope" | "groupPolicy" | "data" | "client"
+>;
 
-export function createDiscordMessageHandler(params: {
-  cfg: LoadedConfig;
-  discordConfig: DiscordConfig;
-  accountId: string;
-  token: string;
-  runtime: RuntimeEnv;
-  botUserId?: string;
-  guildHistories: Map<string, HistoryEntry[]>;
-  historyLimit: number;
-  mediaMaxBytes: number;
-  textLimit: number;
-  replyToMode: ReplyToMode;
-  dmEnabled: boolean;
-  groupDmEnabled: boolean;
-  groupDmChannels?: Array<string | number>;
-  allowFrom?: Array<string | number>;
-  guildEntries?: Record<string, DiscordGuildEntryResolved>;
-}): DiscordMessageHandler {
+export function createDiscordMessageHandler(
+  params: DiscordMessageHandlerParams,
+): DiscordMessageHandler {
   const groupPolicy = params.discordConfig?.groupPolicy ?? "open";
   const ackReactionScope = params.cfg.messages?.ackReactionScope ?? "group-mentions";
   const debounceMs = resolveInboundDebounceMs({ cfg: params.cfg, channel: "discord" });
@@ -50,7 +31,10 @@ export function createDiscordMessageHandler(params: {
       if (!message || !authorId) {
         return null;
       }
-      const channelId = message.channelId;
+      const channelId = resolveDiscordMessageChannelId({
+        message,
+        eventChannelId: entry.data.channel_id,
+      });
       if (!channelId) {
         return null;
       }
@@ -75,36 +59,6 @@ export function createDiscordMessageHandler(params: {
       if (!last) {
         return;
       }
-
-      // Fire message_inbound hook for each raw entry before any filtering
-      const hookRunner = getGlobalHookRunner();
-      if (hookRunner?.hasHooks("message_inbound")) {
-        for (const entry of entries) {
-          const message = entry.data.message;
-          const author = entry.data.author;
-          if (!message) {
-            continue;
-          }
-          const baseText = resolveDiscordMessageText(message, { includeForwarded: false });
-          void hookRunner.runMessageInbound(
-            {
-              channel: "discord",
-              accountId: params.accountId,
-              chatId: message.channelId ?? "",
-              senderId: author?.id,
-              senderName: author?.username,
-              senderUsername: author?.username,
-              isBot: author?.bot === true,
-              isGroup: message.guildId != null,
-              content: baseText,
-              messageId: message.id,
-              timestamp: message.timestamp ? new Date(message.timestamp).getTime() : undefined,
-            },
-            { channelId: "discord", accountId: params.accountId },
-          );
-        }
-      }
-
       if (entries.length === 1) {
         const ctx = await preflightDiscordMessage({
           ...params,

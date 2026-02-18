@@ -1,8 +1,8 @@
-import type { MinionConfig } from "../../config/config.js";
-import type { PollInput } from "../../polls.js";
 import { getChannelPlugin, normalizeChannelId } from "../../channels/plugins/index.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { loadConfig } from "../../config/config.js";
 import { callGateway, randomIdempotencyKey } from "../../gateway/call.js";
+import type { PollInput } from "../../polls.js";
 import { normalizePollInput } from "../../polls.js";
 import {
   GATEWAY_CLIENT_MODES,
@@ -31,6 +31,8 @@ export type MessageGatewayOptions = {
 type MessageSendParams = {
   to: string;
   content: string;
+  /** Active agent id for per-agent outbound media root scoping. */
+  agentId?: string;
   channel?: string;
   mediaUrl?: string;
   mediaUrls?: string[];
@@ -41,7 +43,7 @@ type MessageSendParams = {
   dryRun?: boolean;
   bestEffort?: boolean;
   deps?: OutboundSendDeps;
-  cfg?: MinionConfig;
+  cfg?: OpenClawConfig;
   gateway?: MessageGatewayOptions;
   idempotencyKey?: string;
   mirror?: {
@@ -77,7 +79,7 @@ type MessagePollParams = {
   silent?: boolean;
   isAnonymous?: boolean;
   dryRun?: boolean;
-  cfg?: MinionConfig;
+  cfg?: OpenClawConfig;
   gateway?: MessageGatewayOptions;
   idempotencyKey?: string;
 };
@@ -120,6 +122,24 @@ function resolveGatewayOptions(opts?: MessageGatewayOptions) {
     clientDisplayName: opts?.clientDisplayName,
     mode: opts?.mode ?? GATEWAY_CLIENT_MODES.CLI,
   };
+}
+
+async function callMessageGateway<T>(params: {
+  gateway?: MessageGatewayOptions;
+  method: string;
+  params: Record<string, unknown>;
+}): Promise<T> {
+  const gateway = resolveGatewayOptions(params.gateway);
+  return await callGateway<T>({
+    url: gateway.url,
+    token: gateway.token,
+    method: params.method,
+    params: params.params,
+    timeoutMs: gateway.timeoutMs,
+    clientName: gateway.clientName,
+    clientDisplayName: gateway.clientDisplayName,
+    mode: gateway.mode,
+  });
 }
 
 export async function sendMessage(params: MessageSendParams): Promise<MessageSendResult> {
@@ -179,6 +199,7 @@ export async function sendMessage(params: MessageSendParams): Promise<MessageSen
       cfg,
       channel: outboundChannel,
       to: resolvedTarget.to,
+      agentId: params.agentId,
       accountId: params.accountId,
       payloads: normalizedPayloads,
       replyToId: params.replyToId,
@@ -207,10 +228,8 @@ export async function sendMessage(params: MessageSendParams): Promise<MessageSen
     };
   }
 
-  const gateway = resolveGatewayOptions(params.gateway);
-  const result = await callGateway<{ messageId: string }>({
-    url: gateway.url,
-    token: gateway.token,
+  const result = await callMessageGateway<{ messageId: string }>({
+    gateway: params.gateway,
     method: "send",
     params: {
       to: params.to,
@@ -223,10 +242,6 @@ export async function sendMessage(params: MessageSendParams): Promise<MessageSen
       sessionKey: params.mirror?.sessionKey,
       idempotencyKey: params.idempotencyKey ?? randomIdempotencyKey(),
     },
-    timeoutMs: gateway.timeoutMs,
-    clientName: gateway.clientName,
-    clientDisplayName: gateway.clientDisplayName,
-    mode: gateway.mode,
   });
 
   return {
@@ -278,16 +293,14 @@ export async function sendPoll(params: MessagePollParams): Promise<MessagePollRe
     };
   }
 
-  const gateway = resolveGatewayOptions(params.gateway);
-  const result = await callGateway<{
+  const result = await callMessageGateway<{
     messageId: string;
     toJid?: string;
     channelId?: string;
     conversationId?: string;
     pollId?: string;
   }>({
-    url: gateway.url,
-    token: gateway.token,
+    gateway: params.gateway,
     method: "poll",
     params: {
       to: params.to,
@@ -303,10 +316,6 @@ export async function sendPoll(params: MessagePollParams): Promise<MessagePollRe
       accountId: params.accountId,
       idempotencyKey: params.idempotencyKey ?? randomIdempotencyKey(),
     },
-    timeoutMs: gateway.timeoutMs,
-    clientName: gateway.clientName,
-    clientDisplayName: gateway.clientDisplayName,
-    mode: gateway.mode,
   });
 
   return {

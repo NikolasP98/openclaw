@@ -1,8 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { MinionConfig } from "../config/config.js";
-import type { RuntimeEnv } from "../runtime.js";
 import { resolveDefaultAgentWorkspaceDir } from "../agents/workspace.js";
+import type { OpenClawConfig } from "../config/config.js";
+import type { RuntimeEnv } from "../runtime.js";
 import { resolveHomeDir, resolveUserPath, shortenHomeInString } from "../utils.js";
 
 export type RemovalResult = {
@@ -10,7 +10,7 @@ export type RemovalResult = {
   skipped?: boolean;
 };
 
-export function collectWorkspaceDirs(cfg: MinionConfig | undefined): string[] {
+export function collectWorkspaceDirs(cfg: OpenClawConfig | undefined): string[] {
   const dirs = new Set<string>();
   const defaults = cfg?.agents?.defaults;
   if (typeof defaults?.workspace === "string" && defaults.workspace.trim()) {
@@ -27,6 +27,23 @@ export function collectWorkspaceDirs(cfg: MinionConfig | undefined): string[] {
     dirs.add(resolveDefaultAgentWorkspaceDir());
   }
   return [...dirs];
+}
+
+export function buildCleanupPlan(params: {
+  cfg: OpenClawConfig | undefined;
+  stateDir: string;
+  configPath: string;
+  oauthDir: string;
+}): {
+  configInsideState: boolean;
+  oauthInsideState: boolean;
+  workspaceDirs: string[];
+} {
+  return {
+    configInsideState: isPathWithin(params.configPath, params.stateDir),
+    oauthInsideState: isPathWithin(params.oauthDir, params.stateDir),
+    workspaceDirs: collectWorkspaceDirs(params.cfg),
+  };
 }
 
 export function isPathWithin(child: string, parent: string): boolean {

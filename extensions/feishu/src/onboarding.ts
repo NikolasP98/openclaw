@@ -1,18 +1,18 @@
 import type {
   ChannelOnboardingAdapter,
   ChannelOnboardingDmPolicy,
-  MinionbotConfig,
+  ClawdbotConfig,
   DmPolicy,
   WizardPrompter,
-} from "minion/plugin-sdk";
-import { addWildcardAllowFrom, DEFAULT_ACCOUNT_ID, formatDocsLink } from "minion/plugin-sdk";
-import type { FeishuConfig } from "./types.js";
+} from "openclaw/plugin-sdk";
+import { addWildcardAllowFrom, DEFAULT_ACCOUNT_ID, formatDocsLink } from "openclaw/plugin-sdk";
 import { resolveFeishuCredentials } from "./accounts.js";
 import { probeFeishu } from "./probe.js";
+import type { FeishuConfig } from "./types.js";
 
 const channel = "feishu" as const;
 
-function setFeishuDmPolicy(cfg: MinionbotConfig, dmPolicy: DmPolicy): MinionbotConfig {
+function setFeishuDmPolicy(cfg: ClawdbotConfig, dmPolicy: DmPolicy): ClawdbotConfig {
   const allowFrom =
     dmPolicy === "open"
       ? addWildcardAllowFrom(cfg.channels?.feishu?.allowFrom)?.map((entry) => String(entry))
@@ -30,7 +30,7 @@ function setFeishuDmPolicy(cfg: MinionbotConfig, dmPolicy: DmPolicy): MinionbotC
   };
 }
 
-function setFeishuAllowFrom(cfg: MinionbotConfig, allowFrom: string[]): MinionbotConfig {
+function setFeishuAllowFrom(cfg: ClawdbotConfig, allowFrom: string[]): ClawdbotConfig {
   return {
     ...cfg,
     channels: {
@@ -51,9 +51,9 @@ function parseAllowFromInput(raw: string): string[] {
 }
 
 async function promptFeishuAllowFrom(params: {
-  cfg: MinionbotConfig;
+  cfg: ClawdbotConfig;
   prompter: WizardPrompter;
-}): Promise<MinionbotConfig> {
+}): Promise<ClawdbotConfig> {
   const existing = params.cfg.channels?.feishu?.allowFrom ?? [];
   await params.prompter.note(
     [
@@ -105,9 +105,9 @@ async function noteFeishuCredentialHelp(prompter: WizardPrompter): Promise<void>
 }
 
 function setFeishuGroupPolicy(
-  cfg: MinionbotConfig,
+  cfg: ClawdbotConfig,
   groupPolicy: "open" | "allowlist" | "disabled",
-): MinionbotConfig {
+): ClawdbotConfig {
   return {
     ...cfg,
     channels: {
@@ -121,7 +121,7 @@ function setFeishuGroupPolicy(
   };
 }
 
-function setFeishuGroupAllowFrom(cfg: MinionbotConfig, groupAllowFrom: string[]): MinionbotConfig {
+function setFeishuGroupAllowFrom(cfg: ClawdbotConfig, groupAllowFrom: string[]): ClawdbotConfig {
   return {
     ...cfg,
     channels: {

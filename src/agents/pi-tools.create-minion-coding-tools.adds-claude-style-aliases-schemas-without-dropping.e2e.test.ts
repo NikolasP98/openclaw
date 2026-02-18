@@ -1,7 +1,8 @@
-import type { AgentTool } from "@mariozechner/pi-agent-core";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import type { AgentTool } from "@mariozechner/pi-agent-core";
+import { Type } from "@sinclair/typebox";
 import { describe, expect, it, vi } from "vitest";
 import "./test-helpers/fast-coding-tools.js";
 import { createMinionTools } from "./minion-tools.js";
@@ -62,15 +63,12 @@ describe("createMinionCodingTools", () => {
     it("adds Claude-style aliases to schemas without dropping metadata", () => {
       const base: AgentTool = {
         name: "write",
+        label: "write",
         description: "test",
-        parameters: {
-          type: "object",
-          required: ["path", "content"],
-          properties: {
-            path: { type: "string", description: "Path" },
-            content: { type: "string", description: "Body" },
-          },
-        },
+        parameters: Type.Object({
+          path: Type.String({ description: "Path" }),
+          content: Type.String({ description: "Body" }),
+        }),
         execute: vi.fn(),
       };
 
@@ -90,19 +88,19 @@ describe("createMinionCodingTools", () => {
       const execute = vi.fn(async (_id, args) => args);
       const tool: AgentTool = {
         name: "write",
+        label: "write",
         description: "test",
-        parameters: {
-          type: "object",
-          required: ["path", "content"],
-          properties: {
-            path: { type: "string" },
-            content: { type: "string" },
-          },
-        },
+        parameters: Type.Object({
+          path: Type.String(),
+          content: Type.String(),
+        }),
         execute,
       };
 
-      const wrapped = __testing.wrapToolParamNormalization(tool, [{ keys: ["path", "file_path"] }]);
+      const wrapped = __testing.wrapToolParamNormalization(tool, [
+        { keys: ["path", "file_path"], label: "path (path or file_path)" },
+        { keys: ["content"], label: "content" },
+      ]);
 
       await wrapped.execute("tool-1", { file_path: "foo.txt", content: "x" });
       expect(execute).toHaveBeenCalledWith(
@@ -115,8 +113,20 @@ describe("createMinionCodingTools", () => {
       await expect(wrapped.execute("tool-2", { content: "x" })).rejects.toThrow(
         /Missing required parameter/,
       );
+      await expect(wrapped.execute("tool-2", { content: "x" })).rejects.toThrow(
+        /Supply correct parameters before retrying\./,
+      );
       await expect(wrapped.execute("tool-3", { file_path: "   ", content: "x" })).rejects.toThrow(
         /Missing required parameter/,
+      );
+      await expect(wrapped.execute("tool-3", { file_path: "   ", content: "x" })).rejects.toThrow(
+        /Supply correct parameters before retrying\./,
+      );
+      await expect(wrapped.execute("tool-4", {})).rejects.toThrow(
+        /Missing required parameters: path \(path or file_path\), content/,
+      );
+      await expect(wrapped.execute("tool-4", {})).rejects.toThrow(
+        /Supply correct parameters before retrying\./,
       );
     });
   });
@@ -274,6 +284,7 @@ describe("createMinionCodingTools", () => {
       "sessions_history",
       "sessions_send",
       "sessions_spawn",
+      "subagents",
       "session_status",
       "image",
     ]);
@@ -296,11 +307,55 @@ describe("createMinionCodingTools", () => {
     expect(names.has("sessions_history")).toBe(false);
     expect(names.has("sessions_send")).toBe(false);
     expect(names.has("sessions_spawn")).toBe(false);
+    // Explicit subagent orchestration tool remains available (list/steer/kill with safeguards).
+    expect(names.has("subagents")).toBe(true);
 
     expect(names.has("read")).toBe(true);
     expect(names.has("exec")).toBe(true);
     expect(names.has("process")).toBe(true);
     expect(names.has("apply_patch")).toBe(false);
+  });
+
+  it("uses stored spawnDepth to apply leaf tool policy for flat depth-2 session keys", async () => {
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-depth-policy-"));
+    const storeTemplate = path.join(tmpDir, "sessions-{agentId}.json");
+    const storePath = storeTemplate.replaceAll("{agentId}", "main");
+    await fs.writeFile(
+      storePath,
+      JSON.stringify(
+        {
+          "agent:main:subagent:flat": {
+            sessionId: "session-flat-depth-2",
+            updatedAt: Date.now(),
+            spawnDepth: 2,
+          },
+        },
+        null,
+        2,
+      ),
+      "utf-8",
+    );
+
+    const tools = createOpenClawCodingTools({
+      sessionKey: "agent:main:subagent:flat",
+      config: {
+        session: {
+          store: storeTemplate,
+        },
+        agents: {
+          defaults: {
+            subagents: {
+              maxSpawnDepth: 2,
+            },
+          },
+        },
+      },
+    });
+    const names = new Set(tools.map((tool) => tool.name));
+    expect(names.has("sessions_spawn")).toBe(false);
+    expect(names.has("sessions_list")).toBe(false);
+    expect(names.has("sessions_history")).toBe(false);
+    expect(names.has("subagents")).toBe(true);
   });
   it("supports allow-only sub-agent tool policy", () => {
     const tools = createMinionCodingTools({

@@ -1,13 +1,13 @@
 import type { WebhookRequestBody } from "@line/bot-sdk";
 import type { Request, Response, NextFunction } from "express";
-import type { MinionConfig } from "../config/config.js";
-import type { RuntimeEnv } from "../runtime.js";
-import type { LineInboundContext } from "./bot-message-context.js";
-import type { ResolvedLineAccount } from "./types.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { loadConfig } from "../config/config.js";
 import { logVerbose } from "../globals.js";
+import type { RuntimeEnv } from "../runtime.js";
 import { resolveLineAccount } from "./accounts.js";
 import { handleLineWebhookEvents } from "./bot-handlers.js";
+import type { LineInboundContext } from "./bot-message-context.js";
+import type { ResolvedLineAccount } from "./types.js";
 import { startLineWebhook } from "./webhook.js";
 
 export interface LineBotOptions {
@@ -15,7 +15,7 @@ export interface LineBotOptions {
   channelSecret: string;
   accountId?: string;
   runtime?: RuntimeEnv;
-  config?: MinionConfig;
+  config?: OpenClawConfig;
   mediaMaxMb?: number;
   onMessage?: (ctx: LineInboundContext) => Promise<void>;
 }

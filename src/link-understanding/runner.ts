@@ -1,7 +1,7 @@
 import type { MsgContext } from "../auto-reply/templating.js";
-import type { MinionConfig } from "../config/config.js";
-import type { LinkModelConfig, LinkToolsConfig } from "../config/types.tools.js";
 import { applyTemplate } from "../auto-reply/templating.js";
+import type { OpenClawConfig } from "../config/config.js";
+import type { LinkModelConfig, LinkToolsConfig } from "../config/types.tools.js";
 import { logVerbose, shouldLogVerbose } from "../globals.js";
 import { CLI_OUTPUT_MAX_BUFFER } from "../media-understanding/defaults.js";
 import { resolveTimeoutMs } from "../media-understanding/resolve.js";
@@ -105,7 +105,7 @@ async function runLinkEntries(params: {
 }
 
 export async function runLinkUnderstanding(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   ctx: MsgContext;
   message?: string;
 }): Promise<LinkUnderstandingResult> {

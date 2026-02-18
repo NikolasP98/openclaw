@@ -1,8 +1,6 @@
-import type { MinionConfig } from "../../../config/config.js";
-import type { DmPolicy } from "../../../config/types.js";
-import type { WizardPrompter } from "../../../wizard/prompts.js";
-import type { ChannelOnboardingAdapter, ChannelOnboardingDmPolicy } from "../onboarding-types.js";
 import { formatCliCommand } from "../../../cli/command-format.js";
+import type { OpenClawConfig } from "../../../config/config.js";
+import type { DmPolicy } from "../../../config/types.js";
 import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "../../../routing/session-key.js";
 import {
   listTelegramAccountIds,
@@ -10,11 +8,13 @@ import {
   resolveTelegramAccount,
 } from "../../../telegram/accounts.js";
 import { formatDocsLink } from "../../../terminal/links.js";
-import { addWildcardAllowFrom, promptAccountId } from "./helpers.js";
+import type { WizardPrompter } from "../../../wizard/prompts.js";
+import type { ChannelOnboardingAdapter, ChannelOnboardingDmPolicy } from "../onboarding-types.js";
+import { addWildcardAllowFrom, mergeAllowFromEntries, promptAccountId } from "./helpers.js";
 
 const channel = "telegram" as const;
 
-function setTelegramDmPolicy(cfg: MinionConfig, dmPolicy: DmPolicy) {
+function setTelegramDmPolicy(cfg: OpenClawConfig, dmPolicy: DmPolicy) {
   const allowFrom =
     dmPolicy === "open" ? addWildcardAllowFrom(cfg.channels?.telegram?.allowFrom) : undefined;
   return {
@@ -38,7 +38,7 @@ async function noteTelegramTokenHelp(prompter: WizardPrompter): Promise<void> {
       "3) Copy the token (looks like 123456:ABC...)",
       "Tip: you can also set TELEGRAM_BOT_TOKEN in your env.",
       `Docs: ${formatDocsLink("/telegram")}`,
-      "Website: https://minion.ai",
+      "Website: https://openclaw.ai",
     ].join("\n"),
     "Telegram bot token",
   );
@@ -47,21 +47,21 @@ async function noteTelegramTokenHelp(prompter: WizardPrompter): Promise<void> {
 async function noteTelegramUserIdHelp(prompter: WizardPrompter): Promise<void> {
   await prompter.note(
     [
-      `1) DM your bot, then read from.id in \`${formatCliCommand("minion logs --follow")}\` (safest)`,
+      `1) DM your bot, then read from.id in \`${formatCliCommand("openclaw logs --follow")}\` (safest)`,
       "2) Or call https://api.telegram.org/bot<bot_token>/getUpdates and read message.from.id",
       "3) Third-party: DM @userinfobot or @getidsbot",
       `Docs: ${formatDocsLink("/telegram")}`,
-      "Website: https://minion.ai",
+      "Website: https://openclaw.ai",
     ].join("\n"),
     "Telegram user id",
   );
 }
 
 async function promptTelegramAllowFrom(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   prompter: WizardPrompter;
   accountId: string;
-}): Promise<MinionConfig> {
+}): Promise<OpenClawConfig> {
   const { cfg, prompter, accountId } = params;
   const resolved = resolveTelegramAccount({ cfg, accountId });
   const existingAllowFrom = resolved.config.allowFrom ?? [];
@@ -133,11 +133,7 @@ async function promptTelegramAllowFrom(params: {
     resolvedIds = results.filter(Boolean) as string[];
   }
 
-  const merged = [
-    ...existingAllowFrom.map((item) => String(item).trim()).filter(Boolean),
-    ...resolvedIds,
-  ];
-  const unique = [...new Set(merged)];
+  const unique = mergeAllowFromEntries(existingAllowFrom, resolvedIds);
 
   if (accountId === DEFAULT_ACCOUNT_ID) {
     return {
@@ -176,10 +172,10 @@ async function promptTelegramAllowFrom(params: {
 }
 
 async function promptTelegramAllowFromForAccount(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   prompter: WizardPrompter;
   accountId?: string;
-}): Promise<MinionConfig> {
+}): Promise<OpenClawConfig> {
   const accountId =
     params.accountId && normalizeAccountId(params.accountId)
       ? (normalizeAccountId(params.accountId) ?? DEFAULT_ACCOUNT_ID)

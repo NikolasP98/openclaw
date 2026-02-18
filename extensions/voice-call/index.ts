@@ -1,6 +1,5 @@
-import type { GatewayRequestHandlerOptions, MinionPluginApi } from "minion/plugin-sdk";
 import { Type } from "@sinclair/typebox";
-import type { CoreConfig } from "./src/core-bridge.js";
+import type { GatewayRequestHandlerOptions, OpenClawPluginApi } from "openclaw/plugin-sdk";
 import { registerVoiceCallCli } from "./src/cli.js";
 import {
   VoiceCallConfigSchema,
@@ -8,6 +7,7 @@ import {
   validateProviderConfig,
   type VoiceCallConfig,
 } from "./src/config.js";
+import type { CoreConfig } from "./src/core-bridge.js";
 import { createVoiceCallRuntime, type VoiceCallRuntime } from "./src/runtime.js";
 
 const voiceCallConfigSchema = {
@@ -145,7 +145,7 @@ const voiceCallPlugin = {
   name: "Voice Call",
   description: "Voice-call plugin with Telnyx/Twilio/Plivo providers",
   configSchema: voiceCallConfigSchema,
-  register(api: MinionPluginApi) {
+  register(api: OpenClawPluginApi) {
     const config = resolveVoiceCallConfig(voiceCallConfigSchema.parse(api.pluginConfig));
     const validation = validateProviderConfig(config);
 

@@ -1,12 +1,12 @@
-import type { AgentMessage, StreamFn } from "@mariozechner/pi-agent-core";
 import crypto from "node:crypto";
-import fs from "node:fs/promises";
 import path from "node:path";
-import type { MinionConfig } from "../config/config.js";
+import type { AgentMessage, StreamFn } from "@mariozechner/pi-agent-core";
+import type { OpenClawConfig } from "../config/config.js";
 import { resolveStateDir } from "../config/paths.js";
 import { resolveUserPath } from "../utils.js";
 import { parseBooleanValue } from "../utils/boolean.js";
 import { safeJsonStringify } from "../utils/safe-json.js";
+import { getQueuedFileWriter, type QueuedFileWriter } from "./queued-file-writer.js";
 
 export type CacheTraceStage =
   | "session:loaded"
@@ -50,7 +50,7 @@ export type CacheTrace = {
 };
 
 type CacheTraceInit = {
-  cfg?: MinionConfig;
+  cfg?: OpenClawConfig;
   env?: NodeJS.ProcessEnv;
   runId?: string;
   sessionId?: string;
@@ -70,27 +70,24 @@ type CacheTraceConfig = {
   includeSystem: boolean;
 };
 
-type CacheTraceWriter = {
-  filePath: string;
-  write: (line: string) => void;
-};
+type CacheTraceWriter = QueuedFileWriter;
 
 const writers = new Map<string, CacheTraceWriter>();
 
 function resolveCacheTraceConfig(params: CacheTraceInit): CacheTraceConfig {
   const env = params.env ?? process.env;
   const config = params.cfg?.diagnostics?.cacheTrace;
-  const envEnabled = parseBooleanValue(env.MINION_CACHE_TRACE);
+  const envEnabled = parseBooleanValue(env.OPENCLAW_CACHE_TRACE);
   const enabled = envEnabled ?? config?.enabled ?? false;
-  const fileOverride = config?.filePath?.trim() || env.MINION_CACHE_TRACE_FILE?.trim();
+  const fileOverride = config?.filePath?.trim() || env.OPENCLAW_CACHE_TRACE_FILE?.trim();
   const filePath = fileOverride
     ? resolveUserPath(fileOverride)
     : path.join(resolveStateDir(env), "logs", "cache-trace.jsonl");
 
   const includeMessages =
-    parseBooleanValue(env.MINION_CACHE_TRACE_MESSAGES) ?? config?.includeMessages;
-  const includePrompt = parseBooleanValue(env.MINION_CACHE_TRACE_PROMPT) ?? config?.includePrompt;
-  const includeSystem = parseBooleanValue(env.MINION_CACHE_TRACE_SYSTEM) ?? config?.includeSystem;
+    parseBooleanValue(env.OPENCLAW_CACHE_TRACE_MESSAGES) ?? config?.includeMessages;
+  const includePrompt = parseBooleanValue(env.OPENCLAW_CACHE_TRACE_PROMPT) ?? config?.includePrompt;
+  const includeSystem = parseBooleanValue(env.OPENCLAW_CACHE_TRACE_SYSTEM) ?? config?.includeSystem;
 
   return {
     enabled,
@@ -102,27 +99,7 @@ function resolveCacheTraceConfig(params: CacheTraceInit): CacheTraceConfig {
 }
 
 function getWriter(filePath: string): CacheTraceWriter {
-  const existing = writers.get(filePath);
-  if (existing) {
-    return existing;
-  }
-
-  const dir = path.dirname(filePath);
-  const ready = fs.mkdir(dir, { recursive: true }).catch(() => undefined);
-  let queue = Promise.resolve();
-
-  const writer: CacheTraceWriter = {
-    filePath,
-    write: (line: string) => {
-      queue = queue
-        .then(() => ready)
-        .then(() => fs.appendFile(filePath, line, "utf8"))
-        .catch(() => undefined);
-    },
-  };
-
-  writers.set(filePath, writer);
-  return writer;
+  return getQueuedFileWriter(writers, filePath);
 }
 
 function stableStringify(value: unknown): string {

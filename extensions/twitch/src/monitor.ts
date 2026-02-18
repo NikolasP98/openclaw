@@ -5,12 +5,12 @@
  * resolves agent routes, and handles replies.
  */
 
-import type { ReplyPayload, MinionConfig } from "minion/plugin-sdk";
-import { createReplyPrefixOptions } from "minion/plugin-sdk";
-import type { TwitchAccountConfig, TwitchChatMessage } from "./types.js";
+import type { ReplyPayload, OpenClawConfig } from "openclaw/plugin-sdk";
+import { createReplyPrefixOptions } from "openclaw/plugin-sdk";
 import { checkTwitchAccessControl } from "./access-control.js";
 import { getOrCreateClientManager } from "./client-manager-registry.js";
 import { getTwitchRuntime } from "./runtime.js";
+import type { TwitchAccountConfig, TwitchChatMessage } from "./types.js";
 import { stripMarkdownForTwitch } from "./utils/markdown.js";
 
 export type TwitchRuntimeEnv = {
@@ -21,7 +21,7 @@ export type TwitchRuntimeEnv = {
 export type TwitchMonitorOptions = {
   account: TwitchAccountConfig;
   accountId: string;
-  config: unknown; // MinionConfig
+  config: unknown; // OpenClawConfig
   runtime: TwitchRuntimeEnv;
   abortSignal: AbortSignal;
   statusSink?: (patch: { lastInboundAt?: number; lastOutboundAt?: number }) => void;
@@ -46,7 +46,7 @@ async function processTwitchMessage(params: {
   statusSink?: (patch: { lastInboundAt?: number; lastOutboundAt?: number }) => void;
 }): Promise<void> {
   const { message, account, accountId, config, runtime, core, statusSink } = params;
-  const cfg = config as MinionConfig;
+  const cfg = config as OpenClawConfig;
 
   const route = core.channel.routing.resolveAgentRoute({
     cfg,

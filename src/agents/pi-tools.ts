@@ -5,10 +5,8 @@ import {
   createWriteTool,
   readTool,
 } from "@mariozechner/pi-coding-agent";
-import type { MinionConfig } from "../config/config.js";
-import type { ModelAuthMode } from "./model-auth.js";
-import type { AnyAgentTool } from "./pi-tools.types.js";
-import type { SandboxContext } from "./sandbox.js";
+import type { OpenClawConfig } from "../config/config.js";
+import type { ToolLoopDetectionConfig } from "../config/types.tools.js";
 import { logWarn } from "../logger.js";
 import { getPluginToolMeta } from "../plugins/tools.js";
 import { isSubagentSessionKey } from "../routing/session-key.js";
@@ -22,7 +20,8 @@ import {
   type ProcessToolDefaults,
 } from "./bash-tools.js";
 import { listChannelAgentTools } from "./channel-tools.js";
-import { createMinionTools } from "./minion-tools.js";
+import type { ModelAuthMode } from "./model-auth.js";
+import { createOpenClawTools } from "./openclaw-tools.js";
 import { wrapToolWithAbortSignal } from "./pi-tools.abort.js";
 import { wrapToolWithBeforeToolCallHook } from "./pi-tools.before-tool-call.js";
 import {
@@ -34,7 +33,7 @@ import {
 import {
   assertRequiredParams,
   CLAUDE_PARAM_GROUPS,
-  createMinionReadTool,
+  createOpenClawReadTool,
   createSandboxedEditTool,
   createSandboxedReadTool,
   createSandboxedWriteTool,
@@ -44,6 +43,9 @@ import {
   wrapToolParamNormalization,
 } from "./pi-tools.read.js";
 import { cleanToolSchemaForGemini, normalizeToolParameters } from "./pi-tools.schema.js";
+import type { AnyAgentTool } from "./pi-tools.types.js";
+import type { SandboxContext } from "./sandbox.js";
+import { getSubagentDepthFromSessionStore } from "./subagent-depth.js";
 import {
   applyToolPolicyPipeline,
   buildDefaultToolPolicyPipelineSteps,
@@ -51,8 +53,10 @@ import {
 import {
   applyOwnerOnlyToolPolicy,
   collectExplicitAllowlist,
+  mergeAlsoAllowPolicy,
   resolveToolProfilePolicy,
 } from "./tool-policy.js";
+import { resolveWorkspaceRoot } from "./workspace-dir.js";
 
 function isOpenAIProvider(provider?: string) {
   const normalized = provider?.trim().toLowerCase();
@@ -87,7 +91,7 @@ function isApplyPatchAllowedForModel(params: {
   });
 }
 
-function resolveExecConfig(params: { cfg?: MinionConfig; agentId?: string }) {
+function resolveExecConfig(params: { cfg?: OpenClawConfig; agentId?: string }) {
   const cfg = params.cfg;
   const globalExec = cfg?.tools?.exec;
   const agentExec =
@@ -111,13 +115,40 @@ function resolveExecConfig(params: { cfg?: MinionConfig; agentId?: string }) {
   };
 }
 
-function resolveFsConfig(params: { cfg?: MinionConfig; agentId?: string }) {
+function resolveFsConfig(params: { cfg?: OpenClawConfig; agentId?: string }) {
   const cfg = params.cfg;
   const globalFs = cfg?.tools?.fs;
   const agentFs =
     cfg && params.agentId ? resolveAgentConfig(cfg, params.agentId)?.tools?.fs : undefined;
   return {
     workspaceOnly: agentFs?.workspaceOnly ?? globalFs?.workspaceOnly,
+  };
+}
+
+export function resolveToolLoopDetectionConfig(params: {
+  cfg?: OpenClawConfig;
+  agentId?: string;
+}): ToolLoopDetectionConfig | undefined {
+  const global = params.cfg?.tools?.loopDetection;
+  const agent =
+    params.agentId && params.cfg
+      ? resolveAgentConfig(params.cfg, params.agentId)?.tools?.loopDetection
+      : undefined;
+
+  if (!agent) {
+    return global;
+  }
+  if (!global) {
+    return agent;
+  }
+
+  return {
+    ...global,
+    ...agent,
+    detectors: {
+      ...global.detectors,
+      ...agent.detectors,
+    },
   };
 }
 
@@ -129,7 +160,7 @@ export const __testing = {
   assertRequiredParams,
 } as const;
 
-export function createMinionCodingTools(options?: {
+export function createOpenClawCodingTools(options?: {
   exec?: ExecToolDefaults & ProcessToolDefaults;
   messageProvider?: string;
   agentAccountId?: string;
@@ -139,7 +170,7 @@ export function createMinionCodingTools(options?: {
   sessionKey?: string;
   agentDir?: string;
   workspaceDir?: string;
-  config?: MinionConfig;
+  config?: OpenClawConfig;
   abortSignal?: AbortSignal;
   /**
    * Provider of the currently selected model (used for provider-specific tool quirks).
@@ -217,15 +248,8 @@ export function createMinionCodingTools(options?: {
   const profilePolicy = resolveToolProfilePolicy(profile);
   const providerProfilePolicy = resolveToolProfilePolicy(providerProfile);
 
-  const mergeAlsoAllow = (policy: typeof profilePolicy, alsoAllow?: string[]) => {
-    if (!policy?.allow || !Array.isArray(alsoAllow) || alsoAllow.length === 0) {
-      return policy;
-    }
-    return { ...policy, allow: Array.from(new Set([...policy.allow, ...alsoAllow])) };
-  };
-
-  const profilePolicyWithAlsoAllow = mergeAlsoAllow(profilePolicy, profileAlsoAllow);
-  const providerProfilePolicyWithAlsoAllow = mergeAlsoAllow(
+  const profilePolicyWithAlsoAllow = mergeAlsoAllowPolicy(profilePolicy, profileAlsoAllow);
+  const providerProfilePolicyWithAlsoAllow = mergeAlsoAllowPolicy(
     providerProfilePolicy,
     providerProfileAlsoAllow,
   );
@@ -235,7 +259,10 @@ export function createMinionCodingTools(options?: {
     options?.exec?.scopeKey ?? options?.sessionKey ?? (agentId ? `agent:${agentId}` : undefined);
   const subagentPolicy =
     isSubagentSessionKey(options?.sessionKey) && options?.sessionKey
-      ? resolveSubagentToolPolicy(options.config)
+      ? resolveSubagentToolPolicy(
+          options.config,
+          getSubagentDepthFromSessionStore(options.sessionKey, { cfg: options.config }),
+        )
       : undefined;
   const allowBackground = isToolAllowedByPolicies("process", [
     profilePolicyWithAlsoAllow,
@@ -253,10 +280,12 @@ export function createMinionCodingTools(options?: {
   const sandboxRoot = sandbox?.workspaceDir;
   const sandboxFsBridge = sandbox?.fsBridge;
   const allowWorkspaceWrites = sandbox?.workspaceAccess !== "ro";
-  const workspaceRoot = options?.workspaceDir ?? process.cwd();
+  const workspaceRoot = resolveWorkspaceRoot(options?.workspaceDir);
   const workspaceOnly = fsConfig.workspaceOnly === true;
   const applyPatchConfig = execConfig.applyPatch;
-  const applyPatchWorkspaceOnly = workspaceOnly || applyPatchConfig?.workspaceOnly === true;
+  // Secure by default: apply_patch is workspace-contained unless explicitly disabled.
+  // (tools.fs.workspaceOnly is a separate umbrella flag for read/write/edit/apply_patch.)
+  const applyPatchWorkspaceOnly = workspaceOnly || applyPatchConfig?.workspaceOnly !== false;
   const applyPatchEnabled =
     !!applyPatchConfig?.enabled &&
     isOpenAIProvider(options?.modelProvider) &&
@@ -273,15 +302,14 @@ export function createMinionCodingTools(options?: {
   const base = (codingTools as unknown as AnyAgentTool[]).flatMap((tool) => {
     if (tool.name === readTool.name) {
       if (sandboxRoot) {
-        return [
-          createSandboxedReadTool({
-            root: sandboxRoot,
-            bridge: sandboxFsBridge!,
-          }),
-        ];
+        const sandboxed = createSandboxedReadTool({
+          root: sandboxRoot,
+          bridge: sandboxFsBridge!,
+        });
+        return [workspaceOnly ? wrapToolWorkspaceRootGuard(sandboxed, sandboxRoot) : sandboxed];
       }
       const freshReadTool = createReadTool(workspaceRoot);
-      const wrapped = createMinionReadTool(freshReadTool);
+      const wrapped = createOpenClawReadTool(freshReadTool);
       return [workspaceOnly ? wrapToolWorkspaceRootGuard(wrapped, workspaceRoot) : wrapped];
     }
     if (tool.name === "bash" || tool.name === execToolName) {
@@ -321,7 +349,7 @@ export function createMinionCodingTools(options?: {
     pathPrepend: options?.exec?.pathPrepend ?? execConfig.pathPrepend,
     safeBins: options?.exec?.safeBins ?? execConfig.safeBins,
     agentId,
-    cwd: options?.workspaceDir,
+    cwd: workspaceRoot,
     allowBackground,
     scopeKey,
     sessionKey: options?.sessionKey,
@@ -362,8 +390,18 @@ export function createMinionCodingTools(options?: {
     ...(sandboxRoot
       ? allowWorkspaceWrites
         ? [
-            createSandboxedEditTool({ root: sandboxRoot, bridge: sandboxFsBridge! }),
-            createSandboxedWriteTool({ root: sandboxRoot, bridge: sandboxFsBridge! }),
+            workspaceOnly
+              ? wrapToolWorkspaceRootGuard(
+                  createSandboxedEditTool({ root: sandboxRoot, bridge: sandboxFsBridge! }),
+                  sandboxRoot,
+                )
+              : createSandboxedEditTool({ root: sandboxRoot, bridge: sandboxFsBridge! }),
+            workspaceOnly
+              ? wrapToolWorkspaceRootGuard(
+                  createSandboxedWriteTool({ root: sandboxRoot, bridge: sandboxFsBridge! }),
+                  sandboxRoot,
+                )
+              : createSandboxedWriteTool({ root: sandboxRoot, bridge: sandboxFsBridge! }),
           ]
         : []
       : []),
@@ -372,7 +410,7 @@ export function createMinionCodingTools(options?: {
     processTool as unknown as AnyAgentTool,
     // Channel docking: include channel-defined agent tools (login, etc.).
     ...listChannelAgentTools({ cfg: options?.config }),
-    ...createMinionTools({
+    ...createOpenClawTools({
       sandboxBrowserBridgeUrl: sandbox?.browser?.bridgeUrl,
       allowHostBrowserControl: sandbox ? sandbox.browserAllowHostControl : true,
       agentSessionKey: options?.sessionKey,
@@ -386,7 +424,7 @@ export function createMinionCodingTools(options?: {
       agentDir: options?.agentDir,
       sandboxRoot,
       sandboxFsBridge,
-      workspaceDir: options?.workspaceDir,
+      workspaceDir: workspaceRoot,
       sandboxed: !!sandbox,
       config: options?.config,
       pluginToolAllowlist: collectExplicitAllowlist([
@@ -436,11 +474,15 @@ export function createMinionCodingTools(options?: {
   });
   // Always normalize tool JSON Schemas before handing them to pi-agent/pi-ai.
   // Without this, some providers (notably OpenAI) will reject root-level union schemas.
-  const normalized = subagentFiltered.map(normalizeToolParameters);
+  // Provider-specific cleaning: Gemini needs constraint keywords stripped, but Anthropic expects them.
+  const normalized = subagentFiltered.map((tool) =>
+    normalizeToolParameters(tool, { modelProvider: options?.modelProvider }),
+  );
   const withHooks = normalized.map((tool) =>
     wrapToolWithBeforeToolCallHook(tool, {
       agentId,
       sessionKey: options?.sessionKey,
+      loopDetection: resolveToolLoopDetectionConfig({ cfg: options?.config, agentId }),
     }),
   );
   const withAbort = options?.abortSignal

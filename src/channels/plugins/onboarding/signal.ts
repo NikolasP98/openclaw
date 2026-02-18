@@ -1,10 +1,8 @@
-import type { MinionConfig } from "../../../config/config.js";
-import type { DmPolicy } from "../../../config/types.js";
-import type { WizardPrompter } from "../../../wizard/prompts.js";
-import type { ChannelOnboardingAdapter, ChannelOnboardingDmPolicy } from "../onboarding-types.js";
 import { formatCliCommand } from "../../../cli/command-format.js";
 import { detectBinary } from "../../../commands/onboard-helpers.js";
 import { installSignalCli } from "../../../commands/signal-install.js";
+import type { OpenClawConfig } from "../../../config/config.js";
+import type { DmPolicy } from "../../../config/types.js";
 import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "../../../routing/session-key.js";
 import {
   listSignalAccountIds,
@@ -13,7 +11,9 @@ import {
 } from "../../../signal/accounts.js";
 import { formatDocsLink } from "../../../terminal/links.js";
 import { normalizeE164 } from "../../../utils.js";
-import { addWildcardAllowFrom, promptAccountId } from "./helpers.js";
+import type { WizardPrompter } from "../../../wizard/prompts.js";
+import type { ChannelOnboardingAdapter, ChannelOnboardingDmPolicy } from "../onboarding-types.js";
+import { addWildcardAllowFrom, mergeAllowFromEntries, promptAccountId } from "./helpers.js";
 
 const channel = "signal" as const;
 const MIN_E164_DIGITS = 5;
@@ -38,7 +38,7 @@ export function normalizeSignalAccountInput(value: string | null | undefined): s
   return `+${digits}`;
 }
 
-function setSignalDmPolicy(cfg: MinionConfig, dmPolicy: DmPolicy) {
+function setSignalDmPolicy(cfg: OpenClawConfig, dmPolicy: DmPolicy) {
   const allowFrom =
     dmPolicy === "open" ? addWildcardAllowFrom(cfg.channels?.signal?.allowFrom) : undefined;
   return {
@@ -55,10 +55,10 @@ function setSignalDmPolicy(cfg: MinionConfig, dmPolicy: DmPolicy) {
 }
 
 function setSignalAllowFrom(
-  cfg: MinionConfig,
+  cfg: OpenClawConfig,
   accountId: string,
   allowFrom: string[],
-): MinionConfig {
+): OpenClawConfig {
   if (accountId === DEFAULT_ACCOUNT_ID) {
     return {
       ...cfg,
@@ -101,10 +101,10 @@ function isUuidLike(value: string): boolean {
 }
 
 async function promptSignalAllowFrom(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   prompter: WizardPrompter;
   accountId?: string;
-}): Promise<MinionConfig> {
+}): Promise<OpenClawConfig> {
   const accountId =
     params.accountId && normalizeAccountId(params.accountId)
       ? (normalizeAccountId(params.accountId) ?? DEFAULT_ACCOUNT_ID)
@@ -153,21 +153,22 @@ async function promptSignalAllowFrom(params: {
     },
   });
   const parts = parseSignalAllowFromInput(String(entry));
-  const normalized = parts
-    .map((part) => {
-      if (part === "*") {
-        return "*";
-      }
-      if (part.toLowerCase().startsWith("uuid:")) {
-        return `uuid:${part.slice(5).trim()}`;
-      }
-      if (isUuidLike(part)) {
-        return `uuid:${part}`;
-      }
-      return normalizeE164(part);
-    })
-    .filter(Boolean);
-  const unique = [...new Set(normalized)];
+  const normalized = parts.map((part) => {
+    if (part === "*") {
+      return "*";
+    }
+    if (part.toLowerCase().startsWith("uuid:")) {
+      return `uuid:${part.slice(5).trim()}`;
+    }
+    if (isUuidLike(part)) {
+      return `uuid:${part}`;
+    }
+    return normalizeE164(part);
+  });
+  const unique = mergeAllowFromEntries(
+    undefined,
+    normalized.filter((part): part is string => typeof part === "string" && part.trim().length > 0),
+  );
   return setSignalAllowFrom(params.cfg, accountId, unique);
 }
 
@@ -335,9 +336,9 @@ export const signalOnboardingAdapter: ChannelOnboardingAdapter = {
 
     await prompter.note(
       [
-        'Link device with: signal-cli link -n "Minion"',
+        'Link device with: signal-cli link -n "OpenClaw"',
         "Scan QR in Signal → Linked Devices",
-        `Then run: ${formatCliCommand("minion gateway call channels.status --params '{\"probe\":true}'")}`,
+        `Then run: ${formatCliCommand("openclaw gateway call channels.status --params '{\"probe\":true}'")}`,
         `Docs: ${formatDocsLink("/signal", "signal")}`,
       ].join("\n"),
       "Signal next steps",

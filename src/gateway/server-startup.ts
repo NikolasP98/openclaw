@@ -1,6 +1,3 @@
-import type { CliDeps } from "../cli/deps.js";
-import type { loadConfig } from "../config/config.js";
-import type { loadMinionPlugins } from "../plugins/loader.js";
 import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "../agents/defaults.js";
 import { loadModelCatalog } from "../agents/model-catalog.js";
 import {
@@ -8,6 +5,11 @@ import {
   resolveConfiguredModelRef,
   resolveHooksGmailModel,
 } from "../agents/model-selection.js";
+import { resolveAgentSessionDirs } from "../agents/session-dirs.js";
+import { cleanStaleLockFiles } from "../agents/session-write-lock.js";
+import type { CliDeps } from "../cli/deps.js";
+import type { loadConfig } from "../config/config.js";
+import { resolveStateDir } from "../config/paths.js";
 import { startGmailWatcher } from "../hooks/gmail-watcher.js";
 import {
   clearInternalHooks,
@@ -16,6 +18,7 @@ import {
 } from "../hooks/internal-hooks.js";
 import { loadInternalHooks } from "../hooks/loader.js";
 import { isTruthyEnvValue } from "../infra/env.js";
+import type { loadOpenClawPlugins } from "../plugins/loader.js";
 import { type PluginServicesHandle, startPluginServices } from "../plugins/services.js";
 import { startBrowserControlServerIfEnabled } from "./server-browser.js";
 import {
@@ -24,9 +27,11 @@ import {
 } from "./server-restart-sentinel.js";
 import { startGatewayMemoryBackend } from "./server-startup-memory.js";
 
+const SESSION_LOCK_STALE_MS = 30 * 60 * 1000;
+
 export async function startGatewaySidecars(params: {
   cfg: ReturnType<typeof loadConfig>;
-  pluginRegistry: ReturnType<typeof loadMinionPlugins>;
+  pluginRegistry: ReturnType<typeof loadOpenClawPlugins>;
   defaultWorkspaceDir: string;
   deps: CliDeps;
   startChannels: () => Promise<void>;
@@ -39,7 +44,22 @@ export async function startGatewaySidecars(params: {
   logChannels: { info: (msg: string) => void; error: (msg: string) => void };
   logBrowser: { error: (msg: string) => void };
 }) {
-  // Start Minion browser control server (unless disabled via config).
+  try {
+    const stateDir = resolveStateDir(process.env);
+    const sessionDirs = await resolveAgentSessionDirs(stateDir);
+    for (const sessionsDir of sessionDirs) {
+      await cleanStaleLockFiles({
+        sessionsDir,
+        staleMs: SESSION_LOCK_STALE_MS,
+        removeStale: true,
+        log: { warn: (message) => params.log.warn(message) },
+      });
+    }
+  } catch (err) {
+    params.log.warn(`session lock cleanup failed on startup: ${String(err)}`);
+  }
+
+  // Start OpenClaw browser control server (unless disabled via config).
   let browserControl: Awaited<ReturnType<typeof startBrowserControlServerIfEnabled>> = null;
   try {
     browserControl = await startBrowserControlServerIfEnabled();
@@ -47,26 +67,8 @@ export async function startGatewaySidecars(params: {
     params.logBrowser.error(`server failed to start: ${String(err)}`);
   }
 
-  // Start Google OAuth callback server if enabled (hooks.gogOAuth).
-  let gogOAuthServer: { stop: () => Promise<void> } | null = null;
-  if (
-    params.cfg.hooks?.gogOAuth?.enabled !== false &&
-    !isTruthyEnvValue(process.env.MINION_SKIP_GOG_OAUTH)
-  ) {
-    try {
-      const { startGogOAuthServer } = await import("../hooks/gog-oauth-server.js");
-      gogOAuthServer = await startGogOAuthServer(
-        params.cfg.hooks?.gogOAuth || {},
-        params.defaultWorkspaceDir,
-      );
-      params.logHooks.info("google oauth server started");
-    } catch (err) {
-      params.logHooks.error(`google oauth server failed to start: ${String(err)}`);
-    }
-  }
-
   // Start Gmail watcher if configured (hooks.gmail.account).
-  if (!isTruthyEnvValue(process.env.MINION_SKIP_GMAIL_WATCHER)) {
+  if (!isTruthyEnvValue(process.env.OPENCLAW_SKIP_GMAIL_WATCHER)) {
     try {
       const gmailResult = await startGmailWatcher(params.cfg);
       if (gmailResult.started) {
@@ -131,10 +133,10 @@ export async function startGatewaySidecars(params: {
   }
 
   // Launch configured channels so gateway replies via the surface the message came from.
-  // Tests can opt out via MINION_SKIP_CHANNELS (or legacy MINION_SKIP_PROVIDERS).
+  // Tests can opt out via OPENCLAW_SKIP_CHANNELS (or legacy OPENCLAW_SKIP_PROVIDERS).
   const skipChannels =
-    isTruthyEnvValue(process.env.MINION_SKIP_CHANNELS) ||
-    isTruthyEnvValue(process.env.MINION_SKIP_PROVIDERS);
+    isTruthyEnvValue(process.env.OPENCLAW_SKIP_CHANNELS) ||
+    isTruthyEnvValue(process.env.OPENCLAW_SKIP_PROVIDERS);
   if (!skipChannels) {
     try {
       await params.startChannels();
@@ -143,7 +145,7 @@ export async function startGatewaySidecars(params: {
     }
   } else {
     params.logChannels.info(
-      "skipping channel start (MINION_SKIP_CHANNELS=1 or MINION_SKIP_PROVIDERS=1)",
+      "skipping channel start (OPENCLAW_SKIP_CHANNELS=1 or OPENCLAW_SKIP_PROVIDERS=1)",
     );
   }
 
@@ -179,5 +181,5 @@ export async function startGatewaySidecars(params: {
     }, 750);
   }
 
-  return { browserControl, pluginServices, gogOAuthServer };
+  return { browserControl, pluginServices };
 }

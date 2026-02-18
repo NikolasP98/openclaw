@@ -4,9 +4,9 @@ import type {
   ChannelDock,
   ChannelGroupContext,
   ChannelPlugin,
-  MinionConfig,
+  OpenClawConfig,
   GroupToolPolicyConfig,
-} from "minion/plugin-sdk";
+} from "openclaw/plugin-sdk";
 import {
   applyAccountNameToChannelSection,
   buildChannelConfigSchema,
@@ -19,8 +19,7 @@ import {
   normalizeAccountId,
   resolveChannelAccountConfigBasePath,
   setAccountEnabledInConfigSection,
-} from "minion/plugin-sdk";
-import type { ZcaFriend, ZcaGroup, ZcaUserInfo } from "./types.js";
+} from "openclaw/plugin-sdk";
 import {
   listZalouserAccountIds,
   resolveDefaultZalouserAccountId,
@@ -34,6 +33,7 @@ import { zalouserOnboardingAdapter } from "./onboarding.js";
 import { probeZalouser } from "./probe.js";
 import { sendMessageZalouser } from "./send.js";
 import { collectZalouserStatusIssues } from "./status-issues.js";
+import type { ZcaFriend, ZcaGroup, ZcaUserInfo } from "./types.js";
 import { checkZcaInstalled, parseJsonOutput, runZca, runZcaInteractive } from "./zca.js";
 
 const meta = {
@@ -253,7 +253,7 @@ export const zalouserPlugin: ChannelPlugin<ResolvedZalouserAccount> = {
               enabled: true,
             },
           },
-        } as MinionConfig;
+        } as OpenClawConfig;
       }
       return {
         ...next,
@@ -271,7 +271,7 @@ export const zalouserPlugin: ChannelPlugin<ResolvedZalouserAccount> = {
             },
           },
         },
-      } as MinionConfig;
+      } as OpenClawConfig;
     },
   },
   messaging: {
@@ -501,7 +501,7 @@ export const zalouserPlugin: ChannelPlugin<ResolvedZalouserAccount> = {
       const ok = await checkZcaInstalled();
       if (!ok) {
         throw new Error(
-          "Missing dependency: `zca` not found in PATH. See docs.minion.ai/channels/zalouser",
+          "Missing dependency: `zca` not found in PATH. See docs.openclaw.ai/channels/zalouser",
         );
       }
       runtime.log(

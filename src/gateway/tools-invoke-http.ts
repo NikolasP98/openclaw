@@ -1,6 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { AuthRateLimiter } from "./auth-rate-limit.js";
-import { createMinionTools } from "../agents/minion-tools.js";
+import { createOpenClawTools } from "../agents/openclaw-tools.js";
 import {
   resolveEffectiveToolPolicy,
   resolveGroupToolPolicy,
@@ -10,7 +9,11 @@ import {
   applyToolPolicyPipeline,
   buildDefaultToolPolicyPipelineSteps,
 } from "../agents/tool-policy-pipeline.js";
-import { collectExplicitAllowlist, resolveToolProfilePolicy } from "../agents/tool-policy.js";
+import {
+  collectExplicitAllowlist,
+  mergeAlsoAllowPolicy,
+  resolveToolProfilePolicy,
+} from "../agents/tool-policy.js";
 import { ToolInputError } from "../agents/tools/common.js";
 import { loadConfig } from "../config/config.js";
 import { resolveMainSessionKey } from "../config/sessions.js";
@@ -20,6 +23,7 @@ import { getPluginToolMeta } from "../plugins/tools.js";
 import { isSubagentSessionKey } from "../routing/session-key.js";
 import { DEFAULT_GATEWAY_HTTP_TOOL_DENY } from "../security/dangerous-tools.js";
 import { normalizeMessageChannel } from "../utils/message-channel.js";
+import type { AuthRateLimiter } from "./auth-rate-limit.js";
 import { authorizeGatewayConnect, type ResolvedGatewayAuth } from "./auth.js";
 import {
   readJsonBodyOrError,
@@ -196,8 +200,10 @@ export async function handleToolsInvokeHttpRequest(
     !rawSessionKey || rawSessionKey === "main" ? resolveMainSessionKey(cfg) : rawSessionKey;
 
   // Resolve message channel/account hints (optional headers) for policy inheritance.
-  const messageChannel = normalizeMessageChannel(getHeader(req, "x-minion-message-channel") ?? "");
-  const accountId = getHeader(req, "x-minion-account-id")?.trim() || undefined;
+  const messageChannel = normalizeMessageChannel(
+    getHeader(req, "x-openclaw-message-channel") ?? "",
+  );
+  const accountId = getHeader(req, "x-openclaw-account-id")?.trim() || undefined;
 
   const {
     agentId,
@@ -213,15 +219,8 @@ export async function handleToolsInvokeHttpRequest(
   const profilePolicy = resolveToolProfilePolicy(profile);
   const providerProfilePolicy = resolveToolProfilePolicy(providerProfile);
 
-  const mergeAlsoAllow = (policy: typeof profilePolicy, alsoAllow?: string[]) => {
-    if (!policy?.allow || !Array.isArray(alsoAllow) || alsoAllow.length === 0) {
-      return policy;
-    }
-    return { ...policy, allow: Array.from(new Set([...policy.allow, ...alsoAllow])) };
-  };
-
-  const profilePolicyWithAlsoAllow = mergeAlsoAllow(profilePolicy, profileAlsoAllow);
-  const providerProfilePolicyWithAlsoAllow = mergeAlsoAllow(
+  const profilePolicyWithAlsoAllow = mergeAlsoAllowPolicy(profilePolicy, profileAlsoAllow);
+  const providerProfilePolicyWithAlsoAllow = mergeAlsoAllowPolicy(
     providerProfilePolicy,
     providerProfileAlsoAllow,
   );
@@ -236,7 +235,7 @@ export async function handleToolsInvokeHttpRequest(
     : undefined;
 
   // Build tool list (core + plugin tools).
-  const allTools = createMinionTools({
+  const allTools = createOpenClawTools({
     agentSessionKey: sessionKey,
     agentChannel: messageChannel ?? undefined,
     agentAccountId: accountId,

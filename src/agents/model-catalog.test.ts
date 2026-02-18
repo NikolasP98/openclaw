@@ -1,58 +1,26 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { MinionConfig } from "../config/config.js";
+import { describe, expect, it, vi } from "vitest";
+import type { OpenClawConfig } from "../config/config.js";
+import { __setModelCatalogImportForTest, loadModelCatalog } from "./model-catalog.js";
 import {
-  __setModelCatalogImportForTest,
-  loadModelCatalog,
-  resetModelCatalogCacheForTest,
-} from "./model-catalog.js";
-
-type PiSdkModule = typeof import("./pi-model-discovery.js");
-
-vi.mock("./models-config.js", () => ({
-  ensureMinionModelsJson: vi.fn().mockResolvedValue({ agentDir: "/tmp", wrote: false }),
-}));
-
-vi.mock("./agent-paths.js", () => ({
-  resolveMinionAgentDir: () => "/tmp/minion",
-}));
+  installModelCatalogTestHooks,
+  mockCatalogImportFailThenRecover,
+  type PiSdkModule,
+} from "./model-catalog.test-harness.js";
 
 describe("loadModelCatalog", () => {
-  beforeEach(() => {
-    resetModelCatalogCacheForTest();
-  });
-
-  afterEach(() => {
-    __setModelCatalogImportForTest();
-    resetModelCatalogCacheForTest();
-    vi.restoreAllMocks();
-  });
+  installModelCatalogTestHooks();
 
   it("retries after import failure without poisoning the cache", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    let call = 0;
+    const getCallCount = mockCatalogImportFailThenRecover();
 
-    __setModelCatalogImportForTest(async () => {
-      call += 1;
-      if (call === 1) {
-        throw new Error("boom");
-      }
-      return {
-        AuthStorage: class {},
-        ModelRegistry: class {
-          getAll() {
-            return [{ id: "gpt-4.1", name: "GPT-4.1", provider: "openai" }];
-          }
-        },
-      } as unknown as PiSdkModule;
-    });
-
-    const cfg = {} as MinionConfig;
+    const cfg = {} as OpenClawConfig;
     const first = await loadModelCatalog({ config: cfg });
     expect(first).toEqual([]);
 
     const second = await loadModelCatalog({ config: cfg });
     expect(second).toEqual([{ id: "gpt-4.1", name: "GPT-4.1", provider: "openai" }]);
-    expect(call).toBe(2);
+    expect(getCallCount()).toBe(2);
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
 
@@ -80,7 +48,7 @@ describe("loadModelCatalog", () => {
         }) as unknown as PiSdkModule,
     );
 
-    const result = await loadModelCatalog({ config: {} as MinionConfig });
+    const result = await loadModelCatalog({ config: {} as OpenClawConfig });
     expect(result).toEqual([{ id: "gpt-4.1", name: "GPT-4.1", provider: "openai" }]);
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
@@ -112,7 +80,7 @@ describe("loadModelCatalog", () => {
         }) as unknown as PiSdkModule,
     );
 
-    const result = await loadModelCatalog({ config: {} as MinionConfig });
+    const result = await loadModelCatalog({ config: {} as OpenClawConfig });
     expect(result).toContainEqual(
       expect.objectContaining({
         provider: "openai-codex",

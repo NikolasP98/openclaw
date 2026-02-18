@@ -1,11 +1,12 @@
-import type { MinionConfig } from "../config/config.js";
+import { resolveSessionAgentId } from "../agents/agent-scope.js";
+import type { OpenClawConfig } from "../config/config.js";
 import type { SessionEntry, SessionMaintenanceWarning } from "../config/sessions.js";
 import { isDeliverableMessageChannel, normalizeMessageChannel } from "../utils/message-channel.js";
 import { resolveSessionDeliveryTarget } from "./outbound/targets.js";
 import { enqueueSystemEvent } from "./system-events.js";
 
 type WarningParams = {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   sessionKey: string;
   entry: SessionEntry;
   warning: SessionMaintenanceWarning;
@@ -100,6 +101,7 @@ export async function deliverSessionMaintenanceWarning(params: WarningParams): P
       accountId: target.accountId,
       threadId: target.threadId,
       payloads: [{ text }],
+      agentId: resolveSessionAgentId({ sessionKey: params.sessionKey, config: params.cfg }),
     });
   } catch (err) {
     console.warn(`Failed to deliver session maintenance warning: ${String(err)}`);

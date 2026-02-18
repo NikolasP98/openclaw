@@ -1,20 +1,20 @@
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import {
   type RuntimeEnv,
   isRequestBodyLimitError,
   readRequestBodyWithLimit,
   requestBodyErrorToText,
-} from "minion/plugin-sdk";
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+} from "openclaw/plugin-sdk";
+import { resolveNextcloudTalkAccount } from "./accounts.js";
+import { handleNextcloudTalkInbound } from "./inbound.js";
+import { getNextcloudTalkRuntime } from "./runtime.js";
+import { extractNextcloudTalkHeaders, verifyNextcloudTalkSignature } from "./signature.js";
 import type {
   CoreConfig,
   NextcloudTalkInboundMessage,
   NextcloudTalkWebhookPayload,
   NextcloudTalkWebhookServerOptions,
 } from "./types.js";
-import { resolveNextcloudTalkAccount } from "./accounts.js";
-import { handleNextcloudTalkInbound } from "./inbound.js";
-import { getNextcloudTalkRuntime } from "./runtime.js";
-import { extractNextcloudTalkHeaders, verifyNextcloudTalkSignature } from "./signature.js";
 
 const DEFAULT_WEBHOOK_PORT = 8788;
 const DEFAULT_WEBHOOK_HOST = "0.0.0.0";
@@ -213,8 +213,8 @@ export async function monitorNextcloudTalkProvider(
     accountId: opts.accountId,
   });
   const runtime: RuntimeEnv = opts.runtime ?? {
-    log: (message: string) => core.logging.getChildLogger().info(message),
-    error: (message: string) => core.logging.getChildLogger().error(message),
+    log: (...args: unknown[]) => core.logging.getChildLogger().info(args.map(String).join(" ")),
+    error: (...args: unknown[]) => core.logging.getChildLogger().error(args.map(String).join(" ")),
     exit: () => {
       throw new Error("Runtime exit not available");
     },

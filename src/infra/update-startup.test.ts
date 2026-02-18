@@ -4,8 +4,8 @@ import path from "node:path";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { UpdateCheckResult } from "./update-check.js";
 
-vi.mock("./minion-root.js", () => ({
-  resolveMinionPackageRoot: vi.fn(),
+vi.mock("./openclaw-root.js", () => ({
+  resolveOpenClawPackageRoot: vi.fn(),
 }));
 
 vi.mock("./update-check.js", async () => {
@@ -45,14 +45,14 @@ describe("update-startup", () => {
   let hadNodeEnv = false;
   let hadVitest = false;
 
-  let resolveMinionPackageRoot: (typeof import("./minion-root.js"))["resolveMinionPackageRoot"];
+  let resolveOpenClawPackageRoot: (typeof import("./openclaw-root.js"))["resolveOpenClawPackageRoot"];
   let checkUpdateStatus: (typeof import("./update-check.js"))["checkUpdateStatus"];
   let resolveNpmChannelTag: (typeof import("./update-check.js"))["resolveNpmChannelTag"];
   let runGatewayUpdateCheck: (typeof import("./update-startup.js"))["runGatewayUpdateCheck"];
   let loaded = false;
 
   beforeAll(async () => {
-    suiteRoot = await fs.mkdtemp(path.join(os.tmpdir(), "minion-update-check-suite-"));
+    suiteRoot = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-update-check-suite-"));
   });
 
   beforeEach(async () => {
@@ -60,9 +60,9 @@ describe("update-startup", () => {
     vi.setSystemTime(new Date("2026-01-17T10:00:00Z"));
     tempDir = path.join(suiteRoot, `case-${++suiteCase}`);
     await fs.mkdir(tempDir);
-    hadStateDir = Object.prototype.hasOwnProperty.call(process.env, "MINION_STATE_DIR");
-    prevStateDir = process.env.MINION_STATE_DIR;
-    process.env.MINION_STATE_DIR = tempDir;
+    hadStateDir = Object.prototype.hasOwnProperty.call(process.env, "OPENCLAW_STATE_DIR");
+    prevStateDir = process.env.OPENCLAW_STATE_DIR;
+    process.env.OPENCLAW_STATE_DIR = tempDir;
 
     hadNodeEnv = Object.prototype.hasOwnProperty.call(process.env, "NODE_ENV");
     prevNodeEnv = process.env.NODE_ENV;
@@ -75,7 +75,7 @@ describe("update-startup", () => {
 
     // Perf: load mocked modules once (after timers/env are set up).
     if (!loaded) {
-      ({ resolveMinionPackageRoot } = await import("./minion-root.js"));
+      ({ resolveOpenClawPackageRoot } = await import("./openclaw-root.js"));
       ({ checkUpdateStatus, resolveNpmChannelTag } = await import("./update-check.js"));
       ({ runGatewayUpdateCheck } = await import("./update-startup.js"));
       loaded = true;
@@ -85,9 +85,9 @@ describe("update-startup", () => {
   afterEach(async () => {
     vi.useRealTimers();
     if (hadStateDir) {
-      process.env.MINION_STATE_DIR = prevStateDir;
+      process.env.OPENCLAW_STATE_DIR = prevStateDir;
     } else {
-      delete process.env.MINION_STATE_DIR;
+      delete process.env.OPENCLAW_STATE_DIR;
     }
     if (hadNodeEnv) {
       process.env.NODE_ENV = prevNodeEnv;
@@ -109,10 +109,10 @@ describe("update-startup", () => {
     suiteCase = 0;
   });
 
-  it("logs update hint for npm installs when newer tag exists", async () => {
-    vi.mocked(resolveMinionPackageRoot).mockResolvedValue("/opt/minion");
+  async function runUpdateCheckAndReadState(channel: "stable" | "beta") {
+    vi.mocked(resolveOpenClawPackageRoot).mockResolvedValue("/opt/openclaw");
     vi.mocked(checkUpdateStatus).mockResolvedValue({
-      root: "/opt/minion",
+      root: "/opt/openclaw",
       installKind: "package",
       packageManager: "npm",
     } satisfies UpdateCheckResult);
@@ -123,49 +123,35 @@ describe("update-startup", () => {
 
     const log = { info: vi.fn() };
     await runGatewayUpdateCheck({
-      cfg: { update: { channel: "stable" } },
+      cfg: { update: { channel } },
       log,
       isNixMode: false,
       allowInTests: true,
     });
 
+    const statePath = path.join(tempDir, "update-check.json");
+    const parsed = JSON.parse(await fs.readFile(statePath, "utf-8")) as {
+      lastNotifiedVersion?: string;
+      lastNotifiedTag?: string;
+    };
+    return { log, parsed };
+  }
+
+  it("logs update hint for npm installs when newer tag exists", async () => {
+    const { log, parsed } = await runUpdateCheckAndReadState("stable");
+
     expect(log.info).toHaveBeenCalledWith(
       expect.stringContaining("update available (latest): v2.0.0"),
     );
-
-    const statePath = path.join(tempDir, "update-check.json");
-    const raw = await fs.readFile(statePath, "utf-8");
-    const parsed = JSON.parse(raw) as { lastNotifiedVersion?: string };
     expect(parsed.lastNotifiedVersion).toBe("2.0.0");
   });
 
   it("uses latest when beta tag is older than release", async () => {
-    vi.mocked(resolveMinionPackageRoot).mockResolvedValue("/opt/minion");
-    vi.mocked(checkUpdateStatus).mockResolvedValue({
-      root: "/opt/minion",
-      installKind: "package",
-      packageManager: "npm",
-    } satisfies UpdateCheckResult);
-    vi.mocked(resolveNpmChannelTag).mockResolvedValue({
-      tag: "latest",
-      version: "2.0.0",
-    });
-
-    const log = { info: vi.fn() };
-    await runGatewayUpdateCheck({
-      cfg: { update: { channel: "beta" } },
-      log,
-      isNixMode: false,
-      allowInTests: true,
-    });
+    const { log, parsed } = await runUpdateCheckAndReadState("beta");
 
     expect(log.info).toHaveBeenCalledWith(
       expect.stringContaining("update available (latest): v2.0.0"),
     );
-
-    const statePath = path.join(tempDir, "update-check.json");
-    const raw = await fs.readFile(statePath, "utf-8");
-    const parsed = JSON.parse(raw) as { lastNotifiedTag?: string };
     expect(parsed.lastNotifiedTag).toBe("latest");
   });
 

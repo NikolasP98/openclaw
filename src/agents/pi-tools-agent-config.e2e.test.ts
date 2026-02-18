@@ -1,9 +1,16 @@
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import "./test-helpers/fast-coding-tools.js";
-import type { MinionConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
+import { createOpenClawCodingTools } from "./pi-tools.js";
 import type { SandboxDockerConfig } from "./sandbox.js";
 import type { SandboxFsBridge } from "./sandbox/fs-bridge.js";
-import { createMinionCodingTools } from "./pi-tools.js";
+
+type ToolWithExecute = {
+  execute: (toolCallId: string, args: unknown, signal?: AbortSignal) => Promise<unknown>;
+};
 
 describe("Agent-specific tool filtering", () => {
   const sandboxFsBridgeStub: SandboxFsBridge = {
@@ -20,8 +27,66 @@ describe("Agent-specific tool filtering", () => {
     stat: async () => null,
   };
 
+  async function withApplyPatchEscapeCase(
+    opts: { workspaceOnly?: boolean },
+    run: (params: {
+      applyPatchTool: ToolWithExecute;
+      escapedPath: string;
+      patch: string;
+    }) => Promise<void>,
+  ) {
+    const workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-pi-tools-"));
+    const escapedPath = path.join(
+      path.dirname(workspaceDir),
+      `escaped-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}.txt`,
+    );
+    const relativeEscape = path.relative(workspaceDir, escapedPath);
+
+    try {
+      const cfg: OpenClawConfig = {
+        tools: {
+          allow: ["read", "exec"],
+          exec: {
+            applyPatch: {
+              enabled: true,
+              ...(opts.workspaceOnly === false ? { workspaceOnly: false } : {}),
+            },
+          },
+        },
+      };
+
+      const tools = createOpenClawCodingTools({
+        config: cfg,
+        sessionKey: "agent:main:main",
+        workspaceDir,
+        agentDir: "/tmp/agent",
+        modelProvider: "openai",
+        modelId: "gpt-5.2",
+      });
+
+      const applyPatchTool = tools.find((t) => t.name === "apply_patch");
+      if (!applyPatchTool) {
+        throw new Error("apply_patch tool missing");
+      }
+
+      const patch = `*** Begin Patch
+*** Add File: ${relativeEscape}
++escaped
+*** End Patch`;
+
+      await run({
+        applyPatchTool: applyPatchTool as unknown as ToolWithExecute,
+        escapedPath,
+        patch,
+      });
+    } finally {
+      await fs.rm(escapedPath, { force: true });
+      await fs.rm(workspaceDir, { recursive: true, force: true });
+    }
+  }
+
   it("should apply global tool policy when no agent-specific policy exists", () => {
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       tools: {
         allow: ["read", "write"],
         deny: ["bash"],
@@ -30,13 +95,13 @@ describe("Agent-specific tool filtering", () => {
         list: [
           {
             id: "main",
-            workspace: "~/minion",
+            workspace: "~/openclaw",
           },
         ],
       },
     };
 
-    const tools = createMinionCodingTools({
+    const tools = createOpenClawCodingTools({
       config: cfg,
       sessionKey: "agent:main:main",
       workspaceDir: "/tmp/test",
@@ -51,7 +116,7 @@ describe("Agent-specific tool filtering", () => {
   });
 
   it("should keep global tool policy when agent only sets tools.elevated", () => {
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       tools: {
         deny: ["write"],
       },
@@ -59,7 +124,7 @@ describe("Agent-specific tool filtering", () => {
         list: [
           {
             id: "main",
-            workspace: "~/minion",
+            workspace: "~/openclaw",
             tools: {
               elevated: {
                 enabled: true,
@@ -71,7 +136,7 @@ describe("Agent-specific tool filtering", () => {
       },
     };
 
-    const tools = createMinionCodingTools({
+    const tools = createOpenClawCodingTools({
       config: cfg,
       sessionKey: "agent:main:main",
       workspaceDir: "/tmp/test",
@@ -86,7 +151,7 @@ describe("Agent-specific tool filtering", () => {
   });
 
   it("should allow apply_patch when exec is allow-listed and applyPatch is enabled", () => {
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       tools: {
         allow: ["read", "exec"],
         exec: {
@@ -95,7 +160,7 @@ describe("Agent-specific tool filtering", () => {
       },
     };
 
-    const tools = createMinionCodingTools({
+    const tools = createOpenClawCodingTools({
       config: cfg,
       sessionKey: "agent:main:main",
       workspaceDir: "/tmp/test",
@@ -110,8 +175,28 @@ describe("Agent-specific tool filtering", () => {
     expect(toolNames).toContain("apply_patch");
   });
 
+  it("defaults apply_patch to workspace-only (blocks traversal)", async () => {
+    await withApplyPatchEscapeCase({}, async ({ applyPatchTool, escapedPath, patch }) => {
+      await expect(applyPatchTool.execute("tc1", { input: patch })).rejects.toThrow(
+        /Path escapes sandbox root/,
+      );
+      await expect(fs.readFile(escapedPath, "utf8")).rejects.toBeDefined();
+    });
+  });
+
+  it("allows disabling apply_patch workspace-only via config (dangerous)", async () => {
+    await withApplyPatchEscapeCase(
+      { workspaceOnly: false },
+      async ({ applyPatchTool, escapedPath, patch }) => {
+        await applyPatchTool.execute("tc2", { input: patch });
+        const contents = await fs.readFile(escapedPath, "utf8");
+        expect(contents).toBe("escaped\n");
+      },
+    );
+  });
+
   it("should apply agent-specific tool policy", () => {
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       tools: {
         allow: ["read", "write", "exec"],
         deny: [],
@@ -120,7 +205,7 @@ describe("Agent-specific tool filtering", () => {
         list: [
           {
             id: "restricted",
-            workspace: "~/minion-restricted",
+            workspace: "~/openclaw-restricted",
             tools: {
               allow: ["read"], // Agent override: only read
               deny: ["exec", "write", "edit"],
@@ -130,7 +215,7 @@ describe("Agent-specific tool filtering", () => {
       },
     };
 
-    const tools = createMinionCodingTools({
+    const tools = createOpenClawCodingTools({
       config: cfg,
       sessionKey: "agent:restricted:main",
       workspaceDir: "/tmp/test-restricted",
@@ -146,7 +231,7 @@ describe("Agent-specific tool filtering", () => {
   });
 
   it("should apply provider-specific tool policy", () => {
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       tools: {
         allow: ["read", "write", "exec"],
         byProvider: {
@@ -157,7 +242,7 @@ describe("Agent-specific tool filtering", () => {
       },
     };
 
-    const tools = createMinionCodingTools({
+    const tools = createOpenClawCodingTools({
       config: cfg,
       sessionKey: "agent:main:main",
       workspaceDir: "/tmp/test-provider",
@@ -174,7 +259,7 @@ describe("Agent-specific tool filtering", () => {
   });
 
   it("should apply provider-specific tool profile overrides", () => {
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       tools: {
         profile: "coding",
         byProvider: {
@@ -185,7 +270,7 @@ describe("Agent-specific tool filtering", () => {
       },
     };
 
-    const tools = createMinionCodingTools({
+    const tools = createOpenClawCodingTools({
       config: cfg,
       sessionKey: "agent:main:main",
       workspaceDir: "/tmp/test-provider-profile",
@@ -199,17 +284,17 @@ describe("Agent-specific tool filtering", () => {
   });
 
   it("should allow different tool policies for different agents", () => {
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         list: [
           {
             id: "main",
-            workspace: "~/minion",
+            workspace: "~/openclaw",
             // No tools restriction - all tools available
           },
           {
             id: "family",
-            workspace: "~/minion-family",
+            workspace: "~/openclaw-family",
             tools: {
               allow: ["read"],
               deny: ["exec", "write", "edit", "process"],
@@ -220,7 +305,7 @@ describe("Agent-specific tool filtering", () => {
     };
 
     // main agent: all tools
-    const mainTools = createMinionCodingTools({
+    const mainTools = createOpenClawCodingTools({
       config: cfg,
       sessionKey: "agent:main:main",
       workspaceDir: "/tmp/test-main",
@@ -233,7 +318,7 @@ describe("Agent-specific tool filtering", () => {
     expect(mainToolNames).not.toContain("apply_patch");
 
     // family agent: restricted
-    const familyTools = createMinionCodingTools({
+    const familyTools = createOpenClawCodingTools({
       config: cfg,
       sessionKey: "agent:family:whatsapp:group:123",
       workspaceDir: "/tmp/test-family",
@@ -248,7 +333,7 @@ describe("Agent-specific tool filtering", () => {
   });
 
   it("should apply group tool policy overrides (group-specific beats wildcard)", () => {
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       channels: {
         whatsapp: {
           groups: {
@@ -263,7 +348,7 @@ describe("Agent-specific tool filtering", () => {
       },
     };
 
-    const trustedTools = createMinionCodingTools({
+    const trustedTools = createOpenClawCodingTools({
       config: cfg,
       sessionKey: "agent:main:whatsapp:group:trusted",
       messageProvider: "whatsapp",
@@ -274,7 +359,7 @@ describe("Agent-specific tool filtering", () => {
     expect(trustedNames).toContain("read");
     expect(trustedNames).toContain("exec");
 
-    const defaultTools = createMinionCodingTools({
+    const defaultTools = createOpenClawCodingTools({
       config: cfg,
       sessionKey: "agent:main:whatsapp:group:unknown",
       messageProvider: "whatsapp",
@@ -287,7 +372,7 @@ describe("Agent-specific tool filtering", () => {
   });
 
   it("should apply per-sender tool policies for group tools", () => {
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       channels: {
         whatsapp: {
           groups: {
@@ -302,7 +387,7 @@ describe("Agent-specific tool filtering", () => {
       },
     };
 
-    const aliceTools = createMinionCodingTools({
+    const aliceTools = createOpenClawCodingTools({
       config: cfg,
       sessionKey: "agent:main:whatsapp:group:family",
       senderId: "alice",
@@ -313,7 +398,7 @@ describe("Agent-specific tool filtering", () => {
     expect(aliceNames).toContain("read");
     expect(aliceNames).toContain("exec");
 
-    const bobTools = createMinionCodingTools({
+    const bobTools = createOpenClawCodingTools({
       config: cfg,
       sessionKey: "agent:main:whatsapp:group:family",
       senderId: "bob",
@@ -326,7 +411,7 @@ describe("Agent-specific tool filtering", () => {
   });
 
   it("should not let default sender policy override group tools", () => {
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       channels: {
         whatsapp: {
           groups: {
@@ -343,7 +428,7 @@ describe("Agent-specific tool filtering", () => {
       },
     };
 
-    const adminTools = createMinionCodingTools({
+    const adminTools = createOpenClawCodingTools({
       config: cfg,
       sessionKey: "agent:main:whatsapp:group:locked",
       senderId: "admin",
@@ -356,7 +441,7 @@ describe("Agent-specific tool filtering", () => {
   });
 
   it("should resolve telegram group tool policy for topic session keys", () => {
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       channels: {
         telegram: {
           groups: {
@@ -368,7 +453,7 @@ describe("Agent-specific tool filtering", () => {
       },
     };
 
-    const tools = createMinionCodingTools({
+    const tools = createOpenClawCodingTools({
       config: cfg,
       sessionKey: "agent:main:telegram:group:123:topic:456",
       messageProvider: "telegram",
@@ -381,7 +466,7 @@ describe("Agent-specific tool filtering", () => {
   });
 
   it("should inherit group tool policy for subagents from spawnedBy session keys", () => {
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       channels: {
         whatsapp: {
           groups: {
@@ -393,7 +478,7 @@ describe("Agent-specific tool filtering", () => {
       },
     };
 
-    const tools = createMinionCodingTools({
+    const tools = createOpenClawCodingTools({
       config: cfg,
       sessionKey: "agent:main:subagent:test",
       spawnedBy: "agent:main:whatsapp:group:trusted",
@@ -406,7 +491,7 @@ describe("Agent-specific tool filtering", () => {
   });
 
   it("should apply global tool policy before agent-specific policy", () => {
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       tools: {
         deny: ["browser"], // Global deny
       },
@@ -414,7 +499,7 @@ describe("Agent-specific tool filtering", () => {
         list: [
           {
             id: "work",
-            workspace: "~/minion-work",
+            workspace: "~/openclaw-work",
             tools: {
               deny: ["exec", "process"], // Agent deny (override)
             },
@@ -423,7 +508,7 @@ describe("Agent-specific tool filtering", () => {
       },
     };
 
-    const tools = createMinionCodingTools({
+    const tools = createOpenClawCodingTools({
       config: cfg,
       sessionKey: "agent:work:slack:dm:user123",
       workspaceDir: "/tmp/test-work",
@@ -439,7 +524,7 @@ describe("Agent-specific tool filtering", () => {
   });
 
   it("should work with sandbox tools filtering", () => {
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         defaults: {
           sandbox: {
@@ -450,7 +535,7 @@ describe("Agent-specific tool filtering", () => {
         list: [
           {
             id: "restricted",
-            workspace: "~/minion-restricted",
+            workspace: "~/openclaw-restricted",
             sandbox: {
               mode: "all",
               scope: "agent",
@@ -472,7 +557,7 @@ describe("Agent-specific tool filtering", () => {
       },
     };
 
-    const tools = createMinionCodingTools({
+    const tools = createOpenClawCodingTools({
       config: cfg,
       sessionKey: "agent:restricted:main",
       workspaceDir: "/tmp/test-restricted",
@@ -513,13 +598,13 @@ describe("Agent-specific tool filtering", () => {
   });
 
   it("should run exec synchronously when process is denied", async () => {
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       tools: {
         deny: ["process"],
       },
     };
 
-    const tools = createMinionCodingTools({
+    const tools = createOpenClawCodingTools({
       config: cfg,
       sessionKey: "agent:main:main",
       workspaceDir: "/tmp/test-main",
@@ -533,11 +618,12 @@ describe("Agent-specific tool filtering", () => {
       yieldMs: 10,
     });
 
-    expect(result?.details.status).toBe("completed");
+    const resultDetails = result?.details as { status?: string } | undefined;
+    expect(resultDetails?.status).toBe("completed");
   });
 
   it("should apply agent-specific exec host defaults over global defaults", async () => {
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       tools: {
         exec: {
           host: "sandbox",
@@ -560,7 +646,7 @@ describe("Agent-specific tool filtering", () => {
       },
     };
 
-    const mainTools = createMinionCodingTools({
+    const mainTools = createOpenClawCodingTools({
       config: cfg,
       sessionKey: "agent:main:main",
       workspaceDir: "/tmp/test-main-exec-defaults",
@@ -575,7 +661,7 @@ describe("Agent-specific tool filtering", () => {
       }),
     ).rejects.toThrow("exec host not allowed");
 
-    const helperTools = createMinionCodingTools({
+    const helperTools = createOpenClawCodingTools({
       config: cfg,
       sessionKey: "agent:helper:main",
       workspaceDir: "/tmp/test-helper-exec-defaults",
@@ -588,6 +674,7 @@ describe("Agent-specific tool filtering", () => {
       host: "sandbox",
       yieldMs: 1000,
     });
-    expect(helperResult?.details.status).toBe("completed");
+    const helperDetails = helperResult?.details as { status?: string } | undefined;
+    expect(helperDetails?.status).toBe("completed");
   });
 });

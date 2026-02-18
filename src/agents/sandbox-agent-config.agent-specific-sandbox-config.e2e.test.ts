@@ -1,8 +1,8 @@
 import { EventEmitter } from "node:events";
 import path from "node:path";
 import { Readable } from "node:stream";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { MinionConfig } from "../config/config.js";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import type { OpenClawConfig } from "../config/config.js";
 
 type SpawnCall = {
   command: string;
@@ -21,6 +21,7 @@ vi.mock("node:child_process", async (importOriginal) => {
         stdout?: Readable;
         stderr?: Readable;
         on: (event: string, cb: (...args: unknown[]) => void) => void;
+        emit: (event: string, ...args: unknown[]) => boolean;
       };
       child.stdout = new Readable({ read() {} });
       child.stderr = new Readable({ read() {} });
@@ -40,35 +41,60 @@ vi.mock("node:child_process", async (importOriginal) => {
   };
 });
 
-vi.mock("../skills.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../skills.js")>();
+vi.mock("./skills.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./skills.js")>();
   return {
     ...actual,
     syncSkillsToWorkspace: vi.fn(async () => undefined),
   };
 });
 
+let resolveSandboxContext: typeof import("./sandbox.js").resolveSandboxContext;
+let resolveSandboxConfigForAgent: typeof import("./sandbox.js").resolveSandboxConfigForAgent;
+
+async function resolveContext(config: OpenClawConfig, sessionKey: string, workspaceDir: string) {
+  return resolveSandboxContext({
+    config,
+    sessionKey,
+    workspaceDir,
+  });
+}
+
+function expectDockerSetupCommand(command: string) {
+  expect(
+    spawnCalls.some(
+      (call) =>
+        call.command === "docker" &&
+        call.args[0] === "exec" &&
+        call.args.includes("-lc") &&
+        call.args.includes(command),
+    ),
+  ).toBe(true);
+}
+
 describe("Agent-specific sandbox config", () => {
+  beforeAll(async () => {
+    ({ resolveSandboxConfigForAgent, resolveSandboxContext } = await import("./sandbox.js"));
+  });
+
   beforeEach(() => {
     spawnCalls.length = 0;
   });
 
   it("should use agent-specific workspaceRoot", async () => {
-    const { resolveSandboxContext } = await import("./sandbox.js");
-
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         defaults: {
           sandbox: {
             mode: "all",
             scope: "agent",
-            workspaceRoot: "~/.minion/sandboxes",
+            workspaceRoot: "~/.openclaw/sandboxes",
           },
         },
         list: [
           {
             id: "isolated",
-            workspace: "~/minion-isolated",
+            workspace: "~/openclaw-isolated",
             sandbox: {
               mode: "all",
               scope: "agent",
@@ -79,20 +105,14 @@ describe("Agent-specific sandbox config", () => {
       },
     };
 
-    const context = await resolveSandboxContext({
-      config: cfg,
-      sessionKey: "agent:isolated:main",
-      workspaceDir: "/tmp/test-isolated",
-    });
+    const context = await resolveContext(cfg, "agent:isolated:main", "/tmp/test-isolated");
 
     expect(context).toBeDefined();
     expect(context?.workspaceDir).toContain(path.resolve("/tmp/isolated-sandboxes"));
   });
 
   it("should prefer agent config over global for multiple agents", async () => {
-    const { resolveSandboxContext } = await import("./sandbox.js");
-
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         defaults: {
           sandbox: {
@@ -103,14 +123,14 @@ describe("Agent-specific sandbox config", () => {
         list: [
           {
             id: "main",
-            workspace: "~/minion",
+            workspace: "~/openclaw",
             sandbox: {
               mode: "off",
             },
           },
           {
             id: "family",
-            workspace: "~/minion-family",
+            workspace: "~/openclaw-family",
             sandbox: {
               mode: "all",
               scope: "agent",
@@ -120,26 +140,24 @@ describe("Agent-specific sandbox config", () => {
       },
     };
 
-    const mainContext = await resolveSandboxContext({
-      config: cfg,
-      sessionKey: "agent:main:telegram:group:789",
-      workspaceDir: "/tmp/test-main",
-    });
+    const mainContext = await resolveContext(
+      cfg,
+      "agent:main:telegram:group:789",
+      "/tmp/test-main",
+    );
     expect(mainContext).toBeNull();
 
-    const familyContext = await resolveSandboxContext({
-      config: cfg,
-      sessionKey: "agent:family:whatsapp:group:123",
-      workspaceDir: "/tmp/test-family",
-    });
+    const familyContext = await resolveContext(
+      cfg,
+      "agent:family:whatsapp:group:123",
+      "/tmp/test-family",
+    );
     expect(familyContext).toBeDefined();
     expect(familyContext?.enabled).toBe(true);
   });
 
   it("should prefer agent-specific sandbox tool policy", async () => {
-    const { resolveSandboxContext } = await import("./sandbox.js");
-
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         defaults: {
           sandbox: {
@@ -150,7 +168,7 @@ describe("Agent-specific sandbox config", () => {
         list: [
           {
             id: "restricted",
-            workspace: "~/minion-restricted",
+            workspace: "~/openclaw-restricted",
             sandbox: {
               mode: "all",
               scope: "agent",
@@ -176,11 +194,7 @@ describe("Agent-specific sandbox config", () => {
       },
     };
 
-    const context = await resolveSandboxContext({
-      config: cfg,
-      sessionKey: "agent:restricted:main",
-      workspaceDir: "/tmp/test-restricted",
-    });
+    const context = await resolveContext(cfg, "agent:restricted:main", "/tmp/test-restricted");
 
     expect(context).toBeDefined();
     expect(context?.tools).toEqual({
@@ -190,9 +204,7 @@ describe("Agent-specific sandbox config", () => {
   });
 
   it("should use global sandbox config when no agent-specific config exists", async () => {
-    const { resolveSandboxContext } = await import("./sandbox.js");
-
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         defaults: {
           sandbox: {
@@ -203,26 +215,20 @@ describe("Agent-specific sandbox config", () => {
         list: [
           {
             id: "main",
-            workspace: "~/minion",
+            workspace: "~/openclaw",
           },
         ],
       },
     };
 
-    const context = await resolveSandboxContext({
-      config: cfg,
-      sessionKey: "agent:main:main",
-      workspaceDir: "/tmp/test",
-    });
+    const context = await resolveContext(cfg, "agent:main:main", "/tmp/test");
 
     expect(context).toBeDefined();
     expect(context?.enabled).toBe(true);
   });
 
   it("should allow agent-specific docker setupCommand overrides", async () => {
-    const { resolveSandboxContext } = await import("./sandbox.js");
-
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         defaults: {
           sandbox: {
@@ -236,7 +242,7 @@ describe("Agent-specific sandbox config", () => {
         list: [
           {
             id: "work",
-            workspace: "~/minion-work",
+            workspace: "~/openclaw-work",
             sandbox: {
               mode: "all",
               scope: "agent",
@@ -249,29 +255,15 @@ describe("Agent-specific sandbox config", () => {
       },
     };
 
-    const context = await resolveSandboxContext({
-      config: cfg,
-      sessionKey: "agent:work:main",
-      workspaceDir: "/tmp/test-work",
-    });
+    const context = await resolveContext(cfg, "agent:work:main", "/tmp/test-work");
 
     expect(context).toBeDefined();
     expect(context?.docker.setupCommand).toBe("echo work");
-    expect(
-      spawnCalls.some(
-        (call) =>
-          call.command === "docker" &&
-          call.args[0] === "exec" &&
-          call.args.includes("-lc") &&
-          call.args.includes("echo work"),
-      ),
-    ).toBe(true);
+    expectDockerSetupCommand("echo work");
   });
 
   it("should ignore agent-specific docker overrides when scope is shared", async () => {
-    const { resolveSandboxContext } = await import("./sandbox.js");
-
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         defaults: {
           sandbox: {
@@ -285,7 +277,7 @@ describe("Agent-specific sandbox config", () => {
         list: [
           {
             id: "work",
-            workspace: "~/minion-work",
+            workspace: "~/openclaw-work",
             sandbox: {
               mode: "all",
               scope: "shared",
@@ -298,30 +290,16 @@ describe("Agent-specific sandbox config", () => {
       },
     };
 
-    const context = await resolveSandboxContext({
-      config: cfg,
-      sessionKey: "agent:work:main",
-      workspaceDir: "/tmp/test-work",
-    });
+    const context = await resolveContext(cfg, "agent:work:main", "/tmp/test-work");
 
     expect(context).toBeDefined();
     expect(context?.docker.setupCommand).toBe("echo global");
     expect(context?.containerName).toContain("shared");
-    expect(
-      spawnCalls.some(
-        (call) =>
-          call.command === "docker" &&
-          call.args[0] === "exec" &&
-          call.args.includes("-lc") &&
-          call.args.includes("echo global"),
-      ),
-    ).toBe(true);
+    expectDockerSetupCommand("echo global");
   });
 
   it("should allow agent-specific docker settings beyond setupCommand", async () => {
-    const { resolveSandboxContext } = await import("./sandbox.js");
-
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         defaults: {
           sandbox: {
@@ -336,7 +314,7 @@ describe("Agent-specific sandbox config", () => {
         list: [
           {
             id: "work",
-            workspace: "~/minion-work",
+            workspace: "~/openclaw-work",
             sandbox: {
               mode: "all",
               scope: "agent",
@@ -350,11 +328,7 @@ describe("Agent-specific sandbox config", () => {
       },
     };
 
-    const context = await resolveSandboxContext({
-      config: cfg,
-      sessionKey: "agent:work:main",
-      workspaceDir: "/tmp/test-work",
-    });
+    const context = await resolveContext(cfg, "agent:work:main", "/tmp/test-work");
 
     expect(context).toBeDefined();
     expect(context?.docker.image).toBe("work-image");
@@ -362,9 +336,7 @@ describe("Agent-specific sandbox config", () => {
   });
 
   it("should override with agent-specific sandbox mode 'off'", async () => {
-    const { resolveSandboxContext } = await import("./sandbox.js");
-
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         defaults: {
           sandbox: {
@@ -375,7 +347,7 @@ describe("Agent-specific sandbox config", () => {
         list: [
           {
             id: "main",
-            workspace: "~/minion",
+            workspace: "~/openclaw",
             sandbox: {
               mode: "off",
             },
@@ -384,19 +356,13 @@ describe("Agent-specific sandbox config", () => {
       },
     };
 
-    const context = await resolveSandboxContext({
-      config: cfg,
-      sessionKey: "agent:main:main",
-      workspaceDir: "/tmp/test",
-    });
+    const context = await resolveContext(cfg, "agent:main:main", "/tmp/test");
 
     expect(context).toBeNull();
   });
 
   it("should use agent-specific sandbox mode 'all'", async () => {
-    const { resolveSandboxContext } = await import("./sandbox.js");
-
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         defaults: {
           sandbox: {
@@ -406,7 +372,7 @@ describe("Agent-specific sandbox config", () => {
         list: [
           {
             id: "family",
-            workspace: "~/minion-family",
+            workspace: "~/openclaw-family",
             sandbox: {
               mode: "all",
               scope: "agent",
@@ -416,20 +382,18 @@ describe("Agent-specific sandbox config", () => {
       },
     };
 
-    const context = await resolveSandboxContext({
-      config: cfg,
-      sessionKey: "agent:family:whatsapp:group:123",
-      workspaceDir: "/tmp/test-family",
-    });
+    const context = await resolveContext(
+      cfg,
+      "agent:family:whatsapp:group:123",
+      "/tmp/test-family",
+    );
 
     expect(context).toBeDefined();
     expect(context?.enabled).toBe(true);
   });
 
   it("should use agent-specific scope", async () => {
-    const { resolveSandboxContext } = await import("./sandbox.js");
-
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         defaults: {
           sandbox: {
@@ -440,7 +404,7 @@ describe("Agent-specific sandbox config", () => {
         list: [
           {
             id: "work",
-            workspace: "~/minion-work",
+            workspace: "~/openclaw-work",
             sandbox: {
               mode: "all",
               scope: "agent",
@@ -450,20 +414,14 @@ describe("Agent-specific sandbox config", () => {
       },
     };
 
-    const context = await resolveSandboxContext({
-      config: cfg,
-      sessionKey: "agent:work:slack:channel:456",
-      workspaceDir: "/tmp/test-work",
-    });
+    const context = await resolveContext(cfg, "agent:work:slack:channel:456", "/tmp/test-work");
 
     expect(context).toBeDefined();
     expect(context?.containerName).toContain("agent-work");
   });
 
   it("includes session_status in default sandbox allowlist", async () => {
-    const { resolveSandboxConfigForAgent } = await import("./sandbox.js");
-
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         defaults: {
           sandbox: {
@@ -479,9 +437,7 @@ describe("Agent-specific sandbox config", () => {
   });
 
   it("includes image in default sandbox allowlist", async () => {
-    const { resolveSandboxConfigForAgent } = await import("./sandbox.js");
-
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         defaults: {
           sandbox: {
@@ -497,9 +453,7 @@ describe("Agent-specific sandbox config", () => {
   });
 
   it("injects image into explicit sandbox allowlists", async () => {
-    const { resolveSandboxConfigForAgent } = await import("./sandbox.js");
-
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       tools: {
         sandbox: {
           tools: {

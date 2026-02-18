@@ -8,6 +8,7 @@ import type {
   MarkdownConfig,
   MinionConfig,
 } from "minion/plugin-sdk";
+import type { BaseProbeResult } from "openclaw/plugin-sdk";
 
 export type IrcChannelConfig = {
   requireMention?: boolean;
@@ -83,12 +84,10 @@ export type IrcInboundMessage = {
   isGroup: boolean;
 };
 
-export type IrcProbe = {
-  ok: boolean;
+export type IrcProbe = BaseProbeResult<string> & {
   host: string;
   port: number;
   tls: boolean;
   nick: string;
   latencyMs?: number;
-  error?: string;
 };

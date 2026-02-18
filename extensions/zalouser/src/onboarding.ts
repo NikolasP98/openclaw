@@ -1,31 +1,32 @@
 import type {
   ChannelOnboardingAdapter,
   ChannelOnboardingDmPolicy,
-  MinionConfig,
+  OpenClawConfig,
   WizardPrompter,
-} from "minion/plugin-sdk";
+} from "openclaw/plugin-sdk";
 import {
   addWildcardAllowFrom,
   DEFAULT_ACCOUNT_ID,
+  mergeAllowFromEntries,
   normalizeAccountId,
   promptAccountId,
   promptChannelAccessConfig,
-} from "minion/plugin-sdk";
-import type { ZcaFriend, ZcaGroup } from "./types.js";
+} from "openclaw/plugin-sdk";
 import {
   listZalouserAccountIds,
   resolveDefaultZalouserAccountId,
   resolveZalouserAccountSync,
   checkZcaAuthenticated,
 } from "./accounts.js";
+import type { ZcaFriend, ZcaGroup } from "./types.js";
 import { runZca, runZcaInteractive, checkZcaInstalled, parseJsonOutput } from "./zca.js";
 
 const channel = "zalouser" as const;
 
 function setZalouserDmPolicy(
-  cfg: MinionConfig,
+  cfg: OpenClawConfig,
   dmPolicy: "pairing" | "allowlist" | "open" | "disabled",
-): MinionConfig {
+): OpenClawConfig {
   const allowFrom =
     dmPolicy === "open" ? addWildcardAllowFrom(cfg.channels?.zalouser?.allowFrom) : undefined;
   return {
@@ -38,7 +39,7 @@ function setZalouserDmPolicy(
         ...(allowFrom ? { allowFrom } : {}),
       },
     },
-  } as MinionConfig;
+  } as OpenClawConfig;
 }
 
 async function noteZalouserHelp(prompter: WizardPrompter): Promise<void> {
@@ -50,17 +51,17 @@ async function noteZalouserHelp(prompter: WizardPrompter): Promise<void> {
       "1) Install zca-cli",
       "2) You'll scan a QR code with your Zalo app",
       "",
-      "Docs: https://docs.minion.ai/channels/zalouser",
+      "Docs: https://docs.openclaw.ai/channels/zalouser",
     ].join("\n"),
     "Zalo Personal Setup",
   );
 }
 
 async function promptZalouserAllowFrom(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   prompter: WizardPrompter;
   accountId: string;
-}): Promise<MinionConfig> {
+}): Promise<OpenClawConfig> {
   const { cfg, prompter, accountId } = params;
   const resolved = resolveZalouserAccountSync({ cfg, accountId });
   const existingAllowFrom = resolved.config.allowFrom ?? [];
@@ -121,11 +122,7 @@ async function promptZalouserAllowFrom(params: {
       );
       continue;
     }
-    const merged = [
-      ...existingAllowFrom.map((item) => String(item).trim()).filter(Boolean),
-      ...(results.filter(Boolean) as string[]),
-    ];
-    const unique = [...new Set(merged)];
+    const unique = mergeAllowFromEntries(existingAllowFrom, results.filter(Boolean) as string[]);
     if (accountId === DEFAULT_ACCOUNT_ID) {
       return {
         ...cfg,
@@ -138,7 +135,7 @@ async function promptZalouserAllowFrom(params: {
             allowFrom: unique,
           },
         },
-      } as MinionConfig;
+      } as OpenClawConfig;
     }
 
     return {
@@ -159,15 +156,15 @@ async function promptZalouserAllowFrom(params: {
           },
         },
       },
-    } as MinionConfig;
+    } as OpenClawConfig;
   }
 }
 
 function setZalouserGroupPolicy(
-  cfg: MinionConfig,
+  cfg: OpenClawConfig,
   accountId: string,
   groupPolicy: "open" | "allowlist" | "disabled",
-): MinionConfig {
+): OpenClawConfig {
   if (accountId === DEFAULT_ACCOUNT_ID) {
     return {
       ...cfg,
@@ -179,7 +176,7 @@ function setZalouserGroupPolicy(
           groupPolicy,
         },
       },
-    } as MinionConfig;
+    } as OpenClawConfig;
   }
   return {
     ...cfg,
@@ -198,14 +195,14 @@ function setZalouserGroupPolicy(
         },
       },
     },
-  } as MinionConfig;
+  } as OpenClawConfig;
 }
 
 function setZalouserGroupAllowlist(
-  cfg: MinionConfig,
+  cfg: OpenClawConfig,
   accountId: string,
   groupKeys: string[],
-): MinionConfig {
+): OpenClawConfig {
   const groups = Object.fromEntries(groupKeys.map((key) => [key, { allow: true }]));
   if (accountId === DEFAULT_ACCOUNT_ID) {
     return {
@@ -218,7 +215,7 @@ function setZalouserGroupAllowlist(
           groups,
         },
       },
-    } as MinionConfig;
+    } as OpenClawConfig;
   }
   return {
     ...cfg,
@@ -237,11 +234,11 @@ function setZalouserGroupAllowlist(
         },
       },
     },
-  } as MinionConfig;
+  } as OpenClawConfig;
 }
 
 async function resolveZalouserGroups(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   accountId: string;
   entries: string[];
 }): Promise<Array<{ input: string; resolved: boolean; id?: string }>> {
@@ -340,7 +337,7 @@ export const zalouserOnboardingAdapter: ChannelOnboardingAdapter = {
           "The `zca` binary was not found in PATH.",
           "",
           "Install zca-cli, then re-run onboarding:",
-          "Docs: https://docs.minion.ai/channels/zalouser",
+          "Docs: https://docs.openclaw.ai/channels/zalouser",
         ].join("\n"),
         "Missing Dependency",
       );
@@ -417,7 +414,7 @@ export const zalouserOnboardingAdapter: ChannelOnboardingAdapter = {
             profile: account.profile !== "default" ? account.profile : undefined,
           },
         },
-      } as MinionConfig;
+      } as OpenClawConfig;
     } else {
       next = {
         ...next,
@@ -436,7 +433,7 @@ export const zalouserOnboardingAdapter: ChannelOnboardingAdapter = {
             },
           },
         },
-      } as MinionConfig;
+      } as OpenClawConfig;
     }
 
     if (forceAllowFrom) {

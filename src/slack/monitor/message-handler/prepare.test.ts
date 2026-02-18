@@ -1,16 +1,16 @@
-import type { App } from "@slack/bolt";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import type { App } from "@slack/bolt";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { expectInboundContextContract } from "../../../../test/helpers/inbound-contract.js";
 import type { MinionConfig } from "../../../config/config.js";
+import { resolveAgentRoute } from "../../../routing/resolve-route.js";
+import { resolveThreadSessionKeys } from "../../../routing/session-key.js";
 import type { RuntimeEnv } from "../../../runtime.js";
 import type { ResolvedSlackAccount } from "../../accounts.js";
 import type { SlackMessageEvent } from "../../types.js";
 import type { SlackMonitorContext } from "../context.js";
-import { expectInboundContextContract } from "../../../../test/helpers/inbound-contract.js";
-import { resolveAgentRoute } from "../../../routing/resolve-route.js";
-import { resolveThreadSessionKeys } from "../../../routing/session-key.js";
 import { createSlackMonitorContext } from "../context.js";
 import { prepareSlackMessage } from "./prepare.js";
 
@@ -28,7 +28,7 @@ describe("slack prepareSlackMessage inbound contract", () => {
   }
 
   beforeAll(() => {
-    fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "minion-slack-thread-"));
+    fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-slack-thread-"));
   });
 
   afterAll(() => {
@@ -38,15 +38,8 @@ describe("slack prepareSlackMessage inbound contract", () => {
     }
   });
 
-<<<<<<< HEAD:src/slack/monitor/message-handler/prepare.inbound-contract.test.ts
-  function createDefaultSlackCtx() {
-    const slackCtx = createSlackMonitorContext({
-      cfg: {
-        channels: { slack: { enabled: true } },
-      } as MinionConfig,
-=======
   function createInboundSlackCtx(params: {
-    cfg: OpenClawConfig;
+    cfg: MinionConfig;
     appClient?: App["client"];
     defaultRequireMention?: boolean;
     replyToMode?: "off" | "all";
@@ -54,7 +47,6 @@ describe("slack prepareSlackMessage inbound contract", () => {
   }) {
     return createSlackMonitorContext({
       cfg: params.cfg,
->>>>>>> mirror:src/slack/monitor/message-handler/prepare.test.ts
       accountId: "default",
       botToken: "token",
       app: { client: params.appClient ?? {} } as App,
@@ -81,7 +73,7 @@ describe("slack prepareSlackMessage inbound contract", () => {
       threadInheritParent: false,
       slashCommand: {
         enabled: false,
-        name: "minion",
+        name: "openclaw",
         sessionPrefix: "slack:slash",
         ephemeral: true,
       },
@@ -96,7 +88,7 @@ describe("slack prepareSlackMessage inbound contract", () => {
     const slackCtx = createInboundSlackCtx({
       cfg: {
         channels: { slack: { enabled: true } },
-      } as OpenClawConfig,
+      } as MinionConfig,
     });
     // oxlint-disable-next-line typescript/no-explicit-any
     slackCtx.resolveUserName = async () => ({ name: "Alice" }) as any;
@@ -120,14 +112,8 @@ describe("slack prepareSlackMessage inbound contract", () => {
     });
   }
 
-<<<<<<< HEAD:src/slack/monitor/message-handler/prepare.inbound-contract.test.ts
-  function createThreadSlackCtx(params: { cfg: MinionConfig; replies: unknown }) {
-    return createSlackMonitorContext({
-      cfg: params.cfg,
-=======
   function createSlackAccount(config: ResolvedSlackAccount["config"] = {}): ResolvedSlackAccount {
     return {
->>>>>>> mirror:src/slack/monitor/message-handler/prepare.test.ts
       accountId: "default",
       enabled: true,
       botTokenSource: "config",
@@ -160,27 +146,12 @@ describe("slack prepareSlackMessage inbound contract", () => {
     });
   }
 
-  function createThreadSlackCtx(params: { cfg: OpenClawConfig; replies: unknown }) {
+  function createThreadSlackCtx(params: { cfg: MinionConfig; replies: unknown }) {
     return createInboundSlackCtx({
       cfg: params.cfg,
       appClient: { conversations: { replies: params.replies } } as App["client"],
       defaultRequireMention: false,
       replyToMode: "all",
-<<<<<<< HEAD:src/slack/monitor/message-handler/prepare.inbound-contract.test.ts
-      threadHistoryScope: "thread",
-      threadInheritParent: false,
-      slashCommand: {
-        enabled: false,
-        name: "minion",
-        sessionPrefix: "slack:slash",
-        ephemeral: true,
-      },
-      textLimit: 4000,
-      ackReactionScope: "group-mentions",
-      mediaMaxBytes: 1024,
-      removeAckAfterReply: false,
-=======
->>>>>>> mirror:src/slack/monitor/message-handler/prepare.test.ts
     });
   }
 
@@ -213,6 +184,30 @@ describe("slack prepareSlackMessage inbound contract", () => {
     expectInboundContextContract(prepared!.ctxPayload as any);
   });
 
+  it("includes forwarded shared attachment text in raw body", async () => {
+    const prepared = await prepareWithDefaultCtx(
+      createSlackMessage({
+        text: "",
+        attachments: [{ is_share: true, author_name: "Bob", text: "Forwarded hello" }],
+      }),
+    );
+
+    expect(prepared).toBeTruthy();
+    expect(prepared!.ctxPayload.RawBody).toContain("[Forwarded message from Bob]\nForwarded hello");
+  });
+
+  it("ignores non-forward attachments when no direct text/files are present", async () => {
+    const prepared = await prepareWithDefaultCtx(
+      createSlackMessage({
+        text: "",
+        files: [],
+        attachments: [{ is_msg_unfurl: true, text: "link unfurl text" }],
+      }),
+    );
+
+    expect(prepared).toBeNull();
+  });
+
   it("keeps channel metadata out of GroupSystemPrompt", async () => {
     const slackCtx = createInboundSlackCtx({
       cfg: {
@@ -221,50 +216,11 @@ describe("slack prepareSlackMessage inbound contract", () => {
             enabled: true,
           },
         },
-<<<<<<< HEAD:src/slack/monitor/message-handler/prepare.inbound-contract.test.ts
       } as MinionConfig,
-      accountId: "default",
-      botToken: "token",
-      app: { client: {} } as App,
-      runtime: {} as RuntimeEnv,
-      botUserId: "B1",
-      teamId: "T1",
-      apiAppId: "A1",
-      historyLimit: 0,
-      sessionScope: "per-sender",
-      mainKey: "main",
-      dmEnabled: true,
-      dmPolicy: "open",
-      allowFrom: [],
-      groupDmEnabled: true,
-      groupDmChannels: [],
-=======
-      } as OpenClawConfig,
->>>>>>> mirror:src/slack/monitor/message-handler/prepare.test.ts
       defaultRequireMention: false,
       channelsConfig: {
         C123: { systemPrompt: "Config prompt" },
       },
-<<<<<<< HEAD:src/slack/monitor/message-handler/prepare.inbound-contract.test.ts
-      groupPolicy: "open",
-      useAccessGroups: false,
-      reactionMode: "off",
-      reactionAllowlist: [],
-      replyToMode: "off",
-      threadHistoryScope: "thread",
-      threadInheritParent: false,
-      slashCommand: {
-        enabled: false,
-        name: "minion",
-        sessionPrefix: "slack:slash",
-        ephemeral: true,
-      },
-      textLimit: 4000,
-      ackReactionScope: "group-mentions",
-      mediaMaxBytes: 1024,
-      removeAckAfterReply: false,
-=======
->>>>>>> mirror:src/slack/monitor/message-handler/prepare.test.ts
     });
     // oxlint-disable-next-line typescript/no-explicit-any
     slackCtx.resolveUserName = async () => ({ name: "Alice" }) as any;
@@ -298,45 +254,8 @@ describe("slack prepareSlackMessage inbound contract", () => {
     const slackCtx = createInboundSlackCtx({
       cfg: {
         channels: { slack: { enabled: true, replyToMode: "all" } },
-<<<<<<< HEAD:src/slack/monitor/message-handler/prepare.inbound-contract.test.ts
       } as MinionConfig,
-      accountId: "default",
-      botToken: "token",
-      app: { client: {} } as App,
-      runtime: {} as RuntimeEnv,
-      botUserId: "B1",
-      teamId: "T1",
-      apiAppId: "A1",
-      historyLimit: 0,
-      sessionScope: "per-sender",
-      mainKey: "main",
-      dmEnabled: true,
-      dmPolicy: "open",
-      allowFrom: [],
-      groupDmEnabled: true,
-      groupDmChannels: [],
-      defaultRequireMention: true,
-      groupPolicy: "open",
-      useAccessGroups: false,
-      reactionMode: "off",
-      reactionAllowlist: [],
       replyToMode: "all",
-      threadHistoryScope: "thread",
-      threadInheritParent: false,
-      slashCommand: {
-        enabled: false,
-        name: "minion",
-        sessionPrefix: "slack:slash",
-        ephemeral: true,
-      },
-      textLimit: 4000,
-      ackReactionScope: "group-mentions",
-      mediaMaxBytes: 1024,
-      removeAckAfterReply: false,
-=======
-      } as OpenClawConfig,
-      replyToMode: "all",
->>>>>>> mirror:src/slack/monitor/message-handler/prepare.test.ts
     });
     // oxlint-disable-next-line typescript/no-explicit-any
     slackCtx.resolveUserName = async () => ({ name: "Alice" }) as any;

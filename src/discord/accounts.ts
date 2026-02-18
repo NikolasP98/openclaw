@@ -1,6 +1,7 @@
-import type { MinionConfig } from "../config/config.js";
-import type { DiscordAccountConfig } from "../config/types.js";
-import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "../routing/session-key.js";
+import { createAccountListHelpers } from "../channels/plugins/account-helpers.js";
+import type { OpenClawConfig } from "../config/config.js";
+import type { DiscordAccountConfig, DiscordActionConfig } from "../config/types.js";
+import { normalizeAccountId } from "../routing/session-key.js";
 import { resolveDiscordToken } from "./token.js";
 
 export type ResolvedDiscordAccount = {
@@ -12,32 +13,12 @@ export type ResolvedDiscordAccount = {
   config: DiscordAccountConfig;
 };
 
-function listConfiguredAccountIds(cfg: MinionConfig): string[] {
-  const accounts = cfg.channels?.discord?.accounts;
-  if (!accounts || typeof accounts !== "object") {
-    return [];
-  }
-  return Object.keys(accounts).filter(Boolean);
-}
-
-export function listDiscordAccountIds(cfg: MinionConfig): string[] {
-  const ids = listConfiguredAccountIds(cfg);
-  if (ids.length === 0) {
-    return [DEFAULT_ACCOUNT_ID];
-  }
-  return ids.toSorted((a, b) => a.localeCompare(b));
-}
-
-export function resolveDefaultDiscordAccountId(cfg: MinionConfig): string {
-  const ids = listDiscordAccountIds(cfg);
-  if (ids.includes(DEFAULT_ACCOUNT_ID)) {
-    return DEFAULT_ACCOUNT_ID;
-  }
-  return ids[0] ?? DEFAULT_ACCOUNT_ID;
-}
+const { listAccountIds, resolveDefaultAccountId } = createAccountListHelpers("discord");
+export const listDiscordAccountIds = listAccountIds;
+export const resolveDefaultDiscordAccountId = resolveDefaultAccountId;
 
 function resolveAccountConfig(
-  cfg: MinionConfig,
+  cfg: OpenClawConfig,
   accountId: string,
 ): DiscordAccountConfig | undefined {
   const accounts = cfg.channels?.discord?.accounts;
@@ -47,7 +28,7 @@ function resolveAccountConfig(
   return accounts[accountId] as DiscordAccountConfig | undefined;
 }
 
-function mergeDiscordAccountConfig(cfg: MinionConfig, accountId: string): DiscordAccountConfig {
+function mergeDiscordAccountConfig(cfg: OpenClawConfig, accountId: string): DiscordAccountConfig {
   const { accounts: _ignored, ...base } = (cfg.channels?.discord ?? {}) as DiscordAccountConfig & {
     accounts?: unknown;
   };
@@ -55,8 +36,28 @@ function mergeDiscordAccountConfig(cfg: MinionConfig, accountId: string): Discor
   return { ...base, ...account };
 }
 
+export function createDiscordActionGate(params: {
+  cfg: OpenClawConfig;
+  accountId?: string | null;
+}): (key: keyof DiscordActionConfig, defaultValue?: boolean) => boolean {
+  const accountId = normalizeAccountId(params.accountId);
+  const baseActions = params.cfg.channels?.discord?.actions;
+  const accountActions = resolveAccountConfig(params.cfg, accountId)?.actions;
+  return (key, defaultValue = true) => {
+    const accountValue = accountActions?.[key];
+    if (accountValue !== undefined) {
+      return accountValue;
+    }
+    const baseValue = baseActions?.[key];
+    if (baseValue !== undefined) {
+      return baseValue;
+    }
+    return defaultValue;
+  };
+}
+
 export function resolveDiscordAccount(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
 }): ResolvedDiscordAccount {
   const accountId = normalizeAccountId(params.accountId);
@@ -75,7 +76,7 @@ export function resolveDiscordAccount(params: {
   };
 }
 
-export function listEnabledDiscordAccounts(cfg: MinionConfig): ResolvedDiscordAccount[] {
+export function listEnabledDiscordAccounts(cfg: OpenClawConfig): ResolvedDiscordAccount[] {
   return listDiscordAccountIds(cfg)
     .map((accountId) => resolveDiscordAccount({ cfg, accountId }))
     .filter((account) => account.enabled);

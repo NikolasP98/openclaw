@@ -2,26 +2,18 @@ import { constants as fsConstants } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import type { MsgContext } from "../auto-reply/templating.js";
-import type { MinionConfig } from "../config/config.js";
-import type {
-  MediaUnderstandingConfig,
-  MediaUnderstandingModelConfig,
-} from "../config/types.tools.js";
-import type {
-  MediaAttachment,
-  MediaUnderstandingCapability,
-  MediaUnderstandingDecision,
-  MediaUnderstandingModelDecision,
-  MediaUnderstandingOutput,
-  MediaUnderstandingProvider,
-} from "./types.js";
 import { resolveApiKeyForProvider } from "../agents/model-auth.js";
 import {
   findModelInCatalog,
   loadModelCatalog,
   modelSupportsVision,
 } from "../agents/model-catalog.js";
+import type { MsgContext } from "../auto-reply/templating.js";
+import type { OpenClawConfig } from "../config/config.js";
+import type {
+  MediaUnderstandingConfig,
+  MediaUnderstandingModelConfig,
+} from "../config/types.tools.js";
 import { logVerbose, shouldLogVerbose } from "../globals.js";
 import { runExec } from "../process/exec.js";
 import { MediaAttachmentCache, normalizeAttachments, selectAttachments } from "./attachments.js";
@@ -32,6 +24,7 @@ import {
   DEFAULT_IMAGE_MODELS,
 } from "./defaults.js";
 import { isMediaUnderstandingSkipError } from "./errors.js";
+import { fileExists } from "./fs.js";
 import { extractGeminiResponse } from "./output-extract.js";
 import {
   buildMediaUnderstandingRegistry,
@@ -45,6 +38,14 @@ import {
   runCliEntry,
   runProviderEntry,
 } from "./runner.entries.js";
+import type {
+  MediaAttachment,
+  MediaUnderstandingCapability,
+  MediaUnderstandingDecision,
+  MediaUnderstandingModelDecision,
+  MediaUnderstandingOutput,
+  MediaUnderstandingProvider,
+} from "./types.js";
 
 export type ActiveMediaModel = {
   provider: string;
@@ -173,18 +174,6 @@ async function findBinary(name: string): Promise<string | null> {
 
 async function hasBinary(name: string): Promise<boolean> {
   return Boolean(await findBinary(name));
-}
-
-async function fileExists(filePath?: string | null): Promise<boolean> {
-  if (!filePath) {
-    return false;
-  }
-  try {
-    await fs.stat(filePath);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 async function probeGeminiCli(): Promise<boolean> {
@@ -319,7 +308,7 @@ async function resolveGeminiCliEntry(
 }
 
 async function resolveKeyEntry(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   agentDir?: string;
   providerRegistry: ProviderRegistry;
   capability: MediaUnderstandingCapability;
@@ -403,7 +392,7 @@ async function resolveKeyEntry(params: {
 }
 
 async function resolveAutoEntries(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   agentDir?: string;
   providerRegistry: ProviderRegistry;
   capability: MediaUnderstandingCapability;
@@ -431,7 +420,7 @@ async function resolveAutoEntries(params: {
 }
 
 export async function resolveAutoImageModel(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   agentDir?: string;
   activeModel?: ActiveMediaModel;
 }): Promise<ActiveMediaModel | null> {
@@ -472,7 +461,7 @@ export async function resolveAutoImageModel(params: {
 }
 
 async function resolveActiveModelEntry(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   agentDir?: string;
   providerRegistry: ProviderRegistry;
   capability: MediaUnderstandingCapability;
@@ -517,7 +506,7 @@ async function resolveActiveModelEntry(params: {
 
 async function runAttachmentEntries(params: {
   capability: MediaUnderstandingCapability;
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   ctx: MsgContext;
   attachmentIndex: number;
   agentDir?: string;
@@ -604,7 +593,7 @@ async function runAttachmentEntries(params: {
 
 export async function runCapability(params: {
   capability: MediaUnderstandingCapability;
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   ctx: MsgContext;
   attachments: MediaAttachmentCache;
   media: MediaAttachment[];

@@ -1,13 +1,13 @@
 {
-  "name": "@minion/telegram",
-  "version": "2026.2.13",
+  "name": "@openclaw/telegram",
+  "version": "2026.2.16",
   "private": true,
-  "description": "Minion Telegram channel plugin",
+  "description": "OpenClaw Telegram channel plugin",
   "type": "module",
   "devDependencies": {
     "@nikolasp98/minion": "workspace:*"
   },
-  "minion": {
+  "openclaw": {
     "extensions": [
       "./index.ts"
     ]

@@ -1,12 +1,12 @@
 import { type RunOptions, run } from "@grammyjs/runner";
-import type { MinionConfig } from "../config/config.js";
-import type { RuntimeEnv } from "../runtime.js";
 import { resolveAgentMaxConcurrent } from "../config/agent-limits.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { loadConfig } from "../config/config.js";
 import { computeBackoff, sleepWithAbort } from "../infra/backoff.js";
 import { formatErrorMessage } from "../infra/errors.js";
 import { formatDurationPrecise } from "../infra/format-time/format-duration.ts";
 import { registerUnhandledRejectionHandler } from "../infra/unhandled-rejections.js";
+import type { RuntimeEnv } from "../runtime.js";
 import { resolveTelegramAccount } from "./accounts.js";
 import { resolveTelegramAllowedUpdates } from "./allowed-updates.js";
 import { createTelegramBot } from "./bot.js";
@@ -18,7 +18,7 @@ import { startTelegramWebhook } from "./webhook.js";
 export type MonitorTelegramOpts = {
   token?: string;
   accountId?: string;
-  config?: MinionConfig;
+  config?: OpenClawConfig;
   runtime?: RuntimeEnv;
   abortSignal?: AbortSignal;
   useWebhook?: boolean;
@@ -30,7 +30,7 @@ export type MonitorTelegramOpts = {
   webhookUrl?: string;
 };
 
-export function createTelegramRunnerOptions(cfg: MinionConfig): RunOptions<unknown> {
+export function createTelegramRunnerOptions(cfg: OpenClawConfig): RunOptions<unknown> {
   return {
     sink: {
       concurrency: resolveAgentMaxConcurrent(cfg),
@@ -158,7 +158,7 @@ export async function monitorTelegramProvider(opts: MonitorTelegramOpts = {}) {
         config: cfg,
         path: opts.webhookPath,
         port: opts.webhookPort,
-        secret: opts.webhookSecret,
+        secret: opts.webhookSecret ?? account.config.webhookSecret,
         host: opts.webhookHost ?? account.config.webhookHost,
         runtime: opts.runtime as RuntimeEnv,
         fetch: proxyFetch,

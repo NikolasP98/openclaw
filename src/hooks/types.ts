@@ -65,3 +65,6 @@ export type HookSnapshot = {
   resolvedHooks?: Hook[];
   version?: number;
 };
+
+/** @deprecated Use MinionHookMetadata */
+export type OpenClawHookMetadata = MinionHookMetadata;

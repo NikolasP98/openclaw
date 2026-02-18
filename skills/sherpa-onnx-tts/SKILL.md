@@ -3,7 +3,7 @@ name: sherpa-onnx-tts
 description: Local text-to-speech via sherpa-onnx (offline, no cloud)
 metadata:
   {
-    "minion":
+    "openclaw":
       {
         "emoji": "🗣️",
         "os": ["darwin", "linux", "win32"],
@@ -18,7 +18,7 @@ metadata:
               "archive": "tar.bz2",
               "extract": true,
               "stripComponents": 1,
-              "targetDir": "~/.minion/tools/sherpa-onnx-tts/runtime",
+              "targetDir": "runtime",
               "label": "Download sherpa-onnx runtime (macOS)",
             },
             {
@@ -29,7 +29,7 @@ metadata:
               "archive": "tar.bz2",
               "extract": true,
               "stripComponents": 1,
-              "targetDir": "~/.minion/tools/sherpa-onnx-tts/runtime",
+              "targetDir": "runtime",
               "label": "Download sherpa-onnx runtime (Linux x64)",
             },
             {
@@ -40,7 +40,7 @@ metadata:
               "archive": "tar.bz2",
               "extract": true,
               "stripComponents": 1,
-              "targetDir": "~/.minion/tools/sherpa-onnx-tts/runtime",
+              "targetDir": "runtime",
               "label": "Download sherpa-onnx runtime (Windows x64)",
             },
             {
@@ -49,7 +49,7 @@ metadata:
               "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-lessac-high.tar.bz2",
               "archive": "tar.bz2",
               "extract": true,
-              "targetDir": "~/.minion/tools/sherpa-onnx-tts/models",
+              "targetDir": "models",
               "label": "Download Piper en_US lessac (high)",
             },
           ],
@@ -63,10 +63,10 @@ Local TTS using the sherpa-onnx offline CLI.
 
 ## Install
 
-1. Download the runtime for your OS (extracts into `~/.minion/tools/sherpa-onnx-tts/runtime`)
-2. Download a voice model (extracts into `~/.minion/tools/sherpa-onnx-tts/models`)
+1. Download the runtime for your OS (extracts into `~/.openclaw/tools/sherpa-onnx-tts/runtime`)
+2. Download a voice model (extracts into `~/.openclaw/tools/sherpa-onnx-tts/models`)
 
-Update `~/.minion/minion.json`:
+Update `~/.openclaw/openclaw.json`:
 
 ```json5
 {
@@ -74,8 +74,8 @@ Update `~/.minion/minion.json`:
     entries: {
       "sherpa-onnx-tts": {
         env: {
-          SHERPA_ONNX_RUNTIME_DIR: "~/.minion/tools/sherpa-onnx-tts/runtime",
-          SHERPA_ONNX_MODEL_DIR: "~/.minion/tools/sherpa-onnx-tts/models/vits-piper-en_US-lessac-high",
+          SHERPA_ONNX_RUNTIME_DIR: "~/.openclaw/tools/sherpa-onnx-tts/runtime",
+          SHERPA_ONNX_MODEL_DIR: "~/.openclaw/tools/sherpa-onnx-tts/models/vits-piper-en_US-lessac-high",
         },
       },
     },

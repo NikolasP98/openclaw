@@ -1,6 +1,5 @@
-import type { SeverityNumber } from "@opentelemetry/api-logs";
-import type { DiagnosticEventPayload, MinionPluginService } from "minion/plugin-sdk";
 import { metrics, trace, SpanStatusCode } from "@opentelemetry/api";
+import type { SeverityNumber } from "@opentelemetry/api-logs";
 import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
@@ -10,9 +9,10 @@ import { PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import { ParentBasedSampler, TraceIdRatioBasedSampler } from "@opentelemetry/sdk-trace-base";
 import { SemanticResourceAttributes } from "@opentelemetry/semantic-conventions";
-import { onDiagnosticEvent, registerLogTransport } from "minion/plugin-sdk";
+import type { DiagnosticEventPayload, OpenClawPluginService } from "openclaw/plugin-sdk";
+import { onDiagnosticEvent, registerLogTransport } from "openclaw/plugin-sdk";
 
-const DEFAULT_SERVICE_NAME = "minion";
+const DEFAULT_SERVICE_NAME = "openclaw";
 
 function normalizeEndpoint(endpoint?: string): string | undefined {
   const trimmed = endpoint?.trim();
@@ -39,7 +39,7 @@ function resolveSampleRate(value: number | undefined): number | undefined {
   return value;
 }
 
-export function createDiagnosticsOtelService(): MinionPluginService {
+export function createDiagnosticsOtelService(): OpenClawPluginService {
   let sdk: NodeSDK | null = null;
   let logProvider: LoggerProvider | null = null;
   let stopLogTransport: (() => void) | null = null;
@@ -129,78 +129,78 @@ export function createDiagnosticsOtelService(): MinionPluginService {
         FATAL: 21 as SeverityNumber,
       };
 
-      const meter = metrics.getMeter("minion");
-      const tracer = trace.getTracer("minion");
+      const meter = metrics.getMeter("openclaw");
+      const tracer = trace.getTracer("openclaw");
 
-      const tokensCounter = meter.createCounter("minion.tokens", {
+      const tokensCounter = meter.createCounter("openclaw.tokens", {
         unit: "1",
         description: "Token usage by type",
       });
-      const costCounter = meter.createCounter("minion.cost.usd", {
+      const costCounter = meter.createCounter("openclaw.cost.usd", {
         unit: "1",
         description: "Estimated model cost (USD)",
       });
-      const durationHistogram = meter.createHistogram("minion.run.duration_ms", {
+      const durationHistogram = meter.createHistogram("openclaw.run.duration_ms", {
         unit: "ms",
         description: "Agent run duration",
       });
-      const contextHistogram = meter.createHistogram("minion.context.tokens", {
+      const contextHistogram = meter.createHistogram("openclaw.context.tokens", {
         unit: "1",
         description: "Context window size and usage",
       });
-      const webhookReceivedCounter = meter.createCounter("minion.webhook.received", {
+      const webhookReceivedCounter = meter.createCounter("openclaw.webhook.received", {
         unit: "1",
         description: "Webhook requests received",
       });
-      const webhookErrorCounter = meter.createCounter("minion.webhook.error", {
+      const webhookErrorCounter = meter.createCounter("openclaw.webhook.error", {
         unit: "1",
         description: "Webhook processing errors",
       });
-      const webhookDurationHistogram = meter.createHistogram("minion.webhook.duration_ms", {
+      const webhookDurationHistogram = meter.createHistogram("openclaw.webhook.duration_ms", {
         unit: "ms",
         description: "Webhook processing duration",
       });
-      const messageQueuedCounter = meter.createCounter("minion.message.queued", {
+      const messageQueuedCounter = meter.createCounter("openclaw.message.queued", {
         unit: "1",
         description: "Messages queued for processing",
       });
-      const messageProcessedCounter = meter.createCounter("minion.message.processed", {
+      const messageProcessedCounter = meter.createCounter("openclaw.message.processed", {
         unit: "1",
         description: "Messages processed by outcome",
       });
-      const messageDurationHistogram = meter.createHistogram("minion.message.duration_ms", {
+      const messageDurationHistogram = meter.createHistogram("openclaw.message.duration_ms", {
         unit: "ms",
         description: "Message processing duration",
       });
-      const queueDepthHistogram = meter.createHistogram("minion.queue.depth", {
+      const queueDepthHistogram = meter.createHistogram("openclaw.queue.depth", {
         unit: "1",
         description: "Queue depth on enqueue/dequeue",
       });
-      const queueWaitHistogram = meter.createHistogram("minion.queue.wait_ms", {
+      const queueWaitHistogram = meter.createHistogram("openclaw.queue.wait_ms", {
         unit: "ms",
         description: "Queue wait time before execution",
       });
-      const laneEnqueueCounter = meter.createCounter("minion.queue.lane.enqueue", {
+      const laneEnqueueCounter = meter.createCounter("openclaw.queue.lane.enqueue", {
         unit: "1",
         description: "Command queue lane enqueue events",
       });
-      const laneDequeueCounter = meter.createCounter("minion.queue.lane.dequeue", {
+      const laneDequeueCounter = meter.createCounter("openclaw.queue.lane.dequeue", {
         unit: "1",
         description: "Command queue lane dequeue events",
       });
-      const sessionStateCounter = meter.createCounter("minion.session.state", {
+      const sessionStateCounter = meter.createCounter("openclaw.session.state", {
         unit: "1",
         description: "Session state transitions",
       });
-      const sessionStuckCounter = meter.createCounter("minion.session.stuck", {
+      const sessionStuckCounter = meter.createCounter("openclaw.session.stuck", {
         unit: "1",
         description: "Sessions stuck in processing",
       });
-      const sessionStuckAgeHistogram = meter.createHistogram("minion.session.stuck_age_ms", {
+      const sessionStuckAgeHistogram = meter.createHistogram("openclaw.session.stuck_age_ms", {
         unit: "ms",
         description: "Age of stuck sessions",
       });
-      const runAttemptCounter = meter.createCounter("minion.run.attempt", {
+      const runAttemptCounter = meter.createCounter("openclaw.run.attempt", {
         unit: "1",
         description: "Run attempts",
       });
@@ -217,7 +217,7 @@ export function createDiagnosticsOtelService(): MinionPluginService {
             : {},
         );
         logProvider = new LoggerProvider({ resource, processors: [processor] });
-        const otelLogger = logProvider.getLogger("minion");
+        const otelLogger = logProvider.getLogger("openclaw");
 
         stopLogTransport = registerLogTransport((logObj) => {
           const safeStringify = (value: unknown) => {
@@ -275,13 +275,13 @@ export function createDiagnosticsOtelService(): MinionPluginService {
           }
 
           const attributes: Record<string, string | number | boolean> = {
-            "minion.log.level": logLevelName,
+            "openclaw.log.level": logLevelName,
           };
           if (meta?.name) {
-            attributes["minion.logger"] = meta.name;
+            attributes["openclaw.logger"] = meta.name;
           }
           if (meta?.parentNames?.length) {
-            attributes["minion.logger.parents"] = meta.parentNames.join(".");
+            attributes["openclaw.logger.parents"] = meta.parentNames.join(".");
           }
           if (bindings) {
             for (const [key, value] of Object.entries(bindings)) {
@@ -290,14 +290,14 @@ export function createDiagnosticsOtelService(): MinionPluginService {
                 typeof value === "number" ||
                 typeof value === "boolean"
               ) {
-                attributes[`minion.${key}`] = value;
+                attributes[`openclaw.${key}`] = value;
               } else if (value != null) {
-                attributes[`minion.${key}`] = safeStringify(value);
+                attributes[`openclaw.${key}`] = safeStringify(value);
               }
             }
           }
           if (numericArgs.length > 0) {
-            attributes["minion.log.args"] = safeStringify(numericArgs);
+            attributes["openclaw.log.args"] = safeStringify(numericArgs);
           }
           if (meta?.path?.filePath) {
             attributes["code.filepath"] = meta.path.filePath;
@@ -309,7 +309,7 @@ export function createDiagnosticsOtelService(): MinionPluginService {
             attributes["code.function"] = meta.path.method;
           }
           if (meta?.path?.filePathWithLine) {
-            attributes["minion.code.location"] = meta.path.filePathWithLine;
+            attributes["openclaw.code.location"] = meta.path.filePathWithLine;
           }
 
           otelLogger.emit({
@@ -338,29 +338,29 @@ export function createDiagnosticsOtelService(): MinionPluginService {
 
       const recordModelUsage = (evt: Extract<DiagnosticEventPayload, { type: "model.usage" }>) => {
         const attrs = {
-          "minion.channel": evt.channel ?? "unknown",
-          "minion.provider": evt.provider ?? "unknown",
-          "minion.model": evt.model ?? "unknown",
+          "openclaw.channel": evt.channel ?? "unknown",
+          "openclaw.provider": evt.provider ?? "unknown",
+          "openclaw.model": evt.model ?? "unknown",
         };
 
         const usage = evt.usage;
         if (usage.input) {
-          tokensCounter.add(usage.input, { ...attrs, "minion.token": "input" });
+          tokensCounter.add(usage.input, { ...attrs, "openclaw.token": "input" });
         }
         if (usage.output) {
-          tokensCounter.add(usage.output, { ...attrs, "minion.token": "output" });
+          tokensCounter.add(usage.output, { ...attrs, "openclaw.token": "output" });
         }
         if (usage.cacheRead) {
-          tokensCounter.add(usage.cacheRead, { ...attrs, "minion.token": "cache_read" });
+          tokensCounter.add(usage.cacheRead, { ...attrs, "openclaw.token": "cache_read" });
         }
         if (usage.cacheWrite) {
-          tokensCounter.add(usage.cacheWrite, { ...attrs, "minion.token": "cache_write" });
+          tokensCounter.add(usage.cacheWrite, { ...attrs, "openclaw.token": "cache_write" });
         }
         if (usage.promptTokens) {
-          tokensCounter.add(usage.promptTokens, { ...attrs, "minion.token": "prompt" });
+          tokensCounter.add(usage.promptTokens, { ...attrs, "openclaw.token": "prompt" });
         }
         if (usage.total) {
-          tokensCounter.add(usage.total, { ...attrs, "minion.token": "total" });
+          tokensCounter.add(usage.total, { ...attrs, "openclaw.token": "total" });
         }
 
         if (evt.costUsd) {
@@ -372,13 +372,13 @@ export function createDiagnosticsOtelService(): MinionPluginService {
         if (evt.context?.limit) {
           contextHistogram.record(evt.context.limit, {
             ...attrs,
-            "minion.context": "limit",
+            "openclaw.context": "limit",
           });
         }
         if (evt.context?.used) {
           contextHistogram.record(evt.context.used, {
             ...attrs,
-            "minion.context": "used",
+            "openclaw.context": "used",
           });
         }
 
@@ -387,16 +387,16 @@ export function createDiagnosticsOtelService(): MinionPluginService {
         }
         const spanAttrs: Record<string, string | number> = {
           ...attrs,
-          "minion.sessionKey": evt.sessionKey ?? "",
-          "minion.sessionId": evt.sessionId ?? "",
-          "minion.tokens.input": usage.input ?? 0,
-          "minion.tokens.output": usage.output ?? 0,
-          "minion.tokens.cache_read": usage.cacheRead ?? 0,
-          "minion.tokens.cache_write": usage.cacheWrite ?? 0,
-          "minion.tokens.total": usage.total ?? 0,
+          "openclaw.sessionKey": evt.sessionKey ?? "",
+          "openclaw.sessionId": evt.sessionId ?? "",
+          "openclaw.tokens.input": usage.input ?? 0,
+          "openclaw.tokens.output": usage.output ?? 0,
+          "openclaw.tokens.cache_read": usage.cacheRead ?? 0,
+          "openclaw.tokens.cache_write": usage.cacheWrite ?? 0,
+          "openclaw.tokens.total": usage.total ?? 0,
         };
 
-        const span = spanWithDuration("minion.model.usage", spanAttrs, evt.durationMs);
+        const span = spanWithDuration("openclaw.model.usage", spanAttrs, evt.durationMs);
         span.end();
       };
 
@@ -404,8 +404,8 @@ export function createDiagnosticsOtelService(): MinionPluginService {
         evt: Extract<DiagnosticEventPayload, { type: "webhook.received" }>,
       ) => {
         const attrs = {
-          "minion.channel": evt.channel ?? "unknown",
-          "minion.webhook": evt.updateType ?? "unknown",
+          "openclaw.channel": evt.channel ?? "unknown",
+          "openclaw.webhook": evt.updateType ?? "unknown",
         };
         webhookReceivedCounter.add(1, attrs);
       };
@@ -414,8 +414,8 @@ export function createDiagnosticsOtelService(): MinionPluginService {
         evt: Extract<DiagnosticEventPayload, { type: "webhook.processed" }>,
       ) => {
         const attrs = {
-          "minion.channel": evt.channel ?? "unknown",
-          "minion.webhook": evt.updateType ?? "unknown",
+          "openclaw.channel": evt.channel ?? "unknown",
+          "openclaw.webhook": evt.updateType ?? "unknown",
         };
         if (typeof evt.durationMs === "number") {
           webhookDurationHistogram.record(evt.durationMs, attrs);
@@ -425,9 +425,9 @@ export function createDiagnosticsOtelService(): MinionPluginService {
         }
         const spanAttrs: Record<string, string | number> = { ...attrs };
         if (evt.chatId !== undefined) {
-          spanAttrs["minion.chatId"] = String(evt.chatId);
+          spanAttrs["openclaw.chatId"] = String(evt.chatId);
         }
-        const span = spanWithDuration("minion.webhook.processed", spanAttrs, evt.durationMs);
+        const span = spanWithDuration("openclaw.webhook.processed", spanAttrs, evt.durationMs);
         span.end();
       };
 
@@ -435,8 +435,8 @@ export function createDiagnosticsOtelService(): MinionPluginService {
         evt: Extract<DiagnosticEventPayload, { type: "webhook.error" }>,
       ) => {
         const attrs = {
-          "minion.channel": evt.channel ?? "unknown",
-          "minion.webhook": evt.updateType ?? "unknown",
+          "openclaw.channel": evt.channel ?? "unknown",
+          "openclaw.webhook": evt.updateType ?? "unknown",
         };
         webhookErrorCounter.add(1, attrs);
         if (!tracesEnabled) {
@@ -444,12 +444,12 @@ export function createDiagnosticsOtelService(): MinionPluginService {
         }
         const spanAttrs: Record<string, string | number> = {
           ...attrs,
-          "minion.error": evt.error,
+          "openclaw.error": evt.error,
         };
         if (evt.chatId !== undefined) {
-          spanAttrs["minion.chatId"] = String(evt.chatId);
+          spanAttrs["openclaw.chatId"] = String(evt.chatId);
         }
-        const span = tracer.startSpan("minion.webhook.error", {
+        const span = tracer.startSpan("openclaw.webhook.error", {
           attributes: spanAttrs,
         });
         span.setStatus({ code: SpanStatusCode.ERROR, message: evt.error });
@@ -460,8 +460,8 @@ export function createDiagnosticsOtelService(): MinionPluginService {
         evt: Extract<DiagnosticEventPayload, { type: "message.queued" }>,
       ) => {
         const attrs = {
-          "minion.channel": evt.channel ?? "unknown",
-          "minion.source": evt.source ?? "unknown",
+          "openclaw.channel": evt.channel ?? "unknown",
+          "openclaw.source": evt.source ?? "unknown",
         };
         messageQueuedCounter.add(1, attrs);
         if (typeof evt.queueDepth === "number") {
@@ -473,8 +473,8 @@ export function createDiagnosticsOtelService(): MinionPluginService {
         evt: Extract<DiagnosticEventPayload, { type: "message.processed" }>,
       ) => {
         const attrs = {
-          "minion.channel": evt.channel ?? "unknown",
-          "minion.outcome": evt.outcome ?? "unknown",
+          "openclaw.channel": evt.channel ?? "unknown",
+          "openclaw.outcome": evt.outcome ?? "unknown",
         };
         messageProcessedCounter.add(1, attrs);
         if (typeof evt.durationMs === "number") {
@@ -485,21 +485,21 @@ export function createDiagnosticsOtelService(): MinionPluginService {
         }
         const spanAttrs: Record<string, string | number> = { ...attrs };
         if (evt.sessionKey) {
-          spanAttrs["minion.sessionKey"] = evt.sessionKey;
+          spanAttrs["openclaw.sessionKey"] = evt.sessionKey;
         }
         if (evt.sessionId) {
-          spanAttrs["minion.sessionId"] = evt.sessionId;
+          spanAttrs["openclaw.sessionId"] = evt.sessionId;
         }
         if (evt.chatId !== undefined) {
-          spanAttrs["minion.chatId"] = String(evt.chatId);
+          spanAttrs["openclaw.chatId"] = String(evt.chatId);
         }
         if (evt.messageId !== undefined) {
-          spanAttrs["minion.messageId"] = String(evt.messageId);
+          spanAttrs["openclaw.messageId"] = String(evt.messageId);
         }
         if (evt.reason) {
-          spanAttrs["minion.reason"] = evt.reason;
+          spanAttrs["openclaw.reason"] = evt.reason;
         }
-        const span = spanWithDuration("minion.message.processed", spanAttrs, evt.durationMs);
+        const span = spanWithDuration("openclaw.message.processed", spanAttrs, evt.durationMs);
         if (evt.outcome === "error") {
           span.setStatus({ code: SpanStatusCode.ERROR, message: evt.error });
         }
@@ -509,7 +509,7 @@ export function createDiagnosticsOtelService(): MinionPluginService {
       const recordLaneEnqueue = (
         evt: Extract<DiagnosticEventPayload, { type: "queue.lane.enqueue" }>,
       ) => {
-        const attrs = { "minion.lane": evt.lane };
+        const attrs = { "openclaw.lane": evt.lane };
         laneEnqueueCounter.add(1, attrs);
         queueDepthHistogram.record(evt.queueSize, attrs);
       };
@@ -517,7 +517,7 @@ export function createDiagnosticsOtelService(): MinionPluginService {
       const recordLaneDequeue = (
         evt: Extract<DiagnosticEventPayload, { type: "queue.lane.dequeue" }>,
       ) => {
-        const attrs = { "minion.lane": evt.lane };
+        const attrs = { "openclaw.lane": evt.lane };
         laneDequeueCounter.add(1, attrs);
         queueDepthHistogram.record(evt.queueSize, attrs);
         if (typeof evt.waitMs === "number") {
@@ -528,9 +528,9 @@ export function createDiagnosticsOtelService(): MinionPluginService {
       const recordSessionState = (
         evt: Extract<DiagnosticEventPayload, { type: "session.state" }>,
       ) => {
-        const attrs: Record<string, string> = { "minion.state": evt.state };
+        const attrs: Record<string, string> = { "openclaw.state": evt.state };
         if (evt.reason) {
-          attrs["minion.reason"] = evt.reason;
+          attrs["openclaw.reason"] = evt.reason;
         }
         sessionStateCounter.add(1, attrs);
       };
@@ -538,7 +538,7 @@ export function createDiagnosticsOtelService(): MinionPluginService {
       const recordSessionStuck = (
         evt: Extract<DiagnosticEventPayload, { type: "session.stuck" }>,
       ) => {
-        const attrs: Record<string, string> = { "minion.state": evt.state };
+        const attrs: Record<string, string> = { "openclaw.state": evt.state };
         sessionStuckCounter.add(1, attrs);
         if (typeof evt.ageMs === "number") {
           sessionStuckAgeHistogram.record(evt.ageMs, attrs);
@@ -548,26 +548,26 @@ export function createDiagnosticsOtelService(): MinionPluginService {
         }
         const spanAttrs: Record<string, string | number> = { ...attrs };
         if (evt.sessionKey) {
-          spanAttrs["minion.sessionKey"] = evt.sessionKey;
+          spanAttrs["openclaw.sessionKey"] = evt.sessionKey;
         }
         if (evt.sessionId) {
-          spanAttrs["minion.sessionId"] = evt.sessionId;
+          spanAttrs["openclaw.sessionId"] = evt.sessionId;
         }
-        spanAttrs["minion.queueDepth"] = evt.queueDepth ?? 0;
-        spanAttrs["minion.ageMs"] = evt.ageMs;
-        const span = tracer.startSpan("minion.session.stuck", { attributes: spanAttrs });
+        spanAttrs["openclaw.queueDepth"] = evt.queueDepth ?? 0;
+        spanAttrs["openclaw.ageMs"] = evt.ageMs;
+        const span = tracer.startSpan("openclaw.session.stuck", { attributes: spanAttrs });
         span.setStatus({ code: SpanStatusCode.ERROR, message: "session stuck" });
         span.end();
       };
 
       const recordRunAttempt = (evt: Extract<DiagnosticEventPayload, { type: "run.attempt" }>) => {
-        runAttemptCounter.add(1, { "minion.attempt": evt.attempt });
+        runAttemptCounter.add(1, { "openclaw.attempt": evt.attempt });
       };
 
       const recordHeartbeat = (
         evt: Extract<DiagnosticEventPayload, { type: "diagnostic.heartbeat" }>,
       ) => {
-        queueDepthHistogram.record(evt.queued, { "minion.channel": "heartbeat" });
+        queueDepthHistogram.record(evt.queued, { "openclaw.channel": "heartbeat" });
       };
 
       unsubscribe = onDiagnosticEvent((evt: DiagnosticEventPayload) => {
@@ -629,5 +629,5 @@ export function createDiagnosticsOtelService(): MinionPluginService {
         sdk = null;
       }
     },
-  } satisfies MinionPluginService;
+  } satisfies OpenClawPluginService;
 }

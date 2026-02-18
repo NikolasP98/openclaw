@@ -1,36 +1,27 @@
-import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { promisify } from "node:util";
-import type { GatewayServiceRuntime } from "./service-runtime.js";
-import { colorize, isRich, theme } from "../terminal/theme.js";
 import {
-  formatGatewayServiceDescription,
   GATEWAY_LAUNCH_AGENT_LABEL,
+  resolveGatewayServiceDescription,
   resolveGatewayLaunchAgentLabel,
   resolveLegacyGatewayLaunchAgentLabels,
 } from "./constants.js";
+import { execFileUtf8 } from "./exec-file.js";
 import {
   buildLaunchAgentPlist as buildLaunchAgentPlistImpl,
   readLaunchAgentProgramArgumentsFromFile,
 } from "./launchd-plist.js";
+import { formatLine, toPosixPath } from "./output.js";
 import { resolveGatewayStateDir, resolveHomeDir } from "./paths.js";
 import { parseKeyValueOutput } from "./runtime-parse.js";
-
-const execFileAsync = promisify(execFile);
-const toPosixPath = (value: string) => value.replace(/\\/g, "/");
-
-const formatLine = (label: string, value: string) => {
-  const rich = isRich();
-  return `${colorize(rich, theme.muted, `${label}:`)} ${colorize(rich, theme.command, value)}`;
-};
+import type { GatewayServiceRuntime } from "./service-runtime.js";
 
 function resolveLaunchAgentLabel(args?: { env?: Record<string, string | undefined> }): string {
-  const envLabel = args?.env?.MINION_LAUNCHD_LABEL?.trim();
+  const envLabel = args?.env?.OPENCLAW_LAUNCHD_LABEL?.trim();
   if (envLabel) {
     return envLabel;
   }
-  return resolveGatewayLaunchAgentLabel(args?.env?.MINION_PROFILE);
+  return resolveGatewayLaunchAgentLabel(args?.env?.OPENCLAW_PROFILE);
 }
 
 function resolveLaunchAgentPlistPathForLabel(
@@ -53,7 +44,7 @@ export function resolveGatewayLogPaths(env: Record<string, string | undefined>):
 } {
   const stateDir = resolveGatewayStateDir(env);
   const logDir = path.join(stateDir, "logs");
-  const prefix = env.MINION_LOG_PREFIX?.trim() || "gateway";
+  const prefix = env.OPENCLAW_LOG_PREFIX?.trim() || "gateway";
   return {
     logDir,
     stdoutPath: path.join(logDir, `${prefix}.log`),
@@ -104,30 +95,10 @@ export function buildLaunchAgentPlist({
 async function execLaunchctl(
   args: string[],
 ): Promise<{ stdout: string; stderr: string; code: number }> {
-  try {
-    const { stdout, stderr } = await execFileAsync("launchctl", args, {
-      encoding: "utf8",
-      shell: process.platform === "win32",
-    });
-    return {
-      stdout: String(stdout ?? ""),
-      stderr: String(stderr ?? ""),
-      code: 0,
-    };
-  } catch (error) {
-    const e = error as {
-      stdout?: unknown;
-      stderr?: unknown;
-      code?: unknown;
-      message?: unknown;
-    };
-    return {
-      stdout: typeof e.stdout === "string" ? e.stdout : "",
-      stderr:
-        typeof e.stderr === "string" ? e.stderr : typeof e.message === "string" ? e.message : "",
-      code: typeof e.code === "number" ? e.code : 1,
-    };
-  }
+  const isWindows = process.platform === "win32";
+  const file = isWindows ? (process.env.ComSpec ?? "cmd.exe") : "launchctl";
+  const fileArgs = isWindows ? ["/d", "/s", "/c", "launchctl", ...args] : args;
+  return await execFileUtf8(file, fileArgs, isWindows ? { windowsHide: true } : {});
 }
 
 function resolveGuiDomain(): string {
@@ -261,7 +232,7 @@ export async function findLegacyLaunchAgents(
 ): Promise<LegacyLaunchAgent[]> {
   const domain = resolveGuiDomain();
   const results: LegacyLaunchAgent[] = [];
-  for (const label of resolveLegacyGatewayLaunchAgentLabels(env.MINION_PROFILE)) {
+  for (const label of resolveLegacyGatewayLaunchAgentLabels(env.OPENCLAW_PROFILE)) {
     const plistPath = resolveLaunchAgentPlistPathForLabel(env, label);
     const res = await execLaunchctl(["print", `${domain}/${label}`]);
     const loaded = res.code === 0;
@@ -399,7 +370,7 @@ export async function installLaunchAgent({
 
   const domain = resolveGuiDomain();
   const label = resolveLaunchAgentLabel({ env });
-  for (const legacyLabel of resolveLegacyGatewayLaunchAgentLabels(env.MINION_PROFILE)) {
+  for (const legacyLabel of resolveLegacyGatewayLaunchAgentLabels(env.OPENCLAW_PROFILE)) {
     const legacyPlistPath = resolveLaunchAgentPlistPathForLabel(env, legacyLabel);
     await execLaunchctl(["bootout", domain, legacyPlistPath]);
     await execLaunchctl(["unload", legacyPlistPath]);
@@ -413,12 +384,7 @@ export async function installLaunchAgent({
   const plistPath = resolveLaunchAgentPlistPathForLabel(env, label);
   await fs.mkdir(path.dirname(plistPath), { recursive: true });
 
-  const serviceDescription =
-    description ??
-    formatGatewayServiceDescription({
-      profile: env.MINION_PROFILE,
-      version: environment?.MINION_SERVICE_VERSION ?? env.MINION_SERVICE_VERSION,
-    });
+  const serviceDescription = resolveGatewayServiceDescription({ env, environment, description });
   const plist = buildLaunchAgentPlist({
     label,
     comment: serviceDescription,

@@ -1,17 +1,18 @@
-import type { DmPolicy } from "minion/plugin-sdk";
+import type { DmPolicy } from "openclaw/plugin-sdk";
 import {
   addWildcardAllowFrom,
   formatDocsLink,
+  mergeAllowFromEntries,
   promptChannelAccessConfig,
   type ChannelOnboardingAdapter,
   type ChannelOnboardingDmPolicy,
   type WizardPrompter,
-} from "minion/plugin-sdk";
-import type { CoreConfig } from "./types.js";
+} from "openclaw/plugin-sdk";
 import { listMatrixDirectoryGroupsLive } from "./directory-live.js";
 import { resolveMatrixAccount } from "./matrix/accounts.js";
 import { ensureMatrixSdkInstalled, isMatrixSdkAvailable } from "./matrix/deps.js";
 import { resolveMatrixTargets } from "./resolve-targets.js";
+import type { CoreConfig } from "./types.js";
 
 const channel = "matrix" as const;
 
@@ -118,12 +119,7 @@ async function promptMatrixAllowFrom(params: {
       continue;
     }
 
-    const unique = [
-      ...new Set([
-        ...existingAllowFrom.map((item) => String(item).trim()).filter(Boolean),
-        ...resolvedIds,
-      ]),
-    ];
+    const unique = mergeAllowFromEntries(existingAllowFrom, resolvedIds);
     return {
       ...cfg,
       channels: {
@@ -337,7 +333,7 @@ export const matrixOnboardingAdapter: ChannelOnboardingAdapter = {
     const deviceName = String(
       await prompter.text({
         message: "Matrix device name (optional)",
-        initialValue: existing.deviceName ?? "Minion Gateway",
+        initialValue: existing.deviceName ?? "OpenClaw Gateway",
       }),
     ).trim();
 

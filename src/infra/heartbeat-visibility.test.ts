@@ -1,10 +1,29 @@
 import { describe, expect, it } from "vitest";
-import type { MinionConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { resolveHeartbeatVisibility } from "./heartbeat-visibility.js";
 
 describe("resolveHeartbeatVisibility", () => {
+  function createTelegramAccountHeartbeatConfig(): OpenClawConfig {
+    return {
+      channels: {
+        telegram: {
+          heartbeat: {
+            showOk: true,
+          },
+          accounts: {
+            primary: {
+              heartbeat: {
+                showOk: false,
+              },
+            },
+          },
+        },
+      },
+    } as OpenClawConfig;
+  }
+
   it("returns default values when no config is provided", () => {
-    const cfg = {} as MinionConfig;
+    const cfg = {} as OpenClawConfig;
     const result = resolveHeartbeatVisibility({ cfg, channel: "telegram" });
 
     expect(result).toEqual({
@@ -25,7 +44,7 @@ describe("resolveHeartbeatVisibility", () => {
           },
         },
       },
-    } as MinionConfig;
+    } as OpenClawConfig;
 
     const result = resolveHeartbeatVisibility({ cfg, channel: "telegram" });
 
@@ -52,7 +71,7 @@ describe("resolveHeartbeatVisibility", () => {
           },
         },
       },
-    } as MinionConfig;
+    } as OpenClawConfig;
 
     const result = resolveHeartbeatVisibility({ cfg, channel: "telegram" });
 
@@ -88,7 +107,7 @@ describe("resolveHeartbeatVisibility", () => {
           },
         },
       },
-    } as MinionConfig;
+    } as OpenClawConfig;
 
     const result = resolveHeartbeatVisibility({
       cfg,
@@ -120,7 +139,7 @@ describe("resolveHeartbeatVisibility", () => {
           },
         },
       },
-    } as MinionConfig;
+    } as OpenClawConfig;
 
     const result = resolveHeartbeatVisibility({
       cfg,
@@ -136,46 +155,14 @@ describe("resolveHeartbeatVisibility", () => {
   });
 
   it("handles missing accountId gracefully", () => {
-    const cfg = {
-      channels: {
-        telegram: {
-          heartbeat: {
-            showOk: true,
-          },
-          accounts: {
-            primary: {
-              heartbeat: {
-                showOk: false,
-              },
-            },
-          },
-        },
-      },
-    } as MinionConfig;
-
+    const cfg = createTelegramAccountHeartbeatConfig();
     const result = resolveHeartbeatVisibility({ cfg, channel: "telegram" });
 
     expect(result.showOk).toBe(true);
   });
 
   it("handles non-existent account gracefully", () => {
-    const cfg = {
-      channels: {
-        telegram: {
-          heartbeat: {
-            showOk: true,
-          },
-          accounts: {
-            primary: {
-              heartbeat: {
-                showOk: false,
-              },
-            },
-          },
-        },
-      },
-    } as MinionConfig;
-
+    const cfg = createTelegramAccountHeartbeatConfig();
     const result = resolveHeartbeatVisibility({
       cfg,
       channel: "telegram",
@@ -195,7 +182,7 @@ describe("resolveHeartbeatVisibility", () => {
           },
         },
       },
-    } as MinionConfig;
+    } as OpenClawConfig;
 
     const result = resolveHeartbeatVisibility({ cfg, channel: "whatsapp" });
 
@@ -215,7 +202,7 @@ describe("resolveHeartbeatVisibility", () => {
           },
         },
       },
-    } as MinionConfig;
+    } as OpenClawConfig;
 
     const result = resolveHeartbeatVisibility({ cfg, channel: "discord" });
 
@@ -237,7 +224,7 @@ describe("resolveHeartbeatVisibility", () => {
           },
         },
       },
-    } as MinionConfig;
+    } as OpenClawConfig;
 
     const result = resolveHeartbeatVisibility({ cfg, channel: "slack" });
 
@@ -259,7 +246,7 @@ describe("resolveHeartbeatVisibility", () => {
           },
         },
       },
-    } as MinionConfig;
+    } as OpenClawConfig;
 
     const result = resolveHeartbeatVisibility({ cfg, channel: "webchat" });
 
@@ -271,7 +258,7 @@ describe("resolveHeartbeatVisibility", () => {
   });
 
   it("webchat returns defaults when no channel defaults configured", () => {
-    const cfg = {} as MinionConfig;
+    const cfg = {} as OpenClawConfig;
 
     const result = resolveHeartbeatVisibility({ cfg, channel: "webchat" });
 
@@ -291,7 +278,7 @@ describe("resolveHeartbeatVisibility", () => {
           },
         },
       },
-    } as MinionConfig;
+    } as OpenClawConfig;
 
     const result = resolveHeartbeatVisibility({
       cfg,

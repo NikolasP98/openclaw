@@ -8,8 +8,8 @@ let port = 0;
 let previousToken: string | undefined;
 
 beforeAll(async () => {
-  previousToken = process.env.MINION_GATEWAY_TOKEN;
-  process.env.MINION_GATEWAY_TOKEN = "test-gateway-token-1234567890";
+  previousToken = process.env.OPENCLAW_GATEWAY_TOKEN;
+  process.env.OPENCLAW_GATEWAY_TOKEN = "test-gateway-token-1234567890";
   port = await getFreePort();
   server = await startGatewayServer(port);
 });
@@ -17,9 +17,9 @@ beforeAll(async () => {
 afterAll(async () => {
   await server?.close();
   if (previousToken === undefined) {
-    delete process.env.MINION_GATEWAY_TOKEN;
+    delete process.env.OPENCLAW_GATEWAY_TOKEN;
   } else {
-    process.env.MINION_GATEWAY_TOKEN = previousToken;
+    process.env.OPENCLAW_GATEWAY_TOKEN = previousToken;
   }
 });
 
@@ -61,30 +61,14 @@ function connectReq(
   );
 }
 
-test("accepts minion-ios as a valid gateway client id", async () => {
+test.each([
+  { clientId: "openclaw-ios", platform: "ios" },
+  { clientId: "openclaw-android", platform: "android" },
+])("accepts $clientId as a valid gateway client id", async ({ clientId, platform }) => {
   const ws = new WebSocket(`ws://127.0.0.1:${port}`);
   await new Promise<void>((resolve) => ws.once("open", resolve));
 
-  const res = await connectReq(ws, { clientId: "minion-ios", platform: "ios" });
-  // We don't care if auth fails here; we only care that schema validation accepts the client id.
-  // A schema rejection would close the socket before sending a response.
-  if (!res.ok) {
-    // allow unauthorized error when gateway requires auth
-    // but reject schema validation errors
-    const message = String(res.error?.message ?? "");
-    if (message.includes("invalid connect params")) {
-      throw new Error(message);
-    }
-  }
-
-  ws.close();
-});
-
-test("accepts minion-android as a valid gateway client id", async () => {
-  const ws = new WebSocket(`ws://127.0.0.1:${port}`);
-  await new Promise<void>((resolve) => ws.once("open", resolve));
-
-  const res = await connectReq(ws, { clientId: "minion-android", platform: "android" });
+  const res = await connectReq(ws, { clientId, platform });
   // We don't care if auth fails here; we only care that schema validation accepts the client id.
   // A schema rejection would close the socket before sending a response.
   if (!res.ok) {

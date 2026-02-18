@@ -1,28 +1,42 @@
 import type { Command } from "commander";
-import type { ProgramContext } from "./context.js";
 import { formatDocsLink } from "../../terminal/links.js";
 import { isRich, theme } from "../../terminal/theme.js";
+import { escapeRegExp } from "../../utils.js";
 import { formatCliBannerLine, hasEmittedCliBanner } from "../banner.js";
 import { replaceCliName, resolveCliName } from "../cli-name.js";
+import { getCoreCliCommandsWithSubcommands } from "./command-registry.js";
+import type { ProgramContext } from "./context.js";
+import { getSubCliCommandsWithSubcommands } from "./register.subclis.js";
 
 const CLI_NAME = resolveCliName();
+const CLI_NAME_PATTERN = escapeRegExp(CLI_NAME);
+const ROOT_COMMANDS_WITH_SUBCOMMANDS = new Set([
+  ...getCoreCliCommandsWithSubcommands(),
+  ...getSubCliCommandsWithSubcommands(),
+]);
+const ROOT_COMMANDS_HINT =
+  "Hint: commands suffixed with * have subcommands. Run <command> --help for details.";
 
 const EXAMPLES = [
-  ["minion channels login --verbose", "Link personal WhatsApp Web and show QR + connection logs."],
+  ["openclaw models --help", "Show detailed help for the models command."],
   [
-    'minion message send --target +15555550123 --message "Hi" --json',
+    "openclaw channels login --verbose",
+    "Link personal WhatsApp Web and show QR + connection logs.",
+  ],
+  [
+    'openclaw message send --target +15555550123 --message "Hi" --json',
     "Send via your web session and print JSON result.",
   ],
-  ["minion gateway --port 18789", "Run the WebSocket Gateway locally."],
-  ["minion --dev gateway", "Run a dev Gateway (isolated state/config) on ws://127.0.0.1:19001."],
-  ["minion gateway --force", "Kill anything bound to the default gateway port, then start it."],
-  ["minion gateway ...", "Gateway control via WebSocket."],
+  ["openclaw gateway --port 18789", "Run the WebSocket Gateway locally."],
+  ["openclaw --dev gateway", "Run a dev Gateway (isolated state/config) on ws://127.0.0.1:19001."],
+  ["openclaw gateway --force", "Kill anything bound to the default gateway port, then start it."],
+  ["openclaw gateway ...", "Gateway control via WebSocket."],
   [
-    'minion agent --to +15555550123 --message "Run summary" --deliver',
+    'openclaw agent --to +15555550123 --message "Run summary" --deliver',
     "Talk directly to the agent using the Gateway; optionally send the WhatsApp reply.",
   ],
   [
-    'minion message send --channel telegram --target @mychat --message "Hi"',
+    'openclaw message send --channel telegram --target @mychat --message "Hi"',
     "Send via your Telegram bot.",
   ],
 ] as const;
@@ -34,32 +48,52 @@ export function configureProgramHelp(program: Command, ctx: ProgramContext) {
     .version(ctx.programVersion)
     .option(
       "--dev",
-      "Dev profile: isolate state under ~/.minion-dev, default gateway port 19001, and shift derived ports (browser/canvas)",
+      "Dev profile: isolate state under ~/.openclaw-dev, default gateway port 19001, and shift derived ports (browser/canvas)",
     )
     .option(
       "--profile <name>",
-      "Use a named profile (isolates MINION_STATE_DIR/MINION_CONFIG_PATH under ~/.minion-<name>)",
+      "Use a named profile (isolates OPENCLAW_STATE_DIR/OPENCLAW_CONFIG_PATH under ~/.openclaw-<name>)",
     );
 
   program.option("--no-color", "Disable ANSI colors", false);
+  program.helpOption("-h, --help", "Display help for command");
+  program.helpCommand("help [command]", "Display help for command");
 
   program.configureHelp({
     // sort options and subcommands alphabetically
     sortSubcommands: true,
     sortOptions: true,
     optionTerm: (option) => theme.option(option.flags),
-    subcommandTerm: (cmd) => theme.command(cmd.name()),
+    subcommandTerm: (cmd) => {
+      const isRootCommand = cmd.parent === program;
+      const hasSubcommands = isRootCommand && ROOT_COMMANDS_WITH_SUBCOMMANDS.has(cmd.name());
+      return theme.command(hasSubcommands ? `${cmd.name()} *` : cmd.name());
+    },
   });
+
+  const formatHelpOutput = (str: string) => {
+    let output = str;
+    const isRootHelp = new RegExp(
+      `^Usage:\\s+${CLI_NAME_PATTERN}\\s+\\[options\\]\\s+\\[command\\]\\s*$`,
+      "m",
+    ).test(output);
+    if (isRootHelp && /^Commands:/m.test(output)) {
+      output = output.replace(/^Commands:/m, `Commands:\n  ${theme.muted(ROOT_COMMANDS_HINT)}`);
+    }
+
+    return output
+      .replace(/^Usage:/gm, theme.heading("Usage:"))
+      .replace(/^Options:/gm, theme.heading("Options:"))
+      .replace(/^Commands:/gm, theme.heading("Commands:"));
+  };
 
   program.configureOutput({
     writeOut: (str) => {
-      const colored = str
-        .replace(/^Usage:/gm, theme.heading("Usage:"))
-        .replace(/^Options:/gm, theme.heading("Options:"))
-        .replace(/^Commands:/gm, theme.heading("Commands:"));
-      process.stdout.write(colored);
+      process.stdout.write(formatHelpOutput(str));
     },
-    writeErr: (str) => process.stderr.write(str),
+    writeErr: (str) => {
+      process.stderr.write(formatHelpOutput(str));
+    },
     outputError: (str, write) => write(theme.error(str)),
   });
 
@@ -89,7 +123,7 @@ export function configureProgramHelp(program: Command, ctx: ProgramContext) {
     if (command !== program) {
       return "";
     }
-    const docs = formatDocsLink("/cli", "docs.minion.ai/cli");
+    const docs = formatDocsLink("/cli", "docs.openclaw.ai/cli");
     return `\n${theme.heading("Examples:")}\n${fmtExamples}\n\n${theme.muted("Docs:")} ${docs}\n`;
   });
 }

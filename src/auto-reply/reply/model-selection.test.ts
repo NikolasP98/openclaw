@@ -18,37 +18,12 @@ const makeEntry = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-<<<<<<< HEAD:src/auto-reply/reply/model-selection.inherit-parent.test.ts
-async function resolveState(params: {
-  cfg: MinionConfig;
-  sessionEntry: ReturnType<typeof makeEntry>;
-  sessionStore: Record<string, ReturnType<typeof makeEntry>>;
-  sessionKey: string;
-  parentSessionKey?: string;
-}) {
-  return createModelSelectionState({
-    cfg: params.cfg,
-    agentCfg: params.cfg.agents?.defaults,
-    sessionEntry: params.sessionEntry,
-    sessionStore: params.sessionStore,
-    sessionKey: params.sessionKey,
-    parentSessionKey: params.parentSessionKey,
-    defaultProvider,
-    defaultModel,
-    provider: defaultProvider,
-    model: defaultModel,
-    hasModelDirective: false,
-  });
-}
-
-=======
->>>>>>> mirror:src/auto-reply/reply/model-selection.test.ts
 describe("createModelSelectionState parent inheritance", () => {
   const defaultProvider = "openai";
   const defaultModel = "gpt-4o-mini";
 
   async function resolveState(params: {
-    cfg: OpenClawConfig;
+    cfg: MinionConfig;
     sessionEntry: ReturnType<typeof makeEntry>;
     sessionStore: Record<string, ReturnType<typeof makeEntry>>;
     sessionKey: string;
@@ -70,7 +45,7 @@ describe("createModelSelectionState parent inheritance", () => {
   }
 
   async function resolveHeartbeatStoredOverrideState(hasResolvedHeartbeatModelOverride: boolean) {
-    const cfg = {} as OpenClawConfig;
+    const cfg = {} as MinionConfig;
     const sessionKey = "agent:main:discord:channel:c1";
     const sessionEntry = makeEntry({
       providerOverride: "openai",
@@ -206,66 +181,14 @@ describe("createModelSelectionState parent inheritance", () => {
   });
 
   it("applies stored override when heartbeat override was not resolved", async () => {
-<<<<<<< HEAD:src/auto-reply/reply/model-selection.inherit-parent.test.ts
-    const cfg = {} as MinionConfig;
-    const sessionKey = "agent:main:discord:channel:c1";
-    const sessionEntry = makeEntry({
-      providerOverride: "openai",
-      modelOverride: "gpt-4o",
-    });
-    const sessionStore = {
-      [sessionKey]: sessionEntry,
-    };
-
-    const state = await createModelSelectionState({
-      cfg,
-      agentCfg: cfg.agents?.defaults,
-      sessionEntry,
-      sessionStore,
-      sessionKey,
-      defaultProvider,
-      defaultModel,
-      provider: "anthropic",
-      model: "claude-opus-4-5",
-      hasModelDirective: false,
-      hasResolvedHeartbeatModelOverride: false,
-    });
-=======
     const state = await resolveHeartbeatStoredOverrideState(false);
->>>>>>> mirror:src/auto-reply/reply/model-selection.test.ts
 
     expect(state.provider).toBe("openai");
     expect(state.model).toBe("gpt-4o");
   });
 
   it("skips stored override when heartbeat override was resolved", async () => {
-<<<<<<< HEAD:src/auto-reply/reply/model-selection.inherit-parent.test.ts
-    const cfg = {} as MinionConfig;
-    const sessionKey = "agent:main:discord:channel:c1";
-    const sessionEntry = makeEntry({
-      providerOverride: "openai",
-      modelOverride: "gpt-4o",
-    });
-    const sessionStore = {
-      [sessionKey]: sessionEntry,
-    };
-
-    const state = await createModelSelectionState({
-      cfg,
-      agentCfg: cfg.agents?.defaults,
-      sessionEntry,
-      sessionStore,
-      sessionKey,
-      defaultProvider,
-      defaultModel,
-      provider: "anthropic",
-      model: "claude-opus-4-5",
-      hasModelDirective: false,
-      hasResolvedHeartbeatModelOverride: true,
-    });
-=======
     const state = await resolveHeartbeatStoredOverrideState(true);
->>>>>>> mirror:src/auto-reply/reply/model-selection.test.ts
 
     expect(state.provider).toBe("anthropic");
     expect(state.model).toBe("claude-opus-4-5");
@@ -277,7 +200,7 @@ describe("createModelSelectionState respects session model override", () => {
   const defaultModel = "deepseek-v3-4bit-mlx";
 
   async function resolveState(sessionEntry: ReturnType<typeof makeEntry>) {
-    const cfg = {} as OpenClawConfig;
+    const cfg = {} as MinionConfig;
     const sessionKey = "agent:main:main";
     const sessionStore = { [sessionKey]: sessionEntry };
 

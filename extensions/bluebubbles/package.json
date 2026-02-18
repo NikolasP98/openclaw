@@ -1,12 +1,12 @@
 {
-  "name": "@minion/bluebubbles",
-  "version": "2026.2.13",
-  "description": "Minion BlueBubbles channel plugin",
+  "name": "@openclaw/bluebubbles",
+  "version": "2026.2.16",
+  "description": "OpenClaw BlueBubbles channel plugin",
   "type": "module",
   "devDependencies": {
     "@nikolasp98/minion": "workspace:*"
   },
-  "minion": {
+  "openclaw": {
     "extensions": [
       "./index.ts"
     ],
@@ -28,7 +28,7 @@
       "order": 75
     },
     "install": {
-      "npmSpec": "@minion/bluebubbles",
+      "npmSpec": "@openclaw/bluebubbles",
       "localPath": "extensions/bluebubbles",
       "defaultChoice": "npm"
     }

@@ -1,6 +1,6 @@
-import type { MinionConfig } from "../config/config.js";
-import type { WizardPrompter } from "../wizard/prompts.js";
 import { upsertAuthProfileWithLock } from "../agents/auth-profiles.js";
+import type { OpenClawConfig } from "../config/config.js";
+import type { WizardPrompter } from "../wizard/prompts.js";
 
 export const VLLM_DEFAULT_BASE_URL = "http://127.0.0.1:8000/v1";
 export const VLLM_DEFAULT_CONTEXT_WINDOW = 128000;
@@ -13,10 +13,10 @@ export const VLLM_DEFAULT_COST = {
 };
 
 export async function promptAndConfigureVllm(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   prompter: WizardPrompter;
   agentDir?: string;
-}): Promise<{ config: MinionConfig; modelId: string; modelRef: string }> {
+}): Promise<{ config: OpenClawConfig; modelId: string; modelRef: string }> {
   const baseUrlRaw = await params.prompter.text({
     message: "vLLM base URL",
     initialValue: VLLM_DEFAULT_BASE_URL,
@@ -47,7 +47,7 @@ export async function promptAndConfigureVllm(params: {
     agentDir: params.agentDir,
   });
 
-  const nextConfig: MinionConfig = {
+  const nextConfig: OpenClawConfig = {
     ...params.cfg,
     models: {
       ...params.cfg.models,

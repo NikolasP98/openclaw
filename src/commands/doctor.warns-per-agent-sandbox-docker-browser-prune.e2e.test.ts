@@ -2,16 +2,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { note, readConfigFileSnapshot } from "./doctor.e2e-harness.js";
+import { createDoctorRuntime, mockDoctorConfigSnapshot, note } from "./doctor.e2e-harness.js";
 
 describe("doctor command", () => {
   it("warns when per-agent sandbox docker/browser/prune overrides are ignored under shared scope", async () => {
-    readConfigFileSnapshot.mockResolvedValue({
-      path: "/tmp/minion.json",
-      exists: true,
-      raw: "{}",
-      parsed: {},
-      valid: true,
+    mockDoctorConfigSnapshot({
       config: {
         agents: {
           defaults: {
@@ -23,7 +18,7 @@ describe("doctor command", () => {
           list: [
             {
               id: "work",
-              workspace: "~/minion-work",
+              workspace: "~/openclaw-work",
               sandbox: {
                 mode: "all",
                 scope: "shared",
@@ -35,20 +30,12 @@ describe("doctor command", () => {
           ],
         },
       },
-      issues: [],
-      legacyIssues: [],
     });
 
     note.mockClear();
 
     const { doctorCommand } = await import("./doctor.js");
-    const runtime = {
-      log: vi.fn(),
-      error: vi.fn(),
-      exit: vi.fn(),
-    };
-
-    await doctorCommand(runtime, { nonInteractive: true });
+    await doctorCommand(createDoctorRuntime(), { nonInteractive: true });
 
     expect(
       note.mock.calls.some(([message, title]) => {
@@ -65,27 +52,20 @@ describe("doctor command", () => {
   }, 30_000);
 
   it("does not warn when only the active workspace is present", async () => {
-    readConfigFileSnapshot.mockResolvedValue({
-      path: "/tmp/minion.json",
-      exists: true,
-      raw: "{}",
-      parsed: {},
-      valid: true,
+    mockDoctorConfigSnapshot({
       config: {
-        agents: { defaults: { workspace: "/Users/steipete/minion" } },
+        agents: { defaults: { workspace: "/Users/steipete/openclaw" } },
       },
-      issues: [],
-      legacyIssues: [],
     });
 
     note.mockClear();
     const homedirSpy = vi.spyOn(os, "homedir").mockReturnValue("/Users/steipete");
     const realExists = fs.existsSync;
-    const legacyPath = path.join("/Users/steipete", "minion");
+    const legacyPath = path.join("/Users/steipete", "openclaw");
     const legacyAgentsPath = path.join(legacyPath, "AGENTS.md");
     const existsSpy = vi.spyOn(fs, "existsSync").mockImplementation((value) => {
       if (
-        value === "/Users/steipete/minion" ||
+        value === "/Users/steipete/openclaw" ||
         value === legacyPath ||
         value === legacyAgentsPath
       ) {
@@ -95,13 +75,7 @@ describe("doctor command", () => {
     });
 
     const { doctorCommand } = await import("./doctor.js");
-    const runtime = {
-      log: vi.fn(),
-      error: vi.fn(),
-      exit: vi.fn(),
-    };
-
-    await doctorCommand(runtime, { nonInteractive: true });
+    await doctorCommand(createDoctorRuntime(), { nonInteractive: true });
 
     expect(note.mock.calls.some(([_, title]) => title === "Extra workspace")).toBe(false);
 

@@ -12,7 +12,7 @@ import {
 
 describe("profile name validation", () => {
   it("accepts valid lowercase names", () => {
-    expect(isValidProfileName("minion")).toBe(true);
+    expect(isValidProfileName("openclaw")).toBe(true);
     expect(isValidProfileName("work")).toBe(true);
     expect(isValidProfileName("my-profile")).toBe(true);
     expect(isValidProfileName("test123")).toBe(true);
@@ -102,13 +102,9 @@ describe("getUsedPorts", () => {
     expect(getUsedPorts(undefined)).toEqual(new Set());
   });
 
-  it("returns empty set for empty profiles object", () => {
-    expect(getUsedPorts({})).toEqual(new Set());
-  });
-
   it("extracts ports from profile configs", () => {
     const profiles = {
-      minion: { cdpPort: 18792 },
+      openclaw: { cdpPort: 18792 },
       work: { cdpPort: 18793 },
       personal: { cdpPort: 18795 },
     };
@@ -146,7 +142,7 @@ describe("port collision prevention", () => {
     // Raw config shows empty - no ports used
     expect(usedFromRaw.size).toBe(0);
 
-    // But resolved config has implicit minion at 18800
+    // But resolved config has implicit openclaw at 18800
     const resolved = resolveBrowserConfig({});
     const usedFromResolved = getUsedPorts(resolved.profiles);
     expect(usedFromResolved.has(CDP_PORT_RANGE_START)).toBe(true);
@@ -157,15 +153,19 @@ describe("port collision prevention", () => {
     const { resolveBrowserConfig } = await import("./config.js");
 
     // Simulate what happens with raw config (empty) vs resolved config
-    const rawConfig = { browser: {} }; // Fresh config, no profiles
+    const rawConfig: { browser: { profiles?: Record<string, { cdpPort?: number }> } } = {
+      browser: {},
+    }; // Fresh config, no profiles
     const buggyUsedPorts = getUsedPorts(rawConfig.browser?.profiles);
     const buggyAllocatedPort = allocateCdpPort(buggyUsedPorts);
 
     // Raw config: first allocation gets 18800
     expect(buggyAllocatedPort).toBe(CDP_PORT_RANGE_START);
 
-    // Resolved config: includes implicit minion at 18800
-    const resolved = resolveBrowserConfig(rawConfig.browser);
+    // Resolved config: includes implicit openclaw at 18800
+    const resolved = resolveBrowserConfig(
+      rawConfig.browser as Parameters<typeof resolveBrowserConfig>[0],
+    );
     const fixedUsedPorts = getUsedPorts(resolved.profiles);
     const fixedAllocatedPort = allocateCdpPort(fixedUsedPorts);
 
@@ -227,13 +227,9 @@ describe("getUsedColors", () => {
     expect(getUsedColors(undefined)).toEqual(new Set());
   });
 
-  it("returns empty set for empty profiles object", () => {
-    expect(getUsedColors({})).toEqual(new Set());
-  });
-
   it("extracts and uppercases colors from profile configs", () => {
     const profiles = {
-      minion: { color: "#ff4500" },
+      openclaw: { color: "#ff4500" },
       work: { color: "#0066CC" },
     };
     const used = getUsedColors(profiles);

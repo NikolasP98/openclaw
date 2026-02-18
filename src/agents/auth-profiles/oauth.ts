@@ -4,8 +4,7 @@ import {
   type OAuthCredentials,
   type OAuthProvider,
 } from "@mariozechner/pi-ai";
-import type { MinionConfig } from "../../config/config.js";
-import type { AuthProfileStore } from "./types.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { withFileLock } from "../../infra/file-lock.js";
 import { refreshQwenPortalCredentials } from "../../providers/qwen-portal-oauth.js";
 import { refreshChutesTokens } from "../chutes-oauth.js";
@@ -14,6 +13,7 @@ import { formatAuthDoctorHint } from "./doctor.js";
 import { ensureAuthStoreFile, resolveAuthStorePath } from "./paths.js";
 import { suggestOAuthProfileIdForLegacyDefault } from "./repair.js";
 import { ensureAuthProfileStore, saveAuthProfileStore } from "./store.js";
+import type { AuthProfileStore } from "./types.js";
 
 const OAUTH_PROVIDER_IDS = new Set<string>(getOAuthProviders().map((provider) => provider.id));
 
@@ -93,7 +93,7 @@ async function refreshOAuthTokenWithLock(params: {
 }
 
 async function tryResolveOAuthProfile(params: {
-  cfg?: MinionConfig;
+  cfg?: OpenClawConfig;
   store: AuthProfileStore;
   profileId: string;
   agentDir?: string;
@@ -134,7 +134,7 @@ async function tryResolveOAuthProfile(params: {
 }
 
 export async function resolveApiKeyForProfile(params: {
-  cfg?: MinionConfig;
+  cfg?: OpenClawConfig;
   store: AuthProfileStore;
   profileId: string;
   agentDir?: string;

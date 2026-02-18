@@ -1,5 +1,5 @@
-import type { MinionConfig } from "minion/plugin-sdk";
-import { resolveBlueBubblesAccount } from "./accounts.js";
+import type { OpenClawConfig } from "openclaw/plugin-sdk";
+import { resolveBlueBubblesServerAccount } from "./account-resolve.js";
 import { getCachedBlueBubblesPrivateApiStatus } from "./probe.js";
 import { blueBubblesFetchWithTimeout, buildBlueBubblesApiUrl } from "./types.js";
 
@@ -8,7 +8,7 @@ export type BlueBubblesReactionOpts = {
   password?: string;
   accountId?: string;
   timeoutMs?: number;
-  cfg?: MinionConfig;
+  cfg?: OpenClawConfig;
 };
 
 const REACTION_TYPES = new Set(["love", "like", "dislike", "laugh", "emphasize", "question"]);
@@ -112,19 +112,7 @@ const REACTION_EMOJIS = new Map<string, string>([
 ]);
 
 function resolveAccount(params: BlueBubblesReactionOpts) {
-  const account = resolveBlueBubblesAccount({
-    cfg: params.cfg ?? {},
-    accountId: params.accountId,
-  });
-  const baseUrl = params.serverUrl?.trim() || account.config.serverUrl?.trim();
-  const password = params.password?.trim() || account.config.password?.trim();
-  if (!baseUrl) {
-    throw new Error("BlueBubbles serverUrl is required");
-  }
-  if (!password) {
-    throw new Error("BlueBubbles password is required");
-  }
-  return { baseUrl, password, accountId: account.accountId };
+  return resolveBlueBubblesServerAccount(params);
 }
 
 export function normalizeBlueBubblesReactionInput(emoji: string, remove?: boolean): string {

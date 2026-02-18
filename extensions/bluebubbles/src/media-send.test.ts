@@ -1,8 +1,8 @@
-import type { MinionConfig, PluginRuntime } from "minion/plugin-sdk";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import type { OpenClawConfig, PluginRuntime } from "openclaw/plugin-sdk";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { sendBlueBubblesMedia } from "./media-send.js";
 import { setBlueBubblesRuntime } from "./runtime.js";
@@ -54,18 +54,18 @@ function createMockRuntime(): { runtime: PluginRuntime; mocks: RuntimeMocks } {
   };
 }
 
-function createConfig(overrides?: Record<string, unknown>): MinionConfig {
+function createConfig(overrides?: Record<string, unknown>): OpenClawConfig {
   return {
     channels: {
       bluebubbles: {
         ...overrides,
       },
     },
-  } as unknown as MinionConfig;
+  } as unknown as OpenClawConfig;
 }
 
 async function makeTempDir(): Promise<string> {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "minion-bb-media-"));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-bb-media-"));
   tempDirs.push(dir);
   return dir;
 }

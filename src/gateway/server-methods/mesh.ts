@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import type { GatewayRequestHandlerOptions, GatewayRequestHandlers, RespondFn } from "./types.js";
 import { agentCommand } from "../../commands/agent.js";
 import { normalizeAgentId } from "../../routing/session-key.js";
 import { defaultRuntime } from "../../runtime.js";
@@ -12,11 +11,10 @@ import {
   validateMeshRetryParams,
   validateMeshRunParams,
   validateMeshStatusParams,
-  type MeshPlanAutoParams,
-  type MeshRunParams,
   type MeshWorkflowPlan,
 } from "../protocol/index.js";
 import { agentHandlers } from "./agent.js";
+import type { GatewayRequestHandlerOptions, GatewayRequestHandlers, RespondFn } from "./types.js";
 
 type MeshStepStatus = "pending" | "running" | "succeeded" | "failed" | "skipped";
 type MeshRunStatus = "pending" | "running" | "completed" | "failed";
@@ -81,6 +79,20 @@ function trimMap() {
   const overflow = meshRuns.size - MAX_KEEP_RUNS;
   for (const stale of sorted.slice(0, overflow)) {
     meshRuns.delete(stale.runId);
+  }
+}
+
+function stringifyUnknown(value: unknown): string {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (value instanceof Error) {
+    return value.message;
+  }
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
   }
 }
 
@@ -316,7 +328,7 @@ async function executeStep(params: {
   if (!accepted.ok) {
     step.status = "failed";
     step.endedAt = Date.now();
-    step.error = String(accepted.error ?? "agent request failed");
+    step.error = stringifyUnknown(accepted.error ?? "agent request failed");
     run.history.push({
       ts: Date.now(),
       type: "step.error",
@@ -373,7 +385,7 @@ async function executeStep(params: {
   step.error =
     typeof waitPayload?.error === "string"
       ? waitPayload.error
-      : String(waited.error ?? `agent.wait returned status ${waitStatus}`);
+      : stringifyUnknown(waited.error ?? `agent.wait returned status ${waitStatus}`);
   run.history.push({
     ts: Date.now(),
     type: "step.error",
@@ -737,7 +749,7 @@ export const meshHandlers: GatewayRequestHandlers = {
       return;
     }
 
-    const p = params as MeshPlanAutoParams;
+    const p = params;
     const maxSteps =
       typeof p.maxSteps === "number" && Number.isFinite(p.maxSteps)
         ? Math.max(1, Math.min(16, Math.floor(p.maxSteps)))
@@ -787,7 +799,7 @@ export const meshHandlers: GatewayRequestHandlers = {
       );
       return;
     }
-    const p = params as MeshRunParams;
+    const p = params;
     const plan = normalizePlan(p.plan);
     const graph = validatePlanGraph(plan);
     if (!graph.ok) {

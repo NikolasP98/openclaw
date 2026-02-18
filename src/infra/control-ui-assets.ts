@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { runCommandWithTimeout } from "../process/exec.js";
 import { defaultRuntime, type RuntimeEnv } from "../runtime.js";
-import { resolveMinionPackageRoot, resolveMinionPackageRootSync } from "./minion-root.js";
+import { resolveOpenClawPackageRoot, resolveOpenClawPackageRootSync } from "./openclaw-root.js";
 
 const CONTROL_UI_DIST_PATH_SEGMENTS = ["dist", "control-ui", "index.html"] as const;
 
@@ -86,26 +86,29 @@ export async function resolveControlUiDistIndexPath(
     return path.join(distDir, "control-ui", "index.html");
   }
 
-  const packageRoot = await resolveMinionPackageRoot({ argv1: normalized, moduleUrl });
+  const packageRoot = await resolveOpenClawPackageRoot({ argv1: normalized, moduleUrl });
   if (packageRoot) {
     return path.join(packageRoot, "dist", "control-ui", "index.html");
   }
 
-  // Fallback: traverse up and find package.json with name "minion" + dist/control-ui/index.html
+  // Fallback: traverse up and find package.json with name "openclaw" + dist/control-ui/index.html
   // This handles global installs where path-based resolution might fail.
   let dir = path.dirname(normalized);
   for (let i = 0; i < 8; i++) {
     const pkgJsonPath = path.join(dir, "package.json");
     const indexPath = path.join(dir, "dist", "control-ui", "index.html");
-    if (fs.existsSync(pkgJsonPath) && fs.existsSync(indexPath)) {
+    if (fs.existsSync(pkgJsonPath)) {
       try {
         const raw = fs.readFileSync(pkgJsonPath, "utf-8");
         const parsed = JSON.parse(raw) as { name?: unknown };
-        if (parsed.name === "minion") {
-          return indexPath;
+        if (parsed.name === "openclaw") {
+          return fs.existsSync(indexPath) ? indexPath : null;
         }
+        // Stop at the first package boundary to avoid resolving through unrelated ancestors.
+        return null;
       } catch {
-        // Invalid package.json, continue searching
+        // Invalid package.json at package boundary; abort fallback resolution.
+        return null;
       }
     }
     const parent = path.dirname(dir);
@@ -163,7 +166,7 @@ export function resolveControlUiRootSync(opts: ControlUiRootResolveOptions = {})
       return null;
     }
   })();
-  const packageRoot = resolveMinionPackageRootSync({
+  const packageRoot = resolveOpenClawPackageRootSync({
     argv1,
     moduleUrl: opts.moduleUrl,
     cwd,
@@ -180,7 +183,7 @@ export function resolveControlUiRootSync(opts: ControlUiRootResolveOptions = {})
     addCandidate(candidates, path.join(moduleDir, "../../dist/control-ui"));
   }
   if (argv1Dir) {
-    // minion.mjs or dist/<bundle>.js
+    // openclaw.mjs or dist/<bundle>.js
     addCandidate(candidates, path.join(argv1Dir, "dist", "control-ui"));
     addCandidate(candidates, path.join(argv1Dir, "control-ui"));
   }

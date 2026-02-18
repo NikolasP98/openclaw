@@ -15,7 +15,7 @@ export type GatewayTlsConfig = {
 
 export type WideAreaDiscoveryConfig = {
   enabled?: boolean;
-  /** Optional unicast DNS-SD domain (e.g. "minion.internal"). */
+  /** Optional unicast DNS-SD domain (e.g. "openclaw.internal"). */
   domain?: string;
 };
 
@@ -38,7 +38,7 @@ export type DiscoveryConfig = {
 
 export type CanvasHostConfig = {
   enabled?: boolean;
-  /** Directory to serve (default: ~/.minion/workspace/canvas). */
+  /** Directory to serve (default: ~/.openclaw/workspace/canvas). */
   root?: string;
   /** HTTP port to listen on (default: 18793). */
   port?: number;
@@ -64,7 +64,7 @@ export type TalkConfig = {
 export type GatewayControlUiConfig = {
   /** If false, the Gateway will not serve the Control UI (default /). */
   enabled?: boolean;
-  /** Optional base path prefix for the Control UI (e.g. "/minion"). */
+  /** Optional base path prefix for the Control UI (e.g. "/openclaw"). */
   basePath?: string;
   /** Optional filesystem root for Control UI assets (defaults to dist/control-ui). */
   root?: string;
@@ -80,7 +80,7 @@ export type GatewayAuthMode = "token" | "password" | "trusted-proxy";
 
 /**
  * Configuration for trusted reverse proxy authentication.
- * Used when Minionbot runs behind an identity-aware proxy (Pomerium, Caddy + OAuth, etc.)
+ * Used when Clawdbot runs behind an identity-aware proxy (Pomerium, Caddy + OAuth, etc.)
  * that handles authentication and passes user identity via headers.
  */
 export type GatewayTrustedProxyConfig = {
@@ -313,14 +313,9 @@ export type GatewayConfig = {
   /** Tool access restrictions for HTTP /tools/invoke endpoint. */
   tools?: GatewayToolsConfig;
   /**
-   * SQLite log of all inbound/outbound messages for learning and analysis.
-   * Opt-in: disabled by default. Enable via config or MINION_MESSAGE_LEDGER=1 env var.
-   * Database path can be overridden with MINION_MESSAGE_LEDGER_PATH env var.
+   * Channel health monitor interval in minutes.
+   * Periodically checks channel health and restarts unhealthy channels.
+   * Set to 0 to disable. Default: 5.
    */
-  messageLedger?: {
-    /** Enable message ledger. Also toggleable via MINION_MESSAGE_LEDGER=1 env var. */
-    enabled?: boolean;
-    /** Path to SQLite database file. Default: {workspaceDir}/message-ledger.db */
-    dbPath?: string;
-  };
+  channelHealthCheckMinutes?: number;
 };

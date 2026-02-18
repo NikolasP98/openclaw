@@ -1,6 +1,7 @@
 import type { AgentToolResult } from "@mariozechner/pi-agent-core";
-import type { MinionConfig } from "../../config/config.js";
-import { createActionGate, readStringParam } from "./common.js";
+import type { OpenClawConfig } from "../../config/config.js";
+import { createDiscordActionGate } from "../../discord/accounts.js";
+import { readStringParam } from "./common.js";
 import { handleDiscordGuildAction } from "./discord-actions-guild.js";
 import { handleDiscordMessagingAction } from "./discord-actions-messaging.js";
 import { handleDiscordModerationAction } from "./discord-actions-moderation.js";
@@ -56,10 +57,11 @@ const presenceActions = new Set(["setPresence"]);
 
 export async function handleDiscordAction(
   params: Record<string, unknown>,
-  cfg: MinionConfig,
+  cfg: OpenClawConfig,
 ): Promise<AgentToolResult<unknown>> {
   const action = readStringParam(params, "action", { required: true });
-  const isActionEnabled = createActionGate(cfg.channels?.discord?.actions);
+  const accountId = readStringParam(params, "accountId");
+  const isActionEnabled = createDiscordActionGate({ cfg, accountId });
 
   if (messagingActions.has(action)) {
     return await handleDiscordMessagingAction(action, params, isActionEnabled);

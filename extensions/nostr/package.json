@@ -1,7 +1,7 @@
 {
-  "name": "@minion/nostr",
-  "version": "2026.2.13",
-  "description": "Minion Nostr channel plugin for NIP-04 encrypted DMs",
+  "name": "@openclaw/nostr",
+  "version": "2026.2.16",
+  "description": "OpenClaw Nostr channel plugin for NIP-04 encrypted DMs",
   "type": "module",
   "dependencies": {
     "nostr-tools": "^2.23.1",
@@ -10,7 +10,7 @@
   "devDependencies": {
     "@nikolasp98/minion": "workspace:*"
   },
-  "minion": {
+  "openclaw": {
     "extensions": [
       "./index.ts"
     ],
@@ -25,7 +25,7 @@
       "quickstartAllowFrom": true
     },
     "install": {
-      "npmSpec": "@minion/nostr",
+      "npmSpec": "@openclaw/nostr",
       "localPath": "extensions/nostr",
       "defaultChoice": "npm"
     }

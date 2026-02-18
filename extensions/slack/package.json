@@ -1,13 +1,13 @@
 {
-  "name": "@minion/slack",
-  "version": "2026.2.13",
+  "name": "@openclaw/slack",
+  "version": "2026.2.16",
   "private": true,
-  "description": "Minion Slack channel plugin",
+  "description": "OpenClaw Slack channel plugin",
   "type": "module",
   "devDependencies": {
     "@nikolasp98/minion": "workspace:*"
   },
-  "minion": {
+  "openclaw": {
     "extensions": [
       "./index.ts"
     ]

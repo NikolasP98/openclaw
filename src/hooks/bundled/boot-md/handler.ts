@@ -1,11 +1,11 @@
 import type { CliDeps } from "../../../cli/deps.js";
-import type { MinionConfig } from "../../../config/config.js";
-import type { HookHandler } from "../../hooks.js";
 import { createDefaultDeps } from "../../../cli/deps.js";
+import type { OpenClawConfig } from "../../../config/config.js";
 import { runBootOnce } from "../../../gateway/boot.js";
+import type { HookHandler } from "../../hooks.js";
 
 type BootHookContext = {
-  cfg?: MinionConfig;
+  cfg?: OpenClawConfig;
   workspaceDir?: string;
   deps?: CliDeps;
 };

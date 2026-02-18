@@ -3,13 +3,14 @@ import type {
   ChannelOutboundAdapter,
   ChannelPlugin,
   ChannelSetupInput,
-  MinionConfig,
-} from "minion/plugin-sdk";
+  OpenClawConfig,
+} from "openclaw/plugin-sdk";
 import {
   applyAccountNameToChannelSection,
   DEFAULT_ACCOUNT_ID,
   normalizeAccountId,
-} from "minion/plugin-sdk";
+} from "openclaw/plugin-sdk";
+import { buildTlonAccountFields } from "./account-fields.js";
 import { tlonChannelConfigSchema } from "./config-schema.js";
 import { monitorTlonProvider } from "./monitor/index.js";
 import { tlonOnboardingAdapter } from "./onboarding.js";
@@ -33,10 +34,10 @@ type TlonSetupInput = ChannelSetupInput & {
 };
 
 function applyTlonSetupConfig(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   accountId: string;
   input: TlonSetupInput;
-}): MinionConfig {
+}): OpenClawConfig {
   const { cfg, accountId, input } = params;
   const useDefault = accountId === DEFAULT_ACCOUNT_ID;
   const namedConfig = applyAccountNameToChannelSection({
@@ -47,19 +48,7 @@ function applyTlonSetupConfig(params: {
   });
   const base = namedConfig.channels?.tlon ?? {};
 
-  const payload = {
-    ...(input.ship ? { ship: input.ship } : {}),
-    ...(input.url ? { url: input.url } : {}),
-    ...(input.code ? { code: input.code } : {}),
-    ...(typeof input.allowPrivateNetwork === "boolean"
-      ? { allowPrivateNetwork: input.allowPrivateNetwork }
-      : {}),
-    ...(input.groupChannels ? { groupChannels: input.groupChannels } : {}),
-    ...(input.dmAllowlist ? { dmAllowlist: input.dmAllowlist } : {}),
-    ...(typeof input.autoDiscoverChannels === "boolean"
-      ? { autoDiscoverChannels: input.autoDiscoverChannels }
-      : {}),
-  };
+  const payload = buildTlonAccountFields(input);
 
   if (useDefault) {
     return {
@@ -204,7 +193,7 @@ export const tlonPlugin: ChannelPlugin = {
               enabled,
             },
           },
-        } as MinionConfig;
+        } as OpenClawConfig;
       }
       return {
         ...cfg,
@@ -221,7 +210,7 @@ export const tlonPlugin: ChannelPlugin = {
             },
           },
         },
-      } as MinionConfig;
+      } as OpenClawConfig;
     },
     deleteAccount: ({ cfg, accountId }) => {
       const useDefault = !accountId || accountId === "default";
@@ -237,7 +226,7 @@ export const tlonPlugin: ChannelPlugin = {
             ...cfg.channels,
             tlon: rest,
           },
-        } as MinionConfig;
+        } as OpenClawConfig;
       }
       // oxlint-disable-next-line no-unused-vars
       const { [accountId]: removed, ...remainingAccounts } = (cfg.channels?.tlon?.accounts ??
@@ -251,7 +240,7 @@ export const tlonPlugin: ChannelPlugin = {
             accounts: remainingAccounts,
           },
         },
-      } as MinionConfig;
+      } as OpenClawConfig;
     },
     isConfigured: (account) => account.configured,
     describeAccount: (account) => ({

@@ -1,5 +1,5 @@
-import type { MinionConfig } from "../../config/types.js";
 import { resolveUserTimezone } from "../../agents/date-time.js";
+import type { OpenClawConfig } from "../../config/types.js";
 import { formatZonedTimestamp } from "../../infra/format-time/format-datetime.ts";
 
 /**
@@ -71,9 +71,9 @@ export function injectTimestamp(message: string, opts?: TimestampInjectionOption
 }
 
 /**
- * Build TimestampInjectionOptions from an MinionConfig.
+ * Build TimestampInjectionOptions from an OpenClawConfig.
  */
-export function timestampOptsFromConfig(cfg: MinionConfig): TimestampInjectionOptions {
+export function timestampOptsFromConfig(cfg: OpenClawConfig): TimestampInjectionOptions {
   return {
     timezone: resolveUserTimezone(cfg.agents?.defaults?.userTimezone),
   };

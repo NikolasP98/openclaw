@@ -1,56 +1,59 @@
 ---
-summary: "CLI reference for `minion devices` (device pairing + token rotation/revocation)"
+summary: "CLI reference for `openclaw devices` (device pairing + token rotation/revocation)"
 read_when:
   - You are approving device pairing requests
   - You need to rotate or revoke device tokens
 title: "devices"
 ---
 
-# `minion devices`
+# `openclaw devices`
 
 Manage device pairing requests and device-scoped tokens.
 
 ## Commands
 
-### `minion devices list`
+### `openclaw devices list`
 
 List pending pairing requests and paired devices.
 
 ```
-minion devices list
-minion devices list --json
+openclaw devices list
+openclaw devices list --json
 ```
 
-### `minion devices approve <requestId>`
+### `openclaw devices approve [requestId] [--latest]`
 
-Approve a pending device pairing request.
+Approve a pending device pairing request. If `requestId` is omitted, OpenClaw
+automatically approves the most recent pending request.
 
 ```
-minion devices approve <requestId>
+openclaw devices approve
+openclaw devices approve <requestId>
+openclaw devices approve --latest
 ```
 
-### `minion devices reject <requestId>`
+### `openclaw devices reject <requestId>`
 
 Reject a pending device pairing request.
 
 ```
-minion devices reject <requestId>
+openclaw devices reject <requestId>
 ```
 
-### `minion devices rotate --device <id> --role <role> [--scope <scope...>]`
+### `openclaw devices rotate --device <id> --role <role> [--scope <scope...>]`
 
 Rotate a device token for a specific role (optionally updating scopes).
 
 ```
-minion devices rotate --device <deviceId> --role operator --scope operator.read --scope operator.write
+openclaw devices rotate --device <deviceId> --role operator --scope operator.read --scope operator.write
 ```
 
-### `minion devices revoke --device <id> --role <role>`
+### `openclaw devices revoke --device <id> --role <role>`
 
 Revoke a device token for a specific role.
 
 ```
-minion devices revoke --device <deviceId> --role node
+openclaw devices revoke --device <deviceId> --role node
 ```
 
 ## Common options

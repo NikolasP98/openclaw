@@ -2,43 +2,30 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import type { MinionConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import type { ExecApprovalsResolved } from "../infra/exec-approvals.js";
+import { captureEnv } from "../test-utils/env.js";
 
-const previousBundledPluginsDir = process.env.MINION_BUNDLED_PLUGINS_DIR;
+const bundledPluginsDirSnapshot = captureEnv(["OPENCLAW_BUNDLED_PLUGINS_DIR"]);
 
 beforeAll(() => {
-  process.env.MINION_BUNDLED_PLUGINS_DIR = path.join(
+  process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = path.join(
     os.tmpdir(),
-    "minion-test-no-bundled-extensions",
+    "openclaw-test-no-bundled-extensions",
   );
 });
 
 afterAll(() => {
-  if (previousBundledPluginsDir === undefined) {
-    delete process.env.MINION_BUNDLED_PLUGINS_DIR;
-  } else {
-    process.env.MINION_BUNDLED_PLUGINS_DIR = previousBundledPluginsDir;
-  }
+  bundledPluginsDirSnapshot.restore();
 });
 
 vi.mock("../infra/shell-env.js", async (importOriginal) => {
   const mod = await importOriginal<typeof import("../infra/shell-env.js")>();
   return {
     ...mod,
-    getShellPathFromLoginShell: vi.fn(() => "/usr/bin:/bin"),
+    getShellPathFromLoginShell: vi.fn(() => null),
     resolveShellEnvFallbackTimeoutMs: vi.fn(() => 500),
   };
-});
-
-vi.mock("../plugins/tools.js", () => ({
-  getPluginToolMeta: () => undefined,
-  resolvePluginTools: () => [],
-}));
-
-vi.mock("../infra/shell-env.js", async (importOriginal) => {
-  const mod = await importOriginal<typeof import("../infra/shell-env.js")>();
-  return { ...mod, getShellPathFromLoginShell: () => null };
 });
 
 vi.mock("../plugins/tools.js", () => ({
@@ -80,15 +67,15 @@ vi.mock("../infra/exec-approvals.js", async (importOriginal) => {
   return { ...mod, resolveExecApprovals: () => approvals };
 });
 
-describe("createMinionCodingTools safeBins", () => {
+describe("createOpenClawCodingTools safeBins", () => {
   it("threads tools.exec.safeBins into exec allowlist checks", async () => {
     if (process.platform === "win32") {
       return;
     }
 
-    const { createMinionCodingTools } = await import("./pi-tools.js");
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "minion-safe-bins-"));
-    const cfg: MinionConfig = {
+    const { createOpenClawCodingTools } = await import("./pi-tools.js");
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-safe-bins-"));
+    const cfg: OpenClawConfig = {
       tools: {
         exec: {
           host: "gateway",
@@ -99,7 +86,7 @@ describe("createMinionCodingTools safeBins", () => {
       },
     };
 
-    const tools = createMinionCodingTools({
+    const tools = createOpenClawCodingTools({
       config: cfg,
       sessionKey: "agent:main:main",
       workspaceDir: tmpDir,
@@ -109,25 +96,22 @@ describe("createMinionCodingTools safeBins", () => {
     expect(execTool).toBeDefined();
 
     const marker = `safe-bins-${Date.now()}`;
-    const prevShellEnvTimeoutMs = process.env.MINION_SHELL_ENV_TIMEOUT_MS;
-    process.env.MINION_SHELL_ENV_TIMEOUT_MS = "1000";
+    const envSnapshot = captureEnv(["OPENCLAW_SHELL_ENV_TIMEOUT_MS"]);
     const result = await (async () => {
       try {
+        process.env.OPENCLAW_SHELL_ENV_TIMEOUT_MS = "1000";
         return await execTool!.execute("call1", {
           command: `echo ${marker}`,
           workdir: tmpDir,
         });
       } finally {
-        if (prevShellEnvTimeoutMs === undefined) {
-          delete process.env.MINION_SHELL_ENV_TIMEOUT_MS;
-        } else {
-          process.env.MINION_SHELL_ENV_TIMEOUT_MS = prevShellEnvTimeoutMs;
-        }
+        envSnapshot.restore();
       }
     })();
     const text = result.content.find((content) => content.type === "text")?.text ?? "";
 
-    expect(result.details.status).toBe("completed");
+    const resultDetails = result.details as { status?: string };
+    expect(resultDetails.status).toBe("completed");
     expect(text).toContain(marker);
   });
 
@@ -136,13 +120,13 @@ describe("createMinionCodingTools safeBins", () => {
       return;
     }
 
-    const { createMinionCodingTools } = await import("./pi-tools.js");
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "minion-safe-bins-expand-"));
+    const { createOpenClawCodingTools } = await import("./pi-tools.js");
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-safe-bins-expand-"));
 
     const secret = `TOP_SECRET_${Date.now()}`;
     fs.writeFileSync(path.join(tmpDir, "secret.txt"), `${secret}\n`, "utf8");
 
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       tools: {
         exec: {
           host: "gateway",
@@ -153,7 +137,7 @@ describe("createMinionCodingTools safeBins", () => {
       },
     };
 
-    const tools = createMinionCodingTools({
+    const tools = createOpenClawCodingTools({
       config: cfg,
       sessionKey: "agent:main:main",
       workspaceDir: tmpDir,
@@ -169,7 +153,8 @@ describe("createMinionCodingTools safeBins", () => {
     });
     const text = result.content.find((content) => content.type === "text")?.text ?? "";
 
-    expect(result.details.status).toBe("completed");
+    const blockedResultDetails = result.details as { status?: string };
+    expect(blockedResultDetails.status).toBe("completed");
     expect(text).not.toContain(secret);
   });
 });

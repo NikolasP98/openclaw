@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { MinionConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import type { ChannelGroupPolicy } from "../config/group-policy.js";
 import type { TelegramAccountConfig } from "../config/types.js";
 import type { RuntimeEnv } from "../runtime.js";
@@ -48,8 +48,8 @@ describe("registerTelegramNativeCommands (plugin auth)", () => {
 
     registerTelegramNativeCommands({
       bot: bot as unknown as Parameters<typeof registerTelegramNativeCommands>[0]["bot"],
-      cfg: {} as MinionConfig,
-      runtime: { log } as RuntimeEnv,
+      cfg: {} as OpenClawConfig,
+      runtime: { log } as unknown as RuntimeEnv,
       accountId: "default",
       telegramCfg: {} as TelegramAccountConfig,
       allowFrom: [],
@@ -101,7 +101,7 @@ describe("registerTelegramNativeCommands (plugin auth)", () => {
       },
     } as const;
 
-    const cfg = {} as MinionConfig;
+    const cfg = {} as OpenClawConfig;
     const telegramCfg = {} as TelegramAccountConfig;
     const resolveGroupPolicy = () =>
       ({
@@ -112,7 +112,7 @@ describe("registerTelegramNativeCommands (plugin auth)", () => {
     registerTelegramNativeCommands({
       bot: bot as unknown as Parameters<typeof registerTelegramNativeCommands>[0]["bot"],
       cfg,
-      runtime: {} as RuntimeEnv,
+      runtime: {} as unknown as RuntimeEnv,
       accountId: "default",
       telegramCfg,
       allowFrom: ["999"],

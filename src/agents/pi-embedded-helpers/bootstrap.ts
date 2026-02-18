@@ -1,10 +1,10 @@
-import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { MinionConfig } from "../../config/config.js";
+import type { AgentMessage } from "@mariozechner/pi-agent-core";
+import type { OpenClawConfig } from "../../config/config.js";
+import { truncateUtf16Safe } from "../../utils.js";
 import type { WorkspaceBootstrapFile } from "../workspace.js";
 import type { EmbeddedContextFile } from "./types.js";
-import { truncateUtf16Safe } from "../../utils.js";
 
 type ContentBlockWithSignature = {
   thought_signature?: unknown;
@@ -83,7 +83,7 @@ export function stripThoughtSignatures<T>(
 }
 
 export const DEFAULT_BOOTSTRAP_MAX_CHARS = 20_000;
-export const DEFAULT_BOOTSTRAP_TOTAL_MAX_CHARS = 24_000;
+export const DEFAULT_BOOTSTRAP_TOTAL_MAX_CHARS = 150_000;
 const MIN_BOOTSTRAP_FILE_BUDGET_CHARS = 64;
 const BOOTSTRAP_HEAD_RATIO = 0.7;
 const BOOTSTRAP_TAIL_RATIO = 0.2;
@@ -95,7 +95,7 @@ type TrimBootstrapResult = {
   originalLength: number;
 };
 
-export function resolveBootstrapMaxChars(cfg?: MinionConfig): number {
+export function resolveBootstrapMaxChars(cfg?: OpenClawConfig): number {
   const raw = cfg?.agents?.defaults?.bootstrapMaxChars;
   if (typeof raw === "number" && Number.isFinite(raw) && raw > 0) {
     return Math.floor(raw);
@@ -103,7 +103,7 @@ export function resolveBootstrapMaxChars(cfg?: MinionConfig): number {
   return DEFAULT_BOOTSTRAP_MAX_CHARS;
 }
 
-export function resolveBootstrapTotalMaxChars(cfg?: MinionConfig): number {
+export function resolveBootstrapTotalMaxChars(cfg?: OpenClawConfig): number {
   const raw = cfg?.agents?.defaults?.bootstrapTotalMaxChars;
   if (typeof raw === "number" && Number.isFinite(raw) && raw > 0) {
     return Math.floor(raw);
@@ -156,7 +156,7 @@ function clampToBudget(content: string, budget: number): string {
   if (budget <= 3) {
     return truncateUtf16Safe(content, budget);
   }
-  const safe = Math.max(1, budget - 1);
+  const safe = budget - 1;
   return `${truncateUtf16Safe(content, safe)}…`;
 }
 

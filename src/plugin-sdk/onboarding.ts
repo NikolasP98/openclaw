@@ -1,13 +1,13 @@
-import type { MinionConfig } from "../config/config.js";
-import type { WizardPrompter } from "../wizard/prompts.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "../routing/session-key.js";
+import type { WizardPrompter } from "../wizard/prompts.js";
 
 export type PromptAccountIdParams = {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   prompter: WizardPrompter;
   label: string;
   currentId?: string;
-  listAccountIds: (cfg: MinionConfig) => string[];
+  listAccountIds: (cfg: OpenClawConfig) => string[];
   defaultAccountId: string;
 };
 

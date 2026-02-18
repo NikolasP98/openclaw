@@ -1242,7 +1242,7 @@
         await navigator.clipboard.writeText(text);
         success = true;
       }
-    } catch (err) {
+    } catch {
       // Clipboard API failed, try fallback
     }
 
@@ -1650,7 +1650,7 @@
         e.stopPropagation();
         const entryId = btn.dataset.entryId;
         const shareUrl = buildShareUrl(entryId);
-        copyToClipboard(shareUrl, btn);
+        void copyToClipboard(shareUrl, btn);
       });
     });
 

@@ -1,10 +1,6 @@
 node_modules
 **/node_modules/
 .env
-.env.local
-.env.dev
-.env.prd
-.env.*.local
 docker-compose.extra.yml
 dist
 pnpm-lock.yaml
@@ -31,20 +27,26 @@ apps/android/.cxx/
 *.bun-build
 apps/macos/.build/
 apps/shared/MoltbotKit/.build/
+apps/shared/OpenClawKit/.build/
+apps/shared/OpenClawKit/Package.resolved
 **/ModuleCache/
 bin/
-bin/minionbot-mac
+bin/clawdbot-mac
 bin/docs-list
 apps/macos/.build-local/
 apps/macos/.swiftpm/
 apps/shared/MoltbotKit/.swiftpm/
+apps/shared/OpenClawKit/.swiftpm/
 Core/
 apps/ios/*.xcodeproj/
 apps/ios/*.xcworkspace/
 apps/ios/.swiftpm/
+apps/ios/.local-signing.xcconfig
 vendor/
-apps/ios/Minionbot.xcodeproj/
-apps/ios/Minionbot.xcodeproj/**
+# export-html vendors are committed intentionally (upstream pattern)
+!src/auto-reply/reply/export-html/vendor/
+apps/ios/Clawdbot.xcodeproj/
+apps/ios/Clawdbot.xcodeproj/**
 apps/macos/.build/**
 **/*.bun-build
 apps/ios/*.xcfilelist
@@ -87,13 +89,7 @@ USER.md
 .agent/*.json
 !.agent/workflows/
 /local/
-
-# Pre-compiled extension build artifacts (scripts/build-extensions.ts)
-extensions/**/*.js
-extensions/**/*.cjs
-extensions/**/*.mjs
-
-# Editor directories
-.vscode/
 package-lock.json
-/.openclaw/
+
+# Local iOS signing overrides
+apps/ios/LocalSigning.xcconfig

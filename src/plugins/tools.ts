@@ -1,9 +1,9 @@
-import type { AnyAgentTool } from "../agents/tools/common.js";
-import type { MinionPluginToolContext } from "./types.js";
 import { normalizeToolName } from "../agents/tool-policy.js";
+import type { AnyAgentTool } from "../agents/tools/common.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { applyTestPluginDefaults, normalizePluginsConfig } from "./config-state.js";
-import { loadMinionPlugins } from "./loader.js";
+import { loadOpenClawPlugins } from "./loader.js";
+import type { OpenClawPluginToolContext } from "./types.js";
 
 const log = createSubsystemLogger("plugins");
 
@@ -42,7 +42,7 @@ function isOptionalToolAllowed(params: {
 }
 
 export function resolvePluginTools(params: {
-  context: MinionPluginToolContext;
+  context: OpenClawPluginToolContext;
   existingToolNames?: Set<string>;
   toolAllowlist?: string[];
 }): AnyAgentTool[] {
@@ -54,7 +54,7 @@ export function resolvePluginTools(params: {
     return [];
   }
 
-  const registry = loadMinionPlugins({
+  const registry = loadOpenClawPlugins({
     config: effectiveConfig,
     workspaceDir: params.context.workspaceDir,
     logger: {

@@ -1,5 +1,5 @@
 import path from "node:path";
-import type { MinionConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { resolveStateDir } from "../config/paths.js";
 import {
   DEFAULT_AGENT_ID,
@@ -7,11 +7,12 @@ import {
   parseAgentSessionKey,
 } from "../routing/session-key.js";
 import { resolveUserPath } from "../utils.js";
+import { normalizeSkillFilter } from "./skills/filter.js";
 import { resolveDefaultAgentWorkspaceDir } from "./workspace.js";
 
 export { resolveAgentIdFromSessionKey } from "../routing/session-key.js";
 
-type AgentEntry = NonNullable<NonNullable<MinionConfig["agents"]>["list"]>[number];
+type AgentEntry = NonNullable<NonNullable<OpenClawConfig["agents"]>["list"]>[number];
 
 type ResolvedAgentConfig = {
   name?: string;
@@ -27,12 +28,11 @@ type ResolvedAgentConfig = {
   subagents?: AgentEntry["subagents"];
   sandbox?: AgentEntry["sandbox"];
   tools?: AgentEntry["tools"];
-  capabilities?: AgentEntry["capabilities"];
 };
 
 let defaultAgentWarned = false;
 
-function listAgents(cfg: MinionConfig): AgentEntry[] {
+function listAgents(cfg: OpenClawConfig): AgentEntry[] {
   const list = cfg.agents?.list;
   if (!Array.isArray(list)) {
     return [];
@@ -40,7 +40,7 @@ function listAgents(cfg: MinionConfig): AgentEntry[] {
   return list.filter((entry): entry is AgentEntry => Boolean(entry && typeof entry === "object"));
 }
 
-export function listAgentIds(cfg: MinionConfig): string[] {
+export function listAgentIds(cfg: OpenClawConfig): string[] {
   const agents = listAgents(cfg);
   if (agents.length === 0) {
     return [DEFAULT_AGENT_ID];
@@ -58,7 +58,7 @@ export function listAgentIds(cfg: MinionConfig): string[] {
   return ids.length > 0 ? ids : [DEFAULT_AGENT_ID];
 }
 
-export function resolveDefaultAgentId(cfg: MinionConfig): string {
+export function resolveDefaultAgentId(cfg: OpenClawConfig): string {
   const agents = listAgents(cfg);
   if (agents.length === 0) {
     return DEFAULT_AGENT_ID;
@@ -72,7 +72,7 @@ export function resolveDefaultAgentId(cfg: MinionConfig): string {
   return normalizeAgentId(chosen || DEFAULT_AGENT_ID);
 }
 
-export function resolveSessionAgentIds(params: { sessionKey?: string; config?: MinionConfig }): {
+export function resolveSessionAgentIds(params: { sessionKey?: string; config?: OpenClawConfig }): {
   defaultAgentId: string;
   sessionAgentId: string;
 } {
@@ -86,18 +86,18 @@ export function resolveSessionAgentIds(params: { sessionKey?: string; config?: M
 
 export function resolveSessionAgentId(params: {
   sessionKey?: string;
-  config?: MinionConfig;
+  config?: OpenClawConfig;
 }): string {
   return resolveSessionAgentIds(params).sessionAgentId;
 }
 
-function resolveAgentEntry(cfg: MinionConfig, agentId: string): AgentEntry | undefined {
+function resolveAgentEntry(cfg: OpenClawConfig, agentId: string): AgentEntry | undefined {
   const id = normalizeAgentId(agentId);
   return listAgents(cfg).find((entry) => normalizeAgentId(entry.id) === id);
 }
 
 export function resolveAgentConfig(
-  cfg: MinionConfig,
+  cfg: OpenClawConfig,
   agentId: string,
 ): ResolvedAgentConfig | undefined {
   const id = normalizeAgentId(agentId);
@@ -122,20 +122,17 @@ export function resolveAgentConfig(
     subagents: typeof entry.subagents === "object" && entry.subagents ? entry.subagents : undefined,
     sandbox: entry.sandbox,
     tools: entry.tools,
-    capabilities: entry.capabilities,
   };
 }
 
-export function resolveAgentSkillsFilter(cfg: MinionConfig, agentId: string): string[] | undefined {
-  const raw = resolveAgentConfig(cfg, agentId)?.skills;
-  if (!raw) {
-    return undefined;
-  }
-  const normalized = raw.map((entry) => String(entry).trim()).filter(Boolean);
-  return normalized.length > 0 ? normalized : [];
+export function resolveAgentSkillsFilter(
+  cfg: OpenClawConfig,
+  agentId: string,
+): string[] | undefined {
+  return normalizeSkillFilter(resolveAgentConfig(cfg, agentId)?.skills);
 }
 
-export function resolveAgentModelPrimary(cfg: MinionConfig, agentId: string): string | undefined {
+export function resolveAgentModelPrimary(cfg: OpenClawConfig, agentId: string): string | undefined {
   const raw = resolveAgentConfig(cfg, agentId)?.model;
   if (!raw) {
     return undefined;
@@ -148,7 +145,7 @@ export function resolveAgentModelPrimary(cfg: MinionConfig, agentId: string): st
 }
 
 export function resolveAgentModelFallbacksOverride(
-  cfg: MinionConfig,
+  cfg: OpenClawConfig,
   agentId: string,
 ): string[] | undefined {
   const raw = resolveAgentConfig(cfg, agentId)?.model;
@@ -162,7 +159,23 @@ export function resolveAgentModelFallbacksOverride(
   return Array.isArray(raw.fallbacks) ? raw.fallbacks : undefined;
 }
 
-export function resolveAgentWorkspaceDir(cfg: MinionConfig, agentId: string) {
+export function resolveEffectiveModelFallbacks(params: {
+  cfg: OpenClawConfig;
+  agentId: string;
+  hasSessionModelOverride: boolean;
+}): string[] | undefined {
+  const agentFallbacksOverride = resolveAgentModelFallbacksOverride(params.cfg, params.agentId);
+  if (!params.hasSessionModelOverride) {
+    return agentFallbacksOverride;
+  }
+  const defaultFallbacks =
+    typeof params.cfg.agents?.defaults?.model === "object"
+      ? (params.cfg.agents.defaults.model.fallbacks ?? [])
+      : [];
+  return agentFallbacksOverride ?? defaultFallbacks;
+}
+
+export function resolveAgentWorkspaceDir(cfg: OpenClawConfig, agentId: string) {
   const id = normalizeAgentId(agentId);
   const configured = resolveAgentConfig(cfg, id)?.workspace?.trim();
   if (configured) {
@@ -180,7 +193,7 @@ export function resolveAgentWorkspaceDir(cfg: MinionConfig, agentId: string) {
   return path.join(stateDir, `workspace-${id}`);
 }
 
-export function resolveAgentDir(cfg: MinionConfig, agentId: string) {
+export function resolveAgentDir(cfg: OpenClawConfig, agentId: string) {
   const id = normalizeAgentId(agentId);
   const configured = resolveAgentConfig(cfg, id)?.agentDir?.trim();
   if (configured) {

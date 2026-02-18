@@ -1,31 +1,30 @@
 import { vi } from "vitest";
 import type { MockFn } from "../test-utils/vitest-mock-fn.js";
 
-export const callGatewayMock: MockFn<(opts: unknown) => unknown> = vi.fn();
-vi.mock("../gateway/call.js", () => ({
-  callGateway: (opts: unknown) => callGatewayMock(opts),
-}));
+export type LoadedConfig = ReturnType<(typeof import("../config/config.js"))["loadConfig"]>;
 
-export type SessionsSpawnTestConfig = ReturnType<
-  (typeof import("../config/config.js"))["loadConfig"]
->;
+export const callGatewayMock: MockFn = vi.fn();
 
-const defaultConfigOverride: SessionsSpawnTestConfig = {
+const defaultConfig: LoadedConfig = {
   session: {
     mainKey: "main",
     scope: "per-sender",
   },
 };
 
-let configOverride: SessionsSpawnTestConfig = defaultConfigOverride;
+let configOverride: LoadedConfig = defaultConfig;
 
-export function resetConfigOverride() {
-  configOverride = defaultConfigOverride;
-}
-
-export function setConfigOverride(next: SessionsSpawnTestConfig) {
+export function setSubagentsConfigOverride(next: LoadedConfig) {
   configOverride = next;
 }
+
+export function resetSubagentsConfigOverride() {
+  configOverride = defaultConfig;
+}
+
+vi.mock("../gateway/call.js", () => ({
+  callGateway: (opts: unknown) => callGatewayMock(opts),
+}));
 
 vi.mock("../config/config.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../config/config.js")>();

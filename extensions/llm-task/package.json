@@ -1,13 +1,13 @@
 {
-  "name": "@minion/llm-task",
-  "version": "2026.2.13",
+  "name": "@openclaw/llm-task",
+  "version": "2026.2.16",
   "private": true,
-  "description": "Minion JSON-only LLM task plugin",
+  "description": "OpenClaw JSON-only LLM task plugin",
   "type": "module",
   "devDependencies": {
     "@nikolasp98/minion": "workspace:*"
   },
-  "minion": {
+  "openclaw": {
     "extensions": [
       "./index.ts"
     ]

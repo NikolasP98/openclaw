@@ -1,7 +1,7 @@
-import type { MinionConfig } from "../config/config.js";
-import type { ModelCatalogEntry } from "./model-catalog.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { resolveAgentModelPrimary } from "./agent-scope.js";
 import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "./defaults.js";
+import type { ModelCatalogEntry } from "./model-catalog.js";
 import { normalizeGoogleModelId } from "./models-config.providers.js";
 
 export type ModelRef = {
@@ -21,6 +21,7 @@ const ANTHROPIC_MODEL_ALIASES: Record<string, string> = {
   "opus-4.5": "claude-opus-4-5",
   "sonnet-4.5": "claude-sonnet-4-5",
 };
+const OPENAI_CODEX_OAUTH_MODEL_PREFIXES = ["gpt-5.3-codex"] as const;
 
 function normalizeAliasKey(value: string): string {
   return value.trim().toLowerCase();
@@ -47,7 +48,34 @@ export function normalizeProviderId(provider: string): string {
   return normalized;
 }
 
-export function isCliProvider(provider: string, cfg?: MinionConfig): boolean {
+export function findNormalizedProviderValue<T>(
+  entries: Record<string, T> | undefined,
+  provider: string,
+): T | undefined {
+  if (!entries) {
+    return undefined;
+  }
+  const providerKey = normalizeProviderId(provider);
+  for (const [key, value] of Object.entries(entries)) {
+    if (normalizeProviderId(key) === providerKey) {
+      return value;
+    }
+  }
+  return undefined;
+}
+
+export function findNormalizedProviderKey(
+  entries: Record<string, unknown> | undefined,
+  provider: string,
+): string | undefined {
+  if (!entries) {
+    return undefined;
+  }
+  const providerKey = normalizeProviderId(provider);
+  return Object.keys(entries).find((key) => normalizeProviderId(key) === providerKey);
+}
+
+export function isCliProvider(provider: string, cfg?: OpenClawConfig): boolean {
   const normalized = normalizeProviderId(provider);
   if (normalized === "claude-cli") {
     return true;
@@ -78,6 +106,28 @@ function normalizeProviderModelId(provider: string, model: string): string {
   return model;
 }
 
+function shouldUseOpenAICodexProvider(provider: string, model: string): boolean {
+  if (provider !== "openai") {
+    return false;
+  }
+  const normalized = model.trim().toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+  return OPENAI_CODEX_OAUTH_MODEL_PREFIXES.some(
+    (prefix) => normalized === prefix || normalized.startsWith(`${prefix}-`),
+  );
+}
+
+export function normalizeModelRef(provider: string, model: string): ModelRef {
+  const normalizedProvider = normalizeProviderId(provider);
+  const normalizedModel = normalizeProviderModelId(normalizedProvider, model.trim());
+  if (shouldUseOpenAICodexProvider(normalizedProvider, normalizedModel)) {
+    return { provider: "openai-codex", model: normalizedModel };
+  }
+  return { provider: normalizedProvider, model: normalizedModel };
+}
+
 export function parseModelRef(raw: string, defaultProvider: string): ModelRef | null {
   const trimmed = raw.trim();
   if (!trimmed) {
@@ -85,18 +135,14 @@ export function parseModelRef(raw: string, defaultProvider: string): ModelRef | 
   }
   const slash = trimmed.indexOf("/");
   if (slash === -1) {
-    const provider = normalizeProviderId(defaultProvider);
-    const model = normalizeProviderModelId(provider, trimmed);
-    return { provider, model };
+    return normalizeModelRef(defaultProvider, trimmed);
   }
   const providerRaw = trimmed.slice(0, slash).trim();
-  const provider = normalizeProviderId(providerRaw);
   const model = trimmed.slice(slash + 1).trim();
-  if (!provider || !model) {
+  if (!providerRaw || !model) {
     return null;
   }
-  const normalizedModel = normalizeProviderModelId(provider, model);
-  return { provider, model: normalizedModel };
+  return normalizeModelRef(providerRaw, model);
 }
 
 export function resolveAllowlistModelKey(raw: string, defaultProvider: string): string | null {
@@ -108,7 +154,7 @@ export function resolveAllowlistModelKey(raw: string, defaultProvider: string): 
 }
 
 export function buildConfiguredAllowlistKeys(params: {
-  cfg: MinionConfig | undefined;
+  cfg: OpenClawConfig | undefined;
   defaultProvider: string;
 }): Set<string> | null {
   const rawAllowlist = Object.keys(params.cfg?.agents?.defaults?.models ?? {});
@@ -127,7 +173,7 @@ export function buildConfiguredAllowlistKeys(params: {
 }
 
 export function buildModelAliasIndex(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   defaultProvider: string;
 }): ModelAliasIndex {
   const byAlias = new Map<string, { alias: string; ref: ModelRef }>();
@@ -178,7 +224,7 @@ export function resolveModelRefFromString(params: {
 }
 
 export function resolveConfiguredModelRef(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   defaultProvider: string;
   defaultModel: string;
 }): ModelRef {
@@ -204,7 +250,7 @@ export function resolveConfiguredModelRef(params: {
 
       // Default to anthropic if no provider is specified, but warn as this is deprecated.
       console.warn(
-        `[minion] Model "${trimmed}" specified without provider. Falling back to "anthropic/${trimmed}". Please use "anthropic/${trimmed}" in your config.`,
+        `[openclaw] Model "${trimmed}" specified without provider. Falling back to "anthropic/${trimmed}". Please use "anthropic/${trimmed}" in your config.`,
       );
       return { provider: "anthropic", model: trimmed };
     }
@@ -222,7 +268,7 @@ export function resolveConfiguredModelRef(params: {
 }
 
 export function resolveDefaultModelForAgent(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   agentId?: string;
 }): ModelRef {
   const agentModelOverride = params.agentId
@@ -254,7 +300,7 @@ export function resolveDefaultModelForAgent(params: {
 }
 
 export function buildAllowedModelSet(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   catalog: ModelCatalogEntry[];
   defaultProvider: string;
   defaultModel?: string;
@@ -336,7 +382,7 @@ export type ModelRefStatus = {
 };
 
 export function getModelRefStatus(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   catalog: ModelCatalogEntry[];
   ref: ModelRef;
   defaultProvider: string;
@@ -358,7 +404,7 @@ export function getModelRefStatus(params: {
 }
 
 export function resolveAllowedModelRef(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   catalog: ModelCatalogEntry[];
   raw: string;
   defaultProvider: string;
@@ -401,7 +447,7 @@ export function resolveAllowedModelRef(params: {
 }
 
 export function resolveThinkingDefault(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   provider: string;
   model: string;
   catalog?: ModelCatalogEntry[];
@@ -424,7 +470,7 @@ export function resolveThinkingDefault(params: {
  * Returns null if hooks.gmail.model is not set.
  */
 export function resolveHooksGmailModel(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   defaultProvider: string;
 }): ModelRef | null {
   const hooksModel = params.cfg.hooks?.gmail?.model;

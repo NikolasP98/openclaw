@@ -1,16 +1,16 @@
 import fs from "node:fs";
-import type {
-  ChannelAccountSnapshot,
-  ChannelId,
-  ChannelPlugin,
-} from "../../channels/plugins/types.js";
-import type { MinionConfig } from "../../config/config.js";
 import {
   buildChannelAccountSnapshot,
   formatChannelAllowFrom,
 } from "../../channels/account-summary.js";
 import { resolveChannelDefaultAccountId } from "../../channels/plugins/helpers.js";
 import { listChannelPlugins } from "../../channels/plugins/index.js";
+import type {
+  ChannelAccountSnapshot,
+  ChannelId,
+  ChannelPlugin,
+} from "../../channels/plugins/types.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { sha256HexPrefix } from "../../logging/redact-identifier.js";
 import { formatTimeAgo } from "./format.js";
 
@@ -88,7 +88,7 @@ const formatAccountLabel = (params: { accountId: string; name?: string }) => {
 const resolveAccountEnabled = (
   plugin: ChannelPlugin,
   account: unknown,
-  cfg: MinionConfig,
+  cfg: OpenClawConfig,
 ): boolean => {
   if (plugin.config.isEnabled) {
     return plugin.config.isEnabled(account, cfg);
@@ -100,7 +100,7 @@ const resolveAccountEnabled = (
 const resolveAccountConfigured = async (
   plugin: ChannelPlugin,
   account: unknown,
-  cfg: MinionConfig,
+  cfg: OpenClawConfig,
 ): Promise<boolean> => {
   if (plugin.config.isConfigured) {
     return await plugin.config.isConfigured(account, cfg);
@@ -111,7 +111,7 @@ const resolveAccountConfigured = async (
 
 const buildAccountNotes = (params: {
   plugin: ChannelPlugin;
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   entry: ChannelAccountRow;
 }) => {
   const { plugin, cfg, entry } = params;
@@ -201,7 +201,7 @@ function collectMissingPaths(accounts: ChannelAccountRow[]): string[] {
 
 function summarizeTokenConfig(params: {
   plugin: ChannelPlugin;
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   accounts: ChannelAccountRow[];
   showSecrets: boolean;
 }): { state: "ok" | "setup" | "warn" | null; detail: string | null } {
@@ -211,14 +211,15 @@ function summarizeTokenConfig(params: {
   }
 
   const accountRecs = enabled.map((a) => asRecord(a.account));
-  const hasBotOrAppTokenFields = accountRecs.some((r) => "botToken" in r || "appToken" in r);
+  const hasBotTokenField = accountRecs.some((r) => "botToken" in r);
+  const hasAppTokenField = accountRecs.some((r) => "appToken" in r);
   const hasTokenField = accountRecs.some((r) => "token" in r);
 
-  if (!hasBotOrAppTokenFields && !hasTokenField) {
+  if (!hasBotTokenField && !hasAppTokenField && !hasTokenField) {
     return { state: null, detail: null };
   }
 
-  if (hasBotOrAppTokenFields) {
+  if (hasBotTokenField && hasAppTokenField) {
     const ready = enabled.filter((a) => {
       const rec = asRecord(a.account);
       const bot = typeof rec.botToken === "string" ? rec.botToken.trim() : "";
@@ -265,6 +266,30 @@ function summarizeTokenConfig(params: {
     };
   }
 
+  if (hasBotTokenField) {
+    const ready = enabled.filter((a) => {
+      const rec = asRecord(a.account);
+      const bot = typeof rec.botToken === "string" ? rec.botToken.trim() : "";
+      return Boolean(bot);
+    });
+
+    if (ready.length === 0) {
+      return { state: "setup", detail: "no bot token" };
+    }
+
+    const sample = ready[0]?.account ? asRecord(ready[0].account) : {};
+    const botToken = typeof sample.botToken === "string" ? sample.botToken : "";
+    const botHint = botToken.trim()
+      ? formatTokenHint(botToken, { showSecrets: params.showSecrets })
+      : "";
+    const hint = botHint ? ` (${botHint})` : "";
+
+    return {
+      state: "ok",
+      detail: `bot token config${hint} · accounts ${ready.length}/${enabled.length || 1}`,
+    };
+  }
+
   const ready = enabled.filter((a) => {
     const rec = asRecord(a.account);
     return typeof rec.token === "string" ? Boolean(rec.token.trim()) : false;
@@ -288,7 +313,7 @@ function summarizeTokenConfig(params: {
 // `status --all` channels table.
 // Keep this generic: channel-specific rules belong in the channel plugin.
 export async function buildChannelsTable(
-  cfg: MinionConfig,
+  cfg: OpenClawConfig,
   opts?: { showSecrets?: boolean },
 ): Promise<{
   rows: ChannelRow[];

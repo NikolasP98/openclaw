@@ -1,19 +1,19 @@
-import * as Lark from "@larksuiteoapi/node-sdk";
 import * as http from "http";
+import * as Lark from "@larksuiteoapi/node-sdk";
 import {
-  type MinionbotConfig,
+  type ClawdbotConfig,
   type RuntimeEnv,
   type HistoryEntry,
   installRequestBodyLimitGuard,
-} from "minion/plugin-sdk";
-import type { ResolvedFeishuAccount } from "./types.js";
+} from "openclaw/plugin-sdk";
 import { resolveFeishuAccount, listEnabledFeishuAccounts } from "./accounts.js";
 import { handleFeishuMessage, type FeishuMessageEvent, type FeishuBotAddedEvent } from "./bot.js";
 import { createFeishuWSClient, createEventDispatcher } from "./client.js";
 import { probeFeishu } from "./probe.js";
+import type { ResolvedFeishuAccount } from "./types.js";
 
 export type MonitorFeishuOpts = {
-  config?: MinionbotConfig;
+  config?: ClawdbotConfig;
   runtime?: RuntimeEnv;
   abortSignal?: AbortSignal;
   accountId?: string;
@@ -43,7 +43,7 @@ async function fetchBotOpenId(account: ResolvedFeishuAccount): Promise<string | 
 function registerEventHandlers(
   eventDispatcher: Lark.EventDispatcher,
   context: {
-    cfg: MinionbotConfig;
+    cfg: ClawdbotConfig;
     accountId: string;
     runtime?: RuntimeEnv;
     chatHistories: Map<string, HistoryEntry[]>;
@@ -100,7 +100,7 @@ function registerEventHandlers(
 }
 
 type MonitorAccountParams = {
-  cfg: MinionbotConfig;
+  cfg: ClawdbotConfig;
   account: ResolvedFeishuAccount;
   runtime?: RuntimeEnv;
   abortSignal?: AbortSignal;

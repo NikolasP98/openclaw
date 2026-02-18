@@ -2,11 +2,12 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { MinionConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
+import { captureFullEnv } from "../test-utils/env.js";
 import { resolveSandboxContext } from "./sandbox.js";
 
 vi.mock("./sandbox/docker.js", () => ({
-  ensureSandboxContainer: vi.fn(async () => "minion-sbx-test"),
+  ensureSandboxContainer: vi.fn(async () => "openclaw-sbx-test"),
 }));
 
 vi.mock("./sandbox/browser.js", () => ({
@@ -27,46 +28,31 @@ async function writeSkill(params: { dir: string; name: string; description: stri
   );
 }
 
-function restoreEnv(snapshot: Record<string, string | undefined>) {
-  for (const key of Object.keys(process.env)) {
-    if (!(key in snapshot)) {
-      delete process.env[key];
-    }
-  }
-  for (const [key, value] of Object.entries(snapshot)) {
-    if (value === undefined) {
-      delete process.env[key];
-    } else {
-      process.env[key] = value;
-    }
-  }
-}
-
 describe("sandbox skill mirroring", () => {
-  let envSnapshot: Record<string, string | undefined>;
+  let envSnapshot: ReturnType<typeof captureFullEnv>;
 
   beforeEach(() => {
-    envSnapshot = { ...process.env };
+    envSnapshot = captureFullEnv();
   });
 
   afterEach(() => {
-    restoreEnv(envSnapshot);
+    envSnapshot.restore();
   });
 
   const runContext = async (workspaceAccess: "none" | "ro") => {
-    const bundledDir = await fs.mkdtemp(path.join(os.tmpdir(), "minion-bundled-skills-"));
+    const bundledDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-bundled-skills-"));
     await fs.mkdir(bundledDir, { recursive: true });
 
-    process.env.MINION_BUNDLED_SKILLS_DIR = bundledDir;
+    process.env.OPENCLAW_BUNDLED_SKILLS_DIR = bundledDir;
 
-    const workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), "minion-workspace-"));
+    const workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-workspace-"));
     await writeSkill({
       dir: path.join(workspaceDir, "skills", "demo-skill"),
       name: "demo-skill",
       description: "Demo skill",
     });
 
-    const cfg: MinionConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         defaults: {
           sandbox: {

@@ -1,9 +1,6 @@
 import type { Api, Model } from "@mariozechner/pi-ai";
+import { resolveOpenClawAgentDir } from "../../agents/agent-paths.js";
 import type { AuthProfileStore } from "../../agents/auth-profiles.js";
-import type { ModelRegistry } from "../../agents/pi-model-discovery.js";
-import type { MinionConfig } from "../../config/config.js";
-import type { ModelRow } from "./list.types.js";
-import { resolveMinionAgentDir } from "../../agents/agent-paths.js";
 import { listProfilesForProvider } from "../../agents/auth-profiles.js";
 import {
   getCustomProviderApiKey,
@@ -14,16 +11,24 @@ import {
   ANTIGRAVITY_OPUS_46_FORWARD_COMPAT_CANDIDATES,
   resolveForwardCompatModel,
 } from "../../agents/model-forward-compat.js";
-import { ensureMinionModelsJson } from "../../agents/models-config.js";
+import { ensureOpenClawModelsJson } from "../../agents/models-config.js";
+import { ensurePiAuthJsonFromAuthProfiles } from "../../agents/pi-auth-json.js";
+import type { ModelRegistry } from "../../agents/pi-model-discovery.js";
 import { discoverAuthStorage, discoverModels } from "../../agents/pi-model-discovery.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import {
   formatErrorWithStack,
   MODEL_AVAILABILITY_UNAVAILABLE_CODE,
   shouldFallbackToAuthHeuristics,
 } from "./list.errors.js";
+import type { ModelRow } from "./list.types.js";
 import { isLocalBaseUrl, modelKey } from "./shared.js";
 
-const hasAuthForProvider = (provider: string, cfg?: MinionConfig, authStore?: AuthProfileStore) => {
+const hasAuthForProvider = (
+  provider: string,
+  cfg?: OpenClawConfig,
+  authStore?: AuthProfileStore,
+) => {
   if (!cfg || !authStore) {
     return false;
   }
@@ -94,9 +99,10 @@ function loadAvailableModels(registry: ModelRegistry): Model<Api>[] {
   }
 }
 
-export async function loadModelRegistry(cfg: MinionConfig) {
-  await ensureMinionModelsJson(cfg);
-  const agentDir = resolveMinionAgentDir();
+export async function loadModelRegistry(cfg: OpenClawConfig) {
+  await ensureOpenClawModelsJson(cfg);
+  const agentDir = resolveOpenClawAgentDir();
+  await ensurePiAuthJsonFromAuthProfiles(agentDir);
   const authStorage = discoverAuthStorage(agentDir);
   const registry = discoverModels(authStorage, agentDir);
   const appended = appendAntigravityForwardCompatModels(registry.getAll(), registry);
@@ -180,7 +186,7 @@ export function toModelRow(params: {
   tags: string[];
   aliases?: string[];
   availableKeys?: Set<string>;
-  cfg?: MinionConfig;
+  cfg?: OpenClawConfig;
   authStore?: AuthProfileStore;
 }): ModelRow {
   const { model, key, tags, aliases = [], availableKeys, cfg, authStore } = params;

@@ -1,12 +1,12 @@
 {
-  "name": "@minion/discord",
-  "version": "2026.2.13",
-  "description": "Minion Discord channel plugin",
+  "name": "@openclaw/discord",
+  "version": "2026.2.16",
+  "description": "OpenClaw Discord channel plugin",
   "type": "module",
   "devDependencies": {
     "@nikolasp98/minion": "workspace:*"
   },
-  "minion": {
+  "openclaw": {
     "extensions": [
       "./index.ts"
     ]

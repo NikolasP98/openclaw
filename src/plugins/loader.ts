@@ -1,16 +1,9 @@
-import { createJiti } from "jiti";
 import fs from "node:fs";
-import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { MinionConfig } from "../config/config.js";
+import { createJiti } from "jiti";
+import type { OpenClawConfig } from "../config/config.js";
 import type { GatewayRequestHandler } from "../gateway/server-methods/types.js";
-import type {
-  MinionPluginDefinition,
-  MinionPluginModule,
-  PluginDiagnostic,
-  PluginLogger,
-} from "./types.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { resolveUserPath } from "../utils.js";
 import { clearPluginCommands } from "./commands.js";
@@ -21,18 +14,24 @@ import {
   resolveMemorySlotDecision,
   type NormalizedPluginsConfig,
 } from "./config-state.js";
-import { discoverMinionPlugins } from "./discovery.js";
+import { discoverOpenClawPlugins } from "./discovery.js";
 import { initializeGlobalHookRunner } from "./hook-runner-global.js";
 import { loadPluginManifestRegistry } from "./manifest-registry.js";
 import { createPluginRegistry, type PluginRecord, type PluginRegistry } from "./registry.js";
 import { setActivePluginRegistry } from "./runtime.js";
 import { createPluginRuntime } from "./runtime/index.js";
 import { validateJsonSchemaValue } from "./schema-validator.js";
+import type {
+  OpenClawPluginDefinition,
+  OpenClawPluginModule,
+  PluginDiagnostic,
+  PluginLogger,
+} from "./types.js";
 
 export type PluginLoadResult = PluginRegistry;
 
 export type PluginLoadOptions = {
-  config?: MinionConfig;
+  config?: OpenClawConfig;
   workspaceDir?: string;
   logger?: PluginLogger;
   coreGatewayHandlers?: Record<string, GatewayRequestHandler>;
@@ -44,15 +43,18 @@ const registryCache = new Map<string, PluginRegistry>();
 
 const defaultLogger = () => createSubsystemLogger("plugins");
 
-const resolvePluginSdkAlias = (): string | null => {
+const resolvePluginSdkAliasFile = (params: {
+  srcFile: string;
+  distFile: string;
+}): string | null => {
   try {
     const modulePath = fileURLToPath(import.meta.url);
     const isProduction = process.env.NODE_ENV === "production";
     const isTest = process.env.VITEST || process.env.NODE_ENV === "test";
     let cursor = path.dirname(modulePath);
     for (let i = 0; i < 6; i += 1) {
-      const srcCandidate = path.join(cursor, "src", "plugin-sdk", "index.ts");
-      const distCandidate = path.join(cursor, "dist", "plugin-sdk", "index.js");
+      const srcCandidate = path.join(cursor, "src", "plugin-sdk", params.srcFile);
+      const distCandidate = path.join(cursor, "dist", "plugin-sdk", params.distFile);
       const orderedCandidates = isProduction
         ? isTest
           ? [distCandidate, srcCandidate]
@@ -75,35 +77,11 @@ const resolvePluginSdkAlias = (): string | null => {
   return null;
 };
 
+const resolvePluginSdkAlias = (): string | null =>
+  resolvePluginSdkAliasFile({ srcFile: "index.ts", distFile: "index.js" });
+
 const resolvePluginSdkAccountIdAlias = (): string | null => {
-  try {
-    const modulePath = fileURLToPath(import.meta.url);
-    const isProduction = process.env.NODE_ENV === "production";
-    const isTest = process.env.VITEST || process.env.NODE_ENV === "test";
-    let cursor = path.dirname(modulePath);
-    for (let i = 0; i < 6; i += 1) {
-      const srcCandidate = path.join(cursor, "src", "plugin-sdk", "account-id.ts");
-      const distCandidate = path.join(cursor, "dist", "plugin-sdk", "account-id.js");
-      const orderedCandidates = isProduction
-        ? isTest
-          ? [distCandidate, srcCandidate]
-          : [distCandidate]
-        : [srcCandidate, distCandidate];
-      for (const candidate of orderedCandidates) {
-        if (fs.existsSync(candidate)) {
-          return candidate;
-        }
-      }
-      const parent = path.dirname(cursor);
-      if (parent === cursor) {
-        break;
-      }
-      cursor = parent;
-    }
-  } catch {
-    // ignore
-  }
-  return null;
+  return resolvePluginSdkAliasFile({ srcFile: "account-id.ts", distFile: "account-id.js" });
 };
 
 function buildCacheKey(params: {
@@ -136,8 +114,8 @@ function validatePluginConfig(params: {
 }
 
 function resolvePluginModuleExport(moduleExport: unknown): {
-  definition?: MinionPluginDefinition;
-  register?: MinionPluginDefinition["register"];
+  definition?: OpenClawPluginDefinition;
+  register?: OpenClawPluginDefinition["register"];
 } {
   const resolved =
     moduleExport &&
@@ -147,11 +125,11 @@ function resolvePluginModuleExport(moduleExport: unknown): {
       : moduleExport;
   if (typeof resolved === "function") {
     return {
-      register: resolved as MinionPluginDefinition["register"],
+      register: resolved as OpenClawPluginDefinition["register"],
     };
   }
   if (resolved && typeof resolved === "object") {
-    const def = resolved as MinionPluginDefinition;
+    const def = resolved as OpenClawPluginDefinition;
     const register = def.register ?? def.activate;
     return { definition: def, register };
   }
@@ -199,7 +177,7 @@ function pushDiagnostics(diagnostics: PluginDiagnostic[], append: PluginDiagnost
   diagnostics.push(...append);
 }
 
-export function loadMinionPlugins(options: PluginLoadOptions = {}): PluginRegistry {
+export function loadOpenClawPlugins(options: PluginLoadOptions = {}): PluginRegistry {
   // Test env: default-disable plugins unless explicitly configured.
   // This keeps unit/gateway suites fast and avoids loading heavyweight plugin deps by accident.
   const cfg = applyTestPluginDefaults(options.config ?? {}, process.env);
@@ -229,7 +207,7 @@ export function loadMinionPlugins(options: PluginLoadOptions = {}): PluginRegist
     coreGatewayHandlers: options.coreGatewayHandlers as Record<string, GatewayRequestHandler>,
   });
 
-  const discovery = discoverMinionPlugins({
+  const discovery = discoverOpenClawPlugins({
     workspaceDir: options.workspaceDir,
     extraPaths: normalized.loadPaths,
   });
@@ -242,52 +220,29 @@ export function loadMinionPlugins(options: PluginLoadOptions = {}): PluginRegist
   });
   pushDiagnostics(registry.diagnostics, manifestRegistry.diagnostics);
 
-  const pluginSdkAlias = resolvePluginSdkAlias();
-  const pluginSdkAccountIdAlias = resolvePluginSdkAccountIdAlias();
-
-  // Native require for pre-compiled .js extensions — avoids jiti/Babel overhead.
-  const nativeRequire = createRequire(import.meta.url);
-
-  // jiti is only needed for TypeScript sources that weren't pre-compiled.
-  let _jiti: ReturnType<typeof createJiti> | null = null;
+  // Lazy: avoid creating the Jiti loader when all plugins are disabled (common in unit tests).
+  let jitiLoader: ReturnType<typeof createJiti> | null = null;
   const getJiti = () => {
-    if (!_jiti) {
-      _jiti = createJiti(import.meta.url, {
-        interopDefault: true,
-        extensions: [
-          ".ts",
-          ".tsx",
-          ".mts",
-          ".cts",
-          ".mtsx",
-          ".ctsx",
-          ".js",
-          ".mjs",
-          ".cjs",
-          ".json",
-        ],
-        ...(pluginSdkAlias || pluginSdkAccountIdAlias
-          ? {
-              alias: {
-                ...(pluginSdkAlias ? { "minion/plugin-sdk": pluginSdkAlias } : {}),
-                ...(pluginSdkAccountIdAlias
-                  ? { "minion/plugin-sdk/account-id": pluginSdkAccountIdAlias }
-                  : {}),
-              },
-            }
-          : {}),
-      });
+    if (jitiLoader) {
+      return jitiLoader;
     }
-    return _jiti;
-  };
-
-  /** Use native require for .js/.cjs/.mjs, fall back to jiti for TypeScript. */
-  const loadPluginModule = (source: string): MinionPluginModule => {
-    const ext = path.extname(source);
-    if (ext === ".js" || ext === ".cjs" || ext === ".mjs") {
-      return nativeRequire(source) as MinionPluginModule;
-    }
-    return getJiti()(source) as MinionPluginModule;
+    const pluginSdkAlias = resolvePluginSdkAlias();
+    const pluginSdkAccountIdAlias = resolvePluginSdkAccountIdAlias();
+    jitiLoader = createJiti(import.meta.url, {
+      interopDefault: true,
+      extensions: [".ts", ".tsx", ".mts", ".cts", ".mtsx", ".ctsx", ".js", ".mjs", ".cjs", ".json"],
+      ...(pluginSdkAlias || pluginSdkAccountIdAlias
+        ? {
+            alias: {
+              ...(pluginSdkAlias ? { "openclaw/plugin-sdk": pluginSdkAlias } : {}),
+              ...(pluginSdkAccountIdAlias
+                ? { "openclaw/plugin-sdk/account-id": pluginSdkAccountIdAlias }
+                : {}),
+            },
+          }
+        : {}),
+    });
+    return jitiLoader;
   };
 
   const manifestByRoot = new Map(
@@ -363,9 +318,9 @@ export function loadMinionPlugins(options: PluginLoadOptions = {}): PluginRegist
       continue;
     }
 
-    let mod: MinionPluginModule | null = null;
+    let mod: OpenClawPluginModule | null = null;
     try {
-      mod = loadPluginModule(candidate.source);
+      mod = getJiti()(candidate.source) as OpenClawPluginModule;
     } catch (err) {
       logger.error(`[plugins] ${record.id} failed to load from ${record.source}: ${String(err)}`);
       record.status = "error";

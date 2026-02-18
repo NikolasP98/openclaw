@@ -1,54 +1,18 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { MinionConfig } from "../config/config.js";
-import { withTempHome as withTempHomeBase } from "../../test/helpers/temp-home.js";
-
-async function withTempHome<T>(fn: (home: string) => Promise<T>): Promise<T> {
-  return withTempHomeBase(fn, { prefix: "minion-models-" });
-}
-
-const _MODELS_CONFIG: MinionConfig = {
-  models: {
-    providers: {
-      "custom-proxy": {
-        baseUrl: "http://localhost:4000/v1",
-        apiKey: "TEST_KEY",
-        api: "openai-completions",
-        models: [
-          {
-            id: "llama-3.1-8b",
-            name: "Llama 3.1 8B (Proxy)",
-            api: "openai-completions",
-            reasoning: false,
-            input: ["text"],
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            contextWindow: 128000,
-            maxTokens: 32000,
-          },
-        ],
-      },
-    },
-  },
-};
+import { describe, expect, it } from "vitest";
+import type { OpenClawConfig } from "../config/config.js";
+import { installModelsConfigTestHooks, withModelsTempHome } from "./models-config.e2e-harness.js";
 
 describe("models-config", () => {
-  let previousHome: string | undefined;
-
-  beforeEach(() => {
-    previousHome = process.env.HOME;
-  });
-
-  afterEach(() => {
-    process.env.HOME = previousHome;
-  });
+  installModelsConfigTestHooks();
 
   it("normalizes gemini 3 ids to preview for google providers", async () => {
-    await withTempHome(async () => {
-      const { ensureMinionModelsJson } = await import("./models-config.js");
-      const { resolveMinionAgentDir } = await import("./agent-paths.js");
+    await withModelsTempHome(async () => {
+      const { ensureOpenClawModelsJson } = await import("./models-config.js");
+      const { resolveOpenClawAgentDir } = await import("./agent-paths.js");
 
-      const cfg: MinionConfig = {
+      const cfg: OpenClawConfig = {
         models: {
           providers: {
             google: {
@@ -82,9 +46,9 @@ describe("models-config", () => {
         },
       };
 
-      await ensureMinionModelsJson(cfg);
+      await ensureOpenClawModelsJson(cfg);
 
-      const modelPath = path.join(resolveMinionAgentDir(), "models.json");
+      const modelPath = path.join(resolveOpenClawAgentDir(), "models.json");
       const raw = await fs.readFile(modelPath, "utf8");
       const parsed = JSON.parse(raw) as {
         providers: Record<string, { models: Array<{ id: string }> }>;

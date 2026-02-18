@@ -62,8 +62,8 @@ describe("trigger handling", () => {
         {
           agents: {
             defaults: {
-              model: "anthropic/claude-opus-4-5",
-              workspace: join(home, "minion"),
+              model: { primary: "anthropic/claude-opus-4-5" },
+              workspace: join(home, "openclaw"),
             },
           },
           channels: {

@@ -1,31 +1,10 @@
-import fs from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import type { BrowserServerState } from "./server-context.js";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { withFetchPreconnect } from "../test-utils/fetch-mock.js";
 import * as cdpModule from "./cdp.js";
 import * as pwAiModule from "./pw-ai-module.js";
+import type { BrowserServerState } from "./server-context.js";
+import "./server-context.chrome-test-harness.js";
 import { createBrowserRouteContext } from "./server-context.js";
-
-const chromeUserDataDir = vi.hoisted(() => ({ dir: "/tmp/minion" }));
-
-beforeAll(async () => {
-  chromeUserDataDir.dir = await fs.mkdtemp(path.join(os.tmpdir(), "minion-chrome-user-data-"));
-});
-
-afterAll(async () => {
-  await fs.rm(chromeUserDataDir.dir, { recursive: true, force: true });
-});
-
-vi.mock("./chrome.js", () => ({
-  isChromeCdpReady: vi.fn(async () => true),
-  isChromeReachable: vi.fn(async () => true),
-  launchMinionChrome: vi.fn(async () => {
-    throw new Error("unexpected launch");
-  }),
-  resolveMinionUserDataDir: vi.fn(() => chromeUserDataDir.dir),
-  stopMinionChrome: vi.fn(async () => {}),
-}));
 
 const originalFetch = globalThis.fetch;
 
@@ -35,7 +14,7 @@ afterEach(() => {
 });
 
 function makeState(
-  profile: "remote" | "minion",
+  profile: "remote" | "openclaw",
 ): BrowserServerState & { profiles: Map<string, { lastTargetId?: string | null }> } {
   return {
     // oxlint-disable-next-line typescript/no-explicit-any
@@ -49,6 +28,8 @@ function makeState(
       cdpIsLoopback: profile !== "remote",
       remoteCdpTimeoutMs: 1500,
       remoteCdpHandshakeTimeoutMs: 3000,
+      evaluateEnabled: false,
+      extraArgs: [],
       color: "#FF4500",
       headless: true,
       noSandbox: false,
@@ -60,7 +41,7 @@ function makeState(
           cdpPort: 443,
           color: "#00AA00",
         },
-        minion: { cdpPort: 18800, color: "#FF4500" },
+        openclaw: { cdpPort: 18800, color: "#FF4500" },
       },
     },
     profiles: new Map(),
@@ -84,13 +65,13 @@ describe("browser server-context remote profile tab operations", () => {
       listPagesViaPlaywright,
       createPageViaPlaywright,
       closePageByTargetIdViaPlaywright,
-    } as Awaited<ReturnType<typeof pwAiModule.getPwAiModule>>);
+    } as unknown as Awaited<ReturnType<typeof pwAiModule.getPwAiModule>>);
 
     const fetchMock = vi.fn(async () => {
       throw new Error("unexpected fetch");
     });
 
-    global.fetch = fetchMock;
+    global.fetch = withFetchPreconnect(fetchMock);
 
     const state = makeState("remote");
     const ctx = createBrowserRouteContext({ getState: () => state });
@@ -149,13 +130,13 @@ describe("browser server-context remote profile tab operations", () => {
       closePageByTargetIdViaPlaywright: vi.fn(async () => {
         throw new Error("unexpected close");
       }),
-    } as Awaited<ReturnType<typeof pwAiModule.getPwAiModule>>);
+    } as unknown as Awaited<ReturnType<typeof pwAiModule.getPwAiModule>>);
 
     const fetchMock = vi.fn(async () => {
       throw new Error("unexpected fetch");
     });
 
-    global.fetch = fetchMock;
+    global.fetch = withFetchPreconnect(fetchMock);
 
     const state = makeState("remote");
     const ctx = createBrowserRouteContext({ getState: () => state });
@@ -176,13 +157,13 @@ describe("browser server-context remote profile tab operations", () => {
     vi.spyOn(pwAiModule, "getPwAiModule").mockResolvedValue({
       listPagesViaPlaywright,
       focusPageByTargetIdViaPlaywright,
-    } as Awaited<ReturnType<typeof pwAiModule.getPwAiModule>>);
+    } as unknown as Awaited<ReturnType<typeof pwAiModule.getPwAiModule>>);
 
     const fetchMock = vi.fn(async () => {
       throw new Error("unexpected fetch");
     });
 
-    global.fetch = fetchMock;
+    global.fetch = withFetchPreconnect(fetchMock);
 
     const state = makeState("remote");
     const ctx = createBrowserRouteContext({ getState: () => state });
@@ -202,13 +183,13 @@ describe("browser server-context remote profile tab operations", () => {
       listPagesViaPlaywright: vi.fn(async () => {
         throw new Error("boom");
       }),
-    } as Awaited<ReturnType<typeof pwAiModule.getPwAiModule>>);
+    } as unknown as Awaited<ReturnType<typeof pwAiModule.getPwAiModule>>);
 
     const fetchMock = vi.fn(async () => {
       throw new Error("unexpected fetch");
     });
 
-    global.fetch = fetchMock;
+    global.fetch = withFetchPreconnect(fetchMock);
 
     const state = makeState("remote");
     const ctx = createBrowserRouteContext({ getState: () => state });
@@ -240,7 +221,7 @@ describe("browser server-context remote profile tab operations", () => {
       } as unknown as Response;
     });
 
-    global.fetch = fetchMock;
+    global.fetch = withFetchPreconnect(fetchMock);
 
     const state = makeState("remote");
     const ctx = createBrowserRouteContext({ getState: () => state });
@@ -275,14 +256,14 @@ describe("browser server-context tab selection state", () => {
       } as unknown as Response;
     });
 
-    global.fetch = fetchMock;
+    global.fetch = withFetchPreconnect(fetchMock);
 
-    const state = makeState("minion");
+    const state = makeState("openclaw");
     const ctx = createBrowserRouteContext({ getState: () => state });
-    const minion = ctx.forProfile("minion");
+    const openclaw = ctx.forProfile("openclaw");
 
-    const opened = await minion.openTab("https://created.example");
+    const opened = await openclaw.openTab("https://created.example");
     expect(opened.targetId).toBe("CREATED");
-    expect(state.profiles.get("minion")?.lastTargetId).toBe("CREATED");
+    expect(state.profiles.get("openclaw")?.lastTargetId).toBe("CREATED");
   });
 });

@@ -1,6 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { MinionConfig } from "../config/config.js";
+import { MANIFEST_KEY } from "../compat/legacy-names.js";
+import type { OpenClawConfig } from "../config/config.js";
+import { CONFIG_DIR, resolveUserPath } from "../utils.js";
+import { resolveBundledHooksDir } from "./bundled-dir.js";
+import { shouldIncludeHook } from "./config.js";
+import {
+  parseFrontmatter,
+  resolveOpenClawMetadata,
+  resolveHookInvocationPolicy,
+} from "./frontmatter.js";
 import type {
   Hook,
   HookEligibilityContext,
@@ -9,15 +18,6 @@ import type {
   HookSource,
   ParsedHookFrontmatter,
 } from "./types.js";
-import { MANIFEST_KEY } from "../compat/legacy-names.js";
-import { CONFIG_DIR, resolveUserPath } from "../utils.js";
-import { resolveBundledHooksDir } from "./bundled-dir.js";
-import { shouldIncludeHook } from "./config.js";
-import {
-  parseFrontmatter,
-  resolveMinionMetadata,
-  resolveHookInvocationPolicy,
-} from "./frontmatter.js";
 
 type HookPackageManifest = {
   name?: string;
@@ -25,7 +25,7 @@ type HookPackageManifest = {
 
 function filterHookEntries(
   entries: HookEntry[],
-  config?: MinionConfig,
+  config?: OpenClawConfig,
   eligibility?: HookEligibilityContext,
 ): HookEntry[] {
   return entries.filter((entry) => shouldIncludeHook({ entry, config, eligibility }));
@@ -198,7 +198,7 @@ export function loadHookEntriesFromDir(params: {
         pluginId: params.pluginId,
       },
       frontmatter,
-      metadata: resolveMinionMetadata(frontmatter),
+      metadata: resolveOpenClawMetadata(frontmatter),
       invocation: resolveHookInvocationPolicy(frontmatter),
     };
     return entry;
@@ -208,7 +208,7 @@ export function loadHookEntriesFromDir(params: {
 function loadHookEntries(
   workspaceDir: string,
   opts?: {
-    config?: MinionConfig;
+    config?: OpenClawConfig;
     managedHooksDir?: string;
     bundledHooksDir?: string;
   },
@@ -224,23 +224,23 @@ function loadHookEntries(
   const bundledHooks = bundledHooksDir
     ? loadHooksFromDir({
         dir: bundledHooksDir,
-        source: "minion-bundled",
+        source: "openclaw-bundled",
       })
     : [];
   const extraHooks = extraDirs.flatMap((dir) => {
     const resolved = resolveUserPath(dir);
     return loadHooksFromDir({
       dir: resolved,
-      source: "minion-workspace", // Extra dirs treated as workspace
+      source: "openclaw-workspace", // Extra dirs treated as workspace
     });
   });
   const managedHooks = loadHooksFromDir({
     dir: managedHooksDir,
-    source: "minion-managed",
+    source: "openclaw-managed",
   });
   const workspaceHooks = loadHooksFromDir({
     dir: workspaceHooksDir,
-    source: "minion-workspace",
+    source: "openclaw-workspace",
   });
 
   const merged = new Map<string, Hook>();
@@ -269,7 +269,7 @@ function loadHookEntries(
     return {
       hook,
       frontmatter,
-      metadata: resolveMinionMetadata(frontmatter),
+      metadata: resolveOpenClawMetadata(frontmatter),
       invocation: resolveHookInvocationPolicy(frontmatter),
     };
   });
@@ -278,7 +278,7 @@ function loadHookEntries(
 export function buildWorkspaceHookSnapshot(
   workspaceDir: string,
   opts?: {
-    config?: MinionConfig;
+    config?: OpenClawConfig;
     managedHooksDir?: string;
     bundledHooksDir?: string;
     entries?: HookEntry[];
@@ -302,7 +302,7 @@ export function buildWorkspaceHookSnapshot(
 export function loadWorkspaceHookEntries(
   workspaceDir: string,
   opts?: {
-    config?: MinionConfig;
+    config?: OpenClawConfig;
     managedHooksDir?: string;
     bundledHooksDir?: string;
   },

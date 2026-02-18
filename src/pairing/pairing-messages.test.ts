@@ -1,20 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { captureEnv } from "../test-utils/env.js";
 import { buildPairingReply } from "./pairing-messages.js";
 
 describe("buildPairingReply", () => {
-  let previousProfile: string | undefined;
+  let envSnapshot: ReturnType<typeof captureEnv>;
 
   beforeEach(() => {
-    previousProfile = process.env.MINION_PROFILE;
-    process.env.MINION_PROFILE = "isolated";
+    envSnapshot = captureEnv(["OPENCLAW_PROFILE"]);
+    process.env.OPENCLAW_PROFILE = "isolated";
   });
 
   afterEach(() => {
-    if (previousProfile === undefined) {
-      delete process.env.MINION_PROFILE;
-      return;
-    }
-    process.env.MINION_PROFILE = previousProfile;
+    envSnapshot.restore();
   });
 
   const cases = [
@@ -55,9 +52,9 @@ describe("buildPairingReply", () => {
       const text = buildPairingReply(testCase);
       expect(text).toContain(testCase.idLine);
       expect(text).toContain(`Pairing code: ${testCase.code}`);
-      // CLI commands should respect MINION_PROFILE when set (most tests run with isolated profile)
+      // CLI commands should respect OPENCLAW_PROFILE when set (most tests run with isolated profile)
       const commandRe = new RegExp(
-        `(?:minion|minion) --profile isolated pairing approve ${testCase.channel} ${testCase.code}`,
+        `(?:openclaw|openclaw) --profile isolated pairing approve ${testCase.channel} ${testCase.code}`,
       );
       expect(text).toMatch(commandRe);
     });

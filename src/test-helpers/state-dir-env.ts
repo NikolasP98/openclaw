@@ -1,29 +1,14 @@
-type StateDirEnvSnapshot = {
-  minionStateDir: string | undefined;
-  minionbotStateDir: string | undefined;
-};
+import { captureEnv } from "../test-utils/env.js";
 
-export function snapshotStateDirEnv(): StateDirEnvSnapshot {
-  return {
-    minionStateDir: process.env.MINION_STATE_DIR,
-    minionbotStateDir: process.env.MINIONBOT_STATE_DIR,
-  };
+export function snapshotStateDirEnv() {
+  return captureEnv(["OPENCLAW_STATE_DIR", "CLAWDBOT_STATE_DIR"]);
 }
 
-export function restoreStateDirEnv(snapshot: StateDirEnvSnapshot): void {
-  if (snapshot.minionStateDir === undefined) {
-    delete process.env.MINION_STATE_DIR;
-  } else {
-    process.env.MINION_STATE_DIR = snapshot.minionStateDir;
-  }
-  if (snapshot.minionbotStateDir === undefined) {
-    delete process.env.MINIONBOT_STATE_DIR;
-  } else {
-    process.env.MINIONBOT_STATE_DIR = snapshot.minionbotStateDir;
-  }
+export function restoreStateDirEnv(snapshot: ReturnType<typeof snapshotStateDirEnv>): void {
+  snapshot.restore();
 }
 
 export function setStateDirEnv(stateDir: string): void {
-  process.env.MINION_STATE_DIR = stateDir;
-  delete process.env.MINIONBOT_STATE_DIR;
+  process.env.OPENCLAW_STATE_DIR = stateDir;
+  delete process.env.CLAWDBOT_STATE_DIR;
 }

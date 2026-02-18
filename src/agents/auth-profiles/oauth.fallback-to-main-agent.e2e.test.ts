@@ -2,14 +2,17 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AuthProfileStore } from "./types.js";
+import { captureEnv } from "../../test-utils/env.js";
 import { resolveApiKeyForProfile } from "./oauth.js";
 import { ensureAuthProfileStore } from "./store.js";
+import type { AuthProfileStore } from "./types.js";
 
 describe("resolveApiKeyForProfile fallback to main agent", () => {
-  const previousStateDir = process.env.MINION_STATE_DIR;
-  const previousAgentDir = process.env.MINION_AGENT_DIR;
-  const previousPiAgentDir = process.env.PI_CODING_AGENT_DIR;
+  const envSnapshot = captureEnv([
+    "OPENCLAW_STATE_DIR",
+    "OPENCLAW_AGENT_DIR",
+    "PI_CODING_AGENT_DIR",
+  ]);
   let tmpDir: string;
   let mainAgentDir: string;
   let secondaryAgentDir: string;
@@ -21,31 +24,16 @@ describe("resolveApiKeyForProfile fallback to main agent", () => {
     await fs.mkdir(mainAgentDir, { recursive: true });
     await fs.mkdir(secondaryAgentDir, { recursive: true });
 
-    // Set environment variables so resolveMinionAgentDir() returns mainAgentDir
-    process.env.MINION_STATE_DIR = tmpDir;
-    process.env.MINION_AGENT_DIR = mainAgentDir;
+    // Set environment variables so resolveOpenClawAgentDir() returns mainAgentDir
+    process.env.OPENCLAW_STATE_DIR = tmpDir;
+    process.env.OPENCLAW_AGENT_DIR = mainAgentDir;
     process.env.PI_CODING_AGENT_DIR = mainAgentDir;
   });
 
   afterEach(async () => {
     vi.unstubAllGlobals();
 
-    // Restore original environment
-    if (previousStateDir === undefined) {
-      delete process.env.MINION_STATE_DIR;
-    } else {
-      process.env.MINION_STATE_DIR = previousStateDir;
-    }
-    if (previousAgentDir === undefined) {
-      delete process.env.MINION_AGENT_DIR;
-    } else {
-      process.env.MINION_AGENT_DIR = previousAgentDir;
-    }
-    if (previousPiAgentDir === undefined) {
-      delete process.env.PI_CODING_AGENT_DIR;
-    } else {
-      process.env.PI_CODING_AGENT_DIR = previousPiAgentDir;
-    }
+    envSnapshot.restore();
 
     await fs.rm(tmpDir, { recursive: true, force: true });
   });

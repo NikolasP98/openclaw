@@ -1,12 +1,13 @@
-import type { MinionConfig, SkillConfig } from "../../config/config.js";
-import type { SkillEligibilityContext, SkillEntry } from "./types.js";
+import type { OpenClawConfig, SkillConfig } from "../../config/config.js";
 import {
+  evaluateRuntimeRequires,
   hasBinary,
   isConfigPathTruthyWithDefaults,
   resolveConfigPath,
   resolveRuntimePlatform,
 } from "../../shared/config-eval.js";
 import { resolveSkillKey } from "./frontmatter.js";
+import type { SkillEligibilityContext, SkillEntry } from "./types.js";
 
 const DEFAULT_CONFIG_VALUES: Record<string, boolean> = {
   "browser.enabled": true,
@@ -15,12 +16,12 @@ const DEFAULT_CONFIG_VALUES: Record<string, boolean> = {
 
 export { hasBinary, resolveConfigPath, resolveRuntimePlatform };
 
-export function isConfigPathTruthy(config: MinionConfig | undefined, pathStr: string): boolean {
+export function isConfigPathTruthy(config: OpenClawConfig | undefined, pathStr: string): boolean {
   return isConfigPathTruthyWithDefaults(config, pathStr, DEFAULT_CONFIG_VALUES);
 }
 
 export function resolveSkillConfig(
-  config: MinionConfig | undefined,
+  config: OpenClawConfig | undefined,
   skillKey: string,
 ): SkillConfig | undefined {
   const skills = config?.skills?.entries;
@@ -45,13 +46,13 @@ function normalizeAllowlist(input: unknown): string[] | undefined {
   return normalized.length > 0 ? normalized : undefined;
 }
 
-const BUNDLED_SOURCES = new Set(["minion-bundled"]);
+const BUNDLED_SOURCES = new Set(["openclaw-bundled"]);
 
 function isBundledSkill(entry: SkillEntry): boolean {
   return BUNDLED_SOURCES.has(entry.skill.source);
 }
 
-export function resolveBundledAllowlist(config?: MinionConfig): string[] | undefined {
+export function resolveBundledAllowlist(config?: OpenClawConfig): string[] | undefined {
   return normalizeAllowlist(config?.skills?.allowBundled);
 }
 
@@ -68,7 +69,7 @@ export function isBundledSkillAllowed(entry: SkillEntry, allowlist?: string[]): 
 
 export function shouldIncludeSkill(params: {
   entry: SkillEntry;
-  config?: MinionConfig;
+  config?: OpenClawConfig;
   eligibility?: SkillEligibilityContext;
 }): boolean {
   const { entry, config, eligibility } = params;
@@ -95,52 +96,17 @@ export function shouldIncludeSkill(params: {
     return true;
   }
 
-  const requiredBins = entry.metadata?.requires?.bins ?? [];
-  if (requiredBins.length > 0) {
-    for (const bin of requiredBins) {
-      if (hasBinary(bin)) {
-        continue;
-      }
-      if (eligibility?.remote?.hasBin?.(bin)) {
-        continue;
-      }
-      return false;
-    }
-  }
-  const requiredAnyBins = entry.metadata?.requires?.anyBins ?? [];
-  if (requiredAnyBins.length > 0) {
-    const anyFound =
-      requiredAnyBins.some((bin) => hasBinary(bin)) ||
-      eligibility?.remote?.hasAnyBin?.(requiredAnyBins);
-    if (!anyFound) {
-      return false;
-    }
-  }
-
-  const requiredEnv = entry.metadata?.requires?.env ?? [];
-  if (requiredEnv.length > 0) {
-    for (const envName of requiredEnv) {
-      if (process.env[envName]) {
-        continue;
-      }
-      if (skillConfig?.env?.[envName]) {
-        continue;
-      }
-      if (skillConfig?.apiKey && entry.metadata?.primaryEnv === envName) {
-        continue;
-      }
-      return false;
-    }
-  }
-
-  const requiredConfig = entry.metadata?.requires?.config ?? [];
-  if (requiredConfig.length > 0) {
-    for (const configPath of requiredConfig) {
-      if (!isConfigPathTruthy(config, configPath)) {
-        return false;
-      }
-    }
-  }
-
-  return true;
+  return evaluateRuntimeRequires({
+    requires: entry.metadata?.requires,
+    hasBin: hasBinary,
+    hasRemoteBin: eligibility?.remote?.hasBin,
+    hasAnyRemoteBin: eligibility?.remote?.hasAnyBin,
+    hasEnv: (envName) =>
+      Boolean(
+        process.env[envName] ||
+        skillConfig?.env?.[envName] ||
+        (skillConfig?.apiKey && entry.metadata?.primaryEnv === envName),
+      ),
+    isConfigPathTruthy: (configPath) => isConfigPathTruthy(config, configPath),
+  });
 }

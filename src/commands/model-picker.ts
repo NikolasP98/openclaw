@@ -1,5 +1,3 @@
-import type { MinionConfig } from "../config/config.js";
-import type { WizardPrompter, WizardSelectOption } from "../wizard/prompts.js";
 import { ensureAuthProfileStore, listProfilesForProvider } from "../agents/auth-profiles.js";
 import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "../agents/defaults.js";
 import { getCustomProviderApiKey, resolveEnvApiKey } from "../agents/model-auth.js";
@@ -11,6 +9,8 @@ import {
   normalizeProviderId,
   resolveConfiguredModelRef,
 } from "../agents/model-selection.js";
+import type { OpenClawConfig } from "../config/config.js";
+import type { WizardPrompter, WizardSelectOption } from "../wizard/prompts.js";
 import { formatTokenK } from "./models/shared.js";
 import { OPENAI_CODEX_DEFAULT_MODEL } from "./openai-codex-model-default.js";
 import { promptAndConfigureVllm } from "./vllm-setup.js";
@@ -26,7 +26,7 @@ const PROVIDER_FILTER_THRESHOLD = 30;
 const HIDDEN_ROUTER_MODELS = new Set(["openrouter/auto"]);
 
 type PromptDefaultModelParams = {
-  config: MinionConfig;
+  config: OpenClawConfig;
   prompter: WizardPrompter;
   allowKeep?: boolean;
   includeManual?: boolean;
@@ -37,12 +37,12 @@ type PromptDefaultModelParams = {
   message?: string;
 };
 
-type PromptDefaultModelResult = { model?: string; config?: MinionConfig };
+type PromptDefaultModelResult = { model?: string; config?: OpenClawConfig };
 type PromptModelAllowlistResult = { models?: string[] };
 
 function hasAuthForProvider(
   provider: string,
-  cfg: MinionConfig,
+  cfg: OpenClawConfig,
   store: ReturnType<typeof ensureAuthProfileStore>,
 ) {
   if (listProfilesForProvider(store, provider).length > 0) {
@@ -57,7 +57,26 @@ function hasAuthForProvider(
   return false;
 }
 
-function resolveConfiguredModelRaw(cfg: MinionConfig): string {
+function createProviderAuthChecker(params: {
+  cfg: OpenClawConfig;
+  agentDir?: string;
+}): (provider: string) => boolean {
+  const authStore = ensureAuthProfileStore(params.agentDir, {
+    allowKeychainPrompt: false,
+  });
+  const authCache = new Map<string, boolean>();
+  return (provider: string) => {
+    const cached = authCache.get(provider);
+    if (cached !== undefined) {
+      return cached;
+    }
+    const value = hasAuthForProvider(provider, params.cfg, authStore);
+    authCache.set(provider, value);
+    return value;
+  };
+}
+
+function resolveConfiguredModelRaw(cfg: OpenClawConfig): string {
   const raw = cfg.agents?.defaults?.model as { primary?: string } | string | undefined;
   if (typeof raw === "string") {
     return raw.trim();
@@ -65,7 +84,7 @@ function resolveConfiguredModelRaw(cfg: MinionConfig): string {
   return raw?.primary?.trim() ?? "";
 }
 
-function resolveConfiguredModelKeys(cfg: MinionConfig): string[] {
+function resolveConfiguredModelKeys(cfg: OpenClawConfig): string[] {
   const models = cfg.agents?.defaults?.models ?? {};
   return Object.keys(models)
     .map((key) => String(key ?? "").trim())
@@ -84,6 +103,52 @@ function normalizeModelKeys(values: string[]): string[] {
     next.push(value);
   }
   return next;
+}
+
+function addModelSelectOption(params: {
+  entry: {
+    provider: string;
+    id: string;
+    name?: string;
+    contextWindow?: number;
+    reasoning?: boolean;
+  };
+  options: WizardSelectOption[];
+  seen: Set<string>;
+  aliasIndex: ReturnType<typeof buildModelAliasIndex>;
+  hasAuth: (provider: string) => boolean;
+}) {
+  const key = modelKey(params.entry.provider, params.entry.id);
+  if (params.seen.has(key)) {
+    return;
+  }
+  // Skip internal router models that can't be directly called via API.
+  if (HIDDEN_ROUTER_MODELS.has(key)) {
+    return;
+  }
+  const hints: string[] = [];
+  if (params.entry.name && params.entry.name !== params.entry.id) {
+    hints.push(params.entry.name);
+  }
+  if (params.entry.contextWindow) {
+    hints.push(`ctx ${formatTokenK(params.entry.contextWindow)}`);
+  }
+  if (params.entry.reasoning) {
+    hints.push("reasoning");
+  }
+  const aliases = params.aliasIndex.byKey.get(key);
+  if (aliases?.length) {
+    hints.push(`alias: ${aliases.join(", ")}`);
+  }
+  if (!params.hasAuth(params.entry.provider)) {
+    hints.push("auth missing");
+  }
+  params.options.push({
+    value: key,
+    label: key,
+    hint: hints.length > 0 ? hints.join(" · ") : undefined,
+  });
+  params.seen.add(key);
 }
 
 async function promptManualModel(params: {
@@ -189,19 +254,7 @@ export async function promptDefaultModel(
   }
 
   const agentDir = params.agentDir;
-  const authStore = ensureAuthProfileStore(agentDir, {
-    allowKeychainPrompt: false,
-  });
-  const authCache = new Map<string, boolean>();
-  const hasAuth = (provider: string) => {
-    const cached = authCache.get(provider);
-    if (cached !== undefined) {
-      return cached;
-    }
-    const value = hasAuthForProvider(provider, cfg, authStore);
-    authCache.set(provider, value);
-    return value;
-  };
+  const hasAuth = createProviderAuthChecker({ cfg, agentDir });
 
   const options: WizardSelectOption[] = [];
   if (allowKeep) {
@@ -226,48 +279,9 @@ export async function promptDefaultModel(
   }
 
   const seen = new Set<string>();
-  const addModelOption = (entry: {
-    provider: string;
-    id: string;
-    name?: string;
-    contextWindow?: number;
-    reasoning?: boolean;
-  }) => {
-    const key = modelKey(entry.provider, entry.id);
-    if (seen.has(key)) {
-      return;
-    }
-    // Skip internal router models that can't be directly called via API.
-    if (HIDDEN_ROUTER_MODELS.has(key)) {
-      return;
-    }
-    const hints: string[] = [];
-    if (entry.name && entry.name !== entry.id) {
-      hints.push(entry.name);
-    }
-    if (entry.contextWindow) {
-      hints.push(`ctx ${formatTokenK(entry.contextWindow)}`);
-    }
-    if (entry.reasoning) {
-      hints.push("reasoning");
-    }
-    const aliases = aliasIndex.byKey.get(key);
-    if (aliases?.length) {
-      hints.push(`alias: ${aliases.join(", ")}`);
-    }
-    if (!hasAuth(entry.provider)) {
-      hints.push("auth missing");
-    }
-    options.push({
-      value: key,
-      label: key,
-      hint: hints.length > 0 ? hints.join(" · ") : undefined,
-    });
-    seen.add(key);
-  };
 
   for (const entry of models) {
-    addModelOption(entry);
+    addModelSelectOption({ entry, options, seen, aliasIndex, hasAuth });
   }
 
   if (configuredKey && !seen.has(configuredKey)) {
@@ -327,7 +341,7 @@ export async function promptDefaultModel(
 }
 
 export async function promptModelAllowlist(params: {
-  config: MinionConfig;
+  config: OpenClawConfig;
   prompter: WizardPrompter;
   message?: string;
   agentDir?: string;
@@ -376,67 +390,17 @@ export async function promptModelAllowlist(params: {
     cfg,
     defaultProvider: DEFAULT_PROVIDER,
   });
-  const authStore = ensureAuthProfileStore(params.agentDir, {
-    allowKeychainPrompt: false,
-  });
-  const authCache = new Map<string, boolean>();
-  const hasAuth = (provider: string) => {
-    const cached = authCache.get(provider);
-    if (cached !== undefined) {
-      return cached;
-    }
-    const value = hasAuthForProvider(provider, cfg, authStore);
-    authCache.set(provider, value);
-    return value;
-  };
+  const hasAuth = createProviderAuthChecker({ cfg, agentDir: params.agentDir });
 
   const options: WizardSelectOption[] = [];
   const seen = new Set<string>();
-  const addModelOption = (entry: {
-    provider: string;
-    id: string;
-    name?: string;
-    contextWindow?: number;
-    reasoning?: boolean;
-  }) => {
-    const key = modelKey(entry.provider, entry.id);
-    if (seen.has(key)) {
-      return;
-    }
-    if (HIDDEN_ROUTER_MODELS.has(key)) {
-      return;
-    }
-    const hints: string[] = [];
-    if (entry.name && entry.name !== entry.id) {
-      hints.push(entry.name);
-    }
-    if (entry.contextWindow) {
-      hints.push(`ctx ${formatTokenK(entry.contextWindow)}`);
-    }
-    if (entry.reasoning) {
-      hints.push("reasoning");
-    }
-    const aliases = aliasIndex.byKey.get(key);
-    if (aliases?.length) {
-      hints.push(`alias: ${aliases.join(", ")}`);
-    }
-    if (!hasAuth(entry.provider)) {
-      hints.push("auth missing");
-    }
-    options.push({
-      value: key,
-      label: key,
-      hint: hints.length > 0 ? hints.join(" · ") : undefined,
-    });
-    seen.add(key);
-  };
 
   const filteredCatalog = allowedKeySet
     ? catalog.filter((entry) => allowedKeySet.has(modelKey(entry.provider, entry.id)))
     : catalog;
 
   for (const entry of filteredCatalog) {
-    addModelOption(entry);
+    addModelSelectOption({ entry, options, seen, aliasIndex, hasAuth });
   }
 
   const supplementalKeys = allowedKeySet ? allowedKeys : existingKeys;
@@ -460,6 +424,7 @@ export async function promptModelAllowlist(params: {
     message: params.message ?? "Models in /model picker (multi-select)",
     options,
     initialValues: initialKeys.length > 0 ? initialKeys : undefined,
+    searchable: true,
   });
   const selected = normalizeModelKeys(selection.map((value) => String(value)));
   if (selected.length > 0) {
@@ -478,7 +443,7 @@ export async function promptModelAllowlist(params: {
   return { models: [] };
 }
 
-export function applyPrimaryModel(cfg: MinionConfig, model: string): MinionConfig {
+export function applyPrimaryModel(cfg: OpenClawConfig, model: string): OpenClawConfig {
   const defaults = cfg.agents?.defaults;
   const existingModel = defaults?.model;
   const existingModels = defaults?.models;
@@ -505,7 +470,7 @@ export function applyPrimaryModel(cfg: MinionConfig, model: string): MinionConfi
   };
 }
 
-export function applyModelAllowlist(cfg: MinionConfig, models: string[]): MinionConfig {
+export function applyModelAllowlist(cfg: OpenClawConfig, models: string[]): OpenClawConfig {
   const defaults = cfg.agents?.defaults;
   const normalized = normalizeModelKeys(models);
   if (normalized.length === 0) {
@@ -541,9 +506,9 @@ export function applyModelAllowlist(cfg: MinionConfig, models: string[]): Minion
 }
 
 export function applyModelFallbacksFromSelection(
-  cfg: MinionConfig,
+  cfg: OpenClawConfig,
   selection: string[],
-): MinionConfig {
+): OpenClawConfig {
   const normalized = normalizeModelKeys(selection);
   if (normalized.length <= 1) {
     return cfg;

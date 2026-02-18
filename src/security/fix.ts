@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { MinionConfig } from "../config/config.js";
 import { resolveDefaultAgentId } from "../agents/agent-scope.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { createConfigIO } from "../config/config.js";
 import { collectIncludePathsRecursive } from "../config/includes-scan.js";
 import { resolveConfigPath, resolveOAuthDir, resolveStateDir } from "../config/paths.js";
@@ -184,7 +184,7 @@ async function safeAclReset(params: {
 }
 
 function setGroupPolicyAllowlist(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   channel: string;
   changes: string[];
   policyFlips: Set<string>;
@@ -192,7 +192,7 @@ function setGroupPolicyAllowlist(params: {
   if (!params.cfg.channels) {
     return;
   }
-  const section = params.cfg.channels[params.channel as keyof MinionConfig["channels"]] as
+  const section = params.cfg.channels[params.channel as keyof OpenClawConfig["channels"]] as
     | Record<string, unknown>
     | undefined;
   if (!section || typeof section !== "object") {
@@ -229,7 +229,7 @@ function setGroupPolicyAllowlist(params: {
 }
 
 function setWhatsAppGroupAllowFromFromStore(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   storeAllowFrom: string[];
   changes: string[];
   policyFlips: Set<string>;
@@ -273,8 +273,8 @@ function setWhatsAppGroupAllowFromFromStore(params: {
   }
 }
 
-function applyConfigFixes(params: { cfg: MinionConfig; env: NodeJS.ProcessEnv }): {
-  cfg: MinionConfig;
+function applyConfigFixes(params: { cfg: OpenClawConfig; env: NodeJS.ProcessEnv }): {
+  cfg: OpenClawConfig;
   changes: string[];
   policyFlips: Set<string>;
 } {
@@ -305,7 +305,7 @@ function applyConfigFixes(params: { cfg: MinionConfig; env: NodeJS.ProcessEnv })
 async function chmodCredentialsAndAgentState(params: {
   env: NodeJS.ProcessEnv;
   stateDir: string;
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   actions: SecurityFixAction[];
   applyPerms: (params: {
     path: string;
@@ -366,6 +366,21 @@ async function chmodCredentialsAndAgentState(params: {
     const storePath = path.join(sessionsDir, "sessions.json");
     // eslint-disable-next-line no-await-in-loop
     params.actions.push(await params.applyPerms({ path: storePath, mode: 0o600, require: "file" }));
+
+    // Fix permissions on session transcript files (*.jsonl)
+    // eslint-disable-next-line no-await-in-loop
+    const sessionEntries = await fs.readdir(sessionsDir, { withFileTypes: true }).catch(() => []);
+    for (const entry of sessionEntries) {
+      if (!entry.isFile()) {
+        continue;
+      }
+      if (!entry.name.endsWith(".jsonl")) {
+        continue;
+      }
+      const p = path.join(sessionsDir, entry.name);
+      // eslint-disable-next-line no-await-in-loop
+      params.actions.push(await params.applyPerms({ path: p, mode: 0o600, require: "file" }));
+    }
   }
 }
 

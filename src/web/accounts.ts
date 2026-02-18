@@ -1,8 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { MinionConfig } from "../config/config.js";
-import type { DmPolicy, GroupPolicy, WhatsAppAccountConfig } from "../config/types.js";
+import { createAccountListHelpers } from "../channels/plugins/account-helpers.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { resolveOAuthDir } from "../config/paths.js";
+import type { DmPolicy, GroupPolicy, WhatsAppAccountConfig } from "../config/types.js";
 import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "../routing/session-key.js";
 import { resolveUserPath } from "../utils.js";
 import { hasWebCredsSync } from "./auth-store.js";
@@ -29,15 +30,12 @@ export type ResolvedWhatsAppAccount = {
   debounceMs?: number;
 };
 
-function listConfiguredAccountIds(cfg: MinionConfig): string[] {
-  const accounts = cfg.channels?.whatsapp?.accounts;
-  if (!accounts || typeof accounts !== "object") {
-    return [];
-  }
-  return Object.keys(accounts).filter(Boolean);
-}
+const { listConfiguredAccountIds, listAccountIds, resolveDefaultAccountId } =
+  createAccountListHelpers("whatsapp");
+export const listWhatsAppAccountIds = listAccountIds;
+export const resolveDefaultWhatsAppAccountId = resolveDefaultAccountId;
 
-export function listWhatsAppAuthDirs(cfg: MinionConfig): string[] {
+export function listWhatsAppAuthDirs(cfg: OpenClawConfig): string[] {
   const oauthDir = resolveOAuthDir();
   const whatsappDir = path.join(oauthDir, "whatsapp");
   const authDirs = new Set<string>([oauthDir, path.join(whatsappDir, DEFAULT_ACCOUNT_ID)]);
@@ -62,28 +60,12 @@ export function listWhatsAppAuthDirs(cfg: MinionConfig): string[] {
   return Array.from(authDirs);
 }
 
-export function hasAnyWhatsAppAuth(cfg: MinionConfig): boolean {
+export function hasAnyWhatsAppAuth(cfg: OpenClawConfig): boolean {
   return listWhatsAppAuthDirs(cfg).some((authDir) => hasWebCredsSync(authDir));
 }
 
-export function listWhatsAppAccountIds(cfg: MinionConfig): string[] {
-  const ids = listConfiguredAccountIds(cfg);
-  if (ids.length === 0) {
-    return [DEFAULT_ACCOUNT_ID];
-  }
-  return ids.toSorted((a, b) => a.localeCompare(b));
-}
-
-export function resolveDefaultWhatsAppAccountId(cfg: MinionConfig): string {
-  const ids = listWhatsAppAccountIds(cfg);
-  if (ids.includes(DEFAULT_ACCOUNT_ID)) {
-    return DEFAULT_ACCOUNT_ID;
-  }
-  return ids[0] ?? DEFAULT_ACCOUNT_ID;
-}
-
 function resolveAccountConfig(
-  cfg: MinionConfig,
+  cfg: OpenClawConfig,
   accountId: string,
 ): WhatsAppAccountConfig | undefined {
   const accounts = cfg.channels?.whatsapp?.accounts;
@@ -111,7 +93,7 @@ function legacyAuthExists(authDir: string): boolean {
   }
 }
 
-export function resolveWhatsAppAuthDir(params: { cfg: MinionConfig; accountId: string }): {
+export function resolveWhatsAppAuthDir(params: { cfg: OpenClawConfig; accountId: string }): {
   authDir: string;
   isLegacy: boolean;
 } {
@@ -134,7 +116,7 @@ export function resolveWhatsAppAuthDir(params: { cfg: MinionConfig; accountId: s
 }
 
 export function resolveWhatsAppAccount(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
 }): ResolvedWhatsAppAccount {
   const rootCfg = params.cfg.channels?.whatsapp;
@@ -169,7 +151,7 @@ export function resolveWhatsAppAccount(params: {
   };
 }
 
-export function listEnabledWhatsAppAccounts(cfg: MinionConfig): ResolvedWhatsAppAccount[] {
+export function listEnabledWhatsAppAccounts(cfg: OpenClawConfig): ResolvedWhatsAppAccount[] {
   return listWhatsAppAccountIds(cfg)
     .map((accountId) => resolveWhatsAppAccount({ cfg, accountId }))
     .filter((account) => account.enabled);

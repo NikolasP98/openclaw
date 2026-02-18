@@ -1,6 +1,5 @@
-import type { MinionConfig } from "minion/plugin-sdk";
-import type WebSocket from "ws";
-import { Buffer } from "node:buffer";
+import type { OpenClawConfig } from "openclaw/plugin-sdk";
+export { createDedupeCache, rawDataToString } from "openclaw/plugin-sdk";
 
 export type ResponsePrefixContext = {
   model?: string;
@@ -38,78 +37,6 @@ export function formatInboundFromLabel(params: {
   return `${directLabel} id:${directId}`;
 }
 
-type DedupeCache = {
-  check: (key: string | undefined | null, now?: number) => boolean;
-};
-
-export function createDedupeCache(options: { ttlMs: number; maxSize: number }): DedupeCache {
-  const ttlMs = Math.max(0, options.ttlMs);
-  const maxSize = Math.max(0, Math.floor(options.maxSize));
-  const cache = new Map<string, number>();
-
-  const touch = (key: string, now: number) => {
-    cache.delete(key);
-    cache.set(key, now);
-  };
-
-  const prune = (now: number) => {
-    const cutoff = ttlMs > 0 ? now - ttlMs : undefined;
-    if (cutoff !== undefined) {
-      for (const [entryKey, entryTs] of cache) {
-        if (entryTs < cutoff) {
-          cache.delete(entryKey);
-        }
-      }
-    }
-    if (maxSize <= 0) {
-      cache.clear();
-      return;
-    }
-    while (cache.size > maxSize) {
-      const oldestKey = cache.keys().next().value as string | undefined;
-      if (!oldestKey) {
-        break;
-      }
-      cache.delete(oldestKey);
-    }
-  };
-
-  return {
-    check: (key, now = Date.now()) => {
-      if (!key) {
-        return false;
-      }
-      const existing = cache.get(key);
-      if (existing !== undefined && (ttlMs <= 0 || now - existing < ttlMs)) {
-        touch(key, now);
-        return true;
-      }
-      touch(key, now);
-      prune(now);
-      return false;
-    },
-  };
-}
-
-export function rawDataToString(
-  data: WebSocket.RawData,
-  encoding: BufferEncoding = "utf8",
-): string {
-  if (typeof data === "string") {
-    return data;
-  }
-  if (Buffer.isBuffer(data)) {
-    return data.toString(encoding);
-  }
-  if (Array.isArray(data)) {
-    return Buffer.concat(data).toString(encoding);
-  }
-  if (data instanceof ArrayBuffer) {
-    return Buffer.from(data).toString(encoding);
-  }
-  return Buffer.from(String(data)).toString(encoding);
-}
-
 function normalizeAgentId(value: string | undefined | null): string {
   const trimmed = (value ?? "").trim();
   if (!trimmed) {
@@ -128,9 +55,9 @@ function normalizeAgentId(value: string | undefined | null): string {
   );
 }
 
-type AgentEntry = NonNullable<NonNullable<MinionConfig["agents"]>["list"]>[number];
+type AgentEntry = NonNullable<NonNullable<OpenClawConfig["agents"]>["list"]>[number];
 
-function listAgents(cfg: MinionConfig): AgentEntry[] {
+function listAgents(cfg: OpenClawConfig): AgentEntry[] {
   const list = cfg.agents?.list;
   if (!Array.isArray(list)) {
     return [];
@@ -138,12 +65,12 @@ function listAgents(cfg: MinionConfig): AgentEntry[] {
   return list.filter((entry): entry is AgentEntry => Boolean(entry && typeof entry === "object"));
 }
 
-function resolveAgentEntry(cfg: MinionConfig, agentId: string): AgentEntry | undefined {
+function resolveAgentEntry(cfg: OpenClawConfig, agentId: string): AgentEntry | undefined {
   const id = normalizeAgentId(agentId);
   return listAgents(cfg).find((entry) => normalizeAgentId(entry.id) === id);
 }
 
-export function resolveIdentityName(cfg: MinionConfig, agentId: string): string | undefined {
+export function resolveIdentityName(cfg: OpenClawConfig, agentId: string): string | undefined {
   const entry = resolveAgentEntry(cfg, agentId);
   return entry?.identity?.name?.trim() || undefined;
 }

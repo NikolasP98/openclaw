@@ -1,8 +1,6 @@
-import type { MinionConfig } from "../../../config/config.js";
-import type { DmPolicy } from "../../../config/types.js";
-import type { WizardPrompter } from "../../../wizard/prompts.js";
-import type { ChannelOnboardingAdapter, ChannelOnboardingDmPolicy } from "../onboarding-types.js";
 import { detectBinary } from "../../../commands/onboard-helpers.js";
+import type { OpenClawConfig } from "../../../config/config.js";
+import type { DmPolicy } from "../../../config/types.js";
 import {
   listIMessageAccountIds,
   resolveDefaultIMessageAccountId,
@@ -11,11 +9,13 @@ import {
 import { normalizeIMessageHandle } from "../../../imessage/targets.js";
 import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "../../../routing/session-key.js";
 import { formatDocsLink } from "../../../terminal/links.js";
-import { addWildcardAllowFrom, promptAccountId } from "./helpers.js";
+import type { WizardPrompter } from "../../../wizard/prompts.js";
+import type { ChannelOnboardingAdapter, ChannelOnboardingDmPolicy } from "../onboarding-types.js";
+import { addWildcardAllowFrom, mergeAllowFromEntries, promptAccountId } from "./helpers.js";
 
 const channel = "imessage" as const;
 
-function setIMessageDmPolicy(cfg: MinionConfig, dmPolicy: DmPolicy) {
+function setIMessageDmPolicy(cfg: OpenClawConfig, dmPolicy: DmPolicy) {
   const allowFrom =
     dmPolicy === "open" ? addWildcardAllowFrom(cfg.channels?.imessage?.allowFrom) : undefined;
   return {
@@ -32,10 +32,10 @@ function setIMessageDmPolicy(cfg: MinionConfig, dmPolicy: DmPolicy) {
 }
 
 function setIMessageAllowFrom(
-  cfg: MinionConfig,
+  cfg: OpenClawConfig,
   accountId: string,
   allowFrom: string[],
-): MinionConfig {
+): OpenClawConfig {
   if (accountId === DEFAULT_ACCOUNT_ID) {
     return {
       ...cfg,
@@ -74,10 +74,10 @@ function parseIMessageAllowFromInput(raw: string): string[] {
 }
 
 async function promptIMessageAllowFrom(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   prompter: WizardPrompter;
   accountId?: string;
-}): Promise<MinionConfig> {
+}): Promise<OpenClawConfig> {
   const accountId =
     params.accountId && normalizeAccountId(params.accountId)
       ? (normalizeAccountId(params.accountId) ?? DEFAULT_ACCOUNT_ID)
@@ -138,7 +138,7 @@ async function promptIMessageAllowFrom(params: {
     },
   });
   const parts = parseIMessageAllowFromInput(String(entry));
-  const unique = [...new Set(parts)];
+  const unique = mergeAllowFromEntries(undefined, parts);
   return setIMessageAllowFrom(params.cfg, accountId, unique);
 }
 
@@ -252,7 +252,7 @@ export const imessageOnboardingAdapter: ChannelOnboardingAdapter = {
     await prompter.note(
       [
         "This is still a work in progress.",
-        "Ensure Minion has Full Disk Access to Messages DB.",
+        "Ensure OpenClaw has Full Disk Access to Messages DB.",
         "Grant Automation permission for Messages when prompted.",
         "List chats with: imsg chats --limit 20",
         `Docs: ${formatDocsLink("/imessage", "imessage")}`,

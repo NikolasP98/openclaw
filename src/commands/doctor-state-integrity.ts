@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import type { MinionConfig } from "../config/config.js";
 import { resolveDefaultAgentId } from "../agents/agent-scope.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { resolveOAuthDir, resolveStateDir } from "../config/paths.js";
 import {
   loadSessionStore,
@@ -118,7 +118,7 @@ function findOtherStateDirs(stateDir: string): string[] {
       if (entry.name.startsWith(".")) {
         continue;
       }
-      const candidates = [".minion"].map((dir) => path.resolve(root, entry.name, dir));
+      const candidates = [".openclaw"].map((dir) => path.resolve(root, entry.name, dir));
       for (const candidate of candidates) {
         if (candidate === resolvedState) {
           continue;
@@ -133,7 +133,7 @@ function findOtherStateDirs(stateDir: string): string[] {
 }
 
 export async function noteStateIntegrity(
-  cfg: MinionConfig,
+  cfg: OpenClawConfig,
   prompter: DoctorPrompterLike,
   configPath?: string,
 ) {
@@ -142,7 +142,7 @@ export async function noteStateIntegrity(
   const env = process.env;
   const homedir = () => resolveRequiredHomeDir(env, os.homedir);
   const stateDir = resolveStateDir(env, homedir);
-  const defaultStateDir = path.join(homedir(), ".minion");
+  const defaultStateDir = path.join(homedir(), ".openclaw");
   const oauthDir = resolveOAuthDir(env, stateDir);
   const agentId = resolveDefaultAgentId(cfg);
   const sessionsDir = resolveSessionTranscriptsDirForAgent(agentId, env, homedir);
@@ -388,7 +388,7 @@ export function noteWorkspaceBackupTip(workspaceDir: string) {
   note(
     [
       "- Tip: back up the workspace in a private git repo (GitHub or GitLab).",
-      "- Keep ~/.minion out of git; it contains credentials and session history.",
+      "- Keep ~/.openclaw out of git; it contains credentials and session history.",
       "- Details: /concepts/agent-workspace#git-backup-recommended",
     ].join("\n"),
     "Workspace",

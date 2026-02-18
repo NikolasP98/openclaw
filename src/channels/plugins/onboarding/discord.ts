@@ -1,8 +1,6 @@
-import type { MinionConfig } from "../../../config/config.js";
+import type { OpenClawConfig } from "../../../config/config.js";
 import type { DiscordGuildEntry } from "../../../config/types.discord.js";
 import type { DmPolicy } from "../../../config/types.js";
-import type { WizardPrompter } from "../../../wizard/prompts.js";
-import type { ChannelOnboardingAdapter, ChannelOnboardingDmPolicy } from "../onboarding-types.js";
 import {
   listDiscordAccountIds,
   resolveDefaultDiscordAccountId,
@@ -16,12 +14,14 @@ import {
 import { resolveDiscordUserAllowlist } from "../../../discord/resolve-users.js";
 import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "../../../routing/session-key.js";
 import { formatDocsLink } from "../../../terminal/links.js";
+import type { WizardPrompter } from "../../../wizard/prompts.js";
+import type { ChannelOnboardingAdapter, ChannelOnboardingDmPolicy } from "../onboarding-types.js";
 import { promptChannelAccessConfig } from "./channel-access.js";
-import { addWildcardAllowFrom, promptAccountId } from "./helpers.js";
+import { addWildcardAllowFrom, mergeAllowFromEntries, promptAccountId } from "./helpers.js";
 
 const channel = "discord" as const;
 
-function setDiscordDmPolicy(cfg: MinionConfig, dmPolicy: DmPolicy) {
+function setDiscordDmPolicy(cfg: OpenClawConfig, dmPolicy: DmPolicy) {
   const existingAllowFrom =
     cfg.channels?.discord?.allowFrom ?? cfg.channels?.discord?.dm?.allowFrom;
   const allowFrom = dmPolicy === "open" ? addWildcardAllowFrom(existingAllowFrom) : undefined;
@@ -55,11 +55,11 @@ async function noteDiscordTokenHelp(prompter: WizardPrompter): Promise<void> {
   );
 }
 
-function setDiscordGroupPolicy(
-  cfg: MinionConfig,
+function patchDiscordConfigForAccount(
+  cfg: OpenClawConfig,
   accountId: string,
-  groupPolicy: "open" | "allowlist" | "disabled",
-): MinionConfig {
+  patch: Record<string, unknown>,
+): OpenClawConfig {
   if (accountId === DEFAULT_ACCOUNT_ID) {
     return {
       ...cfg,
@@ -68,7 +68,7 @@ function setDiscordGroupPolicy(
         discord: {
           ...cfg.channels?.discord,
           enabled: true,
-          groupPolicy,
+          ...patch,
         },
       },
     };
@@ -85,7 +85,7 @@ function setDiscordGroupPolicy(
           [accountId]: {
             ...cfg.channels?.discord?.accounts?.[accountId],
             enabled: cfg.channels?.discord?.accounts?.[accountId]?.enabled ?? true,
-            groupPolicy,
+            ...patch,
           },
         },
       },
@@ -93,14 +93,22 @@ function setDiscordGroupPolicy(
   };
 }
 
+function setDiscordGroupPolicy(
+  cfg: OpenClawConfig,
+  accountId: string,
+  groupPolicy: "open" | "allowlist" | "disabled",
+): OpenClawConfig {
+  return patchDiscordConfigForAccount(cfg, accountId, { groupPolicy });
+}
+
 function setDiscordGuildChannelAllowlist(
-  cfg: MinionConfig,
+  cfg: OpenClawConfig,
   accountId: string,
   entries: Array<{
     guildKey: string;
     channelKey?: string;
   }>,
-): MinionConfig {
+): OpenClawConfig {
   const baseGuilds =
     accountId === DEFAULT_ACCOUNT_ID
       ? (cfg.channels?.discord?.guilds ?? {})
@@ -117,40 +125,10 @@ function setDiscordGuildChannelAllowlist(
       guilds[guildKey] = existing;
     }
   }
-  if (accountId === DEFAULT_ACCOUNT_ID) {
-    return {
-      ...cfg,
-      channels: {
-        ...cfg.channels,
-        discord: {
-          ...cfg.channels?.discord,
-          enabled: true,
-          guilds,
-        },
-      },
-    };
-  }
-  return {
-    ...cfg,
-    channels: {
-      ...cfg.channels,
-      discord: {
-        ...cfg.channels?.discord,
-        enabled: true,
-        accounts: {
-          ...cfg.channels?.discord?.accounts,
-          [accountId]: {
-            ...cfg.channels?.discord?.accounts?.[accountId],
-            enabled: cfg.channels?.discord?.accounts?.[accountId]?.enabled ?? true,
-            guilds,
-          },
-        },
-      },
-    },
-  };
+  return patchDiscordConfigForAccount(cfg, accountId, { guilds });
 }
 
-function setDiscordAllowFrom(cfg: MinionConfig, allowFrom: string[]): MinionConfig {
+function setDiscordAllowFrom(cfg: OpenClawConfig, allowFrom: string[]): OpenClawConfig {
   return {
     ...cfg,
     channels: {
@@ -175,10 +153,10 @@ function parseDiscordAllowFromInput(raw: string): string[] {
 }
 
 async function promptDiscordAllowFrom(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   prompter: WizardPrompter;
   accountId?: string;
-}): Promise<MinionConfig> {
+}): Promise<OpenClawConfig> {
   const accountId =
     params.accountId && normalizeAccountId(params.accountId)
       ? (normalizeAccountId(params.accountId) ?? DEFAULT_ACCOUNT_ID)
@@ -234,9 +212,7 @@ async function promptDiscordAllowFrom(params: {
         );
         continue;
       }
-      const unique = [...new Set([...existing.map((v) => String(v).trim()), ...ids])].filter(
-        Boolean,
-      );
+      const unique = mergeAllowFromEntries(existing, ids);
       return setDiscordAllowFrom(params.cfg, unique);
     }
 
@@ -257,7 +233,7 @@ async function promptDiscordAllowFrom(params: {
       continue;
     }
     const ids = results.map((res) => res.id as string);
-    const unique = [...new Set([...existing.map((v) => String(v).trim()).filter(Boolean), ...ids])];
+    const unique = mergeAllowFromEntries(existing, ids);
     return setDiscordAllowFrom(params.cfg, unique);
   }
 }

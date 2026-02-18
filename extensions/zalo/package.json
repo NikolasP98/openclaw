@@ -1,7 +1,7 @@
 {
-  "name": "@minion/zalo",
-  "version": "2026.2.13",
-  "description": "Minion Zalo channel plugin",
+  "name": "@openclaw/zalo",
+  "version": "2026.2.16",
+  "description": "OpenClaw Zalo channel plugin",
   "type": "module",
   "dependencies": {
     "undici": "7.22.0"
@@ -9,7 +9,7 @@
   "devDependencies": {
     "@nikolasp98/minion": "workspace:*"
   },
-  "minion": {
+  "openclaw": {
     "extensions": [
       "./index.ts"
     ],
@@ -27,7 +27,7 @@
       "quickstartAllowFrom": true
     },
     "install": {
-      "npmSpec": "@minion/zalo",
+      "npmSpec": "@openclaw/zalo",
       "localPath": "extensions/zalo",
       "defaultChoice": "npm"
     }

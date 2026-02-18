@@ -1,21 +1,24 @@
+import { isToolAllowedByPolicies } from "../agents/pi-tools.policy.js";
+import {
+  resolveSandboxConfigForAgent,
+  resolveSandboxToolPolicyForAgent,
+} from "../agents/sandbox.js";
 /**
  * Synchronous security audit collector functions.
  *
  * These functions analyze config-based security properties without I/O.
  */
 import type { SandboxToolPolicy } from "../agents/sandbox/types.js";
-import type { MinionConfig } from "../config/config.js";
-import type { AgentToolsConfig } from "../config/types.tools.js";
-import { isToolAllowedByPolicies } from "../agents/pi-tools.policy.js";
-import {
-  resolveSandboxConfigForAgent,
-  resolveSandboxToolPolicyForAgent,
-} from "../agents/sandbox.js";
+import { getBlockedBindReason } from "../agents/sandbox/validate-sandbox-security.js";
 import { resolveToolProfilePolicy } from "../agents/tool-policy.js";
 import { resolveBrowserConfig } from "../browser/config.js";
 import { formatCliCommand } from "../cli/command-format.js";
+import type { OpenClawConfig } from "../config/config.js";
+import type { AgentToolsConfig } from "../config/types.tools.js";
 import { resolveGatewayAuth } from "../gateway/auth.js";
 import { resolveNodeCommandAllowlist } from "../gateway/node-command-policy.js";
+import { inferParamBFromIdOrName } from "../shared/model-param-b.js";
+import { pickSandboxToolPolicy } from "./audit-tool-policy.js";
 
 export type SecurityAuditFinding = {
   checkId: string;
@@ -31,7 +34,7 @@ const SMALL_MODEL_PARAM_B_MAX = 300;
 // Helpers
 // --------------------------------------------------------------------------
 
-function summarizeGroupPolicy(cfg: MinionConfig): {
+function summarizeGroupPolicy(cfg: OpenClawConfig): {
   open: number;
   allowlist: number;
   other: number;
@@ -76,7 +79,7 @@ function looksLikeEnvRef(value: string): boolean {
   return v.startsWith("${") && v.endsWith("}");
 }
 
-function isGatewayRemotelyExposed(cfg: MinionConfig): boolean {
+function isGatewayRemotelyExposed(cfg: OpenClawConfig): boolean {
   const bind = typeof cfg.gateway?.bind === "string" ? cfg.gateway.bind : "loopback";
   if (bind !== "loopback") {
     return true;
@@ -98,7 +101,7 @@ function addModel(models: ModelRef[], raw: unknown, source: string) {
   models.push({ id, source });
 }
 
-function collectModels(cfg: MinionConfig): ModelRef[] {
+function collectModels(cfg: OpenClawConfig): ModelRef[] {
   const out: ModelRef[] = [];
   addModel(out, cfg.agents?.defaults?.model?.primary, "agents.defaults.model.primary");
   for (const f of cfg.agents?.defaults?.model?.fallbacks ?? []) {
@@ -142,26 +145,6 @@ const WEAK_TIER_MODEL_PATTERNS: Array<{ id: string; re: RegExp; label: string }>
   { id: "anthropic.haiku", re: /\bhaiku\b/i, label: "Haiku tier (smaller model)" },
 ];
 
-function inferParamBFromIdOrName(text: string): number | null {
-  const raw = text.toLowerCase();
-  const matches = raw.matchAll(/(?:^|[^a-z0-9])[a-z]?(\d+(?:\.\d+)?)b(?:[^a-z0-9]|$)/g);
-  let best: number | null = null;
-  for (const match of matches) {
-    const numRaw = match[1];
-    if (!numRaw) {
-      continue;
-    }
-    const value = Number(numRaw);
-    if (!Number.isFinite(value) || value <= 0) {
-      continue;
-    }
-    if (best === null || value > best) {
-      best = value;
-    }
-  }
-  return best;
-}
-
 function isGptModel(id: string): boolean {
   return /\bgpt-/i.test(id);
 }
@@ -186,36 +169,6 @@ function extractAgentIdFromSource(source: string): string | null {
   return match?.[1] ?? null;
 }
 
-function unionAllow(base?: string[], extra?: string[]): string[] | undefined {
-  if (!Array.isArray(extra) || extra.length === 0) {
-    return base;
-  }
-  if (!Array.isArray(base) || base.length === 0) {
-    return Array.from(new Set(["*", ...extra]));
-  }
-  return Array.from(new Set([...base, ...extra]));
-}
-
-function pickToolPolicy(config?: {
-  allow?: string[];
-  alsoAllow?: string[];
-  deny?: string[];
-}): SandboxToolPolicy | null {
-  if (!config) {
-    return null;
-  }
-  const allow = Array.isArray(config.allow)
-    ? unionAllow(config.allow, config.alsoAllow)
-    : Array.isArray(config.alsoAllow) && config.alsoAllow.length > 0
-      ? unionAllow(undefined, config.alsoAllow)
-      : undefined;
-  const deny = Array.isArray(config.deny) ? config.deny : undefined;
-  if (!allow && !deny) {
-    return null;
-  }
-  return { allow, deny };
-}
-
 function hasConfiguredDockerConfig(
   docker: Record<string, unknown> | undefined | null,
 ): docker is Record<string, unknown> {
@@ -229,8 +182,8 @@ function normalizeNodeCommand(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function listKnownNodeCommands(cfg: MinionConfig): Set<string> {
-  const baseCfg: MinionConfig = {
+function listKnownNodeCommands(cfg: OpenClawConfig): Set<string> {
+  const baseCfg: OpenClawConfig = {
     ...cfg,
     gateway: {
       ...cfg.gateway,
@@ -272,7 +225,7 @@ function looksLikeNodeCommandPattern(value: string): boolean {
 }
 
 function resolveToolPolicies(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   agentTools?: AgentToolsConfig;
   sandboxMode?: "off" | "non-main" | "all";
   agentId?: string | null;
@@ -284,12 +237,12 @@ function resolveToolPolicies(params: {
     policies.push(profilePolicy);
   }
 
-  const globalPolicy = pickToolPolicy(params.cfg.tools ?? undefined);
+  const globalPolicy = pickSandboxToolPolicy(params.cfg.tools ?? undefined);
   if (globalPolicy) {
     policies.push(globalPolicy);
   }
 
-  const agentPolicy = pickToolPolicy(params.agentTools);
+  const agentPolicy = pickSandboxToolPolicy(params.agentTools);
   if (agentPolicy) {
     policies.push(agentPolicy);
   }
@@ -302,7 +255,7 @@ function resolveToolPolicies(params: {
   return policies;
 }
 
-function hasWebSearchKey(cfg: MinionConfig, env: NodeJS.ProcessEnv): boolean {
+function hasWebSearchKey(cfg: OpenClawConfig, env: NodeJS.ProcessEnv): boolean {
   const search = cfg.tools?.web?.search;
   return Boolean(
     search?.apiKey ||
@@ -313,7 +266,7 @@ function hasWebSearchKey(cfg: MinionConfig, env: NodeJS.ProcessEnv): boolean {
   );
 }
 
-function isWebSearchEnabled(cfg: MinionConfig, env: NodeJS.ProcessEnv): boolean {
+function isWebSearchEnabled(cfg: OpenClawConfig, env: NodeJS.ProcessEnv): boolean {
   const enabled = cfg.tools?.web?.search?.enabled;
   if (enabled === false) {
     return false;
@@ -324,7 +277,7 @@ function isWebSearchEnabled(cfg: MinionConfig, env: NodeJS.ProcessEnv): boolean 
   return hasWebSearchKey(cfg, env);
 }
 
-function isWebFetchEnabled(cfg: MinionConfig): boolean {
+function isWebFetchEnabled(cfg: OpenClawConfig): boolean {
   const enabled = cfg.tools?.web?.fetch?.enabled;
   if (enabled === false) {
     return false;
@@ -332,7 +285,7 @@ function isWebFetchEnabled(cfg: MinionConfig): boolean {
   return true;
 }
 
-function isBrowserEnabled(cfg: MinionConfig): boolean {
+function isBrowserEnabled(cfg: OpenClawConfig): boolean {
   try {
     return resolveBrowserConfig(cfg.browser, cfg).enabled;
   } catch {
@@ -340,7 +293,7 @@ function isBrowserEnabled(cfg: MinionConfig): boolean {
   }
 }
 
-function listGroupPolicyOpen(cfg: MinionConfig): string[] {
+function listGroupPolicyOpen(cfg: OpenClawConfig): string[] {
   const out: string[] = [];
   const channels = cfg.channels as Record<string, unknown> | undefined;
   if (!channels || typeof channels !== "object") {
@@ -374,7 +327,7 @@ function listGroupPolicyOpen(cfg: MinionConfig): string[] {
 // Exported collectors
 // --------------------------------------------------------------------------
 
-export function collectAttackSurfaceSummaryFindings(cfg: MinionConfig): SecurityAuditFinding[] {
+export function collectAttackSurfaceSummaryFindings(cfg: OpenClawConfig): SecurityAuditFinding[] {
   const group = summarizeGroupPolicy(cfg);
   const elevated = cfg.tools?.elevated?.enabled !== false;
   const webhooksEnabled = cfg.hooks?.enabled === true;
@@ -413,13 +366,13 @@ export function collectSyncedFolderFindings(params: {
       severity: "warn",
       title: "State/config path looks like a synced folder",
       detail: `stateDir=${params.stateDir}, configPath=${params.configPath}. Synced folders (iCloud/Dropbox/OneDrive/Google Drive) can leak tokens and transcripts onto other devices.`,
-      remediation: `Keep MINION_STATE_DIR on a local-only volume and re-run "${formatCliCommand("minion security audit --fix")}".`,
+      remediation: `Keep OPENCLAW_STATE_DIR on a local-only volume and re-run "${formatCliCommand("openclaw security audit --fix")}".`,
     });
   }
   return findings;
 }
 
-export function collectSecretsInConfigFindings(cfg: MinionConfig): SecurityAuditFinding[] {
+export function collectSecretsInConfigFindings(cfg: OpenClawConfig): SecurityAuditFinding[] {
   const findings: SecurityAuditFinding[] = [];
   const password =
     typeof cfg.gateway?.auth?.password === "string" ? cfg.gateway.auth.password.trim() : "";
@@ -431,7 +384,7 @@ export function collectSecretsInConfigFindings(cfg: MinionConfig): SecurityAudit
       detail:
         "gateway.auth.password is set in the config file; prefer environment variables for secrets when possible.",
       remediation:
-        "Prefer MINION_GATEWAY_PASSWORD (env) and remove gateway.auth.password from disk.",
+        "Prefer OPENCLAW_GATEWAY_PASSWORD (env) and remove gateway.auth.password from disk.",
     });
   }
 
@@ -450,7 +403,7 @@ export function collectSecretsInConfigFindings(cfg: MinionConfig): SecurityAudit
 }
 
 export function collectHooksHardeningFindings(
-  cfg: MinionConfig,
+  cfg: OpenClawConfig,
   env: NodeJS.ProcessEnv = process.env,
 ): SecurityAuditFinding[] {
   const findings: SecurityAuditFinding[] = [];
@@ -473,17 +426,17 @@ export function collectHooksHardeningFindings(
     tailscaleMode: cfg.gateway?.tailscale?.mode ?? "off",
     env,
   });
-  const minionGatewayToken =
-    typeof env.MINION_GATEWAY_TOKEN === "string" && env.MINION_GATEWAY_TOKEN.trim()
-      ? env.MINION_GATEWAY_TOKEN.trim()
+  const openclawGatewayToken =
+    typeof env.OPENCLAW_GATEWAY_TOKEN === "string" && env.OPENCLAW_GATEWAY_TOKEN.trim()
+      ? env.OPENCLAW_GATEWAY_TOKEN.trim()
       : null;
   const gatewayToken =
     gatewayAuth.mode === "token" &&
     typeof gatewayAuth.token === "string" &&
     gatewayAuth.token.trim()
       ? gatewayAuth.token.trim()
-      : minionGatewayToken
-        ? minionGatewayToken
+      : openclawGatewayToken
+        ? openclawGatewayToken
         : null;
   if (token && gatewayToken && token === gatewayToken) {
     findings.push({
@@ -556,7 +509,7 @@ export function collectHooksHardeningFindings(
 }
 
 export function collectGatewayHttpSessionKeyOverrideFindings(
-  cfg: MinionConfig,
+  cfg: OpenClawConfig,
 ): SecurityAuditFinding[] {
   const findings: SecurityAuditFinding[] = [];
   const chatCompletionsEnabled = cfg.gateway?.http?.endpoints?.chatCompletions?.enabled === true;
@@ -575,14 +528,14 @@ export function collectGatewayHttpSessionKeyOverrideFindings(
     severity: "info",
     title: "HTTP API session-key override is enabled",
     detail:
-      `${enabledEndpoints.join(", ")} accept x-minion-session-key for per-request session routing. ` +
+      `${enabledEndpoints.join(", ")} accept x-openclaw-session-key for per-request session routing. ` +
       "Treat API credential holders as trusted principals.",
   });
 
   return findings;
 }
 
-export function collectSandboxDockerNoopFindings(cfg: MinionConfig): SecurityAuditFinding[] {
+export function collectSandboxDockerNoopFindings(cfg: OpenClawConfig): SecurityAuditFinding[] {
   const findings: SecurityAuditFinding[] = [];
   const configuredPaths: string[] = [];
   const agents = Array.isArray(cfg.agents?.list) ? cfg.agents.list : [];
@@ -632,7 +585,105 @@ export function collectSandboxDockerNoopFindings(cfg: MinionConfig): SecurityAud
   return findings;
 }
 
-export function collectNodeDenyCommandPatternFindings(cfg: MinionConfig): SecurityAuditFinding[] {
+export function collectSandboxDangerousConfigFindings(cfg: OpenClawConfig): SecurityAuditFinding[] {
+  const findings: SecurityAuditFinding[] = [];
+  const agents = Array.isArray(cfg.agents?.list) ? cfg.agents.list : [];
+
+  const configs: Array<{ source: string; docker: Record<string, unknown> }> = [];
+  const defaultDocker = cfg.agents?.defaults?.sandbox?.docker;
+  if (defaultDocker && typeof defaultDocker === "object") {
+    configs.push({
+      source: "agents.defaults.sandbox.docker",
+      docker: defaultDocker as Record<string, unknown>,
+    });
+  }
+  for (const entry of agents) {
+    if (!entry || typeof entry !== "object" || typeof entry.id !== "string") {
+      continue;
+    }
+    const agentDocker = entry.sandbox?.docker;
+    if (agentDocker && typeof agentDocker === "object") {
+      configs.push({
+        source: `agents.list.${entry.id}.sandbox.docker`,
+        docker: agentDocker as Record<string, unknown>,
+      });
+    }
+  }
+
+  for (const { source, docker } of configs) {
+    const binds = Array.isArray(docker.binds) ? docker.binds : [];
+    for (const bind of binds) {
+      if (typeof bind !== "string") {
+        continue;
+      }
+      const blocked = getBlockedBindReason(bind);
+      if (!blocked) {
+        continue;
+      }
+      if (blocked.kind === "non_absolute") {
+        findings.push({
+          checkId: "sandbox.bind_mount_non_absolute",
+          severity: "warn",
+          title: "Sandbox bind mount uses a non-absolute source path",
+          detail:
+            `${source}.binds contains "${bind}" which uses source path "${blocked.sourcePath}". ` +
+            "Non-absolute bind sources are hard to validate safely and may resolve unexpectedly.",
+          remediation: `Rewrite "${bind}" to use an absolute host path (for example: /home/user/project:/project:ro).`,
+        });
+        continue;
+      }
+      const verb = blocked.kind === "covers" ? "covers" : "targets";
+      findings.push({
+        checkId: "sandbox.dangerous_bind_mount",
+        severity: "critical",
+        title: "Dangerous bind mount in sandbox config",
+        detail:
+          `${source}.binds contains "${bind}" which ${verb} blocked path "${blocked.blockedPath}". ` +
+          "This can expose host system directories or the Docker socket to sandbox containers.",
+        remediation: `Remove "${bind}" from ${source}.binds. Use project-specific paths instead.`,
+      });
+    }
+
+    const network = typeof docker.network === "string" ? docker.network : undefined;
+    if (network && network.trim().toLowerCase() === "host") {
+      findings.push({
+        checkId: "sandbox.dangerous_network_mode",
+        severity: "critical",
+        title: "Network host mode in sandbox config",
+        detail: `${source}.network is "host" which bypasses container network isolation entirely.`,
+        remediation: `Set ${source}.network to "bridge" or "none".`,
+      });
+    }
+
+    const seccompProfile =
+      typeof docker.seccompProfile === "string" ? docker.seccompProfile : undefined;
+    if (seccompProfile && seccompProfile.trim().toLowerCase() === "unconfined") {
+      findings.push({
+        checkId: "sandbox.dangerous_seccomp_profile",
+        severity: "critical",
+        title: "Seccomp unconfined in sandbox config",
+        detail: `${source}.seccompProfile is "unconfined" which disables syscall filtering.`,
+        remediation: `Remove ${source}.seccompProfile or use a custom seccomp profile file.`,
+      });
+    }
+
+    const apparmorProfile =
+      typeof docker.apparmorProfile === "string" ? docker.apparmorProfile : undefined;
+    if (apparmorProfile && apparmorProfile.trim().toLowerCase() === "unconfined") {
+      findings.push({
+        checkId: "sandbox.dangerous_apparmor_profile",
+        severity: "critical",
+        title: "AppArmor unconfined in sandbox config",
+        detail: `${source}.apparmorProfile is "unconfined" which disables AppArmor enforcement.`,
+        remediation: `Remove ${source}.apparmorProfile or use a named AppArmor profile.`,
+      });
+    }
+  }
+
+  return findings;
+}
+
+export function collectNodeDenyCommandPatternFindings(cfg: OpenClawConfig): SecurityAuditFinding[] {
   const findings: SecurityAuditFinding[] = [];
   const denyListRaw = cfg.gateway?.nodes?.denyCommands;
   if (!Array.isArray(denyListRaw) || denyListRaw.length === 0) {
@@ -681,7 +732,7 @@ export function collectNodeDenyCommandPatternFindings(cfg: MinionConfig): Securi
   return findings;
 }
 
-export function collectMinimalProfileOverrideFindings(cfg: MinionConfig): SecurityAuditFinding[] {
+export function collectMinimalProfileOverrideFindings(cfg: OpenClawConfig): SecurityAuditFinding[] {
   const findings: SecurityAuditFinding[] = [];
   if (cfg.tools?.profile !== "minimal") {
     return findings;
@@ -717,7 +768,7 @@ export function collectMinimalProfileOverrideFindings(cfg: MinionConfig): Securi
   return findings;
 }
 
-export function collectModelHygieneFindings(cfg: MinionConfig): SecurityAuditFinding[] {
+export function collectModelHygieneFindings(cfg: OpenClawConfig): SecurityAuditFinding[] {
   const findings: SecurityAuditFinding[] = [];
   const models = collectModels(cfg);
   if (models.length === 0) {
@@ -803,7 +854,7 @@ export function collectModelHygieneFindings(cfg: MinionConfig): SecurityAuditFin
 }
 
 export function collectSmallModelRiskFindings(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   env: NodeJS.ProcessEnv;
 }): SecurityAuditFinding[] {
   const findings: SecurityAuditFinding[] = [];
@@ -897,7 +948,7 @@ export function collectSmallModelRiskFindings(params: {
   return findings;
 }
 
-export function collectExposureMatrixFindings(cfg: MinionConfig): SecurityAuditFinding[] {
+export function collectExposureMatrixFindings(cfg: OpenClawConfig): SecurityAuditFinding[] {
   const findings: SecurityAuditFinding[] = [];
   const openGroups = listGroupPolicyOpen(cfg);
   if (openGroups.length === 0) {

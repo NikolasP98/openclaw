@@ -1,8 +1,8 @@
-import { mergeAllowlist, summarizeMapping, type RuntimeEnv } from "minion/plugin-sdk";
 import { format } from "node:util";
-import type { CoreConfig, ReplyToMode } from "../../types.js";
+import { mergeAllowlist, summarizeMapping, type RuntimeEnv } from "openclaw/plugin-sdk";
 import { resolveMatrixTargets } from "../../resolve-targets.js";
 import { getMatrixRuntime } from "../../runtime.js";
+import type { CoreConfig, ReplyToMode } from "../../types.js";
 import { resolveMatrixAccount } from "../accounts.js";
 import { setActiveMatrixClient } from "../active-client.js";
 import {

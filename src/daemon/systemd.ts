@@ -1,16 +1,15 @@
-import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { promisify } from "node:util";
-import type { GatewayServiceRuntime } from "./service-runtime.js";
-import { colorize, isRich, theme } from "../terminal/theme.js";
 import {
-  formatGatewayServiceDescription,
   LEGACY_GATEWAY_SYSTEMD_SERVICE_NAMES,
+  resolveGatewayServiceDescription,
   resolveGatewaySystemdServiceName,
 } from "./constants.js";
+import { execFileUtf8 } from "./exec-file.js";
+import { formatLine, toPosixPath } from "./output.js";
 import { resolveHomeDir } from "./paths.js";
 import { parseKeyValueOutput } from "./runtime-parse.js";
+import type { GatewayServiceRuntime } from "./service-runtime.js";
 import {
   enableSystemdUserLinger,
   readSystemdUserLingerStatus,
@@ -22,14 +21,6 @@ import {
   parseSystemdExecStart,
 } from "./systemd-unit.js";
 
-const execFileAsync = promisify(execFile);
-const toPosixPath = (value: string) => value.replace(/\\/g, "/");
-
-const formatLine = (label: string, value: string) => {
-  const rich = isRich();
-  return `${colorize(rich, theme.muted, `${label}:`)} ${colorize(rich, theme.command, value)}`;
-};
-
 function resolveSystemdUnitPathForName(
   env: Record<string, string | undefined>,
   name: string,
@@ -39,11 +30,11 @@ function resolveSystemdUnitPathForName(
 }
 
 function resolveSystemdServiceName(env: Record<string, string | undefined>): string {
-  const override = env.MINION_SYSTEMD_UNIT?.trim();
+  const override = env.OPENCLAW_SYSTEMD_UNIT?.trim();
   if (override) {
     return override.endsWith(".service") ? override.slice(0, -".service".length) : override;
   }
-  return resolveGatewaySystemdServiceName(env.MINION_PROFILE);
+  return resolveGatewaySystemdServiceName(env.OPENCLAW_PROFILE);
 }
 
 function resolveSystemdUnitPath(env: Record<string, string | undefined>): string {
@@ -148,29 +139,7 @@ export function parseSystemdShow(output: string): SystemdServiceInfo {
 async function execSystemctl(
   args: string[],
 ): Promise<{ stdout: string; stderr: string; code: number }> {
-  try {
-    const { stdout, stderr } = await execFileAsync("systemctl", args, {
-      encoding: "utf8",
-    });
-    return {
-      stdout: String(stdout ?? ""),
-      stderr: String(stderr ?? ""),
-      code: 0,
-    };
-  } catch (error) {
-    const e = error as {
-      stdout?: unknown;
-      stderr?: unknown;
-      code?: unknown;
-      message?: unknown;
-    };
-    return {
-      stdout: typeof e.stdout === "string" ? e.stdout : "",
-      stderr:
-        typeof e.stderr === "string" ? e.stderr : typeof e.message === "string" ? e.message : "",
-      code: typeof e.code === "number" ? e.code : 1,
-    };
-  }
+  return await execFileUtf8("systemctl", args);
 }
 
 export async function isSystemdUserServiceAvailable(): Promise<boolean> {
@@ -231,12 +200,7 @@ export async function installSystemdService({
 
   const unitPath = resolveSystemdUnitPath(env);
   await fs.mkdir(path.dirname(unitPath), { recursive: true });
-  const serviceDescription =
-    description ??
-    formatGatewayServiceDescription({
-      profile: env.MINION_PROFILE,
-      version: environment?.MINION_SERVICE_VERSION ?? env.MINION_SERVICE_VERSION,
-    });
+  const serviceDescription = resolveGatewayServiceDescription({ env, environment, description });
   const unit = buildSystemdUnit({
     description: serviceDescription,
     programArguments,
@@ -245,7 +209,7 @@ export async function installSystemdService({
   });
   await fs.writeFile(unitPath, unit, "utf8");
 
-  const serviceName = resolveGatewaySystemdServiceName(env.MINION_PROFILE);
+  const serviceName = resolveGatewaySystemdServiceName(env.OPENCLAW_PROFILE);
   const unitName = `${serviceName}.service`;
   const reload = await execSystemctl(["--user", "daemon-reload"]);
   if (reload.code !== 0) {
@@ -276,7 +240,7 @@ export async function uninstallSystemdService({
   stdout: NodeJS.WritableStream;
 }): Promise<void> {
   await assertSystemdAvailable();
-  const serviceName = resolveGatewaySystemdServiceName(env.MINION_PROFILE);
+  const serviceName = resolveGatewaySystemdServiceName(env.OPENCLAW_PROFILE);
   const unitName = `${serviceName}.service`;
   await execSystemctl(["--user", "disable", "--now", unitName]);
 

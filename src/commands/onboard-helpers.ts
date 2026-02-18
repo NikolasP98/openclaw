@@ -1,13 +1,10 @@
-import { cancel, isCancel } from "@clack/prompts";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { inspect } from "node:util";
-import type { MinionConfig } from "../config/config.js";
-import type { RuntimeEnv } from "../runtime.js";
-import type { NodeManagerChoice, OnboardMode, ResetScope } from "./onboard-types.js";
+import { cancel, isCancel } from "@clack/prompts";
 import { DEFAULT_AGENT_WORKSPACE_DIR, ensureAgentWorkspace } from "../agents/workspace.js";
-import { formatCliBannerArt } from "../cli/banner.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { CONFIG_PATH } from "../config/config.js";
 import { resolveSessionTranscriptsDirForAgent } from "../config/sessions.js";
 import { callGateway } from "../gateway/call.js";
@@ -17,6 +14,7 @@ import { isSafeExecutableValue } from "../infra/exec-safety.js";
 import { pickPrimaryTailnetIPv4 } from "../infra/tailnet.js";
 import { isWSL } from "../infra/wsl.js";
 import { runCommandWithTimeout } from "../process/exec.js";
+import type { RuntimeEnv } from "../runtime.js";
 import { stylePromptTitle } from "../terminal/prompt-style.js";
 import {
   CONFIG_DIR,
@@ -27,16 +25,18 @@ import {
 } from "../utils.js";
 import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../utils/message-channel.js";
 import { VERSION } from "../version.js";
+import type { NodeManagerChoice, OnboardMode, ResetScope } from "./onboard-types.js";
 
 export function guardCancel<T>(value: T | symbol, runtime: RuntimeEnv): T {
   if (isCancel(value)) {
     cancel(stylePromptTitle("Setup cancelled.") ?? "Setup cancelled.");
     runtime.exit(0);
+    throw new Error("unreachable");
   }
   return value;
 }
 
-export function summarizeExistingConfig(config: MinionConfig): string {
+export function summarizeExistingConfig(config: OpenClawConfig): string {
   const rows: string[] = [];
   const defaults = config.agents?.defaults;
   if (defaults?.workspace) {
@@ -98,14 +98,22 @@ export function validateGatewayPasswordInput(value: unknown): string | undefined
 }
 
 export function printWizardHeader(runtime: RuntimeEnv) {
-  const header = formatCliBannerArt();
+  const header = [
+    "▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄",
+    "██░▄▄▄░██░▄▄░██░▄▄▄██░▀██░██░▄▄▀██░████░▄▄▀██░███░██",
+    "██░███░██░▀▀░██░▄▄▄██░█░█░██░█████░████░▀▀░██░█░█░██",
+    "██░▀▀▀░██░█████░▀▀▀██░██▄░██░▀▀▄██░▀▀░█░██░██▄▀▄▀▄██",
+    "▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀",
+    "                  🦞 OPENCLAW 🦞                    ",
+    " ",
+  ].join("\n");
   runtime.log(header);
 }
 
 export function applyWizardMetadata(
-  cfg: MinionConfig,
+  cfg: OpenClawConfig,
   params: { command: string; mode: OnboardMode },
-): MinionConfig {
+): OpenClawConfig {
   const commit = process.env.GIT_COMMIT?.trim() || process.env.GIT_SHA?.trim() || undefined;
   return {
     ...cfg,
@@ -212,8 +220,8 @@ export function formatControlUiSshHint(params: {
     localUrl,
     authedUrl,
     "Docs:",
-    "https://docs.minion.ai/gateway/remote",
-    "https://docs.minion.ai/web/control-ui",
+    "https://docs.openclaw.ai/gateway/remote",
+    "https://docs.openclaw.ai/web/control-ui",
   ]
     .filter(Boolean)
     .join("\n");
@@ -297,9 +305,9 @@ export function resolveNodeManagerOptions(): Array<{
   label: string;
 }> {
   return [
-    { value: "pnpm", label: "pnpm (recommended)" },
     { value: "npm", label: "npm" },
-    { value: "bun", label: "bun (not recommended for Gateway)" },
+    { value: "pnpm", label: "pnpm" },
+    { value: "bun", label: "bun" },
   ];
 }
 

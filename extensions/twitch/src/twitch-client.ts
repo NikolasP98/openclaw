@@ -1,8 +1,8 @@
-import type { MinionConfig } from "minion/plugin-sdk";
 import { RefreshingAuthProvider, StaticAuthProvider } from "@twurple/auth";
 import { ChatClient, LogLevel } from "@twurple/chat";
-import type { ChannelLogSink, TwitchAccountConfig, TwitchChatMessage } from "./types.js";
+import type { OpenClawConfig } from "openclaw/plugin-sdk";
 import { resolveTwitchToken } from "./token.js";
+import type { ChannelLogSink, TwitchAccountConfig, TwitchChatMessage } from "./types.js";
 import { normalizeToken } from "./utils/twitch.js";
 
 /**
@@ -76,7 +76,7 @@ export class TwitchClientManager {
    */
   async getClient(
     account: TwitchAccountConfig,
-    cfg?: MinionConfig,
+    cfg?: OpenClawConfig,
     accountId?: string,
   ): Promise<ChatClient> {
     const key = this.getAccountKey(account);
@@ -92,7 +92,7 @@ export class TwitchClientManager {
 
     if (!tokenResolution.token) {
       this.logger.error(
-        `Missing Twitch token for account ${account.username} (set channels.twitch.accounts.${account.username}.token or MINION_TWITCH_ACCESS_TOKEN for default)`,
+        `Missing Twitch token for account ${account.username} (set channels.twitch.accounts.${account.username}.token or OPENCLAW_TWITCH_ACCESS_TOKEN for default)`,
       );
       throw new Error("Missing Twitch token");
     }
@@ -236,7 +236,7 @@ export class TwitchClientManager {
     account: TwitchAccountConfig,
     channel: string,
     message: string,
-    cfg?: MinionConfig,
+    cfg?: OpenClawConfig,
     accountId?: string,
   ): Promise<{ ok: boolean; error?: string; messageId?: string }> {
     try {

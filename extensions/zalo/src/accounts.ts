@@ -1,11 +1,11 @@
-import type { MinionConfig } from "minion/plugin-sdk";
-import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "minion/plugin-sdk/account-id";
-import type { ResolvedZaloAccount, ZaloAccountConfig, ZaloConfig } from "./types.js";
+import type { OpenClawConfig } from "openclaw/plugin-sdk";
+import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "openclaw/plugin-sdk/account-id";
 import { resolveZaloToken } from "./token.js";
+import type { ResolvedZaloAccount, ZaloAccountConfig, ZaloConfig } from "./types.js";
 
 export type { ResolvedZaloAccount };
 
-function listConfiguredAccountIds(cfg: MinionConfig): string[] {
+function listConfiguredAccountIds(cfg: OpenClawConfig): string[] {
   const accounts = (cfg.channels?.zalo as ZaloConfig | undefined)?.accounts;
   if (!accounts || typeof accounts !== "object") {
     return [];
@@ -13,7 +13,7 @@ function listConfiguredAccountIds(cfg: MinionConfig): string[] {
   return Object.keys(accounts).filter(Boolean);
 }
 
-export function listZaloAccountIds(cfg: MinionConfig): string[] {
+export function listZaloAccountIds(cfg: OpenClawConfig): string[] {
   const ids = listConfiguredAccountIds(cfg);
   if (ids.length === 0) {
     return [DEFAULT_ACCOUNT_ID];
@@ -21,7 +21,7 @@ export function listZaloAccountIds(cfg: MinionConfig): string[] {
   return ids.toSorted((a, b) => a.localeCompare(b));
 }
 
-export function resolveDefaultZaloAccountId(cfg: MinionConfig): string {
+export function resolveDefaultZaloAccountId(cfg: OpenClawConfig): string {
   const zaloConfig = cfg.channels?.zalo as ZaloConfig | undefined;
   if (zaloConfig?.defaultAccount?.trim()) {
     return zaloConfig.defaultAccount.trim();
@@ -33,7 +33,10 @@ export function resolveDefaultZaloAccountId(cfg: MinionConfig): string {
   return ids[0] ?? DEFAULT_ACCOUNT_ID;
 }
 
-function resolveAccountConfig(cfg: MinionConfig, accountId: string): ZaloAccountConfig | undefined {
+function resolveAccountConfig(
+  cfg: OpenClawConfig,
+  accountId: string,
+): ZaloAccountConfig | undefined {
   const accounts = (cfg.channels?.zalo as ZaloConfig | undefined)?.accounts;
   if (!accounts || typeof accounts !== "object") {
     return undefined;
@@ -41,7 +44,7 @@ function resolveAccountConfig(cfg: MinionConfig, accountId: string): ZaloAccount
   return accounts[accountId] as ZaloAccountConfig | undefined;
 }
 
-function mergeZaloAccountConfig(cfg: MinionConfig, accountId: string): ZaloAccountConfig {
+function mergeZaloAccountConfig(cfg: OpenClawConfig, accountId: string): ZaloAccountConfig {
   const raw = (cfg.channels?.zalo ?? {}) as ZaloConfig;
   const { accounts: _ignored, defaultAccount: _ignored2, ...base } = raw;
   const account = resolveAccountConfig(cfg, accountId) ?? {};
@@ -49,7 +52,7 @@ function mergeZaloAccountConfig(cfg: MinionConfig, accountId: string): ZaloAccou
 }
 
 export function resolveZaloAccount(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
 }): ResolvedZaloAccount {
   const accountId = normalizeAccountId(params.accountId);
@@ -72,7 +75,7 @@ export function resolveZaloAccount(params: {
   };
 }
 
-export function listEnabledZaloAccounts(cfg: MinionConfig): ResolvedZaloAccount[] {
+export function listEnabledZaloAccounts(cfg: OpenClawConfig): ResolvedZaloAccount[] {
   return listZaloAccountIds(cfg)
     .map((accountId) => resolveZaloAccount({ cfg, accountId }))
     .filter((account) => account.enabled);

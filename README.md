@@ -1,9 +1,9 @@
-# 🦑 Minion — Personal AI Assistant
+# 🦞 OpenClaw — Personal AI Assistant
 
 <p align="center">
     <picture>
-        <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/minion/minion/main/docs/assets/minion-logo-text-dark.png">
-        <img src="https://raw.githubusercontent.com/minion/minion/main/docs/assets/minion-logo-text.png" alt="Minion" width="500">
+        <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/openclaw/openclaw/main/docs/assets/openclaw-logo-text-dark.png">
+        <img src="https://raw.githubusercontent.com/openclaw/openclaw/main/docs/assets/openclaw-logo-text.png" alt="OpenClaw" width="500">
     </picture>
 </p>
 
@@ -12,45 +12,45 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/minion/minion/actions/workflows/ci.yml?branch=main"><img src="https://img.shields.io/github/actions/workflow/status/minion/minion/ci.yml?branch=main&style=for-the-badge" alt="CI status"></a>
-  <a href="https://github.com/minion/minion/releases"><img src="https://img.shields.io/github/v/release/minion/minion?include_prereleases&style=for-the-badge" alt="GitHub release"></a>
+  <a href="https://github.com/openclaw/openclaw/actions/workflows/ci.yml?branch=main"><img src="https://img.shields.io/github/actions/workflow/status/openclaw/openclaw/ci.yml?branch=main&style=for-the-badge" alt="CI status"></a>
+  <a href="https://github.com/openclaw/openclaw/releases"><img src="https://img.shields.io/github/v/release/openclaw/openclaw?include_prereleases&style=for-the-badge" alt="GitHub release"></a>
   <a href="https://discord.gg/clawd"><img src="https://img.shields.io/discord/1456350064065904867?label=Discord&logo=discord&logoColor=white&color=5865F2&style=for-the-badge" alt="Discord"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="MIT License"></a>
 </p>
 
-**Minion** is a _personal AI assistant_ you run on your own devices.
+**OpenClaw** is a _personal AI assistant_ you run on your own devices.
 It answers you on the channels you already use (WhatsApp, Telegram, Slack, Discord, Google Chat, Signal, iMessage, Microsoft Teams, WebChat), plus extension channels like BlueBubbles, Matrix, Zalo, and Zalo Personal. It can speak and listen on macOS/iOS/Android, and can render a live Canvas you control. The Gateway is just the control plane — the product is the assistant.
 
 If you want a personal, single-user assistant that feels local, fast, and always-on, this is it.
 
-[Website](https://minion.ai) · [Docs](https://docs.minion.ai) · [DeepWiki](https://deepwiki.com/minion/minion) · [Getting Started](https://docs.minion.ai/start/getting-started) · [Updating](https://docs.minion.ai/install/updating) · [Showcase](https://docs.minion.ai/start/showcase) · [FAQ](https://docs.minion.ai/start/faq) · [Wizard](https://docs.minion.ai/start/wizard) · [Nix](https://github.com/minion/nix-minion) · [Docker](https://docs.minion.ai/install/docker) · [Discord](https://discord.gg/clawd)
+[Website](https://openclaw.ai) · [Docs](https://docs.openclaw.ai) · [Vision](VISION.md) · [DeepWiki](https://deepwiki.com/openclaw/openclaw) · [Getting Started](https://docs.openclaw.ai/start/getting-started) · [Updating](https://docs.openclaw.ai/install/updating) · [Showcase](https://docs.openclaw.ai/start/showcase) · [FAQ](https://docs.openclaw.ai/start/faq) · [Wizard](https://docs.openclaw.ai/start/wizard) · [Nix](https://github.com/openclaw/nix-openclaw) · [Docker](https://docs.openclaw.ai/install/docker) · [Discord](https://discord.gg/clawd)
 
-Preferred setup: run the onboarding wizard (`minion onboard`) in your terminal.
+Preferred setup: run the onboarding wizard (`openclaw onboard`) in your terminal.
 The wizard guides you step by step through setting up the gateway, workspace, channels, and skills. The CLI wizard is the recommended path and works on **macOS, Linux, and Windows (via WSL2; strongly recommended)**.
-Preferred package manager: **pnpm**. npm and bun are also supported.
-New install? Start here: [Getting started](https://docs.minion.ai/start/getting-started)
+Works with npm, pnpm, or bun.
+New install? Start here: [Getting started](https://docs.openclaw.ai/start/getting-started)
 
 **Subscriptions (OAuth):**
 
 - **[Anthropic](https://www.anthropic.com/)** (Claude Pro/Max)
 - **[OpenAI](https://openai.com/)** (ChatGPT/Codex)
 
-Model note: while any model is supported, I strongly recommend **Anthropic Pro/Max (100/200) + Opus 4.6** for long‑context strength and better prompt‑injection resistance. See [Onboarding](https://docs.minion.ai/start/onboarding).
+Model note: while any model is supported, I strongly recommend **Anthropic Pro/Max (100/200) + Opus 4.6** for long‑context strength and better prompt‑injection resistance. See [Onboarding](https://docs.openclaw.ai/start/onboarding).
 
 ## Models (selection + auth)
 
-- Models config + CLI: [Models](https://docs.minion.ai/concepts/models)
-- Auth profile rotation (OAuth vs API keys) + fallbacks: [Model failover](https://docs.minion.ai/concepts/model-failover)
+- Models config + CLI: [Models](https://docs.openclaw.ai/concepts/models)
+- Auth profile rotation (OAuth vs API keys) + fallbacks: [Model failover](https://docs.openclaw.ai/concepts/model-failover)
 
 ## Install (recommended)
 
 Runtime: **Node ≥22**.
 
 ```bash
-pnpm add -g minion@latest
-# or: npm install -g minion@latest
+npm install -g openclaw@latest
+# or: pnpm add -g openclaw@latest
 
-minion onboard --install-daemon
+openclaw onboard --install-daemon
 ```
 
 The wizard installs the Gateway daemon (launchd/systemd user service) so it stays running.
@@ -59,21 +59,21 @@ The wizard installs the Gateway daemon (launchd/systemd user service) so it stay
 
 Runtime: **Node ≥22**.
 
-Full beginner guide (auth, pairing, channels): [Getting started](https://docs.minion.ai/start/getting-started)
+Full beginner guide (auth, pairing, channels): [Getting started](https://docs.openclaw.ai/start/getting-started)
 
 ```bash
-minion onboard --install-daemon
+openclaw onboard --install-daemon
 
-minion gateway --port 18789 --verbose
+openclaw gateway --port 18789 --verbose
 
 # Send a message
-minion message send --to +1234567890 --message "Hello from Minion"
+openclaw message send --to +1234567890 --message "Hello from OpenClaw"
 
 # Talk to the assistant (optionally deliver back to any connected channel: WhatsApp/Telegram/Slack/Discord/Google Chat/Signal/iMessage/BlueBubbles/Microsoft Teams/Matrix/Zalo/Zalo Personal/WebChat)
-minion agent --message "Ship checklist" --thinking high
+openclaw agent --message "Ship checklist" --thinking high
 ```
 
-Upgrading? [Updating guide](https://docs.minion.ai/install/updating) (and run `minion doctor`).
+Upgrading? [Updating guide](https://docs.openclaw.ai/install/updating) (and run `openclaw doctor`).
 
 ## Development channels
 
@@ -81,101 +81,101 @@ Upgrading? [Updating guide](https://docs.minion.ai/install/updating) (and run `m
 - **beta**: prerelease tags (`vYYYY.M.D-beta.N`), npm dist-tag `beta` (macOS app may be missing).
 - **dev**: moving head of `main`, npm dist-tag `dev` (when published).
 
-Switch channels (git + npm): `minion update --channel stable|beta|dev`.
-Details: [Development channels](https://docs.minion.ai/install/development-channels).
+Switch channels (git + npm): `openclaw update --channel stable|beta|dev`.
+Details: [Development channels](https://docs.openclaw.ai/install/development-channels).
 
 ## From source (development)
 
-Use `pnpm` for builds from source (required). Bun is optional for running TypeScript directly.
+Prefer `pnpm` for builds from source. Bun is optional for running TypeScript directly.
 
 ```bash
-git clone https://github.com/minion/minion.git
-cd minion
+git clone https://github.com/openclaw/openclaw.git
+cd openclaw
 
 pnpm install
 pnpm ui:build # auto-installs UI deps on first run
 pnpm build
 
-pnpm minion onboard --install-daemon
+pnpm openclaw onboard --install-daemon
 
 # Dev loop (auto-reload on TS changes)
 pnpm gateway:watch
 ```
 
-Note: `pnpm minion ...` runs TypeScript directly (via `tsx`). `pnpm build` produces `dist/` for running via Node / the packaged `minion` binary.
+Note: `pnpm openclaw ...` runs TypeScript directly (via `tsx`). `pnpm build` produces `dist/` for running via Node / the packaged `openclaw` binary.
 
 ## Security defaults (DM access)
 
-Minion connects to real messaging surfaces. Treat inbound DMs as **untrusted input**.
+OpenClaw connects to real messaging surfaces. Treat inbound DMs as **untrusted input**.
 
-Full security guide: [Security](https://docs.minion.ai/gateway/security)
+Full security guide: [Security](https://docs.openclaw.ai/gateway/security)
 
 Default behavior on Telegram/WhatsApp/Signal/iMessage/Microsoft Teams/Discord/Google Chat/Slack:
 
-- **DM pairing** (`dmPolicy="pairing"` / `channels.discord.dm.policy="pairing"` / `channels.slack.dm.policy="pairing"`): unknown senders receive a short pairing code and the bot does not process their message.
-- Approve with: `minion pairing approve <channel> <code>` (then the sender is added to a local allowlist store).
-- Public inbound DMs require an explicit opt-in: set `dmPolicy="open"` and include `"*"` in the channel allowlist (`allowFrom` / `channels.discord.dm.allowFrom` / `channels.slack.dm.allowFrom`).
+- **DM pairing** (`dmPolicy="pairing"` / `channels.discord.dmPolicy="pairing"` / `channels.slack.dmPolicy="pairing"`; legacy: `channels.discord.dm.policy`, `channels.slack.dm.policy`): unknown senders receive a short pairing code and the bot does not process their message.
+- Approve with: `openclaw pairing approve <channel> <code>` (then the sender is added to a local allowlist store).
+- Public inbound DMs require an explicit opt-in: set `dmPolicy="open"` and include `"*"` in the channel allowlist (`allowFrom` / `channels.discord.allowFrom` / `channels.slack.allowFrom`; legacy: `channels.discord.dm.allowFrom`, `channels.slack.dm.allowFrom`).
 
-Run `minion doctor` to surface risky/misconfigured DM policies.
+Run `openclaw doctor` to surface risky/misconfigured DM policies.
 
 ## Highlights
 
-- **[Local-first Gateway](https://docs.minion.ai/gateway)** — single control plane for sessions, channels, tools, and events.
-- **[Multi-channel inbox](https://docs.minion.ai/channels)** — WhatsApp, Telegram, Slack, Discord, Google Chat, Signal, BlueBubbles (iMessage), iMessage (legacy), Microsoft Teams, Matrix, Zalo, Zalo Personal, WebChat, macOS, iOS/Android.
-- **[Multi-agent routing](https://docs.minion.ai/gateway/configuration)** — route inbound channels/accounts/peers to isolated agents (workspaces + per-agent sessions).
-- **[Voice Wake](https://docs.minion.ai/nodes/voicewake) + [Talk Mode](https://docs.minion.ai/nodes/talk)** — always-on speech for macOS/iOS/Android with ElevenLabs.
-- **[Live Canvas](https://docs.minion.ai/platforms/mac/canvas)** — agent-driven visual workspace with [A2UI](https://docs.minion.ai/platforms/mac/canvas#canvas-a2ui).
-- **[First-class tools](https://docs.minion.ai/tools)** — browser, canvas, nodes, cron, sessions, and Discord/Slack actions.
-- **[Companion apps](https://docs.minion.ai/platforms/macos)** — macOS menu bar app + iOS/Android [nodes](https://docs.minion.ai/nodes).
-- **[Onboarding](https://docs.minion.ai/start/wizard) + [skills](https://docs.minion.ai/tools/skills)** — wizard-driven setup with bundled/managed/workspace skills.
+- **[Local-first Gateway](https://docs.openclaw.ai/gateway)** — single control plane for sessions, channels, tools, and events.
+- **[Multi-channel inbox](https://docs.openclaw.ai/channels)** — WhatsApp, Telegram, Slack, Discord, Google Chat, Signal, BlueBubbles (iMessage), iMessage (legacy), Microsoft Teams, Matrix, Zalo, Zalo Personal, WebChat, macOS, iOS/Android.
+- **[Multi-agent routing](https://docs.openclaw.ai/gateway/configuration)** — route inbound channels/accounts/peers to isolated agents (workspaces + per-agent sessions).
+- **[Voice Wake](https://docs.openclaw.ai/nodes/voicewake) + [Talk Mode](https://docs.openclaw.ai/nodes/talk)** — always-on speech for macOS/iOS/Android with ElevenLabs.
+- **[Live Canvas](https://docs.openclaw.ai/platforms/mac/canvas)** — agent-driven visual workspace with [A2UI](https://docs.openclaw.ai/platforms/mac/canvas#canvas-a2ui).
+- **[First-class tools](https://docs.openclaw.ai/tools)** — browser, canvas, nodes, cron, sessions, and Discord/Slack actions.
+- **[Companion apps](https://docs.openclaw.ai/platforms/macos)** — macOS menu bar app + iOS/Android [nodes](https://docs.openclaw.ai/nodes).
+- **[Onboarding](https://docs.openclaw.ai/start/wizard) + [skills](https://docs.openclaw.ai/tools/skills)** — wizard-driven setup with bundled/managed/workspace skills.
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=minion/minion&type=date&legend=top-left)](https://www.star-history.com/#minion/minion&type=date&legend=top-left)
+[![Star History Chart](https://api.star-history.com/svg?repos=openclaw/openclaw&type=date&legend=top-left)](https://www.star-history.com/#openclaw/openclaw&type=date&legend=top-left)
 
 ## Everything we built so far
 
 ### Core platform
 
-- [Gateway WS control plane](https://docs.minion.ai/gateway) with sessions, presence, config, cron, webhooks, [Control UI](https://docs.minion.ai/web), and [Canvas host](https://docs.minion.ai/platforms/mac/canvas#canvas-a2ui).
-- [CLI surface](https://docs.minion.ai/tools/agent-send): gateway, agent, send, [wizard](https://docs.minion.ai/start/wizard), and [doctor](https://docs.minion.ai/gateway/doctor).
-- [Pi agent runtime](https://docs.minion.ai/concepts/agent) in RPC mode with tool streaming and block streaming.
-- [Session model](https://docs.minion.ai/concepts/session): `main` for direct chats, group isolation, activation modes, queue modes, reply-back. Group rules: [Groups](https://docs.minion.ai/concepts/groups).
-- [Media pipeline](https://docs.minion.ai/nodes/images): images/audio/video, transcription hooks, size caps, temp file lifecycle. Audio details: [Audio](https://docs.minion.ai/nodes/audio).
+- [Gateway WS control plane](https://docs.openclaw.ai/gateway) with sessions, presence, config, cron, webhooks, [Control UI](https://docs.openclaw.ai/web), and [Canvas host](https://docs.openclaw.ai/platforms/mac/canvas#canvas-a2ui).
+- [CLI surface](https://docs.openclaw.ai/tools/agent-send): gateway, agent, send, [wizard](https://docs.openclaw.ai/start/wizard), and [doctor](https://docs.openclaw.ai/gateway/doctor).
+- [Pi agent runtime](https://docs.openclaw.ai/concepts/agent) in RPC mode with tool streaming and block streaming.
+- [Session model](https://docs.openclaw.ai/concepts/session): `main` for direct chats, group isolation, activation modes, queue modes, reply-back. Group rules: [Groups](https://docs.openclaw.ai/concepts/groups).
+- [Media pipeline](https://docs.openclaw.ai/nodes/images): images/audio/video, transcription hooks, size caps, temp file lifecycle. Audio details: [Audio](https://docs.openclaw.ai/nodes/audio).
 
 ### Channels
 
-- [Channels](https://docs.minion.ai/channels): [WhatsApp](https://docs.minion.ai/channels/whatsapp) (Baileys), [Telegram](https://docs.minion.ai/channels/telegram) (grammY), [Slack](https://docs.minion.ai/channels/slack) (Bolt), [Discord](https://docs.minion.ai/channels/discord) (discord.js), [Google Chat](https://docs.minion.ai/channels/googlechat) (Chat API), [Signal](https://docs.minion.ai/channels/signal) (signal-cli), [BlueBubbles](https://docs.minion.ai/channels/bluebubbles) (iMessage, recommended), [iMessage](https://docs.minion.ai/channels/imessage) (legacy imsg), [Microsoft Teams](https://docs.minion.ai/channels/msteams) (extension), [Matrix](https://docs.minion.ai/channels/matrix) (extension), [Zalo](https://docs.minion.ai/channels/zalo) (extension), [Zalo Personal](https://docs.minion.ai/channels/zalouser) (extension), [WebChat](https://docs.minion.ai/web/webchat).
-- [Group routing](https://docs.minion.ai/concepts/group-messages): mention gating, reply tags, per-channel chunking and routing. Channel rules: [Channels](https://docs.minion.ai/channels).
+- [Channels](https://docs.openclaw.ai/channels): [WhatsApp](https://docs.openclaw.ai/channels/whatsapp) (Baileys), [Telegram](https://docs.openclaw.ai/channels/telegram) (grammY), [Slack](https://docs.openclaw.ai/channels/slack) (Bolt), [Discord](https://docs.openclaw.ai/channels/discord) (discord.js), [Google Chat](https://docs.openclaw.ai/channels/googlechat) (Chat API), [Signal](https://docs.openclaw.ai/channels/signal) (signal-cli), [BlueBubbles](https://docs.openclaw.ai/channels/bluebubbles) (iMessage, recommended), [iMessage](https://docs.openclaw.ai/channels/imessage) (legacy imsg), [Microsoft Teams](https://docs.openclaw.ai/channels/msteams) (extension), [Matrix](https://docs.openclaw.ai/channels/matrix) (extension), [Zalo](https://docs.openclaw.ai/channels/zalo) (extension), [Zalo Personal](https://docs.openclaw.ai/channels/zalouser) (extension), [WebChat](https://docs.openclaw.ai/web/webchat).
+- [Group routing](https://docs.openclaw.ai/concepts/group-messages): mention gating, reply tags, per-channel chunking and routing. Channel rules: [Channels](https://docs.openclaw.ai/channels).
 
 ### Apps + nodes
 
-- [macOS app](https://docs.minion.ai/platforms/macos): menu bar control plane, [Voice Wake](https://docs.minion.ai/nodes/voicewake)/PTT, [Talk Mode](https://docs.minion.ai/nodes/talk) overlay, [WebChat](https://docs.minion.ai/web/webchat), debug tools, [remote gateway](https://docs.minion.ai/gateway/remote) control.
-- [iOS node](https://docs.minion.ai/platforms/ios): [Canvas](https://docs.minion.ai/platforms/mac/canvas), [Voice Wake](https://docs.minion.ai/nodes/voicewake), [Talk Mode](https://docs.minion.ai/nodes/talk), camera, screen recording, Bonjour pairing.
-- [Android node](https://docs.minion.ai/platforms/android): [Canvas](https://docs.minion.ai/platforms/mac/canvas), [Talk Mode](https://docs.minion.ai/nodes/talk), camera, screen recording, optional SMS.
-- [macOS node mode](https://docs.minion.ai/nodes): system.run/notify + canvas/camera exposure.
+- [macOS app](https://docs.openclaw.ai/platforms/macos): menu bar control plane, [Voice Wake](https://docs.openclaw.ai/nodes/voicewake)/PTT, [Talk Mode](https://docs.openclaw.ai/nodes/talk) overlay, [WebChat](https://docs.openclaw.ai/web/webchat), debug tools, [remote gateway](https://docs.openclaw.ai/gateway/remote) control.
+- [iOS node](https://docs.openclaw.ai/platforms/ios): [Canvas](https://docs.openclaw.ai/platforms/mac/canvas), [Voice Wake](https://docs.openclaw.ai/nodes/voicewake), [Talk Mode](https://docs.openclaw.ai/nodes/talk), camera, screen recording, Bonjour pairing.
+- [Android node](https://docs.openclaw.ai/platforms/android): [Canvas](https://docs.openclaw.ai/platforms/mac/canvas), [Talk Mode](https://docs.openclaw.ai/nodes/talk), camera, screen recording, optional SMS.
+- [macOS node mode](https://docs.openclaw.ai/nodes): system.run/notify + canvas/camera exposure.
 
 ### Tools + automation
 
-- [Browser control](https://docs.minion.ai/tools/browser): dedicated minion Chrome/Chromium, snapshots, actions, uploads, profiles.
-- [Canvas](https://docs.minion.ai/platforms/mac/canvas): [A2UI](https://docs.minion.ai/platforms/mac/canvas#canvas-a2ui) push/reset, eval, snapshot.
-- [Nodes](https://docs.minion.ai/nodes): camera snap/clip, screen record, [location.get](https://docs.minion.ai/nodes/location-command), notifications.
-- [Cron + wakeups](https://docs.minion.ai/automation/cron-jobs); [webhooks](https://docs.minion.ai/automation/webhook); [Gmail Pub/Sub](https://docs.minion.ai/automation/gmail-pubsub).
-- [Skills platform](https://docs.minion.ai/tools/skills): bundled, managed, and workspace skills with install gating + UI.
+- [Browser control](https://docs.openclaw.ai/tools/browser): dedicated openclaw Chrome/Chromium, snapshots, actions, uploads, profiles.
+- [Canvas](https://docs.openclaw.ai/platforms/mac/canvas): [A2UI](https://docs.openclaw.ai/platforms/mac/canvas#canvas-a2ui) push/reset, eval, snapshot.
+- [Nodes](https://docs.openclaw.ai/nodes): camera snap/clip, screen record, [location.get](https://docs.openclaw.ai/nodes/location-command), notifications.
+- [Cron + wakeups](https://docs.openclaw.ai/automation/cron-jobs); [webhooks](https://docs.openclaw.ai/automation/webhook); [Gmail Pub/Sub](https://docs.openclaw.ai/automation/gmail-pubsub).
+- [Skills platform](https://docs.openclaw.ai/tools/skills): bundled, managed, and workspace skills with install gating + UI.
 
 ### Runtime + safety
 
-- [Channel routing](https://docs.minion.ai/concepts/channel-routing), [retry policy](https://docs.minion.ai/concepts/retry), and [streaming/chunking](https://docs.minion.ai/concepts/streaming).
-- [Presence](https://docs.minion.ai/concepts/presence), [typing indicators](https://docs.minion.ai/concepts/typing-indicators), and [usage tracking](https://docs.minion.ai/concepts/usage-tracking).
-- [Models](https://docs.minion.ai/concepts/models), [model failover](https://docs.minion.ai/concepts/model-failover), and [session pruning](https://docs.minion.ai/concepts/session-pruning).
-- [Security](https://docs.minion.ai/gateway/security) and [troubleshooting](https://docs.minion.ai/channels/troubleshooting).
+- [Channel routing](https://docs.openclaw.ai/concepts/channel-routing), [retry policy](https://docs.openclaw.ai/concepts/retry), and [streaming/chunking](https://docs.openclaw.ai/concepts/streaming).
+- [Presence](https://docs.openclaw.ai/concepts/presence), [typing indicators](https://docs.openclaw.ai/concepts/typing-indicators), and [usage tracking](https://docs.openclaw.ai/concepts/usage-tracking).
+- [Models](https://docs.openclaw.ai/concepts/models), [model failover](https://docs.openclaw.ai/concepts/model-failover), and [session pruning](https://docs.openclaw.ai/concepts/session-pruning).
+- [Security](https://docs.openclaw.ai/gateway/security) and [troubleshooting](https://docs.openclaw.ai/channels/troubleshooting).
 
 ### Ops + packaging
 
-- [Control UI](https://docs.minion.ai/web) + [WebChat](https://docs.minion.ai/web/webchat) served directly from the Gateway.
-- [Tailscale Serve/Funnel](https://docs.minion.ai/gateway/tailscale) or [SSH tunnels](https://docs.minion.ai/gateway/remote) with token/password auth.
-- [Nix mode](https://docs.minion.ai/install/nix) for declarative config; [Docker](https://docs.minion.ai/install/docker)-based installs.
-- [Doctor](https://docs.minion.ai/gateway/doctor) migrations, [logging](https://docs.minion.ai/logging).
+- [Control UI](https://docs.openclaw.ai/web) + [WebChat](https://docs.openclaw.ai/web/webchat) served directly from the Gateway.
+- [Tailscale Serve/Funnel](https://docs.openclaw.ai/gateway/tailscale) or [SSH tunnels](https://docs.openclaw.ai/gateway/remote) with token/password auth.
+- [Nix mode](https://docs.openclaw.ai/install/nix) for declarative config; [Docker](https://docs.openclaw.ai/install/docker)-based installs.
+- [Doctor](https://docs.openclaw.ai/gateway/doctor) migrations, [logging](https://docs.openclaw.ai/logging).
 
 ## How it works (short)
 
@@ -190,7 +190,7 @@ WhatsApp / Telegram / Slack / Discord / Google Chat / Signal / iMessage / BlueBu
 └──────────────┬────────────────┘
                │
                ├─ Pi agent (RPC)
-               ├─ CLI (minion …)
+               ├─ CLI (openclaw …)
                ├─ WebChat UI
                ├─ macOS app
                └─ iOS / Android nodes
@@ -198,16 +198,16 @@ WhatsApp / Telegram / Slack / Discord / Google Chat / Signal / iMessage / BlueBu
 
 ## Key subsystems
 
-- **[Gateway WebSocket network](https://docs.minion.ai/concepts/architecture)** — single WS control plane for clients, tools, and events (plus ops: [Gateway runbook](https://docs.minion.ai/gateway)).
-- **[Tailscale exposure](https://docs.minion.ai/gateway/tailscale)** — Serve/Funnel for the Gateway dashboard + WS (remote access: [Remote](https://docs.minion.ai/gateway/remote)).
-- **[Browser control](https://docs.minion.ai/tools/browser)** — minion‑managed Chrome/Chromium with CDP control.
-- **[Canvas + A2UI](https://docs.minion.ai/platforms/mac/canvas)** — agent‑driven visual workspace (A2UI host: [Canvas/A2UI](https://docs.minion.ai/platforms/mac/canvas#canvas-a2ui)).
-- **[Voice Wake](https://docs.minion.ai/nodes/voicewake) + [Talk Mode](https://docs.minion.ai/nodes/talk)** — always‑on speech and continuous conversation.
-- **[Nodes](https://docs.minion.ai/nodes)** — Canvas, camera snap/clip, screen record, `location.get`, notifications, plus macOS‑only `system.run`/`system.notify`.
+- **[Gateway WebSocket network](https://docs.openclaw.ai/concepts/architecture)** — single WS control plane for clients, tools, and events (plus ops: [Gateway runbook](https://docs.openclaw.ai/gateway)).
+- **[Tailscale exposure](https://docs.openclaw.ai/gateway/tailscale)** — Serve/Funnel for the Gateway dashboard + WS (remote access: [Remote](https://docs.openclaw.ai/gateway/remote)).
+- **[Browser control](https://docs.openclaw.ai/tools/browser)** — openclaw‑managed Chrome/Chromium with CDP control.
+- **[Canvas + A2UI](https://docs.openclaw.ai/platforms/mac/canvas)** — agent‑driven visual workspace (A2UI host: [Canvas/A2UI](https://docs.openclaw.ai/platforms/mac/canvas#canvas-a2ui)).
+- **[Voice Wake](https://docs.openclaw.ai/nodes/voicewake) + [Talk Mode](https://docs.openclaw.ai/nodes/talk)** — always‑on speech and continuous conversation.
+- **[Nodes](https://docs.openclaw.ai/nodes)** — Canvas, camera snap/clip, screen record, `location.get`, notifications, plus macOS‑only `system.run`/`system.notify`.
 
 ## Tailscale access (Gateway dashboard)
 
-Minion can auto-configure Tailscale **Serve** (tailnet-only) or **Funnel** (public) while the Gateway stays bound to loopback. Configure `gateway.tailscale.mode`:
+OpenClaw can auto-configure Tailscale **Serve** (tailnet-only) or **Funnel** (public) while the Gateway stays bound to loopback. Configure `gateway.tailscale.mode`:
 
 - `off`: no Tailscale automation (default).
 - `serve`: tailnet-only HTTPS via `tailscale serve` (uses Tailscale identity headers by default).
@@ -215,12 +215,12 @@ Minion can auto-configure Tailscale **Serve** (tailnet-only) or **Funnel** (publ
 
 Notes:
 
-- `gateway.bind` must stay `loopback` when Serve/Funnel is enabled (Minion enforces this).
+- `gateway.bind` must stay `loopback` when Serve/Funnel is enabled (OpenClaw enforces this).
 - Serve can be forced to require a password by setting `gateway.auth.mode: "password"` or `gateway.auth.allowTailscale: false`.
 - Funnel refuses to start unless `gateway.auth.mode: "password"` is set.
 - Optional: `gateway.tailscale.resetOnExit` to undo Serve/Funnel on shutdown.
 
-Details: [Tailscale guide](https://docs.minion.ai/gateway/tailscale) · [Web surfaces](https://docs.minion.ai/web)
+Details: [Tailscale guide](https://docs.openclaw.ai/gateway/tailscale) · [Web surfaces](https://docs.openclaw.ai/web)
 
 ## Remote Gateway (Linux is great)
 
@@ -230,7 +230,7 @@ It’s perfectly fine to run the Gateway on a small Linux instance. Clients (mac
 - **Device nodes** run device‑local actions (`system.run`, camera, screen recording, notifications) via `node.invoke`.
   In short: exec runs where the Gateway lives; device actions run where the device lives.
 
-Details: [Remote access](https://docs.minion.ai/gateway/remote) · [Nodes](https://docs.minion.ai/nodes) · [Security](https://docs.minion.ai/gateway/security)
+Details: [Remote access](https://docs.openclaw.ai/gateway/remote) · [Nodes](https://docs.openclaw.ai/nodes) · [Security](https://docs.openclaw.ai/gateway/security)
 
 ## macOS permissions via the Gateway protocol
 
@@ -245,7 +245,7 @@ Elevated bash (host permissions) is separate from macOS TCC:
 - Use `/elevated on|off` to toggle per‑session elevated access when enabled + allowlisted.
 - Gateway persists the per‑session toggle via `sessions.patch` (WS method) alongside `thinkingLevel`, `verboseLevel`, `model`, `sendPolicy`, and `groupActivation`.
 
-Details: [Nodes](https://docs.minion.ai/nodes) · [macOS app](https://docs.minion.ai/platforms/macos) · [Gateway protocol](https://docs.minion.ai/concepts/architecture)
+Details: [Nodes](https://docs.openclaw.ai/nodes) · [macOS app](https://docs.openclaw.ai/platforms/macos) · [Gateway protocol](https://docs.openclaw.ai/concepts/architecture)
 
 ## Agent to Agent (sessions\_\* tools)
 
@@ -254,7 +254,7 @@ Details: [Nodes](https://docs.minion.ai/nodes) · [macOS app](https://docs.minio
 - `sessions_history` — fetch transcript logs for a session.
 - `sessions_send` — message another session; optional reply‑back ping‑pong + announce step (`REPLY_SKIP`, `ANNOUNCE_SKIP`).
 
-Details: [Session tools](https://docs.minion.ai/concepts/session-tool)
+Details: [Session tools](https://docs.openclaw.ai/concepts/session-tool)
 
 ## Skills registry (ClawHub)
 
@@ -267,6 +267,7 @@ ClawHub is a minimal skill registry. With ClawHub enabled, the agent can search 
 Send these in WhatsApp/Telegram/Slack/Google Chat/Microsoft Teams/WebChat (group commands are owner-only):
 
 - `/status` — compact session status (model + tokens, cost when available)
+- `/mesh <goal>` — auto-plan + run a multi-step workflow (`/mesh plan|run|status|retry` available)
 - `/new` or `/reset` — reset the session
 - `/compact` — compact session context (summary)
 - `/think <level>` — off|minimal|low|medium|high|xhigh (GPT-5.2 + Codex models only)
@@ -294,25 +295,25 @@ Note: signed builds required for macOS permissions to stick across rebuilds (see
 
 - Pairs as a node via the Bridge.
 - Voice trigger forwarding + Canvas surface.
-- Controlled via `minion nodes …`.
+- Controlled via `openclaw nodes …`.
 
-Runbook: [iOS connect](https://docs.minion.ai/platforms/ios).
+Runbook: [iOS connect](https://docs.openclaw.ai/platforms/ios).
 
 ### Android node (optional)
 
 - Pairs via the same Bridge + pairing flow as iOS.
 - Exposes Canvas, Camera, and Screen capture commands.
-- Runbook: [Android connect](https://docs.minion.ai/platforms/android).
+- Runbook: [Android connect](https://docs.openclaw.ai/platforms/android).
 
 ## Agent workspace + skills
 
-- Workspace root: `~/.minion/workspace` (configurable via `agents.defaults.workspace`).
+- Workspace root: `~/.openclaw/workspace` (configurable via `agents.defaults.workspace`).
 - Injected prompt files: `AGENTS.md`, `SOUL.md`, `TOOLS.md`.
-- Skills: `~/.minion/workspace/skills/<skill>/SKILL.md`.
+- Skills: `~/.openclaw/workspace/skills/<skill>/SKILL.md`.
 
 ## Configuration
 
-Minimal `~/.minion/minion.json` (model + defaults):
+Minimal `~/.openclaw/openclaw.json` (model + defaults):
 
 ```json5
 {
@@ -322,7 +323,7 @@ Minimal `~/.minion/minion.json` (model + defaults):
 }
 ```
 
-[Full configuration reference (all keys + examples).](https://docs.minion.ai/gateway/configuration)
+[Full configuration reference (all keys + examples).](https://docs.openclaw.ai/gateway/configuration)
 
 ## Security model (important)
 
@@ -330,15 +331,15 @@ Minimal `~/.minion/minion.json` (model + defaults):
 - **Group/channel safety:** set `agents.defaults.sandbox.mode: "non-main"` to run **non‑main sessions** (groups/channels) inside per‑session Docker sandboxes; bash then runs in Docker for those sessions.
 - **Sandbox defaults:** allowlist `bash`, `process`, `read`, `write`, `edit`, `sessions_list`, `sessions_history`, `sessions_send`, `sessions_spawn`; denylist `browser`, `canvas`, `nodes`, `cron`, `discord`, `gateway`.
 
-Details: [Security guide](https://docs.minion.ai/gateway/security) · [Docker + sandboxing](https://docs.minion.ai/install/docker) · [Sandbox config](https://docs.minion.ai/gateway/configuration)
+Details: [Security guide](https://docs.openclaw.ai/gateway/security) · [Docker + sandboxing](https://docs.openclaw.ai/install/docker) · [Sandbox config](https://docs.openclaw.ai/gateway/configuration)
 
-### [WhatsApp](https://docs.minion.ai/channels/whatsapp)
+### [WhatsApp](https://docs.openclaw.ai/channels/whatsapp)
 
-- Link the device: `pnpm minion channels login` (stores creds in `~/.minion/credentials`).
+- Link the device: `pnpm openclaw channels login` (stores creds in `~/.openclaw/credentials`).
 - Allowlist who can talk to the assistant via `channels.whatsapp.allowFrom`.
 - If `channels.whatsapp.groups` is set, it becomes a group allowlist; include `"*"` to allow all.
 
-### [Telegram](https://docs.minion.ai/channels/telegram)
+### [Telegram](https://docs.openclaw.ai/channels/telegram)
 
 - Set `TELEGRAM_BOT_TOKEN` or `channels.telegram.botToken` (env wins).
 - Optional: set `channels.telegram.groups` (with `channels.telegram.groups."*".requireMention`); when set, it is a group allowlist (include `"*"` to allow all). Also `channels.telegram.allowFrom` or `channels.telegram.webhookUrl` + `channels.telegram.webhookSecret` as needed.
@@ -353,14 +354,14 @@ Details: [Security guide](https://docs.minion.ai/gateway/security) · [Docker + 
 }
 ```
 
-### [Slack](https://docs.minion.ai/channels/slack)
+### [Slack](https://docs.openclaw.ai/channels/slack)
 
 - Set `SLACK_BOT_TOKEN` + `SLACK_APP_TOKEN` (or `channels.slack.botToken` + `channels.slack.appToken`).
 
-### [Discord](https://docs.minion.ai/channels/discord)
+### [Discord](https://docs.openclaw.ai/channels/discord)
 
 - Set `DISCORD_BOT_TOKEN` or `channels.discord.token` (env wins).
-- Optional: set `commands.native`, `commands.text`, or `commands.useAccessGroups`, plus `channels.discord.dm.allowFrom`, `channels.discord.guilds`, or `channels.discord.mediaMaxMb` as needed.
+- Optional: set `commands.native`, `commands.text`, or `commands.useAccessGroups`, plus `channels.discord.allowFrom`, `channels.discord.guilds`, or `channels.discord.mediaMaxMb` as needed.
 
 ```json5
 {
@@ -372,27 +373,27 @@ Details: [Security guide](https://docs.minion.ai/gateway/security) · [Docker + 
 }
 ```
 
-### [Signal](https://docs.minion.ai/channels/signal)
+### [Signal](https://docs.openclaw.ai/channels/signal)
 
 - Requires `signal-cli` and a `channels.signal` config section.
 
-### [BlueBubbles (iMessage)](https://docs.minion.ai/channels/bluebubbles)
+### [BlueBubbles (iMessage)](https://docs.openclaw.ai/channels/bluebubbles)
 
 - **Recommended** iMessage integration.
 - Configure `channels.bluebubbles.serverUrl` + `channels.bluebubbles.password` and a webhook (`channels.bluebubbles.webhookPath`).
 - The BlueBubbles server runs on macOS; the Gateway can run on macOS or elsewhere.
 
-### [iMessage (legacy)](https://docs.minion.ai/channels/imessage)
+### [iMessage (legacy)](https://docs.openclaw.ai/channels/imessage)
 
 - Legacy macOS-only integration via `imsg` (Messages must be signed in).
 - If `channels.imessage.groups` is set, it becomes a group allowlist; include `"*"` to allow all.
 
-### [Microsoft Teams](https://docs.minion.ai/channels/msteams)
+### [Microsoft Teams](https://docs.openclaw.ai/channels/msteams)
 
 - Configure a Teams app + Bot Framework, then add a `msteams` config section.
 - Allowlist who can talk via `msteams.allowFrom`; group access via `msteams.groupAllowFrom` or `msteams.groupPolicy: "open"`.
 
-### [WebChat](https://docs.minion.ai/web/webchat)
+### [WebChat](https://docs.openclaw.ai/web/webchat)
 
 - Uses the Gateway WebSocket; no separate WebChat port/config.
 
@@ -411,79 +412,79 @@ Browser control (optional):
 
 Use these when you’re past the onboarding flow and want the deeper reference.
 
-- [Start with the docs index for navigation and “what’s where.”](https://docs.minion.ai)
-- [Read the architecture overview for the gateway + protocol model.](https://docs.minion.ai/concepts/architecture)
-- [Use the full configuration reference when you need every key and example.](https://docs.minion.ai/gateway/configuration)
-- [Run the Gateway by the book with the operational runbook.](https://docs.minion.ai/gateway)
-- [Learn how the Control UI/Web surfaces work and how to expose them safely.](https://docs.minion.ai/web)
-- [Understand remote access over SSH tunnels or tailnets.](https://docs.minion.ai/gateway/remote)
-- [Follow the onboarding wizard flow for a guided setup.](https://docs.minion.ai/start/wizard)
-- [Wire external triggers via the webhook surface.](https://docs.minion.ai/automation/webhook)
-- [Set up Gmail Pub/Sub triggers.](https://docs.minion.ai/automation/gmail-pubsub)
-- [Learn the macOS menu bar companion details.](https://docs.minion.ai/platforms/mac/menu-bar)
-- [Platform guides: Windows (WSL2)](https://docs.minion.ai/platforms/windows), [Linux](https://docs.minion.ai/platforms/linux), [macOS](https://docs.minion.ai/platforms/macos), [iOS](https://docs.minion.ai/platforms/ios), [Android](https://docs.minion.ai/platforms/android)
-- [Debug common failures with the troubleshooting guide.](https://docs.minion.ai/channels/troubleshooting)
-- [Review security guidance before exposing anything.](https://docs.minion.ai/gateway/security)
+- [Start with the docs index for navigation and “what’s where.”](https://docs.openclaw.ai)
+- [Read the architecture overview for the gateway + protocol model.](https://docs.openclaw.ai/concepts/architecture)
+- [Use the full configuration reference when you need every key and example.](https://docs.openclaw.ai/gateway/configuration)
+- [Run the Gateway by the book with the operational runbook.](https://docs.openclaw.ai/gateway)
+- [Learn how the Control UI/Web surfaces work and how to expose them safely.](https://docs.openclaw.ai/web)
+- [Understand remote access over SSH tunnels or tailnets.](https://docs.openclaw.ai/gateway/remote)
+- [Follow the onboarding wizard flow for a guided setup.](https://docs.openclaw.ai/start/wizard)
+- [Wire external triggers via the webhook surface.](https://docs.openclaw.ai/automation/webhook)
+- [Set up Gmail Pub/Sub triggers.](https://docs.openclaw.ai/automation/gmail-pubsub)
+- [Learn the macOS menu bar companion details.](https://docs.openclaw.ai/platforms/mac/menu-bar)
+- [Platform guides: Windows (WSL2)](https://docs.openclaw.ai/platforms/windows), [Linux](https://docs.openclaw.ai/platforms/linux), [macOS](https://docs.openclaw.ai/platforms/macos), [iOS](https://docs.openclaw.ai/platforms/ios), [Android](https://docs.openclaw.ai/platforms/android)
+- [Debug common failures with the troubleshooting guide.](https://docs.openclaw.ai/channels/troubleshooting)
+- [Review security guidance before exposing anything.](https://docs.openclaw.ai/gateway/security)
 
 ## Advanced docs (discovery + control)
 
-- [Discovery + transports](https://docs.minion.ai/gateway/discovery)
-- [Bonjour/mDNS](https://docs.minion.ai/gateway/bonjour)
-- [Gateway pairing](https://docs.minion.ai/gateway/pairing)
-- [Remote gateway README](https://docs.minion.ai/gateway/remote-gateway-readme)
-- [Control UI](https://docs.minion.ai/web/control-ui)
-- [Dashboard](https://docs.minion.ai/web/dashboard)
+- [Discovery + transports](https://docs.openclaw.ai/gateway/discovery)
+- [Bonjour/mDNS](https://docs.openclaw.ai/gateway/bonjour)
+- [Gateway pairing](https://docs.openclaw.ai/gateway/pairing)
+- [Remote gateway README](https://docs.openclaw.ai/gateway/remote-gateway-readme)
+- [Control UI](https://docs.openclaw.ai/web/control-ui)
+- [Dashboard](https://docs.openclaw.ai/web/dashboard)
 
 ## Operations & troubleshooting
 
-- [Health checks](https://docs.minion.ai/gateway/health)
-- [Gateway lock](https://docs.minion.ai/gateway/gateway-lock)
-- [Background process](https://docs.minion.ai/gateway/background-process)
-- [Browser troubleshooting (Linux)](https://docs.minion.ai/tools/browser-linux-troubleshooting)
-- [Logging](https://docs.minion.ai/logging)
+- [Health checks](https://docs.openclaw.ai/gateway/health)
+- [Gateway lock](https://docs.openclaw.ai/gateway/gateway-lock)
+- [Background process](https://docs.openclaw.ai/gateway/background-process)
+- [Browser troubleshooting (Linux)](https://docs.openclaw.ai/tools/browser-linux-troubleshooting)
+- [Logging](https://docs.openclaw.ai/logging)
 
 ## Deep dives
 
-- [Agent loop](https://docs.minion.ai/concepts/agent-loop)
-- [Presence](https://docs.minion.ai/concepts/presence)
-- [TypeBox schemas](https://docs.minion.ai/concepts/typebox)
-- [RPC adapters](https://docs.minion.ai/reference/rpc)
-- [Queue](https://docs.minion.ai/concepts/queue)
+- [Agent loop](https://docs.openclaw.ai/concepts/agent-loop)
+- [Presence](https://docs.openclaw.ai/concepts/presence)
+- [TypeBox schemas](https://docs.openclaw.ai/concepts/typebox)
+- [RPC adapters](https://docs.openclaw.ai/reference/rpc)
+- [Queue](https://docs.openclaw.ai/concepts/queue)
 
 ## Workspace & skills
 
-- [Skills config](https://docs.minion.ai/tools/skills-config)
-- [Default AGENTS](https://docs.minion.ai/reference/AGENTS.default)
-- [Templates: AGENTS](https://docs.minion.ai/reference/templates/AGENTS)
-- [Templates: BOOTSTRAP](https://docs.minion.ai/reference/templates/BOOTSTRAP)
-- [Templates: IDENTITY](https://docs.minion.ai/reference/templates/IDENTITY)
-- [Templates: SOUL](https://docs.minion.ai/reference/templates/SOUL)
-- [Templates: TOOLS](https://docs.minion.ai/reference/templates/TOOLS)
-- [Templates: USER](https://docs.minion.ai/reference/templates/USER)
+- [Skills config](https://docs.openclaw.ai/tools/skills-config)
+- [Default AGENTS](https://docs.openclaw.ai/reference/AGENTS.default)
+- [Templates: AGENTS](https://docs.openclaw.ai/reference/templates/AGENTS)
+- [Templates: BOOTSTRAP](https://docs.openclaw.ai/reference/templates/BOOTSTRAP)
+- [Templates: IDENTITY](https://docs.openclaw.ai/reference/templates/IDENTITY)
+- [Templates: SOUL](https://docs.openclaw.ai/reference/templates/SOUL)
+- [Templates: TOOLS](https://docs.openclaw.ai/reference/templates/TOOLS)
+- [Templates: USER](https://docs.openclaw.ai/reference/templates/USER)
 
 ## Platform internals
 
-- [macOS dev setup](https://docs.minion.ai/platforms/mac/dev-setup)
-- [macOS menu bar](https://docs.minion.ai/platforms/mac/menu-bar)
-- [macOS voice wake](https://docs.minion.ai/platforms/mac/voicewake)
-- [iOS node](https://docs.minion.ai/platforms/ios)
-- [Android node](https://docs.minion.ai/platforms/android)
-- [Windows (WSL2)](https://docs.minion.ai/platforms/windows)
-- [Linux app](https://docs.minion.ai/platforms/linux)
+- [macOS dev setup](https://docs.openclaw.ai/platforms/mac/dev-setup)
+- [macOS menu bar](https://docs.openclaw.ai/platforms/mac/menu-bar)
+- [macOS voice wake](https://docs.openclaw.ai/platforms/mac/voicewake)
+- [iOS node](https://docs.openclaw.ai/platforms/ios)
+- [Android node](https://docs.openclaw.ai/platforms/android)
+- [Windows (WSL2)](https://docs.openclaw.ai/platforms/windows)
+- [Linux app](https://docs.openclaw.ai/platforms/linux)
 
 ## Email hooks (Gmail)
 
-- [docs.minion.ai/gmail-pubsub](https://docs.minion.ai/automation/gmail-pubsub)
+- [docs.openclaw.ai/gmail-pubsub](https://docs.openclaw.ai/automation/gmail-pubsub)
 
 ## Molty
 
-Minion was built for **Molty**, a space squid AI assistant. 🦑
+OpenClaw was built for **Molty**, a space lobster AI assistant. 🦞
 by Peter Steinberger and the community.
 
-- [minion.ai](https://minion.ai)
+- [openclaw.ai](https://openclaw.ai)
 - [soul.md](https://soul.md)
 - [steipete.me](https://steipete.me)
-- [@minion](https://x.com/minion)
+- [@openclaw](https://x.com/openclaw)
 
 ## Community
 
@@ -492,9 +493,9 @@ AI/vibe-coded PRs welcome! 🤖
 
 Special thanks to [Mario Zechner](https://mariozechner.at/) for his support and for
 [pi-mono](https://github.com/badlogic/pi-mono).
-Special thanks to Adam Doppelt for squid.bot.
+Special thanks to Adam Doppelt for lobster.bot.
 
-Thanks to all contributors:
+Thanks to all clawtributors:
 
 <p align="left">
   <a href="https://github.com/steipete"><img src="https://avatars.githubusercontent.com/u/58493?v=4&s=48" width="48" height="48" alt="steipete" title="steipete"/></a> <a href="https://github.com/joshp123"><img src="https://avatars.githubusercontent.com/u/1497361?v=4&s=48" width="48" height="48" alt="joshp123" title="joshp123"/></a> <a href="https://github.com/cpojer"><img src="https://avatars.githubusercontent.com/u/13352?v=4&s=48" width="48" height="48" alt="cpojer" title="cpojer"/></a> <a href="https://github.com/mbelinky"><img src="https://avatars.githubusercontent.com/u/132747814?v=4&s=48" width="48" height="48" alt="Mariano Belinky" title="Mariano Belinky"/></a> <a href="https://github.com/sebslight"><img src="https://avatars.githubusercontent.com/u/19554889?v=4&s=48" width="48" height="48" alt="sebslight" title="sebslight"/></a> <a href="https://github.com/Takhoffman"><img src="https://avatars.githubusercontent.com/u/781889?v=4&s=48" width="48" height="48" alt="Takhoffman" title="Takhoffman"/></a> <a href="https://github.com/quotentiroler"><img src="https://avatars.githubusercontent.com/u/40643627?v=4&s=48" width="48" height="48" alt="quotentiroler" title="quotentiroler"/></a> <a href="https://github.com/bohdanpodvirnyi"><img src="https://avatars.githubusercontent.com/u/31819391?v=4&s=48" width="48" height="48" alt="bohdanpodvirnyi" title="bohdanpodvirnyi"/></a> <a href="https://github.com/tyler6204"><img src="https://avatars.githubusercontent.com/u/64381258?v=4&s=48" width="48" height="48" alt="tyler6204" title="tyler6204"/></a> <a href="https://github.com/iHildy"><img src="https://avatars.githubusercontent.com/u/25069719?v=4&s=48" width="48" height="48" alt="iHildy" title="iHildy"/></a>
@@ -531,7 +532,7 @@ Thanks to all contributors:
   <a href="https://github.com/search?q=Pocket%20Clawd"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Pocket Clawd" title="Pocket Clawd"/></a> <a href="https://github.com/RayBB"><img src="https://avatars.githubusercontent.com/u/921217?v=4&s=48" width="48" height="48" alt="RayBB" title="RayBB"/></a> <a href="https://github.com/robaxelsen"><img src="https://avatars.githubusercontent.com/u/13132899?v=4&s=48" width="48" height="48" alt="robaxelsen" title="robaxelsen"/></a> <a href="https://github.com/search?q=Sash%20Catanzarite"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Sash Catanzarite" title="Sash Catanzarite"/></a> <a href="https://github.com/Suksham-sharma"><img src="https://avatars.githubusercontent.com/u/94667656?v=4&s=48" width="48" height="48" alt="Suksham-sharma" title="Suksham-sharma"/></a> <a href="https://github.com/T5-AndyML"><img src="https://avatars.githubusercontent.com/u/22801233?v=4&s=48" width="48" height="48" alt="T5-AndyML" title="T5-AndyML"/></a> <a href="https://github.com/thejhinvirtuoso"><img src="https://avatars.githubusercontent.com/u/258521837?v=4&s=48" width="48" height="48" alt="thejhinvirtuoso" title="thejhinvirtuoso"/></a> <a href="https://github.com/travisp"><img src="https://avatars.githubusercontent.com/u/165698?v=4&s=48" width="48" height="48" alt="travisp" title="travisp"/></a> <a href="https://github.com/search?q=VAC"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="VAC" title="VAC"/></a> <a href="https://github.com/search?q=william%20arzt"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="william arzt" title="william arzt"/></a>
   <a href="https://github.com/yudshj"><img src="https://avatars.githubusercontent.com/u/16971372?v=4&s=48" width="48" height="48" alt="yudshj" title="yudshj"/></a> <a href="https://github.com/zknicker"><img src="https://avatars.githubusercontent.com/u/1164085?v=4&s=48" width="48" height="48" alt="zknicker" title="zknicker"/></a> <a href="https://github.com/0oAstro"><img src="https://avatars.githubusercontent.com/u/79555780?v=4&s=48" width="48" height="48" alt="0oAstro" title="0oAstro"/></a> <a href="https://github.com/Abdul535"><img src="https://avatars.githubusercontent.com/u/54276938?v=4&s=48" width="48" height="48" alt="Abdul535" title="Abdul535"/></a> <a href="https://github.com/abhaymundhara"><img src="https://avatars.githubusercontent.com/u/62872231?v=4&s=48" width="48" height="48" alt="abhaymundhara" title="abhaymundhara"/></a> <a href="https://github.com/aduk059"><img src="https://avatars.githubusercontent.com/u/257603478?v=4&s=48" width="48" height="48" alt="aduk059" title="aduk059"/></a> <a href="https://github.com/aisling404"><img src="https://avatars.githubusercontent.com/u/211950534?v=4&s=48" width="48" height="48" alt="aisling404" title="aisling404"/></a> <a href="https://github.com/search?q=alejandro%20maza"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="alejandro maza" title="alejandro maza"/></a> <a href="https://github.com/Alex-Alaniz"><img src="https://avatars.githubusercontent.com/u/88956822?v=4&s=48" width="48" height="48" alt="Alex-Alaniz" title="Alex-Alaniz"/></a> <a href="https://github.com/alexanderatallah"><img src="https://avatars.githubusercontent.com/u/1011391?v=4&s=48" width="48" height="48" alt="alexanderatallah" title="alexanderatallah"/></a>
   <a href="https://github.com/alexstyl"><img src="https://avatars.githubusercontent.com/u/1665273?v=4&s=48" width="48" height="48" alt="alexstyl" title="alexstyl"/></a> <a href="https://github.com/AlexZhangji"><img src="https://avatars.githubusercontent.com/u/3280924?v=4&s=48" width="48" height="48" alt="AlexZhangji" title="AlexZhangji"/></a> <a href="https://github.com/andrewting19"><img src="https://avatars.githubusercontent.com/u/10536704?v=4&s=48" width="48" height="48" alt="andrewting19" title="andrewting19"/></a> <a href="https://github.com/anpoirier"><img src="https://avatars.githubusercontent.com/u/1245729?v=4&s=48" width="48" height="48" alt="anpoirier" title="anpoirier"/></a> <a href="https://github.com/araa47"><img src="https://avatars.githubusercontent.com/u/22760261?v=4&s=48" width="48" height="48" alt="araa47" title="araa47"/></a> <a href="https://github.com/arthyn"><img src="https://avatars.githubusercontent.com/u/5466421?v=4&s=48" width="48" height="48" alt="arthyn" title="arthyn"/></a> <a href="https://github.com/Asleep123"><img src="https://avatars.githubusercontent.com/u/122379135?v=4&s=48" width="48" height="48" alt="Asleep123" title="Asleep123"/></a> <a href="https://github.com/search?q=Ayush%20Ojha"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Ayush Ojha" title="Ayush Ojha"/></a> <a href="https://github.com/Ayush10"><img src="https://avatars.githubusercontent.com/u/7945279?v=4&s=48" width="48" height="48" alt="Ayush10" title="Ayush10"/></a> <a href="https://github.com/bguidolim"><img src="https://avatars.githubusercontent.com/u/987360?v=4&s=48" width="48" height="48" alt="bguidolim" title="bguidolim"/></a>
-  <a href="https://github.com/bolismauro"><img src="https://avatars.githubusercontent.com/u/771999?v=4&s=48" width="48" height="48" alt="bolismauro" title="bolismauro"/></a> <a href="https://github.com/caelum0x"><img src="https://avatars.githubusercontent.com/u/130079063?v=4&s=48" width="48" height="48" alt="caelum0x" title="caelum0x"/></a> <a href="https://github.com/championswimmer"><img src="https://avatars.githubusercontent.com/u/1327050?v=4&s=48" width="48" height="48" alt="championswimmer" title="championswimmer"/></a> <a href="https://github.com/chenyuan99"><img src="https://avatars.githubusercontent.com/u/25518100?v=4&s=48" width="48" height="48" alt="chenyuan99" title="chenyuan99"/></a> <a href="https://github.com/Chloe-VP"><img src="https://avatars.githubusercontent.com/u/257371598?v=4&s=48" width="48" height="48" alt="Chloe-VP" title="Chloe-VP"/></a> <a href="https://github.com/search?q=Claude%20Code"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Claude Code" title="Claude Code"/></a> <a href="https://github.com/search?q=Minionbot%20Maintainers"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Minionbot Maintainers" title="Minionbot Maintainers"/></a> <a href="https://github.com/conhecendoia"><img src="https://avatars.githubusercontent.com/u/82890727?v=4&s=48" width="48" height="48" alt="conhecendoia" title="conhecendoia"/></a> <a href="https://github.com/dasilva333"><img src="https://avatars.githubusercontent.com/u/947827?v=4&s=48" width="48" height="48" alt="dasilva333" title="dasilva333"/></a> <a href="https://github.com/David-Marsh-Photo"><img src="https://avatars.githubusercontent.com/u/228404527?v=4&s=48" width="48" height="48" alt="David-Marsh-Photo" title="David-Marsh-Photo"/></a>
+  <a href="https://github.com/bolismauro"><img src="https://avatars.githubusercontent.com/u/771999?v=4&s=48" width="48" height="48" alt="bolismauro" title="bolismauro"/></a> <a href="https://github.com/caelum0x"><img src="https://avatars.githubusercontent.com/u/130079063?v=4&s=48" width="48" height="48" alt="caelum0x" title="caelum0x"/></a> <a href="https://github.com/championswimmer"><img src="https://avatars.githubusercontent.com/u/1327050?v=4&s=48" width="48" height="48" alt="championswimmer" title="championswimmer"/></a> <a href="https://github.com/chenyuan99"><img src="https://avatars.githubusercontent.com/u/25518100?v=4&s=48" width="48" height="48" alt="chenyuan99" title="chenyuan99"/></a> <a href="https://github.com/Chloe-VP"><img src="https://avatars.githubusercontent.com/u/257371598?v=4&s=48" width="48" height="48" alt="Chloe-VP" title="Chloe-VP"/></a> <a href="https://github.com/search?q=Claude%20Code"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Claude Code" title="Claude Code"/></a> <a href="https://github.com/search?q=Clawdbot%20Maintainers"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Clawdbot Maintainers" title="Clawdbot Maintainers"/></a> <a href="https://github.com/conhecendoia"><img src="https://avatars.githubusercontent.com/u/82890727?v=4&s=48" width="48" height="48" alt="conhecendoia" title="conhecendoia"/></a> <a href="https://github.com/dasilva333"><img src="https://avatars.githubusercontent.com/u/947827?v=4&s=48" width="48" height="48" alt="dasilva333" title="dasilva333"/></a> <a href="https://github.com/David-Marsh-Photo"><img src="https://avatars.githubusercontent.com/u/228404527?v=4&s=48" width="48" height="48" alt="David-Marsh-Photo" title="David-Marsh-Photo"/></a>
   <a href="https://github.com/deepsoumya617"><img src="https://avatars.githubusercontent.com/u/80877391?v=4&s=48" width="48" height="48" alt="deepsoumya617" title="deepsoumya617"/></a> <a href="https://github.com/search?q=Developer"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Developer" title="Developer"/></a> <a href="https://github.com/search?q=Dimitrios%20Ploutarchos"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Dimitrios Ploutarchos" title="Dimitrios Ploutarchos"/></a> <a href="https://github.com/search?q=Drake%20Thomsen"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Drake Thomsen" title="Drake Thomsen"/></a> <a href="https://github.com/dvrshil"><img src="https://avatars.githubusercontent.com/u/81693876?v=4&s=48" width="48" height="48" alt="dvrshil" title="dvrshil"/></a> <a href="https://github.com/dxd5001"><img src="https://avatars.githubusercontent.com/u/1886046?v=4&s=48" width="48" height="48" alt="dxd5001" title="dxd5001"/></a> <a href="https://github.com/dylanneve1"><img src="https://avatars.githubusercontent.com/u/31746704?v=4&s=48" width="48" height="48" alt="dylanneve1" title="dylanneve1"/></a> <a href="https://github.com/search?q=Felix%20Krause"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Felix Krause" title="Felix Krause"/></a> <a href="https://github.com/foeken"><img src="https://avatars.githubusercontent.com/u/13864?v=4&s=48" width="48" height="48" alt="foeken" title="foeken"/></a> <a href="https://github.com/frankekn"><img src="https://avatars.githubusercontent.com/u/4488090?v=4&s=48" width="48" height="48" alt="frankekn" title="frankekn"/></a>
   <a href="https://github.com/fredheir"><img src="https://avatars.githubusercontent.com/u/3304869?v=4&s=48" width="48" height="48" alt="fredheir" title="fredheir"/></a> <a href="https://github.com/Fronut"><img src="https://avatars.githubusercontent.com/u/165925262?v=4&s=48" width="48" height="48" alt="Fronut" title="Fronut"/></a> <a href="https://github.com/search?q=ganghyun%20kim"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="ganghyun kim" title="ganghyun kim"/></a> <a href="https://github.com/grrowl"><img src="https://avatars.githubusercontent.com/u/907140?v=4&s=48" width="48" height="48" alt="grrowl" title="grrowl"/></a> <a href="https://github.com/gtsifrikas"><img src="https://avatars.githubusercontent.com/u/8904378?v=4&s=48" width="48" height="48" alt="gtsifrikas" title="gtsifrikas"/></a> <a href="https://github.com/HassanFleyah"><img src="https://avatars.githubusercontent.com/u/228002017?v=4&s=48" width="48" height="48" alt="HassanFleyah" title="HassanFleyah"/></a> <a href="https://github.com/HazAT"><img src="https://avatars.githubusercontent.com/u/363802?v=4&s=48" width="48" height="48" alt="HazAT" title="HazAT"/></a> <a href="https://github.com/hrdwdmrbl"><img src="https://avatars.githubusercontent.com/u/554881?v=4&s=48" width="48" height="48" alt="hrdwdmrbl" title="hrdwdmrbl"/></a> <a href="https://github.com/hugobarauna"><img src="https://avatars.githubusercontent.com/u/2719?v=4&s=48" width="48" height="48" alt="hugobarauna" title="hugobarauna"/></a> <a href="https://github.com/iamEvanYT"><img src="https://avatars.githubusercontent.com/u/47493765?v=4&s=48" width="48" height="48" alt="iamEvanYT" title="iamEvanYT"/></a>
   <a href="https://github.com/ichbinlucaskim"><img src="https://avatars.githubusercontent.com/u/125564751?v=4&s=48" width="48" height="48" alt="ichbinlucaskim" title="ichbinlucaskim"/></a> <a href="https://github.com/search?q=Jamie%20Openshaw"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Jamie Openshaw" title="Jamie Openshaw"/></a> <a href="https://github.com/search?q=Jane"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Jane" title="Jane"/></a> <a href="https://github.com/search?q=Jarvis%20Deploy"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Jarvis Deploy" title="Jarvis Deploy"/></a> <a href="https://github.com/search?q=Jefferson%20Nunn"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Jefferson Nunn" title="Jefferson Nunn"/></a> <a href="https://github.com/jogi47"><img src="https://avatars.githubusercontent.com/u/1710139?v=4&s=48" width="48" height="48" alt="jogi47" title="jogi47"/></a> <a href="https://github.com/kentaro"><img src="https://avatars.githubusercontent.com/u/3458?v=4&s=48" width="48" height="48" alt="kentaro" title="kentaro"/></a> <a href="https://github.com/search?q=Kevin%20Lin"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Kevin Lin" title="Kevin Lin"/></a> <a href="https://github.com/kira-ariaki"><img src="https://avatars.githubusercontent.com/u/257352493?v=4&s=48" width="48" height="48" alt="kira-ariaki" title="kira-ariaki"/></a> <a href="https://github.com/kitze"><img src="https://avatars.githubusercontent.com/u/1160594?v=4&s=48" width="48" height="48" alt="kitze" title="kitze"/></a>
@@ -539,11 +540,12 @@ Thanks to all contributors:
   <a href="https://github.com/martinpucik"><img src="https://avatars.githubusercontent.com/u/5503097?v=4&s=48" width="48" height="48" alt="martinpucik" title="martinpucik"/></a> <a href="https://github.com/search?q=Matt%20mini"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Matt mini" title="Matt mini"/></a> <a href="https://github.com/mertcicekci0"><img src="https://avatars.githubusercontent.com/u/179321902?v=4&s=48" width="48" height="48" alt="mertcicekci0" title="mertcicekci0"/></a> <a href="https://github.com/search?q=Miles"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Miles" title="Miles"/></a> <a href="https://github.com/search?q=minghinmatthewlam"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="minghinmatthewlam" title="minghinmatthewlam"/></a> <a href="https://github.com/mrdbstn"><img src="https://avatars.githubusercontent.com/u/58957632?v=4&s=48" width="48" height="48" alt="mrdbstn" title="mrdbstn"/></a> <a href="https://github.com/MSch"><img src="https://avatars.githubusercontent.com/u/7475?v=4&s=48" width="48" height="48" alt="MSch" title="MSch"/></a> <a href="https://github.com/search?q=mudrii"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="mudrii" title="mudrii"/></a> <a href="https://github.com/search?q=Mustafa%20Tag%20Eldeen"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Mustafa Tag Eldeen" title="Mustafa Tag Eldeen"/></a> <a href="https://github.com/search?q=myfunc"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="myfunc" title="myfunc"/></a>
   <a href="https://github.com/mylukin"><img src="https://avatars.githubusercontent.com/u/1021019?v=4&s=48" width="48" height="48" alt="mylukin" title="mylukin"/></a> <a href="https://github.com/nathanbosse"><img src="https://avatars.githubusercontent.com/u/4040669?v=4&s=48" width="48" height="48" alt="nathanbosse" title="nathanbosse"/></a> <a href="https://github.com/ndraiman"><img src="https://avatars.githubusercontent.com/u/12609607?v=4&s=48" width="48" height="48" alt="ndraiman" title="ndraiman"/></a> <a href="https://github.com/nexty5870"><img src="https://avatars.githubusercontent.com/u/3869659?v=4&s=48" width="48" height="48" alt="nexty5870" title="nexty5870"/></a> <a href="https://github.com/Noctivoro"><img src="https://avatars.githubusercontent.com/u/183974570?v=4&s=48" width="48" height="48" alt="Noctivoro" title="Noctivoro"/></a> <a href="https://github.com/Omar-Khaleel"><img src="https://avatars.githubusercontent.com/u/240748662?v=4&s=48" width="48" height="48" alt="Omar-Khaleel" title="Omar-Khaleel"/></a> <a href="https://github.com/ozgur-polat"><img src="https://avatars.githubusercontent.com/u/26483942?v=4&s=48" width="48" height="48" alt="ozgur-polat" title="ozgur-polat"/></a> <a href="https://github.com/search?q=pasogott"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="pasogott" title="pasogott"/></a> <a href="https://github.com/search?q=plum-dawg"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="plum-dawg" title="plum-dawg"/></a> <a href="https://github.com/search?q=pookNast"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="pookNast" title="pookNast"/></a>
   <a href="https://github.com/ppamment"><img src="https://avatars.githubusercontent.com/u/2122919?v=4&s=48" width="48" height="48" alt="ppamment" title="ppamment"/></a> <a href="https://github.com/prathamdby"><img src="https://avatars.githubusercontent.com/u/134331217?v=4&s=48" width="48" height="48" alt="prathamdby" title="prathamdby"/></a> <a href="https://github.com/ptn1411"><img src="https://avatars.githubusercontent.com/u/57529765?v=4&s=48" width="48" height="48" alt="ptn1411" title="ptn1411"/></a> <a href="https://github.com/search?q=rafaelreis-r"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="rafaelreis-r" title="rafaelreis-r"/></a> <a href="https://github.com/rafelbev"><img src="https://avatars.githubusercontent.com/u/467120?v=4&s=48" width="48" height="48" alt="rafelbev" title="rafelbev"/></a> <a href="https://github.com/reeltimeapps"><img src="https://avatars.githubusercontent.com/u/637338?v=4&s=48" width="48" height="48" alt="reeltimeapps" title="reeltimeapps"/></a> <a href="https://github.com/RLTCmpe"><img src="https://avatars.githubusercontent.com/u/10762242?v=4&s=48" width="48" height="48" alt="RLTCmpe" title="RLTCmpe"/></a> <a href="https://github.com/search?q=robhparker"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="robhparker" title="robhparker"/></a> <a href="https://github.com/rohansachinpatil"><img src="https://avatars.githubusercontent.com/u/172933149?v=4&s=48" width="48" height="48" alt="rohansachinpatil" title="rohansachinpatil"/></a> <a href="https://github.com/search?q=Rony%20Kelner"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Rony Kelner" title="Rony Kelner"/></a>
-  <a href="https://github.com/ryancnelson"><img src="https://avatars.githubusercontent.com/u/347171?v=4&s=48" width="48" height="48" alt="ryancnelson" title="ryancnelson"/></a> <a href="https://github.com/search?q=Samrat%20Jha"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Samrat Jha" title="Samrat Jha"/></a> <a href="https://github.com/search?q=seans-minionbot"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="seans-minionbot" title="seans-minionbot"/></a> <a href="https://github.com/senoldogann"><img src="https://avatars.githubusercontent.com/u/45736551?v=4&s=48" width="48" height="48" alt="senoldogann" title="senoldogann"/></a> <a href="https://github.com/Seredeep"><img src="https://avatars.githubusercontent.com/u/22802816?v=4&s=48" width="48" height="48" alt="Seredeep" title="Seredeep"/></a> <a href="https://github.com/sergical"><img src="https://avatars.githubusercontent.com/u/3760543?v=4&s=48" width="48" height="48" alt="sergical" title="sergical"/></a> <a href="https://github.com/search?q=shatner"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="shatner" title="shatner"/></a> <a href="https://github.com/shiv19"><img src="https://avatars.githubusercontent.com/u/9407019?v=4&s=48" width="48" height="48" alt="shiv19" title="shiv19"/></a> <a href="https://github.com/shiyuanhai"><img src="https://avatars.githubusercontent.com/u/1187370?v=4&s=48" width="48" height="48" alt="shiyuanhai" title="shiyuanhai"/></a> <a href="https://github.com/Shrinija17"><img src="https://avatars.githubusercontent.com/u/199155426?v=4&s=48" width="48" height="48" alt="Shrinija17" title="Shrinija17"/></a>
+  <a href="https://github.com/ryancnelson"><img src="https://avatars.githubusercontent.com/u/347171?v=4&s=48" width="48" height="48" alt="ryancnelson" title="ryancnelson"/></a> <a href="https://github.com/search?q=Samrat%20Jha"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Samrat Jha" title="Samrat Jha"/></a> <a href="https://github.com/search?q=seans-openclawbot"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="seans-openclawbot" title="seans-openclawbot"/></a> <a href="https://github.com/senoldogann"><img src="https://avatars.githubusercontent.com/u/45736551?v=4&s=48" width="48" height="48" alt="senoldogann" title="senoldogann"/></a> <a href="https://github.com/Seredeep"><img src="https://avatars.githubusercontent.com/u/22802816?v=4&s=48" width="48" height="48" alt="Seredeep" title="Seredeep"/></a> <a href="https://github.com/sergical"><img src="https://avatars.githubusercontent.com/u/3760543?v=4&s=48" width="48" height="48" alt="sergical" title="sergical"/></a> <a href="https://github.com/search?q=shatner"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="shatner" title="shatner"/></a> <a href="https://github.com/shiv19"><img src="https://avatars.githubusercontent.com/u/9407019?v=4&s=48" width="48" height="48" alt="shiv19" title="shiv19"/></a> <a href="https://github.com/shiyuanhai"><img src="https://avatars.githubusercontent.com/u/1187370?v=4&s=48" width="48" height="48" alt="shiyuanhai" title="shiyuanhai"/></a> <a href="https://github.com/Shrinija17"><img src="https://avatars.githubusercontent.com/u/199155426?v=4&s=48" width="48" height="48" alt="Shrinija17" title="Shrinija17"/></a>
   <a href="https://github.com/siraht"><img src="https://avatars.githubusercontent.com/u/73152895?v=4&s=48" width="48" height="48" alt="siraht" title="siraht"/></a> <a href="https://github.com/snopoke"><img src="https://avatars.githubusercontent.com/u/249606?v=4&s=48" width="48" height="48" alt="snopoke" title="snopoke"/></a> <a href="https://github.com/search?q=spiceoogway"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="spiceoogway" title="spiceoogway"/></a> <a href="https://github.com/stephenchen2025"><img src="https://avatars.githubusercontent.com/u/218387130?v=4&s=48" width="48" height="48" alt="stephenchen2025" title="stephenchen2025"/></a> <a href="https://github.com/search?q=succ985"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="succ985" title="succ985"/></a> <a href="https://github.com/Suvink"><img src="https://avatars.githubusercontent.com/u/10671497?v=4&s=48" width="48" height="48" alt="Suvink" title="Suvink"/></a> <a href="https://github.com/search?q=techboss"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="techboss" title="techboss"/></a> <a href="https://github.com/testingabc321"><img src="https://avatars.githubusercontent.com/u/8577388?v=4&s=48" width="48" height="48" alt="testingabc321" title="testingabc321"/></a> <a href="https://github.com/search?q=tewatia"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="tewatia" title="tewatia"/></a> <a href="https://github.com/search?q=The%20Admiral"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="The Admiral" title="The Admiral"/></a>
   <a href="https://github.com/search?q=therealZpoint-bot"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="therealZpoint-bot" title="therealZpoint-bot"/></a> <a href="https://github.com/thesash"><img src="https://avatars.githubusercontent.com/u/1166151?v=4&s=48" width="48" height="48" alt="thesash" title="thesash"/></a> <a href="https://github.com/search?q=uos-status"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="uos-status" title="uos-status"/></a> <a href="https://github.com/vcastellm"><img src="https://avatars.githubusercontent.com/u/47026?v=4&s=48" width="48" height="48" alt="vcastellm" title="vcastellm"/></a> <a href="https://github.com/search?q=Vibe%20Kanban"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Vibe Kanban" title="Vibe Kanban"/></a> <a href="https://github.com/vincentkoc"><img src="https://avatars.githubusercontent.com/u/25068?v=4&s=48" width="48" height="48" alt="vincentkoc" title="vincentkoc"/></a> <a href="https://github.com/search?q=void"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="void" title="void"/></a> <a href="https://github.com/search?q=Vultr-Clawd%20Admin"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Vultr-Clawd Admin" title="Vultr-Clawd Admin"/></a> <a href="https://github.com/search?q=Wimmie"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Wimmie" title="Wimmie"/></a> <a href="https://github.com/search?q=wolfred"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="wolfred" title="wolfred"/></a>
   <a href="https://github.com/wstock"><img src="https://avatars.githubusercontent.com/u/1394687?v=4&s=48" width="48" height="48" alt="wstock" title="wstock"/></a> <a href="https://github.com/wytheme"><img src="https://avatars.githubusercontent.com/u/5009358?v=4&s=48" width="48" height="48" alt="wytheme" title="wytheme"/></a> <a href="https://github.com/YangHuang2280"><img src="https://avatars.githubusercontent.com/u/201681634?v=4&s=48" width="48" height="48" alt="YangHuang2280" title="YangHuang2280"/></a> <a href="https://github.com/yazinsai"><img src="https://avatars.githubusercontent.com/u/1846034?v=4&s=48" width="48" height="48" alt="yazinsai" title="yazinsai"/></a> <a href="https://github.com/yevhen"><img src="https://avatars.githubusercontent.com/u/107726?v=4&s=48" width="48" height="48" alt="yevhen" title="yevhen"/></a> <a href="https://github.com/YiWang24"><img src="https://avatars.githubusercontent.com/u/176262341?v=4&s=48" width="48" height="48" alt="YiWang24" title="YiWang24"/></a> <a href="https://github.com/search?q=ymat19"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="ymat19" title="ymat19"/></a> <a href="https://github.com/search?q=Zach%20Knickerbocker"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Zach Knickerbocker" title="Zach Knickerbocker"/></a> <a href="https://github.com/zackerthescar"><img src="https://avatars.githubusercontent.com/u/38077284?v=4&s=48" width="48" height="48" alt="zackerthescar" title="zackerthescar"/></a> <a href="https://github.com/search?q=zhixian"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="zhixian" title="zhixian"/></a>
   <a href="https://github.com/0xJonHoldsCrypto"><img src="https://avatars.githubusercontent.com/u/81202085?v=4&s=48" width="48" height="48" alt="0xJonHoldsCrypto" title="0xJonHoldsCrypto"/></a> <a href="https://github.com/aaronn"><img src="https://avatars.githubusercontent.com/u/1653630?v=4&s=48" width="48" height="48" alt="aaronn" title="aaronn"/></a> <a href="https://github.com/Alphonse-arianee"><img src="https://avatars.githubusercontent.com/u/254457365?v=4&s=48" width="48" height="48" alt="Alphonse-arianee" title="Alphonse-arianee"/></a> <a href="https://github.com/atalovesyou"><img src="https://avatars.githubusercontent.com/u/3534502?v=4&s=48" width="48" height="48" alt="atalovesyou" title="atalovesyou"/></a> <a href="https://github.com/search?q=Azade"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Azade" title="Azade"/></a> <a href="https://github.com/carlulsoe"><img src="https://avatars.githubusercontent.com/u/34673973?v=4&s=48" width="48" height="48" alt="carlulsoe" title="carlulsoe"/></a> <a href="https://github.com/search?q=ddyo"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="ddyo" title="ddyo"/></a> <a href="https://github.com/search?q=Erik"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Erik" title="Erik"/></a> <a href="https://github.com/jiulingyun"><img src="https://avatars.githubusercontent.com/u/126459548?v=4&s=48" width="48" height="48" alt="jiulingyun" title="jiulingyun"/></a> <a href="https://github.com/latitudeki5223"><img src="https://avatars.githubusercontent.com/u/119656367?v=4&s=48" width="48" height="48" alt="latitudeki5223" title="latitudeki5223"/></a>
   <a href="https://github.com/search?q=Manuel%20Maly"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Manuel Maly" title="Manuel Maly"/></a> <a href="https://github.com/minghinmatthewlam"><img src="https://avatars.githubusercontent.com/u/14224566?v=4&s=48" width="48" height="48" alt="minghinmatthewlam" title="minghinmatthewlam"/></a> <a href="https://github.com/search?q=Mourad%20Boustani"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Mourad Boustani" title="Mourad Boustani"/></a> <a href="https://github.com/odrobnik"><img src="https://avatars.githubusercontent.com/u/333270?v=4&s=48" width="48" height="48" alt="odrobnik" title="odrobnik"/></a> <a href="https://github.com/pcty-nextgen-ios-builder"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="pcty-nextgen-ios-builder" title="pcty-nextgen-ios-builder"/></a> <a href="https://github.com/search?q=Quentin"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Quentin" title="Quentin"/></a> <a href="https://github.com/rafaelreis-r"><img src="https://avatars.githubusercontent.com/u/57492577?v=4&s=48" width="48" height="48" alt="rafaelreis-r" title="rafaelreis-r"/></a> <a href="https://github.com/search?q=Randy%20Torres"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Randy Torres" title="Randy Torres"/></a> <a href="https://github.com/rhjoh"><img src="https://avatars.githubusercontent.com/u/105699450?v=4&s=48" width="48" height="48" alt="rhjoh" title="rhjoh"/></a> <a href="https://github.com/search?q=Rolf%20Fredheim"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="Rolf Fredheim" title="Rolf Fredheim"/></a>
   <a href="https://github.com/ronak-guliani"><img src="https://avatars.githubusercontent.com/u/23518228?v=4&s=48" width="48" height="48" alt="ronak-guliani" title="ronak-guliani"/></a> <a href="https://github.com/search?q=William%20Stock"><img src="assets/avatar-placeholder.svg" width="48" height="48" alt="William Stock" title="William Stock"/></a>
+     <a href="https://github.com/AkashKobal"><img src="https://avatars.githubusercontent.com/u/98216083?v=4" width="48" height="48" alt="Akash Kobal" title="Akash Kobal"/></a>
 </p>

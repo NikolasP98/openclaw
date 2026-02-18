@@ -1,11 +1,11 @@
-import type { MinionConfig } from "../../config/config.js";
-import type { SandboxConfig, SandboxToolPolicyResolved } from "./types.js";
 import { formatCliCommand } from "../../cli/command-format.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { canonicalizeMainSessionAlias, resolveAgentMainSessionKey } from "../../config/sessions.js";
 import { resolveSessionAgentId } from "../agent-scope.js";
 import { expandToolGroups } from "../tool-policy.js";
 import { resolveSandboxConfigForAgent } from "./config.js";
 import { resolveSandboxToolPolicyForAgent } from "./tool-policy.js";
+import type { SandboxConfig, SandboxToolPolicyResolved } from "./types.js";
 
 function shouldSandboxSession(cfg: SandboxConfig, sessionKey: string, mainSessionKey: string) {
   if (cfg.mode === "off") {
@@ -17,7 +17,10 @@ function shouldSandboxSession(cfg: SandboxConfig, sessionKey: string, mainSessio
   return sessionKey.trim() !== mainSessionKey.trim();
 }
 
-function resolveMainSessionKeyForSandbox(params: { cfg?: MinionConfig; agentId: string }): string {
+function resolveMainSessionKeyForSandbox(params: {
+  cfg?: OpenClawConfig;
+  agentId: string;
+}): string {
   if (params.cfg?.session?.scope === "global") {
     return "global";
   }
@@ -28,7 +31,7 @@ function resolveMainSessionKeyForSandbox(params: { cfg?: MinionConfig; agentId: 
 }
 
 function resolveComparableSessionKeyForSandbox(params: {
-  cfg?: MinionConfig;
+  cfg?: OpenClawConfig;
   agentId: string;
   sessionKey: string;
 }): string {
@@ -39,7 +42,10 @@ function resolveComparableSessionKeyForSandbox(params: {
   });
 }
 
-export function resolveSandboxRuntimeStatus(params: { cfg?: MinionConfig; sessionKey?: string }): {
+export function resolveSandboxRuntimeStatus(params: {
+  cfg?: OpenClawConfig;
+  sessionKey?: string;
+}): {
   agentId: string;
   sessionKey: string;
   mainSessionKey: string;
@@ -73,7 +79,7 @@ export function resolveSandboxRuntimeStatus(params: { cfg?: MinionConfig; sessio
 }
 
 export function formatSandboxToolPolicyBlockedMessage(params: {
-  cfg?: MinionConfig;
+  cfg?: OpenClawConfig;
   sessionKey?: string;
   toolName: string;
 }): string | undefined {
@@ -125,7 +131,7 @@ export function formatSandboxToolPolicyBlockedMessage(params: {
     lines.push(`- Use main session key (direct): ${runtime.mainSessionKey}`);
   }
   lines.push(
-    `- See: ${formatCliCommand(`minion sandbox explain --session ${runtime.sessionKey}`)}`,
+    `- See: ${formatCliCommand(`openclaw sandbox explain --session ${runtime.sessionKey}`)}`,
   );
 
   return lines.join("\n");

@@ -1,13 +1,13 @@
 import { Type } from "@sinclair/typebox";
-import type { MinionConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import type { MemoryCitationsMode } from "../../config/types.memory.js";
-import type { MemorySearchResult } from "../../memory/types.js";
-import type { AnyAgentTool } from "./common.js";
 import { resolveMemoryBackendConfig } from "../../memory/backend-config.js";
 import { getMemorySearchManager } from "../../memory/index.js";
+import type { MemorySearchResult } from "../../memory/types.js";
 import { parseAgentSessionKey } from "../../routing/session-key.js";
 import { resolveSessionAgentId } from "../agent-scope.js";
 import { resolveMemorySearchConfig } from "../memory-search.js";
+import type { AnyAgentTool } from "./common.js";
 import { jsonResult, readNumberParam, readStringParam } from "./common.js";
 
 const MemorySearchSchema = Type.Object({
@@ -22,10 +22,7 @@ const MemoryGetSchema = Type.Object({
   lines: Type.Optional(Type.Number()),
 });
 
-export function createMemorySearchTool(options: {
-  config?: MinionConfig;
-  agentSessionKey?: string;
-}): AnyAgentTool | null {
+function resolveMemoryToolContext(options: { config?: OpenClawConfig; agentSessionKey?: string }) {
   const cfg = options.config;
   if (!cfg) {
     return null;
@@ -37,6 +34,18 @@ export function createMemorySearchTool(options: {
   if (!resolveMemorySearchConfig(cfg, agentId)) {
     return null;
   }
+  return { cfg, agentId };
+}
+
+export function createMemorySearchTool(options: {
+  config?: OpenClawConfig;
+  agentSessionKey?: string;
+}): AnyAgentTool | null {
+  const ctx = resolveMemoryToolContext(options);
+  if (!ctx) {
+    return null;
+  }
+  const { cfg, agentId } = ctx;
   return {
     label: "Memory Search",
     name: "memory_search",
@@ -72,12 +81,14 @@ export function createMemorySearchTool(options: {
           status.backend === "qmd"
             ? clampResultsByInjectedChars(decorated, resolved.qmd?.limits.maxInjectedChars)
             : decorated;
+        const searchMode = (status.custom as { searchMode?: string } | undefined)?.searchMode;
         return jsonResult({
           results,
           provider: status.provider,
           model: status.model,
           fallback: status.fallback,
           citations: citationsMode,
+          mode: searchMode,
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -88,20 +99,14 @@ export function createMemorySearchTool(options: {
 }
 
 export function createMemoryGetTool(options: {
-  config?: MinionConfig;
+  config?: OpenClawConfig;
   agentSessionKey?: string;
 }): AnyAgentTool | null {
-  const cfg = options.config;
-  if (!cfg) {
+  const ctx = resolveMemoryToolContext(options);
+  if (!ctx) {
     return null;
   }
-  const agentId = resolveSessionAgentId({
-    sessionKey: options.agentSessionKey,
-    config: cfg,
-  });
-  if (!resolveMemorySearchConfig(cfg, agentId)) {
-    return null;
-  }
+  const { cfg, agentId } = ctx;
   return {
     label: "Memory Get",
     name: "memory_get",
@@ -134,7 +139,7 @@ export function createMemoryGetTool(options: {
   };
 }
 
-function resolveMemoryCitationsMode(cfg: MinionConfig): MemoryCitationsMode {
+function resolveMemoryCitationsMode(cfg: OpenClawConfig): MemoryCitationsMode {
   const mode = cfg.memory?.citations;
   if (mode === "on" || mode === "off" || mode === "auto") {
     return mode;

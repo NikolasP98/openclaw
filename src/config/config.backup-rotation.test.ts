@@ -1,22 +1,22 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import type { MinionConfig } from "./types.js";
 import { rotateConfigBackups } from "./backup-rotation.js";
 import { withTempHome } from "./test-helpers.js";
+import type { OpenClawConfig } from "./types.js";
 
 describe("config backup rotation", () => {
   it("keeps a 5-deep backup ring for config writes", async () => {
     await withTempHome(async () => {
-      const stateDir = process.env.MINION_STATE_DIR?.trim();
+      const stateDir = process.env.OPENCLAW_STATE_DIR?.trim();
       if (!stateDir) {
-        throw new Error("Expected MINION_STATE_DIR to be set by withTempHome");
+        throw new Error("Expected OPENCLAW_STATE_DIR to be set by withTempHome");
       }
-      const configPath = path.join(stateDir, "minion.json");
-      const buildConfig = (version: number): MinionConfig =>
+      const configPath = path.join(stateDir, "openclaw.json");
+      const buildConfig = (version: number): OpenClawConfig =>
         ({
           agents: { list: [{ id: `v${version}` }] },
-        }) as MinionConfig;
+        }) as OpenClawConfig;
 
       const writeVersion = async (version: number) => {
         const json = JSON.stringify(buildConfig(version), null, 2).trimEnd().concat("\n");

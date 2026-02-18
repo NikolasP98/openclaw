@@ -3,7 +3,6 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import WebSocket from "ws";
-import type { ResolvedBrowserConfig, ResolvedBrowserProfile } from "./config.js";
 import { ensurePortAvailable } from "../infra/ports.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { CONFIG_DIR } from "../utils.js";
@@ -14,11 +13,15 @@ import {
   resolveBrowserExecutableForPlatform,
 } from "./chrome.executables.js";
 import {
-  decorateMinionProfile,
+  decorateOpenClawProfile,
   ensureProfileCleanExit,
   isProfileDecorated,
 } from "./chrome.profile-decoration.js";
-import { DEFAULT_MINION_BROWSER_COLOR, DEFAULT_MINION_BROWSER_PROFILE_NAME } from "./constants.js";
+import type { ResolvedBrowserConfig, ResolvedBrowserProfile } from "./config.js";
+import {
+  DEFAULT_OPENCLAW_BROWSER_COLOR,
+  DEFAULT_OPENCLAW_BROWSER_PROFILE_NAME,
+} from "./constants.js";
 
 const log = createSubsystemLogger("browser").child("chrome");
 
@@ -30,7 +33,7 @@ export {
   resolveBrowserExecutableForPlatform,
 } from "./chrome.executables.js";
 export {
-  decorateMinionProfile,
+  decorateOpenClawProfile,
   ensureProfileCleanExit,
   isProfileDecorated,
 } from "./chrome.profile-decoration.js";
@@ -56,7 +59,7 @@ function resolveBrowserExecutable(resolved: ResolvedBrowserConfig): BrowserExecu
   return resolveBrowserExecutableForPlatform(resolved, process.platform);
 }
 
-export function resolveMinionUserDataDir(profileName = DEFAULT_MINION_BROWSER_PROFILE_NAME) {
+export function resolveOpenClawUserDataDir(profileName = DEFAULT_OPENCLAW_BROWSER_PROFILE_NAME) {
   return path.join(CONFIG_DIR, "browser", profileName, "user-data");
 }
 
@@ -157,7 +160,7 @@ export async function isChromeCdpReady(
   return await canOpenWebSocket(wsUrl, handshakeTimeoutMs);
 }
 
-export async function launchMinionChrome(
+export async function launchOpenClawChrome(
   resolved: ResolvedBrowserConfig,
   profile: ResolvedBrowserProfile,
 ): Promise<RunningChrome> {
@@ -173,13 +176,13 @@ export async function launchMinionChrome(
     );
   }
 
-  const userDataDir = resolveMinionUserDataDir(profile.name);
+  const userDataDir = resolveOpenClawUserDataDir(profile.name);
   fs.mkdirSync(userDataDir, { recursive: true });
 
   const needsDecorate = !isProfileDecorated(
     userDataDir,
     profile.name,
-    (profile.color ?? DEFAULT_MINION_BROWSER_COLOR).toUpperCase(),
+    (profile.color ?? DEFAULT_OPENCLAW_BROWSER_COLOR).toUpperCase(),
   );
 
   // First launch to create preference files if missing, then decorate and relaunch.
@@ -213,6 +216,11 @@ export async function launchMinionChrome(
 
     // Stealth: hide navigator.webdriver from automation detection (#80)
     args.push("--disable-blink-features=AutomationControlled");
+
+    // Append user-configured extra arguments (e.g., stealth flags, window size)
+    if (resolved.extraArgs.length > 0) {
+      args.push(...resolved.extraArgs);
+    }
 
     // Always open a blank tab to ensure a target exists.
     args.push("about:blank");
@@ -260,20 +268,20 @@ export async function launchMinionChrome(
 
   if (needsDecorate) {
     try {
-      decorateMinionProfile(userDataDir, {
+      decorateOpenClawProfile(userDataDir, {
         name: profile.name,
         color: profile.color,
       });
-      log.info(`🦑 minion browser profile decorated (${profile.color})`);
+      log.info(`🦞 openclaw browser profile decorated (${profile.color})`);
     } catch (err) {
-      log.warn(`minion browser profile decoration failed: ${String(err)}`);
+      log.warn(`openclaw browser profile decoration failed: ${String(err)}`);
     }
   }
 
   try {
     ensureProfileCleanExit(userDataDir);
   } catch (err) {
-    log.warn(`minion browser clean-exit prefs failed: ${String(err)}`);
+    log.warn(`openclaw browser clean-exit prefs failed: ${String(err)}`);
   }
 
   const proc = spawnOnce();
@@ -299,7 +307,7 @@ export async function launchMinionChrome(
 
   const pid = proc.pid ?? -1;
   log.info(
-    `🦑 minion browser started (${exe.kind}) profile "${profile.name}" on 127.0.0.1:${profile.cdpPort} (pid ${pid})`,
+    `🦞 openclaw browser started (${exe.kind}) profile "${profile.name}" on 127.0.0.1:${profile.cdpPort} (pid ${pid})`,
   );
 
   return {
@@ -312,7 +320,7 @@ export async function launchMinionChrome(
   };
 }
 
-export async function stopMinionChrome(running: RunningChrome, timeoutMs = 2500) {
+export async function stopOpenClawChrome(running: RunningChrome, timeoutMs = 2500) {
   const proc = running.proc;
   if (proc.killed) {
     return;

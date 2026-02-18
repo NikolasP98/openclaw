@@ -1,18 +1,14 @@
-import type { MinionConfig } from "../config/config.js";
-import type { GatewayMessageChannel } from "../utils/message-channel.js";
-import type { SandboxFsBridge } from "./sandbox/fs-bridge.js";
-import type { AnyAgentTool } from "./tools/common.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { resolvePluginTools } from "../plugins/tools.js";
+import type { GatewayMessageChannel } from "../utils/message-channel.js";
 import { resolveSessionAgentId } from "./agent-scope.js";
-import { createAgentsCapabilitiesTool } from "./tools/agents-capabilities-tool.js";
+import type { SandboxFsBridge } from "./sandbox/fs-bridge.js";
 import { createAgentsListTool } from "./tools/agents-list-tool.js";
 import { createBrowserTool } from "./tools/browser-tool.js";
 import { createCanvasTool } from "./tools/canvas-tool.js";
+import type { AnyAgentTool } from "./tools/common.js";
 import { createCronTool } from "./tools/cron-tool.js";
 import { createGatewayTool } from "./tools/gateway-tool.js";
-import { createGogAuthRevokeTool } from "./tools/gog-auth-revoke-tool.js";
-import { createGogAuthStartTool } from "./tools/gog-auth-start-tool.js";
-import { createGogAuthStatusTool } from "./tools/gog-auth-status-tool.js";
 import { createImageTool } from "./tools/image-tool.js";
 import { createMessageTool } from "./tools/message-tool.js";
 import { createNodesTool } from "./tools/nodes-tool.js";
@@ -21,10 +17,12 @@ import { createSessionsHistoryTool } from "./tools/sessions-history-tool.js";
 import { createSessionsListTool } from "./tools/sessions-list-tool.js";
 import { createSessionsSendTool } from "./tools/sessions-send-tool.js";
 import { createSessionsSpawnTool } from "./tools/sessions-spawn-tool.js";
+import { createSubagentsTool } from "./tools/subagents-tool.js";
 import { createTtsTool } from "./tools/tts-tool.js";
 import { createWebFetchTool, createWebSearchTool } from "./tools/web-tools.js";
+import { resolveWorkspaceRoot } from "./workspace-dir.js";
 
-export function createMinionTools(options?: {
+export function createOpenClawTools(options?: {
   sandboxBrowserBridgeUrl?: string;
   allowHostBrowserControl?: boolean;
   agentSessionKey?: string;
@@ -45,7 +43,7 @@ export function createMinionTools(options?: {
   sandboxFsBridge?: SandboxFsBridge;
   workspaceDir?: string;
   sandboxed?: boolean;
-  config?: MinionConfig;
+  config?: OpenClawConfig;
   pluginToolAllowlist?: string[];
   /** Current channel ID for auto-threading (Slack). */
   currentChannelId?: string;
@@ -64,10 +62,12 @@ export function createMinionTools(options?: {
   /** If true, omit the message tool from the tool list. */
   disableMessageTool?: boolean;
 }): AnyAgentTool[] {
+  const workspaceDir = resolveWorkspaceRoot(options?.workspaceDir);
   const imageTool = options?.agentDir?.trim()
     ? createImageTool({
         config: options?.config,
         agentDir: options.agentDir,
+        workspaceDir,
         sandbox:
           options?.sandboxRoot && options?.sandboxFsBridge
             ? { root: options.sandboxRoot, bridge: options.sandboxFsBridge }
@@ -123,10 +123,6 @@ export function createMinionTools(options?: {
       agentSessionKey: options?.agentSessionKey,
       requesterAgentIdOverride: options?.requesterAgentIdOverride,
     }),
-    createAgentsCapabilitiesTool({
-      agentSessionKey: options?.agentSessionKey,
-      requesterAgentIdOverride: options?.requesterAgentIdOverride,
-    }),
     createSessionsListTool({
       agentSessionKey: options?.agentSessionKey,
       sandboxed: options?.sandboxed,
@@ -152,38 +148,12 @@ export function createMinionTools(options?: {
       sandboxed: options?.sandboxed,
       requesterAgentIdOverride: options?.requesterAgentIdOverride,
     }),
+    createSubagentsTool({
+      agentSessionKey: options?.agentSessionKey,
+    }),
     createSessionStatusTool({
       agentSessionKey: options?.agentSessionKey,
       config: options?.config,
-    }),
-    createGogAuthStartTool({
-      agentId: options?.agentDir?.trim()
-        ? resolveSessionAgentId({
-            sessionKey: options?.agentSessionKey,
-            config: options?.config,
-          })
-        : undefined,
-      agentDir: options?.agentDir,
-      sessionKey: options?.agentSessionKey,
-    }),
-    createGogAuthStatusTool({
-      agentId: options?.agentDir?.trim()
-        ? resolveSessionAgentId({
-            sessionKey: options?.agentSessionKey,
-            config: options?.config,
-          })
-        : undefined,
-      sessionKey: options?.agentSessionKey,
-    }),
-    createGogAuthRevokeTool({
-      agentId: options?.agentDir?.trim()
-        ? resolveSessionAgentId({
-            sessionKey: options?.agentSessionKey,
-            config: options?.config,
-          })
-        : undefined,
-      agentDir: options?.agentDir,
-      sessionKey: options?.agentSessionKey,
     }),
     ...(webSearchTool ? [webSearchTool] : []),
     ...(webFetchTool ? [webFetchTool] : []),
@@ -193,7 +163,7 @@ export function createMinionTools(options?: {
   const pluginTools = resolvePluginTools({
     context: {
       config: options?.config,
-      workspaceDir: options?.workspaceDir,
+      workspaceDir,
       agentDir: options?.agentDir,
       agentId: resolveSessionAgentId({
         sessionKey: options?.agentSessionKey,

@@ -1,8 +1,8 @@
 {
-  "name": "@minion/memory-lancedb",
-  "version": "2026.2.13",
+  "name": "@openclaw/memory-lancedb",
+  "version": "2026.2.16",
   "private": true,
-  "description": "Minion LanceDB-backed long-term memory plugin with auto-recall/capture",
+  "description": "OpenClaw LanceDB-backed long-term memory plugin with auto-recall/capture",
   "type": "module",
   "dependencies": {
     "@lancedb/lancedb": "^0.26.2",
@@ -12,7 +12,7 @@
   "devDependencies": {
     "@nikolasp98/minion": "workspace:*"
   },
-  "minion": {
+  "openclaw": {
     "extensions": [
       "./index.ts"
     ]

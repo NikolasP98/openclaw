@@ -1,14 +1,14 @@
 import type { Command } from "commander";
-import type { MinionConfig } from "../config/config.js";
-import type { PluginLogger } from "./types.js";
 import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "../agents/agent-scope.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { loadConfig } from "../config/config.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
-import { loadMinionPlugins } from "./loader.js";
+import { loadOpenClawPlugins } from "./loader.js";
+import type { PluginLogger } from "./types.js";
 
 const log = createSubsystemLogger("plugins");
 
-export function registerPluginCliCommands(program: Command, cfg?: MinionConfig) {
+export function registerPluginCliCommands(program: Command, cfg?: OpenClawConfig) {
   const config = cfg ?? loadConfig();
   const workspaceDir = resolveAgentWorkspaceDir(config, resolveDefaultAgentId(config));
   const logger: PluginLogger = {
@@ -17,7 +17,7 @@ export function registerPluginCliCommands(program: Command, cfg?: MinionConfig) 
     error: (msg: string) => log.error(msg),
     debug: (msg: string) => log.debug(msg),
   };
-  const registry = loadMinionPlugins({
+  const registry = loadOpenClawPlugins({
     config,
     workspaceDir,
     logger,

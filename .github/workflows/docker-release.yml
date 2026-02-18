@@ -18,7 +18,7 @@ on:
       - "skills/**"
 
 concurrency:
-  group: docker-release-${{ github.ref }}
+  group: docker-release-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 env:

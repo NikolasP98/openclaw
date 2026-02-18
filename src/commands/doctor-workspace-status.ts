@@ -1,11 +1,11 @@
-import type { MinionConfig } from "../config/config.js";
 import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "../agents/agent-scope.js";
 import { buildWorkspaceSkillStatus } from "../agents/skills-status.js";
-import { loadMinionPlugins } from "../plugins/loader.js";
+import type { OpenClawConfig } from "../config/config.js";
+import { loadOpenClawPlugins } from "../plugins/loader.js";
 import { note } from "../terminal/note.js";
 import { detectLegacyWorkspaceDirs, formatLegacyWorkspaceWarning } from "./doctor-workspace.js";
 
-export function noteWorkspaceStatus(cfg: MinionConfig) {
+export function noteWorkspaceStatus(cfg: OpenClawConfig) {
   const workspaceDir = resolveAgentWorkspaceDir(cfg, resolveDefaultAgentId(cfg));
   const legacyWorkspace = detectLegacyWorkspaceDirs({ workspaceDir });
   if (legacyWorkspace.legacyDirs.length > 0) {
@@ -25,7 +25,7 @@ export function noteWorkspaceStatus(cfg: MinionConfig) {
     "Skills status",
   );
 
-  const pluginRegistry = loadMinionPlugins({
+  const pluginRegistry = loadOpenClawPlugins({
     config: cfg,
     workspaceDir,
     logger: {

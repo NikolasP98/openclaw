@@ -2,13 +2,13 @@ import {
   createReplyPrefixContext,
   createTypingCallbacks,
   logTypingFailure,
-  type MinionbotConfig,
+  type ClawdbotConfig,
   type ReplyPayload,
   type RuntimeEnv,
-} from "minion/plugin-sdk";
-import type { MentionTarget } from "./mention.js";
+} from "openclaw/plugin-sdk";
 import { resolveFeishuAccount } from "./accounts.js";
 import { createFeishuClient } from "./client.js";
+import type { MentionTarget } from "./mention.js";
 import { buildMentionedCardContent } from "./mention.js";
 import { getFeishuRuntime } from "./runtime.js";
 import { sendMarkdownCardFeishu, sendMessageFeishu } from "./send.js";
@@ -22,7 +22,7 @@ function shouldUseCard(text: string): boolean {
 }
 
 export type CreateFeishuReplyDispatcherParams = {
-  cfg: MinionbotConfig;
+  cfg: ClawdbotConfig;
   agentId: string;
   runtime: RuntimeEnv;
   chatId: string;

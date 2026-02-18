@@ -1,10 +1,10 @@
+import { getChannelPlugin } from "../../channels/plugins/index.js";
 import type {
   ChannelDirectoryEntry,
   ChannelDirectoryEntryKind,
   ChannelId,
 } from "../../channels/plugins/types.js";
-import type { MinionConfig } from "../../config/config.js";
-import { getChannelPlugin } from "../../channels/plugins/index.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { defaultRuntime, type RuntimeEnv } from "../../runtime.js";
 import { buildDirectoryCacheKey, DirectoryCache } from "./directory-cache.js";
 import { ambiguousTargetError, unknownTargetError } from "./target-errors.js";
@@ -30,7 +30,7 @@ export type ResolveMessagingTargetResult =
   | { ok: false; error: Error; candidates?: ChannelDirectoryEntry[] };
 
 export async function resolveChannelTarget(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   channel: ChannelId;
   input: string;
   accountId?: string | null;
@@ -213,7 +213,7 @@ function resolveMatch(params: {
 }
 
 async function listDirectoryEntries(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   channel: ChannelId;
   accountId?: string | null;
   kind: ChannelDirectoryEntryKind;
@@ -228,20 +228,14 @@ async function listDirectoryEntries(params: {
   }
   const runtime = params.runtime ?? defaultRuntime;
   const useLive = params.source === "live";
-  if (params.kind === "user") {
-    const fn = useLive ? (directory.listPeersLive ?? directory.listPeers) : directory.listPeers;
-    if (!fn) {
-      return [];
-    }
-    return await fn({
-      cfg: params.cfg,
-      accountId: params.accountId ?? undefined,
-      query: params.query ?? undefined,
-      limit: undefined,
-      runtime,
-    });
-  }
-  const fn = useLive ? (directory.listGroupsLive ?? directory.listGroups) : directory.listGroups;
+  const fn =
+    params.kind === "user"
+      ? useLive
+        ? (directory.listPeersLive ?? directory.listPeers)
+        : directory.listPeers
+      : useLive
+        ? (directory.listGroupsLive ?? directory.listGroups)
+        : directory.listGroups;
   if (!fn) {
     return [];
   }
@@ -255,7 +249,7 @@ async function listDirectoryEntries(params: {
 }
 
 async function getDirectoryEntries(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   channel: ChannelId;
   accountId?: string | null;
   kind: ChannelDirectoryEntryKind;
@@ -329,7 +323,7 @@ function pickAmbiguousMatch(
 }
 
 export async function resolveMessagingTarget(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   channel: ChannelId;
   input: string;
   accountId?: string | null;
@@ -459,7 +453,7 @@ export async function resolveMessagingTarget(params: {
 }
 
 export async function lookupDirectoryDisplay(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   channel: ChannelId;
   targetId: string;
   accountId?: string | null;

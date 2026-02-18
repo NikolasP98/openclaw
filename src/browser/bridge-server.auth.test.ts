@@ -1,8 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { startBrowserBridgeServer, stopBrowserBridgeServer } from "./bridge-server.js";
-import { DEFAULT_MINION_BROWSER_COLOR, DEFAULT_MINION_BROWSER_PROFILE_NAME } from "./constants.js";
+import type { ResolvedBrowserConfig } from "./config.js";
+import {
+  DEFAULT_OPENCLAW_BROWSER_COLOR,
+  DEFAULT_OPENCLAW_BROWSER_PROFILE_NAME,
+} from "./constants.js";
 
-function buildResolvedConfig() {
+function buildResolvedConfig(): ResolvedBrowserConfig {
   return {
     enabled: true,
     evaluateEnabled: false,
@@ -12,19 +16,20 @@ function buildResolvedConfig() {
     cdpIsLoopback: true,
     remoteCdpTimeoutMs: 1500,
     remoteCdpHandshakeTimeoutMs: 3000,
-    color: DEFAULT_MINION_BROWSER_COLOR,
+    extraArgs: [],
+    color: DEFAULT_OPENCLAW_BROWSER_COLOR,
     executablePath: undefined,
     headless: true,
     noSandbox: false,
     attachOnly: true,
-    defaultProfile: DEFAULT_MINION_BROWSER_PROFILE_NAME,
+    defaultProfile: DEFAULT_OPENCLAW_BROWSER_PROFILE_NAME,
     profiles: {
-      [DEFAULT_MINION_BROWSER_PROFILE_NAME]: {
+      [DEFAULT_OPENCLAW_BROWSER_PROFILE_NAME]: {
         cdpPort: 1,
-        color: DEFAULT_MINION_BROWSER_COLOR,
+        color: DEFAULT_OPENCLAW_BROWSER_COLOR,
       },
     },
-  } as const;
+  } as unknown as ResolvedBrowserConfig;
 }
 
 describe("startBrowserBridgeServer auth", () => {
@@ -55,7 +60,7 @@ describe("startBrowserBridgeServer auth", () => {
     expect(authed.status).toBe(200);
   });
 
-  it("accepts x-minion-password when authPassword is set", async () => {
+  it("accepts x-openclaw-password when authPassword is set", async () => {
     const bridge = await startBrowserBridgeServer({
       resolved: buildResolvedConfig(),
       authPassword: "secret-password",
@@ -66,7 +71,7 @@ describe("startBrowserBridgeServer auth", () => {
     expect(unauth.status).toBe(401);
 
     const authed = await fetch(`${bridge.baseUrl}/`, {
-      headers: { "x-minion-password": "secret-password" },
+      headers: { "x-openclaw-password": "secret-password" },
     });
     expect(authed.status).toBe(200);
   });

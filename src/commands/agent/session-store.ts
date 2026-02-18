@@ -1,9 +1,9 @@
-import type { MinionConfig } from "../../config/config.js";
 import { setCliSessionId } from "../../agents/cli-session.js";
 import { lookupContextTokens } from "../../agents/context.js";
 import { DEFAULT_CONTEXT_TOKENS } from "../../agents/defaults.js";
 import { isCliProvider } from "../../agents/model-selection.js";
 import { deriveSessionTotalTokens, hasNonzeroUsage } from "../../agents/usage.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { type SessionEntry, updateSessionStore } from "../../config/sessions.js";
 
 type RunResult = Awaited<
@@ -11,7 +11,7 @@ type RunResult = Awaited<
 >;
 
 export async function updateSessionStoreAfterAgentRun(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   contextTokensOverride?: number;
   sessionId: string;
   sessionKey: string;

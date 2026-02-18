@@ -1,7 +1,7 @@
 import type { IncomingMessage } from "node:http";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import type { ChannelPlugin } from "../channels/plugins/types.js";
-import type { MinionConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { setActivePluginRegistry } from "../plugins/runtime.js";
 import { createTestRegistry } from "../test-utils/channel-plugins.js";
 import { createIMessageTestPlugin } from "../test-utils/imessage-test-plugin.js";
@@ -16,6 +16,27 @@ import {
 } from "./hooks.js";
 
 describe("gateway hooks helpers", () => {
+  const resolveHooksConfigOrThrow = (cfg: OpenClawConfig) => {
+    const resolved = resolveHooksConfig(cfg);
+    expect(resolved).not.toBeNull();
+    if (!resolved) {
+      throw new Error("hooks config missing");
+    }
+    return resolved;
+  };
+
+  const buildHookAgentConfig = (allowedAgentIds: string[]) =>
+    ({
+      hooks: {
+        enabled: true,
+        token: "secret",
+        allowedAgentIds,
+      },
+      agents: {
+        list: [{ id: "main", default: true }, { id: "hooks" }],
+      },
+    }) as OpenClawConfig;
+
   beforeEach(() => {
     setActivePluginRegistry(emptyRegistry);
   });
@@ -30,7 +51,7 @@ describe("gateway hooks helpers", () => {
         token: "secret",
         path: "hooks///",
       },
-    } as MinionConfig;
+    } as OpenClawConfig;
     const resolved = resolveHooksConfig(base);
     expect(resolved?.basePath).toBe("/hooks");
     expect(resolved?.token).toBe("secret");
@@ -40,7 +61,7 @@ describe("gateway hooks helpers", () => {
   test("resolveHooksConfig rejects root path", () => {
     const cfg = {
       hooks: { enabled: true, token: "x", path: "/" },
-    } as MinionConfig;
+    } as OpenClawConfig;
     expect(() => resolveHooksConfig(cfg)).toThrow("hooks.path may not be '/'");
   });
 
@@ -48,14 +69,14 @@ describe("gateway hooks helpers", () => {
     const req = {
       headers: {
         authorization: "Bearer top",
-        "x-minion-token": "header",
+        "x-openclaw-token": "header",
       },
     } as unknown as IncomingMessage;
     const result1 = extractHookToken(req);
     expect(result1).toBe("top");
 
     const req2 = {
-      headers: { "x-minion-token": "header" },
+      headers: { "x-openclaw-token": "header" },
     } as unknown as IncomingMessage;
     const result2 = extractHookToken(req2);
     expect(result2).toBe("header");
@@ -143,7 +164,7 @@ describe("gateway hooks helpers", () => {
       agents: {
         list: [{ id: "main", default: true }, { id: "hooks" }],
       },
-    } as MinionConfig;
+    } as OpenClawConfig;
     const resolved = resolveHooksConfig(cfg);
     expect(resolved).not.toBeNull();
     if (!resolved) {
@@ -155,63 +176,21 @@ describe("gateway hooks helpers", () => {
   });
 
   test("isHookAgentAllowed honors hooks.allowedAgentIds for explicit routing", () => {
-    const cfg = {
-      hooks: {
-        enabled: true,
-        token: "secret",
-        allowedAgentIds: ["hooks"],
-      },
-      agents: {
-        list: [{ id: "main", default: true }, { id: "hooks" }],
-      },
-    } as MinionConfig;
-    const resolved = resolveHooksConfig(cfg);
-    expect(resolved).not.toBeNull();
-    if (!resolved) {
-      return;
-    }
+    const resolved = resolveHooksConfigOrThrow(buildHookAgentConfig(["hooks"]));
     expect(isHookAgentAllowed(resolved, undefined)).toBe(true);
     expect(isHookAgentAllowed(resolved, "hooks")).toBe(true);
     expect(isHookAgentAllowed(resolved, "missing-agent")).toBe(false);
   });
 
   test("isHookAgentAllowed treats empty allowlist as deny-all for explicit agentId", () => {
-    const cfg = {
-      hooks: {
-        enabled: true,
-        token: "secret",
-        allowedAgentIds: [],
-      },
-      agents: {
-        list: [{ id: "main", default: true }, { id: "hooks" }],
-      },
-    } as MinionConfig;
-    const resolved = resolveHooksConfig(cfg);
-    expect(resolved).not.toBeNull();
-    if (!resolved) {
-      return;
-    }
+    const resolved = resolveHooksConfigOrThrow(buildHookAgentConfig([]));
     expect(isHookAgentAllowed(resolved, undefined)).toBe(true);
     expect(isHookAgentAllowed(resolved, "hooks")).toBe(false);
     expect(isHookAgentAllowed(resolved, "main")).toBe(false);
   });
 
   test("isHookAgentAllowed treats wildcard allowlist as allow-all", () => {
-    const cfg = {
-      hooks: {
-        enabled: true,
-        token: "secret",
-        allowedAgentIds: ["*"],
-      },
-      agents: {
-        list: [{ id: "main", default: true }, { id: "hooks" }],
-      },
-    } as MinionConfig;
-    const resolved = resolveHooksConfig(cfg);
-    expect(resolved).not.toBeNull();
-    if (!resolved) {
-      return;
-    }
+    const resolved = resolveHooksConfigOrThrow(buildHookAgentConfig(["*"]));
     expect(isHookAgentAllowed(resolved, undefined)).toBe(true);
     expect(isHookAgentAllowed(resolved, "hooks")).toBe(true);
     expect(isHookAgentAllowed(resolved, "missing-agent")).toBe(true);
@@ -220,7 +199,7 @@ describe("gateway hooks helpers", () => {
   test("resolveHookSessionKey disables request sessionKey by default", () => {
     const cfg = {
       hooks: { enabled: true, token: "secret" },
-    } as MinionConfig;
+    } as OpenClawConfig;
     const resolved = resolveHooksConfig(cfg);
     expect(resolved).not.toBeNull();
     if (!resolved) {
@@ -237,7 +216,7 @@ describe("gateway hooks helpers", () => {
   test("resolveHookSessionKey allows request sessionKey when explicitly enabled", () => {
     const cfg = {
       hooks: { enabled: true, token: "secret", allowRequestSessionKey: true },
-    } as MinionConfig;
+    } as OpenClawConfig;
     const resolved = resolveHooksConfig(cfg);
     expect(resolved).not.toBeNull();
     if (!resolved) {
@@ -259,7 +238,7 @@ describe("gateway hooks helpers", () => {
         allowRequestSessionKey: true,
         allowedSessionKeyPrefixes: ["hook:"],
       },
-    } as MinionConfig;
+    } as OpenClawConfig;
     const resolved = resolveHooksConfig(cfg);
     expect(resolved).not.toBeNull();
     if (!resolved) {
@@ -288,7 +267,7 @@ describe("gateway hooks helpers", () => {
         token: "secret",
         defaultSessionKey: "hook:ingress",
       },
-    } as MinionConfig;
+    } as OpenClawConfig;
     const resolved = resolveHooksConfig(cfg);
     expect(resolved).not.toBeNull();
     if (!resolved) {
@@ -311,7 +290,7 @@ describe("gateway hooks helpers", () => {
           defaultSessionKey: "agent:main:main",
           allowedSessionKeyPrefixes: ["hook:"],
         },
-      } as MinionConfig),
+      } as OpenClawConfig),
     ).toThrow("hooks.defaultSessionKey must match hooks.allowedSessionKeyPrefixes");
 
     expect(() =>
@@ -321,7 +300,7 @@ describe("gateway hooks helpers", () => {
           token: "secret",
           allowedSessionKeyPrefixes: ["agent:"],
         },
-      } as MinionConfig),
+      } as OpenClawConfig),
     ).toThrow(
       "hooks.allowedSessionKeyPrefixes must include 'hook:' when hooks.defaultSessionKey is unset",
     );

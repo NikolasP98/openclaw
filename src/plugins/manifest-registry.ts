@@ -1,10 +1,10 @@
 import fs from "node:fs";
-import type { MinionConfig } from "../config/config.js";
-import type { PluginConfigUiHint, PluginDiagnostic, PluginKind, PluginOrigin } from "./types.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { resolveUserPath } from "../utils.js";
 import { normalizePluginsConfig, type NormalizedPluginsConfig } from "./config-state.js";
-import { discoverMinionPlugins, type PluginCandidate } from "./discovery.js";
+import { discoverOpenClawPlugins, type PluginCandidate } from "./discovery.js";
 import { loadPluginManifest, type PluginManifest } from "./manifest.js";
+import type { PluginConfigUiHint, PluginDiagnostic, PluginKind, PluginOrigin } from "./types.js";
 
 type SeenIdEntry = {
   candidate: PluginCandidate;
@@ -61,8 +61,12 @@ const registryCache = new Map<string, { expiresAt: number; registry: PluginManif
 
 const DEFAULT_MANIFEST_CACHE_MS = 200;
 
+export function clearPluginManifestRegistryCache(): void {
+  registryCache.clear();
+}
+
 function resolveManifestCacheMs(env: NodeJS.ProcessEnv): number {
-  const raw = env.MINION_PLUGIN_MANIFEST_CACHE_MS?.trim();
+  const raw = env.OPENCLAW_PLUGIN_MANIFEST_CACHE_MS?.trim();
   if (raw === "" || raw === "0") {
     return 0;
   }
@@ -77,7 +81,7 @@ function resolveManifestCacheMs(env: NodeJS.ProcessEnv): number {
 }
 
 function shouldUseManifestCache(env: NodeJS.ProcessEnv): boolean {
-  const disabled = env.MINION_DISABLE_PLUGIN_MANIFEST_CACHE?.trim();
+  const disabled = env.OPENCLAW_DISABLE_PLUGIN_MANIFEST_CACHE?.trim();
   if (disabled) {
     return false;
   }
@@ -89,7 +93,14 @@ function buildCacheKey(params: {
   plugins: NormalizedPluginsConfig;
 }): string {
   const workspaceKey = params.workspaceDir ? resolveUserPath(params.workspaceDir) : "";
-  return `${workspaceKey}::${JSON.stringify(params.plugins)}`;
+  // The manifest registry only depends on where plugins are discovered from (workspace + load paths).
+  // It does not depend on allow/deny/entries enable-state, so exclude those for higher cache hit rates.
+  const loadPaths = params.plugins.loadPaths
+    .map((p) => resolveUserPath(p))
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .toSorted();
+  return `${workspaceKey}::${JSON.stringify(loadPaths)}`;
 }
 
 function safeStatMtimeMs(filePath: string): number | null {
@@ -134,7 +145,7 @@ function buildRecord(params: {
 }
 
 export function loadPluginManifestRegistry(params: {
-  config?: MinionConfig;
+  config?: OpenClawConfig;
   workspaceDir?: string;
   cache?: boolean;
   env?: NodeJS.ProcessEnv;
@@ -158,7 +169,7 @@ export function loadPluginManifestRegistry(params: {
         candidates: params.candidates,
         diagnostics: params.diagnostics ?? [],
       }
-    : discoverMinionPlugins({
+    : discoverOpenClawPlugins({
         workspaceDir: params.workspaceDir,
         extraPaths: normalized.loadPaths,
       });

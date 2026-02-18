@@ -1,13 +1,13 @@
-import type { MinionConfig } from "../../config/config.js";
-import type { MsgContext } from "../templating.js";
-import type { ReplyPayload } from "../types.js";
 import { resolveSessionAgentId } from "../../agents/agent-scope.js";
 import { getFinishedSession, getSession, markExited } from "../../agents/bash-process-registry.js";
 import { createExecTool } from "../../agents/bash-tools.js";
 import { resolveSandboxRuntimeStatus } from "../../agents/sandbox.js";
 import { killProcessTree } from "../../agents/shell-utils.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { logVerbose } from "../../globals.js";
 import { clampInt } from "../../utils.js";
+import type { MsgContext } from "../templating.js";
+import type { ReplyPayload } from "../types.js";
 import { formatElevatedUnavailableMessage } from "./elevated-unavailable.js";
 import { stripMentions, stripStructuralPrefixes } from "./mentions.js";
 
@@ -33,7 +33,7 @@ type ActiveBashJob =
 
 let activeJob: ActiveBashJob | null = null;
 
-function resolveForegroundMs(cfg: MinionConfig): number {
+function resolveForegroundMs(cfg: OpenClawConfig): number {
   const raw = cfg.commands?.bashForegroundMs;
   if (typeof raw !== "number" || Number.isNaN(raw)) {
     return DEFAULT_FOREGROUND_MS;
@@ -97,7 +97,7 @@ function parseBashRequest(raw: string): BashRequest | null {
 
 function resolveRawCommandBody(params: {
   ctx: MsgContext;
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   agentId?: string;
   isGroup: boolean;
 }) {
@@ -176,7 +176,7 @@ function buildUsageReply(): ReplyPayload {
 
 export async function handleBashChatCommand(params: {
   ctx: MsgContext;
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   agentId?: string;
   sessionKey: string;
   isGroup: boolean;
@@ -188,7 +188,7 @@ export async function handleBashChatCommand(params: {
 }): Promise<ReplyPayload> {
   if (params.cfg.commands?.bash !== true) {
     return {
-      text: "⚠️ bash is disabled. Set commands.bash=true to enable. Docs: https://docs.minion.ai/tools/slash-commands#config",
+      text: "⚠️ bash is disabled. Set commands.bash=true to enable. Docs: https://docs.openclaw.ai/tools/slash-commands#config",
     };
   }
 

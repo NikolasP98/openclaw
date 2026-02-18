@@ -1,9 +1,8 @@
 import type { MsgContext } from "../../auto-reply/templating.js";
 import type { ChatType } from "../../channels/chat-type.js";
-import type { ChannelId } from "../../channels/plugins/types.js";
-import type { MinionConfig } from "../../config/config.js";
-import type { ResolvedMessagingTarget } from "./target-resolver.js";
 import { getChannelPlugin } from "../../channels/plugins/index.js";
+import type { ChannelId } from "../../channels/plugins/types.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { recordSessionMetaFromInbound, resolveStorePath } from "../../config/sessions.js";
 import { parseDiscordTarget } from "../../discord/targets.js";
 import { parseIMessageTarget, normalizeIMessageHandle } from "../../imessage/targets.js";
@@ -22,6 +21,7 @@ import { buildTelegramGroupPeerId } from "../../telegram/bot/helpers.js";
 import { resolveTelegramTargetChatType } from "../../telegram/inline-buttons.js";
 import { parseTelegramTarget } from "../../telegram/targets.js";
 import { isWhatsAppGroupJid, normalizeWhatsAppTarget } from "../../whatsapp/normalize.js";
+import type { ResolvedMessagingTarget } from "./target-resolver.js";
 
 export type OutboundSessionRoute = {
   sessionKey: string;
@@ -34,7 +34,7 @@ export type OutboundSessionRoute = {
 };
 
 export type ResolveOutboundSessionRouteParams = {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   channel: ChannelId;
   agentId: string;
   accountId?: string | null;
@@ -113,7 +113,7 @@ function inferPeerKind(params: {
 }
 
 function buildBaseSessionKey(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   agentId: string;
   channel: ChannelId;
   accountId?: string | null;
@@ -131,7 +131,7 @@ function buildBaseSessionKey(params: {
 
 // Best-effort mpim detection: allowlist/config, then Slack API (if token available).
 async function resolveSlackChannelType(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
   channelId: string;
 }): Promise<"channel" | "group" | "dm" | "unknown"> {
@@ -952,7 +952,7 @@ export async function resolveOutboundSessionRoute(
 }
 
 export async function ensureOutboundSessionEntry(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   agentId: string;
   channel: ChannelId;
   accountId?: string | null;

@@ -5,24 +5,23 @@
  */
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { SandboxToolPolicy } from "../agents/sandbox/types.js";
-import type { MinionConfig, ConfigFileSnapshot } from "../config/config.js";
-import type { AgentToolsConfig } from "../config/types.tools.js";
-import type { SkillScanFinding } from "./skill-scanner.js";
-import type { ExecFn } from "./windows-acl.js";
-import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "../agents/agent-scope.js";
+import { resolveDefaultAgentId } from "../agents/agent-scope.js";
 import { isToolAllowedByPolicies } from "../agents/pi-tools.policy.js";
 import {
   resolveSandboxConfigForAgent,
   resolveSandboxToolPolicyForAgent,
 } from "../agents/sandbox.js";
+import type { SandboxToolPolicy } from "../agents/sandbox/types.js";
 import { loadWorkspaceSkillEntries } from "../agents/skills.js";
 import { resolveToolProfilePolicy } from "../agents/tool-policy.js";
+import { listAgentWorkspaceDirs } from "../agents/workspace-dirs.js";
 import { MANIFEST_KEY } from "../compat/legacy-names.js";
 import { resolveNativeSkillsEnabled } from "../config/commands.js";
+import type { OpenClawConfig, ConfigFileSnapshot } from "../config/config.js";
 import { createConfigIO } from "../config/config.js";
 import { collectIncludePathsRecursive } from "../config/includes-scan.js";
 import { resolveOAuthDir } from "../config/paths.js";
+import type { AgentToolsConfig } from "../config/types.tools.js";
 import { normalizePluginsConfig } from "../plugins/config-state.js";
 import { normalizeAgentId } from "../routing/session-key.js";
 import {
@@ -31,7 +30,11 @@ import {
   inspectPathPermissions,
   safeStat,
 } from "./audit-fs.js";
+import { pickSandboxToolPolicy } from "./audit-tool-policy.js";
+import { extensionUsesSkippedScannerPath, isPathInside } from "./scan-paths.js";
+import type { SkillScanFinding } from "./skill-scanner.js";
 import * as skillScanner from "./skill-scanner.js";
+import type { ExecFn } from "./windows-acl.js";
 
 export type SecurityAuditFinding = {
   checkId: string;
@@ -62,22 +65,6 @@ function expandTilde(p: string, env: NodeJS.ProcessEnv): string | null {
   return null;
 }
 
-function isPathInside(basePath: string, candidatePath: string): boolean {
-  const base = path.resolve(basePath);
-  const candidate = path.resolve(candidatePath);
-  const rel = path.relative(base, candidate);
-  return rel === "" || (!rel.startsWith(`..${path.sep}`) && rel !== ".." && !path.isAbsolute(rel));
-}
-
-function extensionUsesSkippedScannerPath(entry: string): boolean {
-  const segments = entry.split(/[\\/]+/).filter(Boolean);
-  return segments.some(
-    (segment) =>
-      segment === "node_modules" ||
-      (segment.startsWith(".") && segment !== "." && segment !== ".."),
-  );
-}
-
 async function readPluginManifestExtensions(pluginPath: string): Promise<string[]> {
   const manifestPath = path.join(pluginPath, "package.json");
   const raw = await fs.readFile(manifestPath, "utf-8").catch(() => "");
@@ -95,20 +82,6 @@ async function readPluginManifestExtensions(pluginPath: string): Promise<string[
   return extensions.map((entry) => (typeof entry === "string" ? entry.trim() : "")).filter(Boolean);
 }
 
-function listWorkspaceDirs(cfg: MinionConfig): string[] {
-  const dirs = new Set<string>();
-  const list = cfg.agents?.list;
-  if (Array.isArray(list)) {
-    for (const entry of list) {
-      if (entry && typeof entry === "object" && typeof entry.id === "string") {
-        dirs.add(resolveAgentWorkspaceDir(cfg, entry.id));
-      }
-    }
-  }
-  dirs.add(resolveAgentWorkspaceDir(cfg, resolveDefaultAgentId(cfg)));
-  return [...dirs];
-}
-
 function formatCodeSafetyDetails(findings: SkillScanFinding[], rootDir: string): string {
   return findings
     .map((finding) => {
@@ -123,38 +96,8 @@ function formatCodeSafetyDetails(findings: SkillScanFinding[], rootDir: string):
     .join("\n");
 }
 
-function unionAllow(base?: string[], extra?: string[]): string[] | undefined {
-  if (!Array.isArray(extra) || extra.length === 0) {
-    return base;
-  }
-  if (!Array.isArray(base) || base.length === 0) {
-    return Array.from(new Set(["*", ...extra]));
-  }
-  return Array.from(new Set([...base, ...extra]));
-}
-
-function pickToolPolicy(config?: {
-  allow?: string[];
-  alsoAllow?: string[];
-  deny?: string[];
-}): SandboxToolPolicy | undefined {
-  if (!config) {
-    return undefined;
-  }
-  const allow = Array.isArray(config.allow)
-    ? unionAllow(config.allow, config.alsoAllow)
-    : Array.isArray(config.alsoAllow) && config.alsoAllow.length > 0
-      ? unionAllow(undefined, config.alsoAllow)
-      : undefined;
-  const deny = Array.isArray(config.deny) ? config.deny : undefined;
-  if (!allow && !deny) {
-    return undefined;
-  }
-  return { allow, deny };
-}
-
 function resolveToolPolicies(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   agentTools?: AgentToolsConfig;
   sandboxMode?: "off" | "non-main" | "all";
   agentId?: string | null;
@@ -163,8 +106,8 @@ function resolveToolPolicies(params: {
   const profilePolicy = resolveToolProfilePolicy(profile);
   const policies: Array<SandboxToolPolicy | undefined> = [
     profilePolicy,
-    pickToolPolicy(params.cfg.tools ?? undefined),
-    pickToolPolicy(params.agentTools),
+    pickSandboxToolPolicy(params.cfg.tools ?? undefined),
+    pickSandboxToolPolicy(params.agentTools),
   ];
   if (params.sandboxMode === "all") {
     policies.push(resolveSandboxToolPolicyForAgent(params.cfg, params.agentId ?? undefined));
@@ -177,7 +120,7 @@ function normalizePluginIdSet(entries: string[]): Set<string> {
 }
 
 function resolveEnabledExtensionPluginIds(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   pluginDirs: string[];
 }): string[] {
   const normalized = normalizePluginsConfig(params.cfg.plugins);
@@ -257,7 +200,7 @@ function hasProviderPluginAllow(params: {
 // --------------------------------------------------------------------------
 
 export async function collectPluginsTrustFindings(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   stateDir: string;
 }): Promise<SecurityAuditFinding[]> {
   const findings: SecurityAuditFinding[] = [];
@@ -386,7 +329,7 @@ export async function collectPluginsTrustFindings(params: {
         sandboxMode,
         agentId: context.agentId,
       });
-      const broadPolicy = isToolAllowedByPolicies("__minion_plugin_probe__", policies);
+      const broadPolicy = isToolAllowedByPolicies("__openclaw_plugin_probe__", policies);
       const explicitPluginAllow =
         !restrictiveProfile &&
         (hasExplicitPluginAllow({
@@ -507,7 +450,7 @@ export async function collectIncludeFilePermFindings(params: {
 }
 
 export async function collectStateDeepFilesystemFindings(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   env: NodeJS.ProcessEnv;
   stateDir: string;
   platform?: NodeJS.Platform;
@@ -689,7 +632,7 @@ export async function collectPluginsCodeSafetyFindings(params: {
       title: "Plugin extensions directory scan failed",
       detail: `Static code scan could not list extensions directory: ${String(err)}`,
       remediation:
-        "Check file permissions and plugin layout, then rerun `minion security audit --deep`.",
+        "Check file permissions and plugin layout, then rerun `openclaw security audit --deep`.",
     });
     return [];
   });
@@ -726,7 +669,7 @@ export async function collectPluginsCodeSafetyFindings(params: {
         title: `Plugin "${pluginName}" has extension entry path traversal`,
         detail: `Found extension entries that escape the plugin directory:\n${escapedEntries.map((entry) => `  - ${entry}`).join("\n")}`,
         remediation:
-          "Update the plugin manifest so all minion.extensions entries stay inside the plugin directory.",
+          "Update the plugin manifest so all openclaw.extensions entries stay inside the plugin directory.",
       });
     }
 
@@ -741,7 +684,7 @@ export async function collectPluginsCodeSafetyFindings(params: {
           title: `Plugin "${pluginName}" code scan failed`,
           detail: `Static code scan could not complete: ${String(err)}`,
           remediation:
-            "Check file permissions and plugin layout, then rerun `minion security audit --deep`.",
+            "Check file permissions and plugin layout, then rerun `openclaw security audit --deep`.",
         });
         return null;
       });
@@ -759,7 +702,7 @@ export async function collectPluginsCodeSafetyFindings(params: {
         title: `Plugin "${pluginName}" contains dangerous code patterns`,
         detail: `Found ${summary.critical} critical issue(s) in ${summary.scannedFiles} scanned file(s):\n${details}`,
         remediation:
-          "Review the plugin source code carefully before use. If untrusted, remove the plugin from your Minion extensions state directory.",
+          "Review the plugin source code carefully before use. If untrusted, remove the plugin from your OpenClaw extensions state directory.",
       });
     } else if (summary.warn > 0) {
       const warnFindings = summary.findings.filter((f) => f.severity === "warn");
@@ -779,18 +722,18 @@ export async function collectPluginsCodeSafetyFindings(params: {
 }
 
 export async function collectInstalledSkillsCodeSafetyFindings(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   stateDir: string;
 }): Promise<SecurityAuditFinding[]> {
   const findings: SecurityAuditFinding[] = [];
   const pluginExtensionsDir = path.join(params.stateDir, "extensions");
   const scannedSkillDirs = new Set<string>();
-  const workspaceDirs = listWorkspaceDirs(params.cfg);
+  const workspaceDirs = listAgentWorkspaceDirs(params.cfg);
 
   for (const workspaceDir of workspaceDirs) {
     const entries = loadWorkspaceSkillEntries(workspaceDir, { config: params.cfg });
     for (const entry of entries) {
-      if (entry.skill.source === "minion-bundled") {
+      if (entry.skill.source === "openclaw-bundled") {
         continue;
       }
 
@@ -812,7 +755,7 @@ export async function collectInstalledSkillsCodeSafetyFindings(params: {
           title: `Skill "${skillName}" code scan failed`,
           detail: `Static code scan could not complete for ${skillDir}: ${String(err)}`,
           remediation:
-            "Check file permissions and skill layout, then rerun `minion security audit --deep`.",
+            "Check file permissions and skill layout, then rerun `openclaw security audit --deep`.",
         });
         return null;
       });

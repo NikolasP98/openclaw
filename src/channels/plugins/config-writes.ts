@@ -1,6 +1,6 @@
-import type { MinionConfig } from "../../config/config.js";
-import type { ChannelId } from "./types.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { normalizeAccountId } from "../../routing/session-key.js";
+import type { ChannelId } from "./types.js";
 
 type ChannelConfigWithAccounts = {
   configWrites?: boolean;
@@ -21,7 +21,7 @@ function resolveAccountConfig(accounts: ChannelConfigWithAccounts["accounts"], a
 }
 
 export function resolveChannelConfigWrites(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   channelId?: ChannelId | null;
   accountId?: string | null;
 }): boolean {

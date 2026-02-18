@@ -1,6 +1,3 @@
-import type { MinionConfig } from "../../config/config.js";
-import type { ReplyPayload } from "../types.js";
-import type { InlineDirectives } from "./directive-handling.parse.js";
 import { resolveAuthStorePathForDisplay } from "../../agents/auth-profiles.js";
 import {
   type ModelAliasIndex,
@@ -9,8 +6,10 @@ import {
   resolveConfiguredModelRef,
   resolveModelRefFromString,
 } from "../../agents/model-selection.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { buildBrowseProvidersButton } from "../../telegram/model-buttons.js";
 import { shortenHomePath } from "../../utils.js";
+import type { ReplyPayload } from "../types.js";
 import { resolveModelsCommandReply } from "./commands-models.js";
 import {
   formatAuthLabel,
@@ -22,10 +21,11 @@ import {
   type ModelPickerCatalogEntry,
   resolveProviderEndpointLabel,
 } from "./directive-handling.model-picker.js";
+import type { InlineDirectives } from "./directive-handling.parse.js";
 import { type ModelDirectiveSelection, resolveModelDirectiveSelection } from "./model-selection.js";
 
 function buildModelPickerCatalog(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   defaultProvider: string;
   defaultModel: string;
   aliasIndex: ModelAliasIndex;
@@ -168,7 +168,7 @@ function buildModelPickerCatalog(params: {
 
 export async function maybeHandleModelDirectiveInfo(params: {
   directives: InlineDirectives;
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   agentDir: string;
   activeAgentId: string;
   provider: string;
@@ -313,7 +313,7 @@ export async function maybeHandleModelDirectiveInfo(params: {
 
 export function resolveModelSelectionFromDirective(params: {
   directives: InlineDirectives;
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   agentDir: string;
   defaultProvider: string;
   defaultModel: string;

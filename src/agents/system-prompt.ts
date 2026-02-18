@@ -1,9 +1,10 @@
 import type { ReasoningLevel, ThinkLevel } from "../auto-reply/thinking.js";
+import { SILENT_REPLY_TOKEN } from "../auto-reply/tokens.js";
 import type { MemoryCitationsMode } from "../config/types.memory.js";
+import { listDeliverableMessageChannels } from "../utils/message-channel.js";
 import type { ResolvedTimeFormat } from "./date-time.js";
 import type { EmbeddedContextFile } from "./pi-embedded-helpers.js";
-import { SILENT_REPLY_TOKEN } from "../auto-reply/tokens.js";
-import { listDeliverableMessageChannels } from "../utils/message-channel.js";
+import { sanitizeForPromptLiteral } from "./sanitize-for-prompt.js";
 
 /**
  * Controls which hardcoded sections are included in the system prompt.
@@ -109,7 +110,10 @@ function buildMessagingSection(params: {
     "## Messaging",
     "- Reply in current session → automatically routes to the source channel (Signal, Telegram, etc.)",
     "- Cross-session messaging → use sessions_send(sessionKey, message)",
-    "- Never use exec/curl for provider messaging; Minion handles all routing internally.",
+    "- Sub-agent orchestration → use subagents(action=list|steer|kill)",
+    "- `[System Message] ...` blocks are internal context and are not user-visible by default.",
+    `- If a \`[System Message]\` reports completed cron/subagent work and asks for a user update, rewrite it in your normal assistant voice and send that update (do not forward raw system text or default to ${SILENT_REPLY_TOKEN}).`,
+    "- Never use exec/curl for provider messaging; OpenClaw handles all routing internally.",
     params.availableTools.has("message")
       ? [
           "",
@@ -119,7 +123,7 @@ function buildMessagingSection(params: {
           `- If multiple channels are configured, pass \`channel\` (${params.messageChannelOptions}).`,
           `- If you use \`message\` (\`action=send\`) to deliver your user-visible reply, respond with ONLY: ${SILENT_REPLY_TOKEN} (avoid duplicate replies).`,
           params.inlineButtonsEnabled
-            ? "- Inline buttons supported. Use `action=send` with `buttons=[[{text,callback_data}]]` (callback_data routes back as a user message)."
+            ? "- Inline buttons supported. Use `action=send` with `buttons=[[{text,callback_data,style?}]]`; `style` can be `primary`, `success`, or `danger`."
             : params.runtimeChannel
               ? `- Inline buttons not enabled for ${params.runtimeChannel}. If you need them, ask to set ${params.runtimeChannel}.capabilities.inlineButtons ("dm"|"group"|"all"|"allowlist").`
               : "",
@@ -150,13 +154,13 @@ function buildDocsSection(params: { docsPath?: string; isMinimal: boolean; readT
   }
   return [
     "## Documentation",
-    `Minion docs: ${docsPath}`,
-    "Mirror: https://docs.minion.ai",
-    "Source: https://github.com/minion/minion",
+    `OpenClaw docs: ${docsPath}`,
+    "Mirror: https://docs.openclaw.ai",
+    "Source: https://github.com/openclaw/openclaw",
     "Community: https://discord.com/invite/clawd",
     "Find new skills: https://clawhub.com",
-    "For Minion behavior, commands, config, or architecture: consult local docs first.",
-    "When diagnosing issues, run `minion status` yourself when possible; only ask the user if you lack access (e.g., sandboxed).",
+    "For OpenClaw behavior, commands, config, or architecture: consult local docs first.",
+    "When diagnosing issues, run `openclaw status` yourself when possible; only ask the user if you lack access (e.g., sandboxed).",
     "",
   ];
 }
@@ -199,6 +203,7 @@ export function buildAgentSystemPrompt(params: {
   sandboxInfo?: {
     enabled: boolean;
     workspaceDir?: string;
+    containerWorkspaceDir?: string;
     workspaceAccess?: "none" | "ro" | "rw";
     agentWorkspaceMount?: string;
     browserBridgeUrl?: string;
@@ -234,12 +239,13 @@ export function buildAgentSystemPrompt(params: {
     nodes: "List/describe/notify/camera/screen on paired nodes",
     cron: "Manage cron jobs and wake events (use for reminders; when scheduling a reminder, write the systemEvent text as something that will read like a reminder when it fires, and mention that it is a reminder depending on the time gap between setting and firing; include recent context in reminder text if appropriate)",
     message: "Send messages and channel actions",
-    gateway: "Restart, apply config, or run updates on the running Minion process",
+    gateway: "Restart, apply config, or run updates on the running OpenClaw process",
     agents_list: "List agent ids allowed for sessions_spawn",
     sessions_list: "List other sessions (incl. sub-agents) with filters/last",
     sessions_history: "Fetch history for another session/sub-agent",
     sessions_send: "Send a message to another session/sub-agent",
     sessions_spawn: "Spawn a sub-agent session",
+    subagents: "List, steer, or kill sub-agent runs for this requester session",
     session_status:
       "Show a /status-equivalent status card (usage + time + Reasoning/Verbose/Elevated); use for model-use questions (📊 session_status); optional per-session model override",
     image: "Analyze an image with the configured image model",
@@ -267,6 +273,7 @@ export function buildAgentSystemPrompt(params: {
     "sessions_list",
     "sessions_history",
     "sessions_send",
+    "subagents",
     "session_status",
     "image",
   ];
@@ -348,6 +355,19 @@ export function buildAgentSystemPrompt(params: {
   const messageChannelOptions = listDeliverableMessageChannels().join("|");
   const promptMode = params.promptMode ?? "full";
   const isMinimal = promptMode === "minimal" || promptMode === "none";
+  const sandboxContainerWorkspace = params.sandboxInfo?.containerWorkspaceDir?.trim();
+  const sanitizedWorkspaceDir = sanitizeForPromptLiteral(params.workspaceDir);
+  const sanitizedSandboxContainerWorkspace = sandboxContainerWorkspace
+    ? sanitizeForPromptLiteral(sandboxContainerWorkspace)
+    : "";
+  const displayWorkspaceDir =
+    params.sandboxInfo?.enabled && sanitizedSandboxContainerWorkspace
+      ? sanitizedSandboxContainerWorkspace
+      : sanitizedWorkspaceDir;
+  const workspaceGuidance =
+    params.sandboxInfo?.enabled && sanitizedSandboxContainerWorkspace
+      ? `For read/write/edit/apply_patch, file paths resolve against host workspace: ${sanitizedWorkspaceDir}. For bash/exec commands, use sandbox container paths under ${sanitizedSandboxContainerWorkspace} (or relative paths from that workdir), not host paths. Prefer relative paths so both sandboxed exec and file tools work consistently.`
+      : "Treat this directory as the single global workspace for file operations unless explicitly instructed otherwise.";
   const safetySection = [
     "## Safety",
     "You have no independent goals: do not pursue self-preservation, replication, resource acquisition, or power-seeking; avoid long-term plans beyond the user's request.",
@@ -374,11 +394,11 @@ export function buildAgentSystemPrompt(params: {
 
   // For "none" mode, return just the basic identity line
   if (promptMode === "none") {
-    return "You are a personal assistant running inside Minion.";
+    return "You are a personal assistant running inside OpenClaw.";
   }
 
   const lines = [
-    "You are a personal assistant running inside Minion.",
+    "You are a personal assistant running inside OpenClaw.",
     "",
     "## Tooling",
     "Tool availability (filtered by policy):",
@@ -393,17 +413,20 @@ export function buildAgentSystemPrompt(params: {
           "- apply_patch: apply multi-file patches",
           `- ${execToolName}: run shell commands (supports background via yieldMs/background)`,
           `- ${processToolName}: manage background exec sessions`,
-          "- browser: control Minion's dedicated browser",
+          "- browser: control OpenClaw's dedicated browser",
           "- canvas: present/eval/snapshot the Canvas",
           "- nodes: list/describe/notify/camera/screen on paired nodes",
           "- cron: manage cron jobs and wake events (use for reminders; when scheduling a reminder, write the systemEvent text as something that will read like a reminder when it fires, and mention that it is a reminder depending on the time gap between setting and firing; include recent context in reminder text if appropriate)",
           "- sessions_list: list sessions",
           "- sessions_history: fetch session history",
           "- sessions_send: send to another session",
+          "- subagents: list/steer/kill sub-agent runs",
           '- session_status: show usage/time/model state and answer "what model are we using?"',
         ].join("\n"),
     "TOOLS.md does not control tool availability; it is user guidance for how to use external tools.",
-    "If a task is more complex or takes longer, spawn a sub-agent. It will do the work for you and ping you when it's done. You can always check up on it.",
+    `For long waits, avoid rapid poll loops: use ${execToolName} with enough yieldMs or ${processToolName}(action=poll, timeout=<ms>).`,
+    "If a task is more complex or takes longer, spawn a sub-agent. Completion is push-based: it will auto-announce when done.",
+    "Do not poll `subagents list` / `sessions_list` in a loop; only check status on-demand (for intervention, debugging, or when explicitly asked).",
     "",
     "## Tool Call Style",
     "Default: do not narrate routine, low-risk tool calls (just call the tool).",
@@ -412,25 +435,25 @@ export function buildAgentSystemPrompt(params: {
     "Use plain human language for narration unless in a technical context.",
     "",
     ...safetySection,
-    "## Minion CLI Quick Reference",
-    "Minion is controlled via subcommands. Do not invent commands.",
+    "## OpenClaw CLI Quick Reference",
+    "OpenClaw is controlled via subcommands. Do not invent commands.",
     "To manage the Gateway daemon service (start/stop/restart):",
-    "- minion gateway status",
-    "- minion gateway start",
-    "- minion gateway stop",
-    "- minion gateway restart",
-    "If unsure, ask the user to run `minion help` (or `minion gateway --help`) and paste the output.",
+    "- openclaw gateway status",
+    "- openclaw gateway start",
+    "- openclaw gateway stop",
+    "- openclaw gateway restart",
+    "If unsure, ask the user to run `openclaw help` (or `openclaw gateway --help`) and paste the output.",
     "",
     ...skillsSection,
     ...memorySection,
     // Skip self-update for subagent/none modes
-    hasGateway && !isMinimal ? "## Minion Self-Update" : "",
+    hasGateway && !isMinimal ? "## OpenClaw Self-Update" : "",
     hasGateway && !isMinimal
       ? [
           "Get Updates (self-update) is ONLY allowed when the user explicitly asks for it.",
           "Do not run config.apply or update.run unless the user explicitly requests an update or config change; if it's not explicit, ask first.",
           "Actions: config.get, config.schema, config.apply (validate + write full config, then restart), update.run (update deps or git, then restart).",
-          "After restart, Minion pings the last active session automatically.",
+          "After restart, OpenClaw pings the last active session automatically.",
         ].join("\n")
       : "",
     hasGateway && !isMinimal ? "" : "",
@@ -450,8 +473,8 @@ export function buildAgentSystemPrompt(params: {
       ? "If you need the current date, time, or day of week, run session_status (📊 session_status)."
       : "",
     "## Workspace",
-    `Your working directory is: ${params.workspaceDir}`,
-    "Treat this directory as the single global workspace for file operations unless explicitly instructed otherwise.",
+    `Your working directory is: ${displayWorkspaceDir}`,
+    workspaceGuidance,
     ...workspaceNotes,
     "",
     ...docsSection,
@@ -461,19 +484,22 @@ export function buildAgentSystemPrompt(params: {
           "You are running in a sandboxed runtime (tools execute in Docker).",
           "Some tools may be unavailable due to sandbox policy.",
           "Sub-agents stay sandboxed (no elevated/host access). Need outside-sandbox read/write? Don't spawn; ask first.",
+          params.sandboxInfo.containerWorkspaceDir
+            ? `Sandbox container workdir: ${sanitizeForPromptLiteral(params.sandboxInfo.containerWorkspaceDir)}`
+            : "",
           params.sandboxInfo.workspaceDir
-            ? `Sandbox workspace: ${params.sandboxInfo.workspaceDir}`
+            ? `Sandbox host mount source (file tools bridge only; not valid inside sandbox exec): ${sanitizeForPromptLiteral(params.sandboxInfo.workspaceDir)}`
             : "",
           params.sandboxInfo.workspaceAccess
             ? `Agent workspace access: ${params.sandboxInfo.workspaceAccess}${
                 params.sandboxInfo.agentWorkspaceMount
-                  ? ` (mounted at ${params.sandboxInfo.agentWorkspaceMount})`
+                  ? ` (mounted at ${sanitizeForPromptLiteral(params.sandboxInfo.agentWorkspaceMount)})`
                   : ""
               }`
             : "",
           params.sandboxInfo.browserBridgeUrl ? "Sandbox browser: enabled." : "",
           params.sandboxInfo.browserNoVncUrl
-            ? `Sandbox browser observer (noVNC): ${params.sandboxInfo.browserNoVncUrl}`
+            ? `Sandbox browser observer (noVNC): ${sanitizeForPromptLiteral(params.sandboxInfo.browserNoVncUrl)}`
             : "",
           params.sandboxInfo.hostBrowserAllowed === true
             ? "Host browser control: allowed."
@@ -502,7 +528,7 @@ export function buildAgentSystemPrompt(params: {
       userTimezone,
     }),
     "## Workspace Files (injected)",
-    "These user-editable files are loaded by Minion and included below in Project Context.",
+    "These user-editable files are loaded by OpenClaw and included below in Project Context.",
     "",
     ...buildReplyTagsSection(isMinimal),
     ...buildMessagingSection({
@@ -596,7 +622,7 @@ export function buildAgentSystemPrompt(params: {
       heartbeatPromptLine,
       "If you receive a heartbeat poll (a user message matching the heartbeat prompt above), and there is nothing that needs attention, reply exactly:",
       "HEARTBEAT_OK",
-      'Minion treats a leading/trailing "HEARTBEAT_OK" as a heartbeat ack (and may discard it).',
+      'OpenClaw treats a leading/trailing "HEARTBEAT_OK" as a heartbeat ack (and may discard it).',
       'If something needs attention, do NOT include "HEARTBEAT_OK"; reply with the alert text instead.',
       "",
     );
