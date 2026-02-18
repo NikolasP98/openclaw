@@ -16,15 +16,15 @@
     {
       "id": "prd-tenant-bernibites",
       "host": "bernibites",
-      "user": "deploy",
+      "user": "bot-prd",
       "port": 22,
-      "deployment_path": "/home/deploy/minion",
+      "deployment_path": "/home/bot-prd/.minion",
       "platform": "linux/amd64",
       "gateway_port": 18789,
       "bridge_port": 18790,
       "tenant": "bernibites",
       "region": "us-east",
-      "local_build": true
+      "local_build": false
     }
   ]
 }
