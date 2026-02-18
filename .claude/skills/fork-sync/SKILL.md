@@ -579,7 +579,7 @@ Before starting the sync workflow:
 
 - [ ] Working directory is clean (`git status`)
 - [ ] No uncommitted changes that could conflict
-- [ ] WIP changes stashed or committed (`git stash` if needed) — avoids partial-staging complexity during sync
+- [ ] WIP changes committed to a temp branch or stashed (see WIP Preservation below)
 - [ ] Upstream remote is configured (`git remote -v | grep upstream`)
 - [ ] Latest upstream fetched (`git fetch upstream`)
 - [ ] Mirror is clean mirror (no divergence from upstream)
@@ -702,7 +702,7 @@ When upstream has a critical fix you need immediately:
 2. **All custom work on DEV**: Commit custom changes to DEV or feature branches
 3. **Sync regularly**: Weekly or bi-weekly to avoid large merge conflicts
 4. **Clean working directory**: Always start with `git status` showing clean
-5. **Stash before sync**: Commit or stash all WIP before starting — avoids partial-staging headaches and stash/pop friction during branch switches
+5. **Preserve WIP before sync**: Commit WIP to a temp branch (preferred) or stash — see WIP Preservation section
 6. **Review upstream changes**: Use `git log mirror..upstream/main` before merging
 7. **Test after sync**: Verify Docker images build successfully
 8. **DEV before main**: Always test in DEV before merging to main (production)
@@ -719,14 +719,7 @@ When upstream has a critical fix you need immediately:
 
 **Cause**: Uncommitted changes in working directory
 
-**Fix**:
-
-```bash
-git status  # Review changes
-git stash   # Temporarily save changes
-# Run sync workflow
-git stash pop  # Restore changes after sync
-```
+**Fix**: Use the WIP Preservation method below (temp branch preferred over stash).
 
 ### "Updates were rejected because the remote contains work"
 
@@ -791,6 +784,37 @@ git push origin <branch-name>
 ├──────────────────────────────────────────────────────────────────┤
 │ Note: Feature branches and main (production) are manual         │
 └──────────────────────────────────────────────────────────────────┘
+```
+
+## WIP Preservation
+
+**Why not stash?** Stashing before a large merge is risky: `git stash pop` after the merge replays your changes against the new HEAD, producing phantom diffs (hundreds of "deleted" lines that are actually upstream additions). Recovery requires extracting a patch and 3-way re-applying — fragile and time-consuming.
+
+**Preferred approach — temp branch:**
+
+```bash
+# Before starting fork-sync:
+git checkout DEV
+git checkout -b wip/pre-sync
+git add -A && git commit -m "WIP: pre-sync snapshot"
+git checkout DEV
+
+# ... run fork-sync (Phase 1 → 2 → 2.5) ...
+
+# After sync completes:
+git cherry-pick wip/pre-sync   # or: git diff DEV..wip/pre-sync | git apply --3way
+git branch -D wip/pre-sync
+```
+
+**Why this works:** The WIP commit stays on a named branch with full context. After the merge, cherry-picking replays it cleanly against the new HEAD. If conflicts occur, they're real conflicts (not phantom diffs from stash replay).
+
+**If you must stash:** Be aware that `git stash pop` after a merge will produce phantom changes. To recover:
+
+```bash
+git stash pop                          # phantom diffs appear
+git diff > /tmp/wip.patch             # save actual WIP
+git checkout -- .                      # discard phantom changes
+git apply --3way /tmp/wip.patch       # re-apply with 3-way merge
 ```
 
 ## When to Use This Skill
