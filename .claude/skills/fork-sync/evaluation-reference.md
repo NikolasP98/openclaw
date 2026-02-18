@@ -15,6 +15,8 @@ Location: `.claude/skills/fork-sync/state/evaluation.json`
   "updated": "ISO-8601",
   "snapshot": {
     "mergeBase": "sha",
+    "analysisBase": "sha (= lastSyncedMirrorHead for incremental, mergeBase for full)",
+    "syncScope": "full | incremental-light | incremental-heavy",
     "mirrorHead": "sha",
     "devHead": "sha",
     "upstreamCommitCount": 1428,
@@ -66,15 +68,17 @@ Location: `.claude/skills/fork-sync/state/evaluation.json`
 
 ### Field Reference
 
-| Field               | Description                                                   |
-| ------------------- | ------------------------------------------------------------- |
-| `version`           | Schema version (increment on breaking changes)                |
-| `snapshot`          | Branch state at initialization — used for resumability checks |
-| `cursor`            | Current progress position for resuming mid-evaluation         |
-| `summary`           | Aggregate counts across all modules                           |
-| `modules[]`         | Per-module evaluation state and decisions                     |
-| `forkFeatureIndex`  | Files with actual fork functionality (conflict-prone)         |
-| `mergeShoppingList` | Final output — conflict resolution playbook for Phase 2       |
+| Field                   | Description                                                                                  |
+| ----------------------- | -------------------------------------------------------------------------------------------- |
+| `version`               | Schema version (increment on breaking changes)                                               |
+| `snapshot`              | Branch state at initialization — used for resumability checks                                |
+| `snapshot.analysisBase` | Commit used as diff base (`lastSyncedMirrorHead` for incremental, `mergeBase` for full)      |
+| `snapshot.syncScope`    | Sync scope that determined analysis range (`full`, `incremental-light`, `incremental-heavy`) |
+| `cursor`                | Current progress position for resuming mid-evaluation                                        |
+| `summary`               | Aggregate counts across all modules                                                          |
+| `modules[]`             | Per-module evaluation state and decisions                                                    |
+| `forkFeatureIndex`      | Files with actual fork functionality (conflict-prone)                                        |
+| `mergeShoppingList`     | Final output — conflict resolution playbook for Phase 2                                      |
 
 ### Module Status Values
 
@@ -267,14 +271,22 @@ fi
 
 ### Delta Update Protocol
 
-When `snapshot.mirrorHead` doesn't match current `mirror` HEAD (mirror has advanced since evaluation), run the automatic delta update — do NOT ask the user whether to re-evaluate:
+When `snapshot.mirrorHead` doesn't match current `mirror` HEAD (mirror has advanced since evaluation), run the automatic delta update — do NOT ask the user whether to re-evaluate.
+
+**Sync-history awareness**: If `sync-history.json` exists, the delta base should be `lastSyncedMirrorHead` (not the evaluation's `snapshot.mirrorHead`), since the sync history tracks what was actually merged, not just what was evaluated.
 
 **Steps:**
 
 1. **Compute delta commits**:
 
    ```bash
-   OLD_HEAD=$(jq -r '.snapshot.mirrorHead' .claude/skills/fork-sync/state/evaluation.json)
+   # Prefer sync-history baseline if available
+   SYNC_HISTORY=".claude/skills/fork-sync/state/sync-history.json"
+   if [ -f "$SYNC_HISTORY" ]; then
+     OLD_HEAD=$(jq -r '.lastSyncedMirrorHead' "$SYNC_HISTORY")
+   else
+     OLD_HEAD=$(jq -r '.snapshot.mirrorHead' .claude/skills/fork-sync/state/evaluation.json)
+   fi
    NEW_HEAD=$(git rev-parse mirror)
    git log --oneline --name-only $OLD_HEAD..$NEW_HEAD
    ```

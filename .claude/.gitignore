@@ -6,4 +6,5 @@ settings.local.json
 *.log
 
 # Evaluation state (session-specific, regenerable)
-skills/fork-sync/state/
+skills/fork-sync/state/*
+!skills/fork-sync/state/sync-history.json

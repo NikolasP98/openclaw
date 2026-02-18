@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "syncs": [
+    {
+      "id": "sync-001",
+      "completedAt": "2026-02-17T08:00:00Z",
+      "mirrorHead": "2cf82c357e7e293ea56d39e0b8d814f12573c904",
+      "devHead": "cefcbd3d6814f893d8accbfc0bf2be40ce0be2fe",
+      "mergeCommit": "bootstrapped",
+      "upstreamCommitCount": 1608,
+      "syncType": "full",
+      "evaluationUsed": true,
+      "notes": "Bootstrapped from evaluation.json — initial bulk merge"
+    },
+    {
+      "id": "sync-002",
+      "completedAt": "2026-02-18T12:00:00Z",
+      "mirrorHead": "fe3f0759b5c4b3ccb7118c253607ff3c5f173116",
+      "devHead": "04584dd22a979e9de222c1379ed1ea8129a825b2",
+      "mergeCommit": "04584dd22a979e9de222c1379ed1ea8129a825b2",
+      "upstreamCommitCount": 270,
+      "syncType": "incremental-heavy",
+      "evaluationUsed": false,
+      "notes": "270 upstream commits, 40 conflicts resolved (rebrand sed + manual package.json)"
+    }
+  ],
+  "lastSyncedMirrorHead": "fe3f0759b5c4b3ccb7118c253607ff3c5f173116",
+  "lastSyncedAt": "2026-02-18T12:00:00Z"
+}
