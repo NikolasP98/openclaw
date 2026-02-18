@@ -1,5 +1,5 @@
-import { resolveDefaultAgentId } from "../agents/agent-scope.js";
 import type { CliDeps } from "../cli/deps.js";
+import { resolveDefaultAgentId } from "../agents/agent-scope.js";
 import { loadConfig } from "../config/config.js";
 import {
   canonicalizeMainSessionAlias,
@@ -12,13 +12,11 @@ import { appendCronRunLog, resolveCronRunLogPath } from "../cron/run-log.js";
 import { CronService } from "../cron/service.js";
 import { resolveCronStorePath } from "../cron/store.js";
 import { normalizeHttpWebhookUrl } from "../cron/webhook-url.js";
-import { formatErrorMessage } from "../infra/errors.js";
 import { runHeartbeatOnce } from "../infra/heartbeat-runner.js";
 import { requestHeartbeatNow } from "../infra/heartbeat-wake.js";
-import { fetchWithSsrFGuard } from "../infra/net/fetch-guard.js";
-import { SsrFBlockedError } from "../infra/net/ssrf.js";
 import { enqueueSystemEvent } from "../infra/system-events.js";
 import { getChildLogger } from "../logging.js";
+import { emitReliabilityEvent } from "../logging/reliability.js";
 import { normalizeAgentId, toAgentStoreSessionKey } from "../routing/session-key.js";
 import { defaultRuntime } from "../runtime.js";
 
@@ -200,6 +198,53 @@ export function buildGatewayCronService(params: {
     log: getChildLogger({ module: "cron", storePath }),
     onEvent: (evt) => {
       params.broadcast("cron", evt, { dropIfSlow: true });
+
+      // Emit reliability events for cron outcomes
+      if (evt.action === "finished") {
+        if (evt.status === "ok") {
+          emitReliabilityEvent({
+            category: "cron",
+            severity: "low",
+            event: "cron.run.ok",
+            message: `Cron job ${evt.jobId} completed successfully`,
+            sessionKey: evt.sessionKey,
+            metadata: { jobId: evt.jobId, durationMs: evt.durationMs },
+          });
+        } else if (evt.status === "error") {
+          emitReliabilityEvent({
+            category: "cron",
+            severity: "high",
+            event: "cron.run.error",
+            message: `Cron job ${evt.jobId} failed: ${evt.error ?? "unknown error"}`,
+            sessionKey: evt.sessionKey,
+            metadata: { jobId: evt.jobId, error: evt.error, durationMs: evt.durationMs },
+          });
+        } else if (evt.status === "skipped") {
+          emitReliabilityEvent({
+            category: "cron",
+            severity: "medium",
+            event: "cron.run.skipped",
+            message: `Cron job ${evt.jobId} was skipped`,
+            sessionKey: evt.sessionKey,
+            metadata: { jobId: evt.jobId },
+          });
+        }
+        // Detect late runs
+        if (evt.runAtMs) {
+          const latenessMs = Date.now() - evt.runAtMs - (evt.durationMs ?? 0);
+          if (latenessMs > 60_000) {
+            emitReliabilityEvent({
+              category: "cron",
+              severity: "medium",
+              event: "cron.run.late",
+              message: `Cron job ${evt.jobId} started ${Math.round(latenessMs / 1000)}s late`,
+              sessionKey: evt.sessionKey,
+              metadata: { jobId: evt.jobId, latenessMs },
+            });
+          }
+        }
+      }
+
       if (evt.action === "finished") {
         const webhookToken = params.cfg.cron?.webhookToken?.trim();
         const legacyWebhook = params.cfg.cron?.webhook?.trim();
@@ -246,43 +291,25 @@ export function buildGatewayCronService(params: {
           const timeout = setTimeout(() => {
             abortController.abort();
           }, CRON_WEBHOOK_TIMEOUT_MS);
-
-          void (async () => {
-            try {
-              const result = await fetchWithSsrFGuard({
-                url: webhookTarget.url,
-                init: {
-                  method: "POST",
-                  headers,
-                  body: JSON.stringify(evt),
-                  signal: abortController.signal,
+          void fetch(webhookTarget.url, {
+            method: "POST",
+            headers,
+            body: JSON.stringify(evt),
+            signal: abortController.signal,
+          })
+            .catch((err) => {
+              cronLogger.warn(
+                {
+                  err: String(err),
+                  jobId: evt.jobId,
+                  webhookUrl: redactWebhookUrl(webhookTarget.url),
                 },
-              });
-              await result.release();
-            } catch (err) {
-              if (err instanceof SsrFBlockedError) {
-                cronLogger.warn(
-                  {
-                    reason: formatErrorMessage(err),
-                    jobId: evt.jobId,
-                    webhookUrl: redactWebhookUrl(webhookTarget.url),
-                  },
-                  "cron: webhook delivery blocked by SSRF guard",
-                );
-              } else {
-                cronLogger.warn(
-                  {
-                    err: formatErrorMessage(err),
-                    jobId: evt.jobId,
-                    webhookUrl: redactWebhookUrl(webhookTarget.url),
-                  },
-                  "cron: webhook delivery failed",
-                );
-              }
-            } finally {
+                "cron: webhook delivery failed",
+              );
+            })
+            .finally(() => {
               clearTimeout(timeout);
-            }
-          })();
+            });
         }
         const logPath = resolveCronRunLogPath({
           storePath,

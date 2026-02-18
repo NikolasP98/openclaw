@@ -1,4 +1,6 @@
 import crypto from "node:crypto";
+import type { NodeSession } from "../node-registry.js";
+import type { GatewayRequestHandlers } from "./types.js";
 import {
   createBrowserControlContext,
   startBrowserControlServiceFromConfig,
@@ -6,11 +8,10 @@ import {
 import { applyBrowserProxyPaths, persistBrowserProxyFiles } from "../../browser/proxy-files.js";
 import { createBrowserRouteDispatcher } from "../../browser/routes/dispatcher.js";
 import { loadConfig } from "../../config/config.js";
+import { emitReliabilityEvent } from "../../logging/reliability.js";
 import { isNodeCommandAllowed, resolveNodeCommandAllowlist } from "../node-command-policy.js";
-import type { NodeSession } from "../node-registry.js";
 import { ErrorCodes, errorShape } from "../protocol/index.js";
 import { respondUnavailableOnNodeInvokeError, safeParseJson } from "./nodes.helpers.js";
-import type { GatewayRequestHandlers } from "./types.js";
 
 type BrowserRequestParams = {
   method?: string;
@@ -157,6 +158,7 @@ export const browserHandlers: GatewayRequestHandlers = {
         nodes: context.nodeRegistry.listConnected(),
       });
     } catch (err) {
+      emitBrowserReliabilityEvent(String(err), path);
       respond(false, undefined, errorShape(ErrorCodes.UNAVAILABLE, String(err)));
       return;
     }
@@ -169,6 +171,7 @@ export const browserHandlers: GatewayRequestHandlers = {
         allowlist,
       });
       if (!allowed.ok) {
+        emitBrowserReliabilityEvent(`node command not allowed: ${allowed.reason}`, path);
         respond(
           false,
           undefined,
@@ -195,11 +198,13 @@ export const browserHandlers: GatewayRequestHandlers = {
         idempotencyKey: crypto.randomUUID(),
       });
       if (!respondUnavailableOnNodeInvokeError(respond, res)) {
+        emitBrowserReliabilityEvent("node invoke error", path);
         return;
       }
       const payload = res.payloadJSON ? safeParseJson(res.payloadJSON) : res.payload;
       const proxy = payload && typeof payload === "object" ? (payload as BrowserProxyResult) : null;
       if (!proxy || !("result" in proxy)) {
+        emitBrowserReliabilityEvent("browser proxy failed", path);
         respond(false, undefined, errorShape(ErrorCodes.UNAVAILABLE, "browser proxy failed"));
         return;
       }
@@ -219,6 +224,7 @@ export const browserHandlers: GatewayRequestHandlers = {
     try {
       dispatcher = createBrowserRouteDispatcher(createBrowserControlContext());
     } catch (err) {
+      emitBrowserReliabilityEvent(String(err), path);
       respond(false, undefined, errorShape(ErrorCodes.UNAVAILABLE, String(err)));
       return;
     }
@@ -236,6 +242,7 @@ export const browserHandlers: GatewayRequestHandlers = {
           ? String((result.body as { error?: unknown }).error)
           : `browser request failed (${result.status})`;
       const code = result.status >= 500 ? ErrorCodes.UNAVAILABLE : ErrorCodes.INVALID_REQUEST;
+      emitBrowserReliabilityEvent(message, path, result.status);
       respond(false, undefined, errorShape(code, message, { details: result.body }));
       return;
     }
@@ -243,3 +250,37 @@ export const browserHandlers: GatewayRequestHandlers = {
     respond(true, result.body);
   },
 };
+
+const AUTH_PATTERNS = /\b(401|403|login.required|authentication|unauthorized|forbidden)\b/i;
+const TIMEOUT_PATTERNS = /\b(timeout|timed?.out|ETIMEDOUT)\b/i;
+
+function emitBrowserReliabilityEvent(errorMsg: string, path: string, statusCode?: number) {
+  const isAuth = statusCode === 401 || statusCode === 403 || AUTH_PATTERNS.test(errorMsg);
+  const isTimeout = TIMEOUT_PATTERNS.test(errorMsg);
+
+  if (isAuth) {
+    emitReliabilityEvent({
+      category: "browser",
+      severity: "high",
+      event: "browser.auth_failed",
+      message: `Browser auth failure on ${path}: ${errorMsg}`,
+      metadata: { path, statusCode },
+    });
+  } else if (isTimeout) {
+    emitReliabilityEvent({
+      category: "browser",
+      severity: "medium",
+      event: "browser.timeout",
+      message: `Browser timeout on ${path}: ${errorMsg}`,
+      metadata: { path },
+    });
+  } else {
+    emitReliabilityEvent({
+      category: "browser",
+      severity: "medium",
+      event: "browser.page_error",
+      message: `Browser error on ${path}: ${errorMsg}`,
+      metadata: { path, statusCode },
+    });
+  }
+}

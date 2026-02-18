@@ -1,3 +1,4 @@
+import type { GatewayRequestHandlers, GatewayRequestOptions } from "./server-methods/types.js";
 import { ErrorCodes, errorShape } from "./protocol/index.js";
 import { agentHandlers } from "./server-methods/agent.js";
 import { agentsHandlers } from "./server-methods/agents.js";
@@ -11,9 +12,10 @@ import { deviceHandlers } from "./server-methods/devices.js";
 import { execApprovalsHandlers } from "./server-methods/exec-approvals.js";
 import { healthHandlers } from "./server-methods/health.js";
 import { logsHandlers } from "./server-methods/logs.js";
+import { meshHandlers } from "./server-methods/mesh.js";
 import { modelsHandlers } from "./server-methods/models.js";
 import { nodeHandlers } from "./server-methods/nodes.js";
-import { pushHandlers } from "./server-methods/push.js";
+import { reliabilityHandlers } from "./server-methods/reliability.js";
 import { sendHandlers } from "./server-methods/send.js";
 import { sessionsHandlers } from "./server-methods/sessions.js";
 import { skillsHandlers } from "./server-methods/skills.js";
@@ -21,7 +23,6 @@ import { specialistsHandlers } from "./server-methods/specialists.js";
 import { systemHandlers } from "./server-methods/system.js";
 import { talkHandlers } from "./server-methods/talk.js";
 import { ttsHandlers } from "./server-methods/tts.js";
-import type { GatewayRequestHandlers, GatewayRequestOptions } from "./server-methods/types.js";
 import { updateHandlers } from "./server-methods/update.js";
 import { usageHandlers } from "./server-methods/usage.js";
 import { voicewakeHandlers } from "./server-methods/voicewake.js";
@@ -49,7 +50,6 @@ const PAIRING_METHODS = new Set([
   "device.pair.list",
   "device.pair.approve",
   "device.pair.reject",
-  "device.pair.remove",
   "device.token.rotate",
   "device.token.revoke",
   "node.rename",
@@ -82,6 +82,8 @@ const READ_METHODS = new Set([
   "chat.history",
   "config.get",
   "talk.config",
+  "mesh.plan",
+  "mesh.status",
 ]);
 const WRITE_METHODS = new Set([
   "send",
@@ -98,7 +100,9 @@ const WRITE_METHODS = new Set([
   "chat.send",
   "chat.abort",
   "browser.request",
-  "push.test",
+  "mesh.plan.auto",
+  "mesh.run",
+  "mesh.retry",
 ]);
 
 function authorizeGatewayMethod(method: string, client: GatewayRequestOptions["client"]) {
@@ -176,6 +180,7 @@ function authorizeGatewayMethod(method: string, client: GatewayRequestOptions["c
 export const coreGatewayHandlers: GatewayRequestHandlers = {
   ...connectHandlers,
   ...logsHandlers,
+  ...meshHandlers,
   ...voicewakeHandlers,
   ...healthHandlers,
   ...channelsHandlers,
@@ -194,13 +199,13 @@ export const coreGatewayHandlers: GatewayRequestHandlers = {
   ...systemHandlers,
   ...updateHandlers,
   ...nodeHandlers,
-  ...pushHandlers,
   ...sendHandlers,
   ...usageHandlers,
   ...agentHandlers,
   ...agentsHandlers,
   ...specialistsHandlers,
   ...browserHandlers,
+  ...reliabilityHandlers,
 };
 
 export async function handleGatewayRequest(

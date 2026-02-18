@@ -64,7 +64,6 @@ const BASE_METHODS = [
   "device.pair.list",
   "device.pair.approve",
   "device.pair.reject",
-  "device.pair.remove",
   "device.token.rotate",
   "device.token.revoke",
   "node.rename",
@@ -86,11 +85,19 @@ const BASE_METHODS = [
   "agent",
   "agent.identity.get",
   "agent.wait",
+  "mesh.plan",
+  "mesh.plan.auto",
+  "mesh.run",
+  "mesh.status",
+  "mesh.retry",
   "browser.request",
   // WebChat WebSocket-native chat methods
   "chat.history",
   "chat.abort",
   "chat.send",
+  // Reliability KPI methods
+  "reliability.events",
+  "reliability.summary",
 ];
 
 export function listGatewayMethods(): string[] {
@@ -117,4 +124,5 @@ export const GATEWAY_EVENTS = [
   "voicewake.changed",
   "exec.approval.requested",
   "exec.approval.resolved",
+  "reliability",
 ];
