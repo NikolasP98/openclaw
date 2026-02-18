@@ -1,11 +1,18 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { PluginConfigUiHint, PluginKind } from "./types.js";
-import { MANIFEST_KEY, LEGACY_MANIFEST_KEYS } from "../compat/legacy-names.js";
+import {
+  MANIFEST_KEY,
+  LEGACY_MANIFEST_KEYS,
+  LEGACY_PLUGIN_MANIFEST_FILENAMES,
+} from "../compat/legacy-names.js";
 import { isRecord } from "../utils.js";
 
 export const PLUGIN_MANIFEST_FILENAME = "minion.plugin.json";
-export const PLUGIN_MANIFEST_FILENAMES = [PLUGIN_MANIFEST_FILENAME] as const;
+export const PLUGIN_MANIFEST_FILENAMES = [
+  PLUGIN_MANIFEST_FILENAME,
+  ...LEGACY_PLUGIN_MANIFEST_FILENAMES,
+] as const;
 
 export type PluginManifest = {
   id: string;

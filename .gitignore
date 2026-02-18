@@ -91,5 +91,10 @@ USER.md
 /local/
 package-lock.json
 
+# Pre-compiled extension build artifacts (scripts/build-extensions.ts)
+extensions/**/*.js
+extensions/**/*.cjs
+extensions/**/*.mjs
+
 # Local iOS signing overrides
 apps/ios/LocalSigning.xcconfig
