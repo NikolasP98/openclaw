@@ -25,6 +25,20 @@ jobs:
       - name: Configure npm auth
         run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
 
+      - name: Check if version already published (main only)
+        if: github.ref_name == 'main'
+        id: version-check
+        run: |
+          LOCAL_VERSION=$(node -p "require('./package.json').version")
+          REMOTE_VERSION=$(npm view @nikolasp98/minion@latest version 2>/dev/null || echo "none")
+          if [ "$LOCAL_VERSION" = "$REMOTE_VERSION" ]; then
+            echo "::warning::Version $LOCAL_VERSION already published — bump version in package.json before pushing to main"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Publishing $LOCAL_VERSION (remote has $REMOTE_VERSION)"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Set prerelease version (DEV only)
         if: github.ref_name == 'DEV'
         run: |
@@ -33,7 +47,7 @@ jobs:
           npm version "${BASE_VERSION}-dev.${TIMESTAMP}" --no-git-tag-version
 
       - name: Publish (main → latest)
-        if: github.ref_name == 'main'
+        if: github.ref_name == 'main' && steps.version-check.outputs.skip != 'true'
         run: pnpm publish --no-git-checks --tag latest
 
       - name: Publish (DEV → dev)
