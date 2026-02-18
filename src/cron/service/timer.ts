@@ -1,8 +1,9 @@
 import type { HeartbeatRunResult } from "../../infra/heartbeat-wake.js";
+import type { CronJob, CronRunOutcome, CronRunStatus, CronRunTelemetry } from "../types.js";
+import type { CronEvent, CronServiceState } from "./state.js";
 import { DEFAULT_AGENT_ID } from "../../routing/session-key.js";
 import { resolveCronDeliveryPlan } from "../delivery.js";
 import { sweepCronRunSessions } from "../session-reaper.js";
-import type { CronJob, CronRunOutcome, CronRunStatus, CronRunTelemetry } from "../types.js";
 import {
   computeJobNextRunAtMs,
   nextWakeAtMs,
@@ -10,7 +11,6 @@ import {
   resolveJobPayloadTextForMain,
 } from "./jobs.js";
 import { locked } from "./locked.js";
-import type { CronEvent, CronServiceState } from "./state.js";
 import { ensureLoaded, persist } from "./store.js";
 
 const MAX_TIMER_DELAY_MS = 60_000;
@@ -456,6 +456,10 @@ async function executeJobCore(
   state: CronServiceState,
   job: CronJob,
 ): Promise<CronRunOutcome & CronRunTelemetry> {
+  // For "universal" scoped jobs, clear sessionKey so events route to the
+  // agent's main session instead of a specific user's session.
+  const effectiveSessionKey = job.scope === "universal" ? undefined : job.sessionKey;
+
   if (job.sessionTarget === "main") {
     const text = resolveJobPayloadTextForMain(job);
     if (!text) {
@@ -470,7 +474,7 @@ async function executeJobCore(
     }
     state.deps.enqueueSystemEvent(text, {
       agentId: job.agentId,
-      sessionKey: job.sessionKey,
+      sessionKey: effectiveSessionKey,
       contextKey: `cron:${job.id}`,
     });
     if (job.wakeMode === "now" && state.deps.runHeartbeatOnce) {
@@ -485,7 +489,7 @@ async function executeJobCore(
         heartbeatResult = await state.deps.runHeartbeatOnce({
           reason,
           agentId: job.agentId,
-          sessionKey: job.sessionKey,
+          sessionKey: effectiveSessionKey,
         });
         if (
           heartbeatResult.status !== "skipped" ||
@@ -497,7 +501,7 @@ async function executeJobCore(
           state.deps.requestHeartbeatNow({
             reason,
             agentId: job.agentId,
-            sessionKey: job.sessionKey,
+            sessionKey: effectiveSessionKey,
           });
           return { status: "ok", summary: text };
         }
@@ -515,7 +519,7 @@ async function executeJobCore(
       state.deps.requestHeartbeatNow({
         reason: `cron:${job.id}`,
         agentId: job.agentId,
-        sessionKey: job.sessionKey,
+        sessionKey: effectiveSessionKey,
       });
       return { status: "ok", summary: text };
     }
@@ -544,14 +548,14 @@ async function executeJobCore(
       res.status === "error" ? `${prefix} (error): ${summaryText}` : `${prefix}: ${summaryText}`;
     state.deps.enqueueSystemEvent(label, {
       agentId: job.agentId,
-      sessionKey: job.sessionKey,
+      sessionKey: effectiveSessionKey,
       contextKey: `cron:${job.id}`,
     });
     if (job.wakeMode === "now") {
       state.deps.requestHeartbeatNow({
         reason: `cron:${job.id}`,
         agentId: job.agentId,
-        sessionKey: job.sessionKey,
+        sessionKey: effectiveSessionKey,
       });
     }
   }

@@ -11,6 +11,7 @@ export type CronSchedule =
       staggerMs?: number;
     };
 
+export type CronJobScope = "universal" | "session";
 export type CronSessionTarget = "main" | "isolated";
 export type CronWakeMode = "next-heartbeat" | "now";
 
@@ -100,6 +101,12 @@ export type CronJob = {
   agentId?: string;
   /** Origin session namespace for reminder delivery and wake routing. */
   sessionKey?: string;
+  /**
+   * Job scope controls event routing:
+   * - "session" (default): tied to a specific sessionKey; output routes to that session only
+   * - "universal": not tied to any user session; output routes to agent's main session
+   */
+  scope?: CronJobScope;
   name: string;
   description?: string;
   enabled: boolean;
