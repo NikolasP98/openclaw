@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { PluginConfigUiHint, PluginKind } from "./types.js";
-import { MANIFEST_KEY } from "../compat/legacy-names.js";
+import { MANIFEST_KEY, LEGACY_MANIFEST_KEYS } from "../compat/legacy-names.js";
 import { isRecord } from "../utils.js";
 
 export const PLUGIN_MANIFEST_FILENAME = "minion.plugin.json";
@@ -134,12 +134,13 @@ export type MinionPackageManifest = {
 };
 
 export type ManifestKey = typeof MANIFEST_KEY;
+export type LegacyManifestKey = (typeof LEGACY_MANIFEST_KEYS)[number];
 
 export type PackageManifest = {
   name?: string;
   version?: string;
   description?: string;
-} & Partial<Record<ManifestKey, MinionPackageManifest>>;
+} & Partial<Record<ManifestKey | LegacyManifestKey, MinionPackageManifest>>;
 
 export function getPackageManifestMetadata(
   manifest: PackageManifest | undefined,
@@ -147,7 +148,17 @@ export function getPackageManifestMetadata(
   if (!manifest) {
     return undefined;
   }
-  return manifest[MANIFEST_KEY];
+  const primary = manifest[MANIFEST_KEY];
+  if (primary) {
+    return primary;
+  }
+  for (const key of LEGACY_MANIFEST_KEYS) {
+    const legacy = manifest[key];
+    if (legacy) {
+      return legacy;
+    }
+  }
+  return undefined;
 }
 
 /** @deprecated Use MinionPackageManifest */
