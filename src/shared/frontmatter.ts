@@ -137,3 +137,6 @@ export function parseOpenClawManifestInstallBase(
   }
   return spec;
 }
+
+/** @deprecated Use resolveMinionManifestBlock */
+export const resolveOpenClawManifestBlock = resolveMinionManifestBlock;

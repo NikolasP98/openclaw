@@ -1,8 +1,8 @@
+import type { Mock } from "vitest";
 import { EventEmitter } from "node:events";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import type { Mock } from "vitest";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { logWarnMock, logDebugMock, logInfoMock } = vi.hoisted(() => ({
@@ -312,7 +312,7 @@ describe("QmdMemoryManager", () => {
           sessions: { enabled: true },
         },
       },
-    } as OpenClawConfig;
+    } as MinionConfig;
 
     const sessionCollectionName = `sessions-${devAgentId}`;
     const wrongSessionsPath = path.join(stateDir, "agents", agentId, "qmd", "sessions");
@@ -371,7 +371,7 @@ describe("QmdMemoryManager", () => {
           sessions: { enabled: true },
         },
       },
-    } as OpenClawConfig;
+    } as MinionConfig;
 
     const sessionCollectionName = `sessions-${agentId}`;
     spawnMock.mockImplementation((_cmd: string, args: string[]) => {
@@ -458,7 +458,7 @@ describe("QmdMemoryManager", () => {
           paths: [],
         },
       },
-    } as OpenClawConfig;
+    } as MinionConfig;
 
     let updateCalls = 0;
     spawnMock.mockImplementation((_cmd: string, args: string[]) => {
@@ -515,7 +515,7 @@ describe("QmdMemoryManager", () => {
           paths: [],
         },
       },
-    } as OpenClawConfig;
+    } as MinionConfig;
 
     spawnMock.mockImplementation((_cmd: string, args: string[]) => {
       if (args[0] === "update") {
@@ -828,7 +828,7 @@ describe("QmdMemoryManager", () => {
           ],
         },
       },
-    } as OpenClawConfig;
+    } as MinionConfig;
 
     spawnMock.mockImplementation((_cmd: string, args: string[]) => {
       if (args[0] === "query") {
@@ -874,7 +874,7 @@ describe("QmdMemoryManager", () => {
           ],
         },
       },
-    } as OpenClawConfig;
+    } as MinionConfig;
 
     spawnMock.mockImplementation((_cmd: string, args: string[]) => {
       if (args[0] === "search") {

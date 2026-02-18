@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import type { MinionConfig } from "../config/config.js";
 import { loadConfig } from "../config/config.js";
 import { createConfigIO } from "../config/io.js";
 
@@ -11,7 +12,7 @@ function sendJson(res: ServerResponse, status: number, body: unknown) {
   res.end(JSON.stringify(body));
 }
 
-async function readJsonBody(req: IncomingMessage): Promise<any> {
+async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
     let body = "";
     req.on("data", (chunk) => {
@@ -20,7 +21,7 @@ async function readJsonBody(req: IncomingMessage): Promise<any> {
     req.on("end", () => {
       try {
         resolve(JSON.parse(body));
-      } catch (err) {
+      } catch {
         reject(new Error("Invalid JSON"));
       }
     });
@@ -61,7 +62,7 @@ export async function handleConfigApiRequest(
   // PUT /api/config - Update configuration
   if (req.method === "PUT" && url.pathname === "/api/config") {
     try {
-      const newConfig = await readJsonBody(req);
+      const newConfig = (await readJsonBody(req)) as MinionConfig;
 
       // Write the config using the config IO
       const configIo = createConfigIO();

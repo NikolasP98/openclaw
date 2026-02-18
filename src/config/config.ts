@@ -18,4 +18,4 @@ export {
   validateConfigObjectRawWithPlugins,
   validateConfigObjectWithPlugins,
 } from "./validation.js";
-export { MinionSchema } from "./zod-schema.js";
+export { MinionSchema, OpenClawSchema } from "./zod-schema.js";

@@ -22,3 +22,8 @@ export function ensureMinionAgentEnv(): string {
   }
   return dir;
 }
+
+/** @deprecated Use resolveMinionAgentDir */
+export const resolveOpenClawAgentDir = resolveMinionAgentDir;
+/** @deprecated Use ensureMinionAgentEnv */
+export const ensureOpenClawAgentEnv = ensureMinionAgentEnv;

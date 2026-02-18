@@ -318,4 +318,9 @@ export type GatewayConfig = {
    * Set to 0 to disable. Default: 5.
    */
   channelHealthCheckMinutes?: number;
+  /** Message ledger (SQLite inbound/outbound logging). Fork-specific. */
+  messageLedger?: {
+    enabled?: boolean;
+    dbPath?: string;
+  };
 };

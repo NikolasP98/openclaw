@@ -126,3 +126,6 @@ export function ensureMinionCliOnPath(opts: EnsureMinionPathOpts = {}) {
     process.env.PATH = merged;
   }
 }
+
+/** @deprecated Use ensureMinionCliOnPath */
+export const ensureOpenClawCliOnPath = ensureMinionCliOnPath;

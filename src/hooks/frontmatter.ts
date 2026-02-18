@@ -1,3 +1,10 @@
+import type {
+  OpenClawHookMetadata,
+  HookEntry,
+  HookInstallSpec,
+  HookInvocationPolicy,
+  ParsedHookFrontmatter,
+} from "./types.js";
 import { parseFrontmatterBlock } from "../markdown/frontmatter.js";
 import {
   getFrontmatterString,
@@ -9,13 +16,6 @@ import {
   resolveOpenClawManifestOs,
   resolveOpenClawManifestRequires,
 } from "../shared/frontmatter.js";
-import type {
-  OpenClawHookMetadata,
-  HookEntry,
-  HookInstallSpec,
-  HookInvocationPolicy,
-  ParsedHookFrontmatter,
-} from "./types.js";
 
 export function parseFrontmatter(content: string): ParsedHookFrontmatter {
   return parseFrontmatterBlock(content);
@@ -85,3 +85,6 @@ export function resolveHookInvocationPolicy(
 export function resolveHookKey(hookName: string, entry?: HookEntry): string {
   return entry?.metadata?.hookKey ?? hookName;
 }
+
+/** Alias: upstream uses resolveOpenClawMetadata, fork uses resolveMinionMetadata */
+export const resolveMinionMetadata = resolveOpenClawMetadata;

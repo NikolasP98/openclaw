@@ -89,7 +89,7 @@ describe("resolveCronSession", () => {
       vi.mocked(evaluateSessionFreshness).mockReturnValue({ fresh: true });
 
       const result = resolveCronSession({
-        cfg: {} as OpenClawConfig,
+        cfg: {} as MinionConfig,
         sessionKey: "webhook:stable-key",
         agentId: "main",
         nowMs: Date.now(),
@@ -114,7 +114,7 @@ describe("resolveCronSession", () => {
       vi.mocked(evaluateSessionFreshness).mockReturnValue({ fresh: false });
 
       const result = resolveCronSession({
-        cfg: {} as OpenClawConfig,
+        cfg: {} as MinionConfig,
         sessionKey: "webhook:stable-key",
         agentId: "main",
         nowMs: Date.now(),
@@ -141,7 +141,7 @@ describe("resolveCronSession", () => {
       vi.mocked(evaluateSessionFreshness).mockReturnValue({ fresh: true });
 
       const result = resolveCronSession({
-        cfg: {} as OpenClawConfig,
+        cfg: {} as MinionConfig,
         sessionKey: "webhook:stable-key",
         agentId: "main",
         nowMs: Date.now(),
@@ -165,7 +165,7 @@ describe("resolveCronSession", () => {
       vi.mocked(evaluateSessionFreshness).mockReturnValue({ fresh: true });
 
       const result = resolveCronSession({
-        cfg: {} as OpenClawConfig,
+        cfg: {} as MinionConfig,
         sessionKey: "webhook:stable-key",
         agentId: "main",
         nowMs: Date.now(),

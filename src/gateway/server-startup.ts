@@ -1,3 +1,6 @@
+import type { CliDeps } from "../cli/deps.js";
+import type { loadConfig } from "../config/config.js";
+import type { loadOpenClawPlugins } from "../plugins/loader.js";
 import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "../agents/defaults.js";
 import { loadModelCatalog } from "../agents/model-catalog.js";
 import {
@@ -7,8 +10,6 @@ import {
 } from "../agents/model-selection.js";
 import { resolveAgentSessionDirs } from "../agents/session-dirs.js";
 import { cleanStaleLockFiles } from "../agents/session-write-lock.js";
-import type { CliDeps } from "../cli/deps.js";
-import type { loadConfig } from "../config/config.js";
 import { resolveStateDir } from "../config/paths.js";
 import { startGmailWatcher } from "../hooks/gmail-watcher.js";
 import {
@@ -18,7 +19,6 @@ import {
 } from "../hooks/internal-hooks.js";
 import { loadInternalHooks } from "../hooks/loader.js";
 import { isTruthyEnvValue } from "../infra/env.js";
-import type { loadOpenClawPlugins } from "../plugins/loader.js";
 import { type PluginServicesHandle, startPluginServices } from "../plugins/services.js";
 import { startBrowserControlServerIfEnabled } from "./server-browser.js";
 import {
@@ -65,6 +65,24 @@ export async function startGatewaySidecars(params: {
     browserControl = await startBrowserControlServerIfEnabled();
   } catch (err) {
     params.logBrowser.error(`server failed to start: ${String(err)}`);
+  }
+
+  // Start Google OAuth callback server if enabled (hooks.gogOAuth).
+  let gogOAuthServer: { stop: () => Promise<void> } | null = null;
+  if (
+    params.cfg.hooks?.gogOAuth?.enabled !== false &&
+    !isTruthyEnvValue(process.env.OPENCLAW_SKIP_GOG_OAUTH)
+  ) {
+    try {
+      const { startGogOAuthServer } = await import("../hooks/gog-oauth-server.js");
+      gogOAuthServer = await startGogOAuthServer(
+        params.cfg.hooks?.gogOAuth || {},
+        params.defaultWorkspaceDir,
+      );
+      params.logHooks.info("google oauth server started");
+    } catch (err) {
+      params.logHooks.error(`google oauth server failed to start: ${String(err)}`);
+    }
   }
 
   // Start Gmail watcher if configured (hooks.gmail.account).
@@ -181,5 +199,5 @@ export async function startGatewaySidecars(params: {
     }, 750);
   }
 
-  return { browserControl, pluginServices };
+  return { browserControl, pluginServices, gogOAuthServer };
 }

@@ -87,3 +87,6 @@ export type SkillSnapshot = {
   resolvedSkills?: Skill[];
   version?: number;
 };
+
+/** @deprecated Use MinionSkillMetadata */
+export type OpenClawSkillMetadata = MinionSkillMetadata;

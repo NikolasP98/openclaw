@@ -42,5 +42,5 @@ export interface MinionConfig {
     list?: AgentConfig[];
   };
   bindings?: AgentBinding[];
-  [key: string]: any;
+  [key: string]: unknown;
 }

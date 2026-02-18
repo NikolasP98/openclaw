@@ -142,3 +142,6 @@ export async function ensureMinionModelsJson(
   await fs.writeFile(targetPath, next, { mode: 0o600 });
   return { agentDir, wrote: true };
 }
+
+/** @deprecated Use ensureMinionModelsJson */
+export const ensureOpenClawModelsJson = ensureMinionModelsJson;

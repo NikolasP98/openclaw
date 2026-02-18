@@ -28,3 +28,6 @@ export async function resolveMinionDocsPath(params: {
   const packageDocs = path.join(packageRoot, "docs");
   return fs.existsSync(packageDocs) ? packageDocs : null;
 }
+
+/** @deprecated Use resolveMinionDocsPath */
+export const resolveOpenClawDocsPath = resolveMinionDocsPath;

@@ -47,3 +47,6 @@ export function compareMinionVersions(
   }
   return 0;
 }
+
+/** @deprecated Use compareMinionVersions */
+export const compareOpenClawVersions = compareMinionVersions;

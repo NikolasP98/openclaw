@@ -186,6 +186,9 @@ export function decorateMinionProfile(
   }
 }
 
+/** Backward-compat alias (OpenClaw -> Minion rebrand) */
+export const decorateOpenClawProfile = decorateMinionProfile;
+
 export function ensureProfileCleanExit(userDataDir: string) {
   const preferencesPath = path.join(userDataDir, "Default", "Preferences");
   const prefs = safeReadJson(preferencesPath) ?? {};
