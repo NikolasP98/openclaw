@@ -2,11 +2,11 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SMOKE_IMAGE="${MINION_INSTALL_SMOKE_IMAGE:-${MINIONBOT_INSTALL_SMOKE_IMAGE:-minion-install-smoke:local}}"
-NONROOT_IMAGE="${MINION_INSTALL_NONROOT_IMAGE:-${MINIONBOT_INSTALL_NONROOT_IMAGE:-minion-install-nonroot:local}}"
-INSTALL_URL="${MINION_INSTALL_URL:-${MINIONBOT_INSTALL_URL:-https://minion.bot/install.sh}}"
-CLI_INSTALL_URL="${MINION_INSTALL_CLI_URL:-${MINIONBOT_INSTALL_CLI_URL:-https://minion.bot/install-cli.sh}}"
-SKIP_NONROOT="${MINION_INSTALL_SMOKE_SKIP_NONROOT:-${MINIONBOT_INSTALL_SMOKE_SKIP_NONROOT:-0}}"
+SMOKE_IMAGE="${OPENCLAW_INSTALL_SMOKE_IMAGE:-${CLAWDBOT_INSTALL_SMOKE_IMAGE:-openclaw-install-smoke:local}}"
+NONROOT_IMAGE="${OPENCLAW_INSTALL_NONROOT_IMAGE:-${CLAWDBOT_INSTALL_NONROOT_IMAGE:-openclaw-install-nonroot:local}}"
+INSTALL_URL="${OPENCLAW_INSTALL_URL:-${CLAWDBOT_INSTALL_URL:-https://openclaw.bot/install.sh}}"
+CLI_INSTALL_URL="${OPENCLAW_INSTALL_CLI_URL:-${CLAWDBOT_INSTALL_CLI_URL:-https://openclaw.bot/install-cli.sh}}"
+SKIP_NONROOT="${OPENCLAW_INSTALL_SMOKE_SKIP_NONROOT:-${CLAWDBOT_INSTALL_SMOKE_SKIP_NONROOT:-0}}"
 LATEST_DIR="$(mktemp -d)"
 LATEST_FILE="${LATEST_DIR}/latest"
 
@@ -19,11 +19,12 @@ docker build \
 echo "==> Run installer smoke test (root): $INSTALL_URL"
 docker run --rm -t \
   -v "${LATEST_DIR}:/out" \
-  -e MINION_INSTALL_URL="$INSTALL_URL" \
-  -e MINION_INSTALL_LATEST_OUT="/out/latest" \
-  -e MINION_INSTALL_SMOKE_PREVIOUS="${MINION_INSTALL_SMOKE_PREVIOUS:-${MINIONBOT_INSTALL_SMOKE_PREVIOUS:-}}" \
-  -e MINION_INSTALL_SMOKE_SKIP_PREVIOUS="${MINION_INSTALL_SMOKE_SKIP_PREVIOUS:-${MINIONBOT_INSTALL_SMOKE_SKIP_PREVIOUS:-0}}" \
-  -e MINION_NO_ONBOARD=1 \
+  -e OPENCLAW_INSTALL_URL="$INSTALL_URL" \
+  -e OPENCLAW_INSTALL_METHOD=npm \
+  -e OPENCLAW_INSTALL_LATEST_OUT="/out/latest" \
+  -e OPENCLAW_INSTALL_SMOKE_PREVIOUS="${OPENCLAW_INSTALL_SMOKE_PREVIOUS:-${CLAWDBOT_INSTALL_SMOKE_PREVIOUS:-}}" \
+  -e OPENCLAW_INSTALL_SMOKE_SKIP_PREVIOUS="${OPENCLAW_INSTALL_SMOKE_SKIP_PREVIOUS:-${CLAWDBOT_INSTALL_SMOKE_SKIP_PREVIOUS:-0}}" \
+  -e OPENCLAW_NO_ONBOARD=1 \
   -e DEBIAN_FRONTEND=noninteractive \
   "$SMOKE_IMAGE"
 
@@ -33,7 +34,7 @@ if [[ -f "$LATEST_FILE" ]]; then
 fi
 
 if [[ "$SKIP_NONROOT" == "1" ]]; then
-  echo "==> Skip non-root installer smoke (MINION_INSTALL_SMOKE_SKIP_NONROOT=1)"
+  echo "==> Skip non-root installer smoke (OPENCLAW_INSTALL_SMOKE_SKIP_NONROOT=1)"
 else
   echo "==> Build non-root image: $NONROOT_IMAGE"
   docker build \
@@ -43,15 +44,16 @@ else
 
   echo "==> Run installer non-root test: $INSTALL_URL"
   docker run --rm -t \
-    -e MINION_INSTALL_URL="$INSTALL_URL" \
-    -e MINION_INSTALL_EXPECT_VERSION="$LATEST_VERSION" \
-    -e MINION_NO_ONBOARD=1 \
+    -e OPENCLAW_INSTALL_URL="$INSTALL_URL" \
+    -e OPENCLAW_INSTALL_METHOD=npm \
+    -e OPENCLAW_INSTALL_EXPECT_VERSION="$LATEST_VERSION" \
+    -e OPENCLAW_NO_ONBOARD=1 \
     -e DEBIAN_FRONTEND=noninteractive \
     "$NONROOT_IMAGE"
 fi
 
-if [[ "${MINION_INSTALL_SMOKE_SKIP_CLI:-${MINIONBOT_INSTALL_SMOKE_SKIP_CLI:-0}}" == "1" ]]; then
-  echo "==> Skip CLI installer smoke (MINION_INSTALL_SMOKE_SKIP_CLI=1)"
+if [[ "${OPENCLAW_INSTALL_SMOKE_SKIP_CLI:-${CLAWDBOT_INSTALL_SMOKE_SKIP_CLI:-0}}" == "1" ]]; then
+  echo "==> Skip CLI installer smoke (OPENCLAW_INSTALL_SMOKE_SKIP_CLI=1)"
   exit 0
 fi
 
@@ -63,8 +65,8 @@ fi
 echo "==> Run CLI installer non-root test (same image)"
 docker run --rm -t \
   --entrypoint /bin/bash \
-  -e MINION_INSTALL_URL="$INSTALL_URL" \
-  -e MINION_INSTALL_CLI_URL="$CLI_INSTALL_URL" \
-  -e MINION_NO_ONBOARD=1 \
+  -e OPENCLAW_INSTALL_URL="$INSTALL_URL" \
+  -e OPENCLAW_INSTALL_CLI_URL="$CLI_INSTALL_URL" \
+  -e OPENCLAW_NO_ONBOARD=1 \
   -e DEBIAN_FRONTEND=noninteractive \
   "$NONROOT_IMAGE" -lc "curl -fsSL \"$CLI_INSTALL_URL\" | bash -s -- --set-npm-prefix --no-onboard"

@@ -4,10 +4,11 @@ import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "../agents/agent
 import { lookupContextTokens } from "../agents/context.js";
 import { DEFAULT_CONTEXT_TOKENS, DEFAULT_MODEL, DEFAULT_PROVIDER } from "../agents/defaults.js";
 import {
+  parseModelRef,
   resolveConfiguredModelRef,
   resolveDefaultModelForAgent,
 } from "../agents/model-selection.js";
-import { type MinionConfig, loadConfig } from "../config/config.js";
+import { type OpenClawConfig, loadConfig } from "../config/config.js";
 import { resolveStateDir } from "../config/paths.js";
 import {
   buildGroupDisplayName,
@@ -95,7 +96,7 @@ function isWorkspaceRelativePath(value: string): boolean {
 }
 
 function resolveIdentityAvatarUrl(
-  cfg: MinionConfig,
+  cfg: OpenClawConfig,
   agentId: string,
   avatar: string | undefined,
 ): string | undefined {
@@ -316,7 +317,7 @@ function listExistingAgentIdsFromDisk(): string[] {
   }
 }
 
-function listConfiguredAgentIds(cfg: MinionConfig): string[] {
+function listConfiguredAgentIds(cfg: OpenClawConfig): string[] {
   const agents = cfg.agents?.list ?? [];
   if (agents.length > 0) {
     const ids = new Set<string>();
@@ -348,7 +349,7 @@ function listConfiguredAgentIds(cfg: MinionConfig): string[] {
   return sorted;
 }
 
-export function listAgentsForGateway(cfg: MinionConfig): {
+export function listAgentsForGateway(cfg: OpenClawConfig): {
   defaultId: string;
   mainKey: string;
   scope: SessionScope;
@@ -417,11 +418,14 @@ function canonicalizeSessionKeyForAgent(agentId: string, key: string): string {
   return `agent:${normalizeAgentId(agentId)}:${lowered}`;
 }
 
-function resolveDefaultStoreAgentId(cfg: MinionConfig): string {
+function resolveDefaultStoreAgentId(cfg: OpenClawConfig): string {
   return normalizeAgentId(resolveDefaultAgentId(cfg));
 }
 
-export function resolveSessionStoreKey(params: { cfg: MinionConfig; sessionKey: string }): string {
+export function resolveSessionStoreKey(params: {
+  cfg: OpenClawConfig;
+  sessionKey: string;
+}): string {
   const raw = params.sessionKey.trim();
   if (!raw) {
     return raw;
@@ -455,7 +459,7 @@ export function resolveSessionStoreKey(params: { cfg: MinionConfig; sessionKey: 
   return canonicalizeSessionKeyForAgent(agentId, lowered);
 }
 
-function resolveSessionStoreAgentId(cfg: MinionConfig, canonicalKey: string): string {
+function resolveSessionStoreAgentId(cfg: OpenClawConfig, canonicalKey: string): string {
   if (canonicalKey === "global" || canonicalKey === "unknown") {
     return resolveDefaultStoreAgentId(cfg);
   }
@@ -467,7 +471,7 @@ function resolveSessionStoreAgentId(cfg: MinionConfig, canonicalKey: string): st
 }
 
 export function canonicalizeSpawnedByForAgent(
-  cfg: MinionConfig,
+  cfg: OpenClawConfig,
   agentId: string,
   spawnedBy?: string,
 ): string | undefined {
@@ -492,7 +496,7 @@ export function canonicalizeSpawnedByForAgent(
 }
 
 export function resolveGatewaySessionStoreTarget(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   key: string;
   scanLegacyKeys?: boolean;
   store?: Record<string, SessionEntry>;
@@ -548,7 +552,7 @@ export function resolveGatewaySessionStoreTarget(params: {
 
 // Merge with existing entry based on latest timestamp to ensure data consistency and avoid overwriting with less complete data.
 function mergeSessionEntryIntoCombined(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   combined: Record<string, SessionEntry>;
   entry: SessionEntry;
   agentId: string;
@@ -576,7 +580,7 @@ function mergeSessionEntryIntoCombined(params: {
   }
 }
 
-export function loadCombinedSessionStoreForGateway(cfg: MinionConfig): {
+export function loadCombinedSessionStoreForGateway(cfg: OpenClawConfig): {
   storePath: string;
   store: Record<string, SessionEntry>;
 } {
@@ -621,7 +625,7 @@ export function loadCombinedSessionStoreForGateway(cfg: MinionConfig): {
   return { storePath, store: combined };
 }
 
-export function getSessionDefaults(cfg: MinionConfig): GatewaySessionsDefaults {
+export function getSessionDefaults(cfg: OpenClawConfig): GatewaySessionsDefaults {
   const resolved = resolveConfiguredModelRef({
     cfg,
     defaultProvider: DEFAULT_PROVIDER,
@@ -639,8 +643,10 @@ export function getSessionDefaults(cfg: MinionConfig): GatewaySessionsDefaults {
 }
 
 export function resolveSessionModelRef(
-  cfg: MinionConfig,
-  entry?: SessionEntry,
+  cfg: OpenClawConfig,
+  entry?:
+    | SessionEntry
+    | Pick<SessionEntry, "model" | "modelProvider" | "modelOverride" | "providerOverride">,
   agentId?: string,
 ): { provider: string; model: string } {
   const resolved = agentId
@@ -650,18 +656,47 @@ export function resolveSessionModelRef(
         defaultProvider: DEFAULT_PROVIDER,
         defaultModel: DEFAULT_MODEL,
       });
+
+  // Prefer the last runtime model recorded on the session entry.
+  // This is the actual model used by the latest run and must win over defaults.
   let provider = resolved.provider;
   let model = resolved.model;
+  const runtimeModel = entry?.model?.trim();
+  const runtimeProvider = entry?.modelProvider?.trim();
+  if (runtimeModel) {
+    const parsedRuntime = parseModelRef(
+      runtimeModel,
+      runtimeProvider || provider || DEFAULT_PROVIDER,
+    );
+    if (parsedRuntime) {
+      provider = parsedRuntime.provider;
+      model = parsedRuntime.model;
+    } else {
+      provider = runtimeProvider || provider;
+      model = runtimeModel;
+    }
+    return { provider, model };
+  }
+
+  // Fall back to explicit per-session override (set at spawn/model-patch time),
+  // then finally to configured defaults.
   const storedModelOverride = entry?.modelOverride?.trim();
   if (storedModelOverride) {
-    provider = entry?.providerOverride?.trim() || provider;
-    model = storedModelOverride;
+    const overrideProvider = entry?.providerOverride?.trim() || provider || DEFAULT_PROVIDER;
+    const parsedOverride = parseModelRef(storedModelOverride, overrideProvider);
+    if (parsedOverride) {
+      provider = parsedOverride.provider;
+      model = parsedOverride.model;
+    } else {
+      provider = overrideProvider;
+      model = storedModelOverride;
+    }
   }
   return { provider, model };
 }
 
 export function listSessionsFromStore(params: {
-  cfg: MinionConfig;
+  cfg: OpenClawConfig;
   storePath: string;
   store: Record<string, SessionEntry>;
   opts: import("./protocol/index.js").SessionsListParams;

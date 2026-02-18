@@ -15,6 +15,14 @@ const getLoggerInfo = vi.fn();
 const asString = (value: unknown, fallback: string) =>
   typeof value === "string" && value.trim() ? value : fallback;
 
+function enableAdvertiserUnitMode(hostname = "test-host") {
+  // Allow advertiser to run in unit tests.
+  delete process.env.VITEST;
+  process.env.NODE_ENV = "development";
+  vi.spyOn(os, "hostname").mockReturnValue(hostname);
+  process.env.OPENCLAW_MDNS_HOSTNAME = hostname;
+}
+
 function mockCiaoService(params?: {
   advertise?: ReturnType<typeof vi.fn>;
   destroy?: ReturnType<typeof vi.fn>;
@@ -105,19 +113,14 @@ describe("gateway bonjour advertiser", () => {
   });
 
   it("does not block on advertise and publishes expected txt keys", async () => {
-    // Allow advertiser to run in unit tests.
-    delete process.env.VITEST;
-    process.env.NODE_ENV = "development";
-
-    vi.spyOn(os, "hostname").mockReturnValue("test-host");
-    process.env.MINION_MDNS_HOSTNAME = "test-host";
-    process.env.MINION_MDNS_HOSTNAME = "test-host";
+    enableAdvertiserUnitMode();
 
     const destroy = vi.fn().mockResolvedValue(undefined);
+    let resolveAdvertise = () => {};
     const advertise = vi.fn().mockImplementation(
       async () =>
         await new Promise<void>((resolve) => {
-          setTimeout(resolve, 250);
+          resolveAdvertise = resolve;
         }),
     );
     mockCiaoService({ advertise, destroy });
@@ -126,12 +129,12 @@ describe("gateway bonjour advertiser", () => {
       gatewayPort: 18789,
       sshPort: 2222,
       tailnetDns: "host.tailnet.ts.net",
-      cliPath: "/opt/homebrew/bin/minion",
+      cliPath: "/opt/homebrew/bin/openclaw",
     });
 
     expect(createService).toHaveBeenCalledTimes(1);
     const [gatewayCall] = createService.mock.calls as Array<[Record<string, unknown>]>;
-    expect(gatewayCall?.[0]?.type).toBe("minion-gw");
+    expect(gatewayCall?.[0]?.type).toBe("openclaw-gw");
     const gatewayType = asString(gatewayCall?.[0]?.type, "");
     expect(gatewayType.length).toBeLessThanOrEqual(15);
     expect(gatewayCall?.[0]?.port).toBe(18789);
@@ -141,12 +144,14 @@ describe("gateway bonjour advertiser", () => {
     expect((gatewayCall?.[0]?.txt as Record<string, string>)?.gatewayPort).toBe("18789");
     expect((gatewayCall?.[0]?.txt as Record<string, string>)?.sshPort).toBe("2222");
     expect((gatewayCall?.[0]?.txt as Record<string, string>)?.cliPath).toBe(
-      "/opt/homebrew/bin/minion",
+      "/opt/homebrew/bin/openclaw",
     );
     expect((gatewayCall?.[0]?.txt as Record<string, string>)?.transport).toBe("gateway");
 
     // We don't await `advertise()`, but it should still be called for each service.
     expect(advertise).toHaveBeenCalledTimes(1);
+    resolveAdvertise();
+    await Promise.resolve();
 
     await started.stop();
     expect(destroy).toHaveBeenCalledTimes(1);
@@ -154,11 +159,7 @@ describe("gateway bonjour advertiser", () => {
   });
 
   it("omits cliPath and sshPort in minimal mode", async () => {
-    // Allow advertiser to run in unit tests.
-    delete process.env.VITEST;
-    process.env.NODE_ENV = "development";
-
-    vi.spyOn(os, "hostname").mockReturnValue("test-host");
+    enableAdvertiserUnitMode();
 
     const destroy = vi.fn().mockResolvedValue(undefined);
     const advertise = vi.fn().mockResolvedValue(undefined);
@@ -167,7 +168,7 @@ describe("gateway bonjour advertiser", () => {
     const started = await startGatewayBonjourAdvertiser({
       gatewayPort: 18789,
       sshPort: 2222,
-      cliPath: "/opt/homebrew/bin/minion",
+      cliPath: "/opt/homebrew/bin/openclaw",
       minimal: true,
     });
 
@@ -179,12 +180,7 @@ describe("gateway bonjour advertiser", () => {
   });
 
   it("attaches conflict listeners for services", async () => {
-    // Allow advertiser to run in unit tests.
-    delete process.env.VITEST;
-    process.env.NODE_ENV = "development";
-
-    vi.spyOn(os, "hostname").mockReturnValue("test-host");
-    process.env.MINION_MDNS_HOSTNAME = "test-host";
+    enableAdvertiserUnitMode();
 
     const destroy = vi.fn().mockResolvedValue(undefined);
     const advertise = vi.fn().mockResolvedValue(undefined);
@@ -207,12 +203,7 @@ describe("gateway bonjour advertiser", () => {
   });
 
   it("cleans up unhandled rejection handler after shutdown", async () => {
-    // Allow advertiser to run in unit tests.
-    delete process.env.VITEST;
-    process.env.NODE_ENV = "development";
-
-    vi.spyOn(os, "hostname").mockReturnValue("test-host");
-    process.env.MINION_MDNS_HOSTNAME = "test-host";
+    enableAdvertiserUnitMode();
 
     const destroy = vi.fn().mockResolvedValue(undefined);
     const advertise = vi.fn().mockResolvedValue(undefined);
@@ -240,13 +231,8 @@ describe("gateway bonjour advertiser", () => {
   });
 
   it("logs advertise failures and retries via watchdog", async () => {
-    // Allow advertiser to run in unit tests.
-    delete process.env.VITEST;
-    process.env.NODE_ENV = "development";
-
+    enableAdvertiserUnitMode();
     vi.useFakeTimers();
-    vi.spyOn(os, "hostname").mockReturnValue("test-host");
-    process.env.MINION_MDNS_HOSTNAME = "test-host";
 
     const destroy = vi.fn().mockResolvedValue(undefined);
     const advertise = vi
@@ -278,12 +264,7 @@ describe("gateway bonjour advertiser", () => {
   });
 
   it("handles advertise throwing synchronously", async () => {
-    // Allow advertiser to run in unit tests.
-    delete process.env.VITEST;
-    process.env.NODE_ENV = "development";
-
-    vi.spyOn(os, "hostname").mockReturnValue("test-host");
-    process.env.MINION_MDNS_HOSTNAME = "test-host";
+    enableAdvertiserUnitMode();
 
     const destroy = vi.fn().mockResolvedValue(undefined);
     const advertise = vi.fn(() => {
@@ -319,10 +300,10 @@ describe("gateway bonjour advertiser", () => {
     });
 
     const [gatewayCall] = createService.mock.calls as Array<[ServiceCall]>;
-    expect(gatewayCall?.[0]?.name).toBe("minion (Minion)");
+    expect(gatewayCall?.[0]?.name).toBe("openclaw (OpenClaw)");
     expect(gatewayCall?.[0]?.domain).toBe("local");
-    expect(gatewayCall?.[0]?.hostname).toBe("minion");
-    expect((gatewayCall?.[0]?.txt as Record<string, string>)?.lanHost).toBe("minion.local");
+    expect(gatewayCall?.[0]?.hostname).toBe("openclaw");
+    expect((gatewayCall?.[0]?.txt as Record<string, string>)?.lanHost).toBe("openclaw.local");
 
     await started.stop();
   });

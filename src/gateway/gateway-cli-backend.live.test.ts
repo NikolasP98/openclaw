@@ -18,7 +18,7 @@ const CLI_IMAGE = isTruthyEnvValue(process.env.MINION_LIVE_CLI_BACKEND_IMAGE_PRO
 const CLI_RESUME = isTruthyEnvValue(process.env.MINION_LIVE_CLI_BACKEND_RESUME_PROBE);
 const describeLive = LIVE && CLI_LIVE ? describe : describe.skip;
 
-const DEFAULT_MODEL = "claude-cli/claude-sonnet-4-5";
+const DEFAULT_MODEL = "claude-cli/claude-sonnet-4-6";
 const DEFAULT_CLAUDE_ARGS = ["-p", "--output-format", "json", "--dangerously-skip-permissions"];
 const DEFAULT_CODEX_ARGS = [
   "exec",

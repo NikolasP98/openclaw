@@ -1,17 +1,17 @@
-import type { AgentTool } from "@mariozechner/pi-agent-core";
-import { Type } from "@sinclair/typebox";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
+import { Type } from "@sinclair/typebox";
 import { describe, expect, it, vi } from "vitest";
 import "./test-helpers/fast-coding-tools.js";
-import { createMinionTools } from "./minion-tools.js";
-import { __testing, createMinionCodingTools } from "./pi-tools.js";
-import { createSandboxedReadTool } from "./pi-tools.read.js";
+import { createOpenClawTools } from "./openclaw-tools.js";
+import { __testing, createOpenClawCodingTools } from "./pi-tools.js";
+import { createOpenClawReadTool, createSandboxedReadTool } from "./pi-tools.read.js";
 import { createHostSandboxFsBridge } from "./test-helpers/host-sandbox-fs-bridge.js";
 import { createBrowserTool } from "./tools/browser-tool.js";
 
-const defaultTools = createMinionCodingTools();
+const defaultTools = createOpenClawCodingTools();
 
 function findUnionKeywordOffenders(
   tools: Array<{ name: string; parameters: unknown }>,
@@ -58,7 +58,26 @@ function findUnionKeywordOffenders(
   return offenders;
 }
 
-describe("createMinionCodingTools", () => {
+function extractToolText(result: unknown): string {
+  if (!result || typeof result !== "object") {
+    return "";
+  }
+  const content = (result as { content?: unknown }).content;
+  if (!Array.isArray(content)) {
+    return "";
+  }
+  const textBlock = content.find((block) => {
+    return (
+      block &&
+      typeof block === "object" &&
+      (block as { type?: unknown }).type === "text" &&
+      typeof (block as { text?: unknown }).text === "string"
+    );
+  }) as { text?: string } | undefined;
+  return textBlock?.text ?? "";
+}
+
+describe("createOpenClawCodingTools", () => {
   describe("Claude/Gemini alias support", () => {
     it("adds Claude-style aliases to schemas without dropping metadata", () => {
       const base: AgentTool = {
@@ -271,7 +290,7 @@ describe("createMinionCodingTools", () => {
     expect(findUnionKeywordOffenders(defaultTools)).toEqual([]);
   });
   it("keeps raw core tool schemas union-free", () => {
-    const tools = createMinionTools();
+    const tools = createOpenClawTools();
     const coreTools = new Set([
       "browser",
       "canvas",
@@ -291,7 +310,7 @@ describe("createMinionCodingTools", () => {
     expect(findUnionKeywordOffenders(tools, { onlyNames: coreTools })).toEqual([]);
   });
   it("does not expose provider-specific message tools", () => {
-    const tools = createMinionCodingTools({ messageProvider: "discord" });
+    const tools = createOpenClawCodingTools({ messageProvider: "discord" });
     const names = new Set(tools.map((tool) => tool.name));
     expect(names.has("discord")).toBe(false);
     expect(names.has("slack")).toBe(false);
@@ -299,7 +318,7 @@ describe("createMinionCodingTools", () => {
     expect(names.has("whatsapp")).toBe(false);
   });
   it("filters session tools for sub-agent sessions by default", () => {
-    const tools = createMinionCodingTools({
+    const tools = createOpenClawCodingTools({
       sessionKey: "agent:main:subagent:test",
     });
     const names = new Set(tools.map((tool) => tool.name));
@@ -336,7 +355,7 @@ describe("createMinionCodingTools", () => {
       "utf-8",
     );
 
-    const tools = createMinionCodingTools({
+    const tools = createOpenClawCodingTools({
       sessionKey: "agent:main:subagent:flat",
       config: {
         session: {
@@ -358,7 +377,7 @@ describe("createMinionCodingTools", () => {
     expect(names.has("subagents")).toBe(true);
   });
   it("supports allow-only sub-agent tool policy", () => {
-    const tools = createMinionCodingTools({
+    const tools = createOpenClawCodingTools({
       sessionKey: "agent:main:subagent:test",
       // Intentionally partial config; only fields used by pi-tools are provided.
       config: {
@@ -376,7 +395,7 @@ describe("createMinionCodingTools", () => {
   });
 
   it("applies tool profiles before allow/deny policies", () => {
-    const tools = createMinionCodingTools({
+    const tools = createOpenClawCodingTools({
       config: { tools: { profile: "messaging" } },
     });
     const names = new Set(tools.map((tool) => tool.name));
@@ -387,7 +406,7 @@ describe("createMinionCodingTools", () => {
     expect(names.has("browser")).toBe(false);
   });
   it("expands group shorthands in global tool policy", () => {
-    const tools = createMinionCodingTools({
+    const tools = createOpenClawCodingTools({
       config: { tools: { allow: ["group:fs"] } },
     });
     const names = new Set(tools.map((tool) => tool.name));
@@ -398,7 +417,7 @@ describe("createMinionCodingTools", () => {
     expect(names.has("browser")).toBe(false);
   });
   it("expands group shorthands in global tool deny policy", () => {
-    const tools = createMinionCodingTools({
+    const tools = createOpenClawCodingTools({
       config: { tools: { deny: ["group:fs"] } },
     });
     const names = new Set(tools.map((tool) => tool.name));
@@ -408,7 +427,7 @@ describe("createMinionCodingTools", () => {
     expect(names.has("exec")).toBe(true);
   });
   it("lets agent profiles override global profiles", () => {
-    const tools = createMinionCodingTools({
+    const tools = createOpenClawCodingTools({
       sessionKey: "agent:work:main",
       config: {
         tools: { profile: "coding" },
@@ -492,8 +511,8 @@ describe("createMinionCodingTools", () => {
     }
   });
   it("applies sandbox path guards to file_path alias", async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "minion-sbx-"));
-    const outsidePath = path.join(os.tmpdir(), "minion-outside.txt");
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-sbx-"));
+    const outsidePath = path.join(os.tmpdir(), "openclaw-outside.txt");
     await fs.writeFile(outsidePath, "outside", "utf8");
     try {
       const readTool = createSandboxedReadTool({
@@ -507,5 +526,91 @@ describe("createMinionCodingTools", () => {
       await fs.rm(outsidePath, { force: true });
       await fs.rm(tmpDir, { recursive: true, force: true });
     }
+  });
+
+  it("auto-pages read output across chunks when context window budget allows", async () => {
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-read-autopage-"));
+    const filePath = path.join(tmpDir, "big.txt");
+    const lines = Array.from(
+      { length: 5000 },
+      (_unused, i) => `line-${String(i + 1).padStart(4, "0")}`,
+    );
+    await fs.writeFile(filePath, lines.join("\n"), "utf8");
+    try {
+      const readTool = createSandboxedReadTool({
+        root: tmpDir,
+        bridge: createHostSandboxFsBridge(tmpDir),
+        modelContextWindowTokens: 200_000,
+      });
+      const result = await readTool.execute("read-autopage-1", { path: "big.txt" });
+      const text = extractToolText(result);
+      expect(text).toContain("line-0001");
+      expect(text).toContain("line-5000");
+      expect(text).not.toContain("Read output capped at");
+      expect(text).not.toMatch(/Use offset=\d+ to continue\.\]$/);
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("adds capped continuation guidance when aggregated read output reaches budget", async () => {
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-read-cap-"));
+    const filePath = path.join(tmpDir, "huge.txt");
+    const lines = Array.from(
+      { length: 8000 },
+      (_unused, i) => `line-${String(i + 1).padStart(4, "0")}-abcdefghijklmnopqrstuvwxyz`,
+    );
+    await fs.writeFile(filePath, lines.join("\n"), "utf8");
+    try {
+      const readTool = createSandboxedReadTool({
+        root: tmpDir,
+        bridge: createHostSandboxFsBridge(tmpDir),
+      });
+      const result = await readTool.execute("read-cap-1", { path: "huge.txt" });
+      const text = extractToolText(result);
+      expect(text).toContain("line-0001");
+      expect(text).toContain("[Read output capped at 50KB for this call. Use offset=");
+      expect(text).not.toContain("line-8000");
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("strips truncation.content details from read results while preserving other fields", async () => {
+    const readResult: AgentToolResult<unknown> = {
+      content: [{ type: "text" as const, text: "line-0001" }],
+      details: {
+        truncation: {
+          truncated: true,
+          outputLines: 1,
+          firstLineExceedsLimit: false,
+          content: "hidden duplicate payload",
+        },
+      },
+    };
+    const baseRead: AgentTool = {
+      name: "read",
+      label: "read",
+      description: "test read",
+      parameters: Type.Object({
+        path: Type.String(),
+        offset: Type.Optional(Type.Number()),
+        limit: Type.Optional(Type.Number()),
+      }),
+      execute: vi.fn(async () => readResult),
+    };
+
+    const wrapped = createOpenClawReadTool(
+      baseRead as unknown as Parameters<typeof createOpenClawReadTool>[0],
+    );
+    const result = await wrapped.execute("read-strip-1", { path: "demo.txt", limit: 1 });
+
+    const details = (result as { details?: { truncation?: Record<string, unknown> } }).details;
+    expect(details?.truncation).toMatchObject({
+      truncated: true,
+      outputLines: 1,
+      firstLineExceedsLimit: false,
+    });
+    expect(details?.truncation).not.toHaveProperty("content");
   });
 });
