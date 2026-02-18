@@ -398,6 +398,65 @@ bash .claude/skills/fork-sync/scripts/resolve-conflicts.sh
 
 **Note**: Feature branches and main (production) are not synced automatically. Update them manually when needed.
 
+### Phase 2.5: Post-Merge Alias Fixup
+
+**Goal**: Add backward-compat aliases for any new upstream `OpenClaw*` exports that the fork references by `Minion*` names (or vice versa).
+
+**Why this is needed**: Upstream uses `OpenClaw*` naming (e.g., `createOpenClawTools`, `OpenClawConfig`). The fork uses `Minion*` naming. When upstream adds new exports, they use `OpenClaw*` names. Fork test files and code may reference the `Minion*` equivalent, which doesn't exist until we add an alias.
+
+**When to run**: After every Phase 2 merge commit, before pushing DEV.
+
+```bash
+# Step 1: Run TypeScript type check to find broken imports
+npx tsc --noEmit 2>&1 | grep "^src/" | head -40
+
+# Step 2: Categorize errors
+# - "has no exported member 'createMinionX'" → add alias in source file
+# - "Cannot find name 'OpenClawX'" → change to MinionX in test, or add import
+# - "Did you mean 'DEFAULT_MINION_X'?" → add alias in constants file
+# - "Property 'X' does not exist on type" → add to type definition (fork feature)
+
+# Step 3: For each missing Minion* alias, add to the source file:
+#   export const createMinionX = createOpenClawX;
+#   export type MinionX = OpenClawX;
+
+# Step 4: For each missing OpenClaw* alias (upstream files importing fork names):
+#   Create re-export shim files: src/module/openclaw-name.ts → re-exports minion-name.ts
+
+# Step 5: For test files using bare OpenClawConfig without import:
+#   Change to MinionConfig (which IS imported)
+
+# Step 6: Verify
+npx tsc --noEmit 2>&1 | grep "^src/" | wc -l  # Should be 0
+npx oxlint --type-aware  # Should be 0 errors
+```
+
+**Common alias patterns**:
+
+| Source file                  | Alias to add                                                         |
+| ---------------------------- | -------------------------------------------------------------------- |
+| `src/agents/minion-tools.ts` | `export const createMinionTools = createOpenClawTools`               |
+| `src/agents/pi-tools.ts`     | `export const createMinionCodingTools = createOpenClawCodingTools`   |
+| `src/browser/constants.ts`   | `export const DEFAULT_OPENCLAW_X = DEFAULT_MINION_X`                 |
+| `src/browser/chrome.ts`      | `export const resolveMinionUserDataDir = resolveOpenClawUserDataDir` |
+| `src/config/types.minion.ts` | `export type OpenClawConfig = MinionConfig`                          |
+| `src/plugins/types.ts`       | `export type OpenClawPluginX = MinionPluginX`                        |
+
+**Re-export shim files** (for modules renamed during rebrand):
+
+| Shim file                       | Re-exports                    |
+| ------------------------------- | ----------------------------- |
+| `src/infra/openclaw-root.ts`    | `src/infra/minion-root.ts`    |
+| `src/infra/tmp-openclaw-dir.ts` | `src/infra/tmp-minion-dir.ts` |
+| `src/agents/openclaw-tools.ts`  | `src/agents/minion-tools.ts`  |
+| `src/config/types.openclaw.ts`  | `src/config/types.minion.ts`  |
+
+**Commit separately** from the merge commit:
+
+```bash
+git commit -m "fix: post-merge compatibility — add OpenClaw/Minion backward-compat aliases"
+```
+
 ## Safety Checks
 
 ### Pre-Sync Checklist
@@ -602,6 +661,12 @@ git push origin <branch-name>
 │                                git -C ../merge-wt commit + push │
 │                                git worktree remove ../merge-wt  │
 ├──────────────────────────────────────────────────────────────────┤
+│ 2.5. Alias fixup            → npx tsc --noEmit | grep ^src/    │
+│      (after merge commit)     Add Minion↔OpenClaw aliases       │
+│                                Create re-export shim files      │
+│                                Fix test imports                 │
+│                                Commit separately from merge     │
+├──────────────────────────────────────────────────────────────────┤
 │ Verify:                     → git log mirror..upstream/main     │
 │                                (should be empty)                 │
 ├──────────────────────────────────────────────────────────────────┤
@@ -626,6 +691,6 @@ Invoke this skill when:
 
 ---
 
-**Skill Version**: 5.0.0
-**Last Updated**: 2026-02-17
+**Skill Version**: 5.1.0
+**Last Updated**: 2026-02-18
 **Maintained By**: Nikolas P. (NikolasP98)

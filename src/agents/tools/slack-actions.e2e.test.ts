@@ -142,7 +142,7 @@ describe("handleSlackAction", () => {
   });
 
   it("accepts blocks JSON and allows empty content", async () => {
-    const cfg = { channels: { slack: { botToken: "tok" } } } as OpenClawConfig;
+    const cfg = { channels: { slack: { botToken: "tok" } } } as MinionConfig;
     sendSlackMessage.mockClear();
     await handleSlackAction(
       {
@@ -162,7 +162,7 @@ describe("handleSlackAction", () => {
   });
 
   it("accepts blocks arrays directly", async () => {
-    const cfg = { channels: { slack: { botToken: "tok" } } } as OpenClawConfig;
+    const cfg = { channels: { slack: { botToken: "tok" } } } as MinionConfig;
     sendSlackMessage.mockClear();
     await handleSlackAction(
       {
@@ -180,7 +180,7 @@ describe("handleSlackAction", () => {
   });
 
   it("rejects invalid blocks JSON", async () => {
-    const cfg = { channels: { slack: { botToken: "tok" } } } as OpenClawConfig;
+    const cfg = { channels: { slack: { botToken: "tok" } } } as MinionConfig;
     await expect(
       handleSlackAction(
         {
@@ -194,7 +194,7 @@ describe("handleSlackAction", () => {
   });
 
   it("rejects empty blocks arrays", async () => {
-    const cfg = { channels: { slack: { botToken: "tok" } } } as OpenClawConfig;
+    const cfg = { channels: { slack: { botToken: "tok" } } } as MinionConfig;
     await expect(
       handleSlackAction(
         {
@@ -208,7 +208,7 @@ describe("handleSlackAction", () => {
   });
 
   it("requires at least one of content, blocks, or mediaUrl", async () => {
-    const cfg = { channels: { slack: { botToken: "tok" } } } as OpenClawConfig;
+    const cfg = { channels: { slack: { botToken: "tok" } } } as MinionConfig;
     await expect(
       handleSlackAction(
         {
@@ -222,7 +222,7 @@ describe("handleSlackAction", () => {
   });
 
   it("rejects blocks combined with mediaUrl", async () => {
-    const cfg = { channels: { slack: { botToken: "tok" } } } as OpenClawConfig;
+    const cfg = { channels: { slack: { botToken: "tok" } } } as MinionConfig;
     await expect(
       handleSlackAction(
         {
@@ -237,7 +237,7 @@ describe("handleSlackAction", () => {
   });
 
   it("passes blocks JSON to editSlackMessage with empty content", async () => {
-    const cfg = { channels: { slack: { botToken: "tok" } } } as OpenClawConfig;
+    const cfg = { channels: { slack: { botToken: "tok" } } } as MinionConfig;
     editSlackMessage.mockClear();
     await handleSlackAction(
       {
@@ -254,7 +254,7 @@ describe("handleSlackAction", () => {
   });
 
   it("passes blocks arrays to editSlackMessage", async () => {
-    const cfg = { channels: { slack: { botToken: "tok" } } } as OpenClawConfig;
+    const cfg = { channels: { slack: { botToken: "tok" } } } as MinionConfig;
     editSlackMessage.mockClear();
     await handleSlackAction(
       {
@@ -271,7 +271,7 @@ describe("handleSlackAction", () => {
   });
 
   it("requires content or blocks for editMessage", async () => {
-    const cfg = { channels: { slack: { botToken: "tok" } } } as OpenClawConfig;
+    const cfg = { channels: { slack: { botToken: "tok" } } } as MinionConfig;
     await expect(
       handleSlackAction(
         {

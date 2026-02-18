@@ -124,7 +124,7 @@ describe("createMinionCodingTools", () => {
   it("coerces structured content blocks for write", async () => {
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-structured-write-"));
     try {
-      const tools = createOpenClawCodingTools({ workspaceDir: tmpDir });
+      const tools = createMinionCodingTools({ workspaceDir: tmpDir });
       const writeTool = tools.find((tool) => tool.name === "write");
       expect(writeTool).toBeDefined();
 
@@ -151,7 +151,7 @@ describe("createMinionCodingTools", () => {
       const filePath = path.join(tmpDir, "structured-edit.js");
       await fs.writeFile(filePath, "const value = 'old';\n", "utf8");
 
-      const tools = createOpenClawCodingTools({ workspaceDir: tmpDir });
+      const tools = createMinionCodingTools({ workspaceDir: tmpDir });
       const editTool = tools.find((tool) => tool.name === "edit");
       expect(editTool).toBeDefined();
 

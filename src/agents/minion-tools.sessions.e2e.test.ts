@@ -725,7 +725,7 @@ describe("sessions tools", () => {
       outcome: { status: "ok" },
     });
 
-    const tool = createOpenClawTools({
+    const tool = createMinionTools({
       agentSessionKey: "agent:main:main",
     }).find((candidate) => candidate.name === "subagents");
     expect(tool).toBeDefined();
@@ -779,7 +779,7 @@ describe("sessions tools", () => {
       }));
 
     try {
-      const tool = createOpenClawTools({
+      const tool = createMinionTools({
         agentSessionKey: "agent:main:main",
       }).find((candidate) => candidate.name === "subagents");
       expect(tool).toBeDefined();
@@ -834,7 +834,7 @@ describe("sessions tools", () => {
       }));
 
     try {
-      const tool = createOpenClawTools({
+      const tool = createMinionTools({
         agentSessionKey: "agent:main:main",
       }).find((candidate) => candidate.name === "subagents");
       expect(tool).toBeDefined();
@@ -913,7 +913,7 @@ describe("sessions tools", () => {
       outcome: { status: "ok" },
     });
 
-    const tool = createOpenClawTools({
+    const tool = createMinionTools({
       agentSessionKey: "agent:main:main",
     }).find((candidate) => candidate.name === "subagents");
     expect(tool).toBeDefined();
@@ -947,7 +947,7 @@ describe("sessions tools", () => {
       startedAt: Date.now() - 60_000,
     });
 
-    const tool = createOpenClawTools({
+    const tool = createMinionTools({
       agentSessionKey: "agent:main:main",
     }).find((candidate) => candidate.name === "subagents");
     expect(tool).toBeDefined();
@@ -994,7 +994,7 @@ describe("sessions tools", () => {
       startedAt: now - 30_000,
     });
 
-    const tool = createOpenClawTools({
+    const tool = createMinionTools({
       agentSessionKey: "agent:main:main",
     }).find((candidate) => candidate.name === "subagents");
     expect(tool).toBeDefined();

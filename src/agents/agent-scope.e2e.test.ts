@@ -136,7 +136,7 @@ describe("resolveAgentConfig", () => {
       }),
     ).toEqual([]);
 
-    const cfgInheritDefaults: OpenClawConfig = {
+    const cfgInheritDefaults: MinionConfig = {
       agents: {
         defaults: {
           model: {
