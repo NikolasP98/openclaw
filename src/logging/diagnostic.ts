@@ -8,6 +8,7 @@ import {
   type SessionRef,
   type SessionStateValue,
 } from "./diagnostic-session-state.js";
+import { emitReliabilityEvent } from "./reliability.js";
 import { createSubsystemLogger } from "./subsystem.js";
 
 const diag = createSubsystemLogger("diagnostic");
@@ -92,6 +93,13 @@ export function logWebhookError(params: {
     updateType: params.updateType,
     chatId: params.chatId,
     error: params.error,
+  });
+  emitReliabilityEvent({
+    category: "general",
+    severity: "high",
+    event: "general.agent_error",
+    message: `Webhook error on ${params.channel}: ${params.error}`,
+    metadata: { channel: params.channel, updateType: params.updateType },
   });
   markActivity();
 }
@@ -216,6 +224,14 @@ export function logSessionStuck(params: SessionRef & { state: SessionStateValue;
     ageMs: params.ageMs,
     queueDepth: state.queueDepth,
   });
+  emitReliabilityEvent({
+    category: "general",
+    severity: "high",
+    event: "general.session_stuck",
+    message: `Session stuck for ${Math.round(params.ageMs / 1000)}s: ${state.sessionKey ?? state.sessionId ?? "unknown"}`,
+    sessionKey: state.sessionKey ?? undefined,
+    metadata: { ageMs: params.ageMs, queueDepth: state.queueDepth },
+  });
   markActivity();
 }
 
@@ -289,6 +305,21 @@ export function logToolLoopAction(
     message: params.message,
     pairedToolName: params.pairedToolName,
   });
+  if (params.action === "block") {
+    emitReliabilityEvent({
+      category: "general",
+      severity: "medium",
+      event: "general.tool_loop",
+      message: `Tool loop blocked: ${params.toolName} (${params.detector}, count=${params.count})`,
+      sessionKey: params.sessionKey ?? undefined,
+      metadata: {
+        toolName: params.toolName,
+        detector: params.detector,
+        count: params.count,
+        pairedToolName: params.pairedToolName,
+      },
+    });
+  }
   markActivity();
 }
 

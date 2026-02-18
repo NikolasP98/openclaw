@@ -177,6 +177,14 @@ function discoverInDirectory(params: {
     if (extensions.length > 0) {
       for (const extPath of extensions) {
         const resolved = preferCompiledSource(path.resolve(fullPath, extPath));
+        if (!fs.existsSync(resolved)) {
+          params.diagnostics.push({
+            level: "warn",
+            message: `extension source not found, skipping: ${resolved}`,
+            source: resolved,
+          });
+          continue;
+        }
         addCandidate({
           candidates: params.candidates,
           seen: params.seen,
@@ -263,6 +271,14 @@ function discoverFromPath(params: {
     if (extensions.length > 0) {
       for (const extPath of extensions) {
         const source = preferCompiledSource(path.resolve(resolved, extPath));
+        if (!fs.existsSync(source)) {
+          params.diagnostics.push({
+            level: "warn",
+            message: `extension source not found, skipping: ${source}`,
+            source,
+          });
+          continue;
+        }
         addCandidate({
           candidates: params.candidates,
           seen: params.seen,

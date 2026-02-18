@@ -41,6 +41,7 @@ Core/
 apps/ios/*.xcodeproj/
 apps/ios/*.xcworkspace/
 apps/ios/.swiftpm/
+apps/ios/.derivedData/
 apps/ios/.local-signing.xcconfig
 vendor/
 # export-html vendors are committed intentionally (upstream pattern)
@@ -90,6 +91,11 @@ USER.md
 !.agent/workflows/
 /local/
 package-lock.json
+
+# Pre-compiled extension build artifacts (scripts/build-extensions.ts)
+extensions/**/*.js
+extensions/**/*.cjs
+extensions/**/*.mjs
 
 # Local iOS signing overrides
 apps/ios/LocalSigning.xcconfig

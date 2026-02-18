@@ -7,6 +7,7 @@ Comprehensive workflow automation for syncing the Minion fork with upstream and 
 This skill manages the complete fork synchronization workflow for the Minion fork, including:
 
 - Syncing `mirror` with `upstream/main`
+- **Incremental sync tracking** — only processes commits since the last successful sync
 - Updating `DEV` (integration) branch with upstream changes
 - **Systematic upstream evaluation** (Phase 1.6) for large gaps — module-by-module categorization with persistent, resumable state
 - Handling merge conflicts
@@ -21,8 +22,9 @@ This skill manages the complete fork synchronization workflow for the Minion for
 ├── SKILL.md                    # Main skill documentation and procedures
 ├── README.md                   # This file
 ├── evaluation-reference.md     # Detailed heuristics, schema, and module format for Phase 1.6
-├── state/                      # Persistent evaluation state (gitignored)
-│   └── evaluation.json         # Generated during Phase 1.6 evaluation
+├── state/                      # Persistent state (gitignored)
+│   ├── evaluation.json         # Generated during Phase 1.6 evaluation
+│   └── sync-history.json       # Incremental sync tracking (which mirror commits were merged)
 └── scripts/
     └── quick-sync.sh           # Automated sync script with safety checks
 ```
@@ -99,9 +101,9 @@ See SKILL.md for detailed conflict resolution procedures.
 
 ## Version
 
-- **Version**: 3.0.0
+- **Version**: 4.0.0
 - **Created**: 2026-02-01
-- **Last Updated**: 2026-02-16
+- **Last Updated**: 2026-02-18
 - **Maintained By**: Nikolas P. (NikolasP98)
 
 ## Branch Management Notes

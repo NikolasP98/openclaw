@@ -113,17 +113,90 @@ git push origin mirror
 
 **Expected**: Fast-forward merge, no conflicts (since mirror is clean mirror)
 
+### Phase 1.1: Determine Sync Scope
+
+**Goal**: Check sync history to determine what needs syncing, avoiding redundant work.
+
+**State file**: `.claude/skills/fork-sync/state/sync-history.json`
+
+**Logic**:
+
+```bash
+SYNC_HISTORY=".claude/skills/fork-sync/state/sync-history.json"
+MIRROR_HEAD=$(git rev-parse mirror)
+
+# Step 1: Check for sync history
+if [ ! -f "$SYNC_HISTORY" ]; then
+  # Check if we can bootstrap from evaluation.json
+  EVAL_FILE=".claude/skills/fork-sync/state/evaluation.json"
+  if [ -f "$EVAL_FILE" ]; then
+    EVAL_MIRROR=$(jq -r '.snapshot.mirrorHead' "$EVAL_FILE")
+    # Check if evaluation's mirror head is ancestor of DEV (merge was completed)
+    if git merge-base --is-ancestor "$EVAL_MIRROR" DEV 2>/dev/null; then
+      echo "Bootstrapping sync-history.json from completed evaluation"
+      # Create sync-history.json from evaluation.json (see bootstrap schema)
+      SCOPE="bootstrapped"
+    else
+      SCOPE="full"
+    fi
+  else
+    SCOPE="full"
+  fi
+else
+  # Step 2: Compare last synced mirror head with current mirror
+  LAST_SYNCED=$(jq -r '.lastSyncedMirrorHead' "$SYNC_HISTORY")
+
+  if [ "$LAST_SYNCED" = "$MIRROR_HEAD" ]; then
+    echo "Nothing to sync — mirror HEAD matches last synced commit"
+    SCOPE="none"
+  else
+    # Step 3: Count delta commits
+    DELTA=$(git rev-list --count "$LAST_SYNCED".."$MIRROR_HEAD")
+    if [ "$DELTA" -le 50 ]; then
+      SCOPE="incremental-light"
+    else
+      SCOPE="incremental-heavy"
+    fi
+    echo "Delta: $DELTA commits since last sync → scope: $SCOPE"
+  fi
+fi
+```
+
+**Routing table**:
+
+| Scope               | Condition                                     | Path                                            |
+| ------------------- | --------------------------------------------- | ----------------------------------------------- |
+| `none`              | lastSyncedMirrorHead == mirror HEAD           | Stop — nothing to sync                          |
+| `full`              | No sync-history, no bootstrappable evaluation | Phase 1.5 → 1.6 (if >50) → 1.7 → 2 → 2.5        |
+| `incremental-light` | Delta <= 50 commits                           | Phase 1.5-incremental → 2 → 2.5                 |
+| `incremental-heavy` | Delta > 50 commits                            | Phase 1.5 → 1.6 (scoped) → 1.7 → 2 → 2.5        |
+| `bootstrapped`      | No sync-history but evaluation.json completed | Create sync-history.json, then re-run Phase 1.1 |
+
+**Incremental-light shortcut**: For <=50 commits, Phase 1.5 includes inline evaluation — classify each delta file as auto-accept / rebrand / fork-feature-conflict / extpkg, then go directly to Phase 2 without needing Phase 1.6/1.7.
+
 ### Phase 1.5: Pre-Merge Evaluation
 
 **Goal**: Analyze upstream changes before merging to understand impact and plan conflict resolution
 
+**Scope-aware comparison base**:
+
+- **Full mode**: Compare `merge-base(mirror, DEV)..mirror` (full gap)
+- **Incremental mode**: Compare `$lastSyncedMirrorHead..mirror` (only delta since last sync)
+
 ```bash
-# Compare mirror (upstream) with main to see what changed
-git diff main..mirror --stat | head -50
-git log --oneline main..mirror --no-merges | head -30
+# Determine comparison base from Phase 1.1 scope
+if [ "$SCOPE" = "full" ]; then
+  ANALYSIS_BASE=$(git merge-base mirror DEV)
+else
+  ANALYSIS_BASE=$(jq -r '.lastSyncedMirrorHead' "$SYNC_HISTORY")
+fi
+
+# Compare mirror changes since the analysis base
+git diff "$ANALYSIS_BASE"..mirror --stat | head -50
+git log --oneline "$ANALYSIS_BASE"..mirror --no-merges | head -30
 
 # Generate per-file change analysis
-git diff main..mirror --name-status | sort
+git diff "$ANALYSIS_BASE"..mirror --name-status | sort
 ```
 
 **Evaluation Process**:
@@ -187,16 +260,25 @@ On invocation, check for existing state:
 Snapshot current branch state and build the commit inventory.
 
 ```bash
+# Determine analysis base (scope-aware)
+if [ "$SCOPE" = "full" ]; then
+  ANALYSIS_BASE=$(git merge-base mirror DEV)
+else
+  # Incremental: only analyze commits since last sync
+  ANALYSIS_BASE=$(jq -r '.lastSyncedMirrorHead' "$SYNC_HISTORY")
+fi
+
 # Record snapshot
-MERGE_BASE=$(git merge-base mirror DEV)
 MIRROR_HEAD=$(git rev-parse mirror)
 DEV_HEAD=$(git rev-parse DEV)
-UPSTREAM_COUNT=$(git rev-list --count $MERGE_BASE..mirror)
-FORK_COUNT=$(git rev-list --count $MERGE_BASE..DEV)
+UPSTREAM_COUNT=$(git rev-list --count $ANALYSIS_BASE..mirror)
+FORK_COUNT=$(git rev-list --count $ANALYSIS_BASE..DEV)
 
-# Build full commit list grouped by module (src/ subdirectory)
-git log --oneline --name-only $MERGE_BASE..mirror
+# Build commit list grouped by module (src/ subdirectory)
+git log --oneline --name-only $ANALYSIS_BASE..mirror
 ```
+
+**Note**: The `analysisBase` and `syncScope` are recorded in `evaluation.json`'s snapshot for auditability.
 
 #### Step 2: Build Fork Feature Index
 
@@ -375,6 +457,38 @@ git -C ../openclaw-merge-worktree commit -m "Merge upstream changes from mirror"
 
 # Step 7: Push DEV
 git -C ../openclaw-merge-worktree push origin DEV
+
+# Step 7.5: Update sync-history.json
+# Record this sync in the persistent history
+SYNC_HISTORY=".claude/skills/fork-sync/state/sync-history.json"
+MIRROR_HEAD=$(git rev-parse mirror)
+DEV_HEAD=$(git -C ../openclaw-merge-worktree rev-parse HEAD)
+MERGE_COMMIT=$(git -C ../openclaw-merge-worktree rev-parse HEAD)
+DELTA_COUNT=$(git rev-list --count "$LAST_SYNCED".."$MIRROR_HEAD" 2>/dev/null || echo "unknown")
+SYNC_ID="sync-$(printf '%03d' $(($(jq '.syncs | length' "$SYNC_HISTORY") + 1)))"
+NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+# Append new entry and update top-level fields
+jq --arg id "$SYNC_ID" \
+   --arg now "$NOW" \
+   --arg mirrorHead "$MIRROR_HEAD" \
+   --arg devHead "$DEV_HEAD" \
+   --arg mergeCommit "$MERGE_COMMIT" \
+   --arg deltaCount "$DELTA_COUNT" \
+   --arg syncType "$SCOPE" \
+   '.syncs += [{
+     id: $id,
+     completedAt: $now,
+     mirrorHead: $mirrorHead,
+     devHead: $devHead,
+     mergeCommit: $mergeCommit,
+     upstreamCommitCount: ($deltaCount | tonumber),
+     syncType: $syncType,
+     evaluationUsed: false,
+     notes: "Incremental sync"
+   }] |
+   .lastSyncedMirrorHead = $mirrorHead |
+   .lastSyncedAt = $now' "$SYNC_HISTORY" > "${SYNC_HISTORY}.tmp" && mv "${SYNC_HISTORY}.tmp" "$SYNC_HISTORY"
 
 # Step 8: Cleanup
 git worktree remove ../openclaw-merge-worktree
@@ -640,8 +754,12 @@ git push origin <branch-name>
 │                                git merge --ff-only upstream/main │
 │                                git push origin mirror            │
 ├──────────────────────────────────────────────────────────────────┤
-│ 1.5. Pre-merge evaluation   → git diff main..mirror --stat      │
-│                                Review changes per-file           │
+│ 1.1. Determine sync scope   → Check sync-history.json           │
+│                                Route: none/full/inc-light/heavy  │
+│                                Bootstrap from evaluation.json   │
+├──────────────────────────────────────────────────────────────────┤
+│ 1.5. Pre-merge evaluation   → git diff $BASE..mirror --stat     │
+│      (scope-aware)            Review changes per-file           │
 │                                Plan conflict resolution strategy │
 ├──────────────────────────────────────────────────────────────────┤
 │ 1.6. Systematic evaluation  → "evaluate upstream" (resumable)   │
@@ -659,6 +777,7 @@ git push origin <branch-name>
 │                                bash scripts/resolve-conflicts.sh│
 │                                Resolve manualMerge files (N)    │
 │                                git -C ../merge-wt commit + push │
+│                                Update sync-history.json (7.5)   │
 │                                git worktree remove ../merge-wt  │
 ├──────────────────────────────────────────────────────────────────┤
 │ 2.5. Alias fixup            → npx tsc --noEmit | grep ^src/    │
@@ -691,6 +810,6 @@ Invoke this skill when:
 
 ---
 
-**Skill Version**: 5.1.0
+**Skill Version**: 6.0.0
 **Last Updated**: 2026-02-18
 **Maintained By**: Nikolas P. (NikolasP98)

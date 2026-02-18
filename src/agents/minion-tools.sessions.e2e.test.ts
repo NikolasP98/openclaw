@@ -30,22 +30,20 @@ vi.mock("../config/config.js", async (importOriginal) => {
 });
 
 import "./test-helpers/fast-core-tools.js";
-import { sleep } from "../utils.js";
-import { createMinionTools } from "./minion-tools.js";
+import { createOpenClawTools } from "./openclaw-tools.js";
 
 const waitForCalls = async (getCount: () => number, count: number, timeoutMs = 2000) => {
-  const start = Date.now();
-  while (getCount() < count) {
-    if (Date.now() - start > timeoutMs) {
-      throw new Error(`timed out waiting for ${count} calls`);
-    }
-    await sleep(0);
-  }
+  await vi.waitFor(
+    () => {
+      expect(getCount()).toBeGreaterThanOrEqual(count);
+    },
+    { timeout: timeoutMs, interval: 5 },
+  );
 };
 
 describe("sessions tools", () => {
   it("uses number (not integer) in tool schemas for Gemini compatibility", () => {
-    const tools = createMinionTools();
+    const tools = createOpenClawTools();
     const byName = (name: string) => {
       const tool = tools.find((candidate) => candidate.name === name);
       expect(tool).toBeDefined();
@@ -132,7 +130,7 @@ describe("sessions tools", () => {
       return {};
     });
 
-    const tool = createMinionTools().find((candidate) => candidate.name === "sessions_list");
+    const tool = createOpenClawTools().find((candidate) => candidate.name === "sessions_list");
     expect(tool).toBeDefined();
     if (!tool) {
       throw new Error("missing sessions_list tool");
@@ -175,7 +173,7 @@ describe("sessions tools", () => {
       return {};
     });
 
-    const tool = createMinionTools().find((candidate) => candidate.name === "sessions_history");
+    const tool = createOpenClawTools().find((candidate) => candidate.name === "sessions_history");
     expect(tool).toBeDefined();
     if (!tool) {
       throw new Error("missing sessions_history tool");
@@ -225,7 +223,7 @@ describe("sessions tools", () => {
       return {};
     });
 
-    const tool = createMinionTools().find((candidate) => candidate.name === "sessions_history");
+    const tool = createOpenClawTools().find((candidate) => candidate.name === "sessions_history");
     expect(tool).toBeDefined();
     if (!tool) {
       throw new Error("missing sessions_history tool");
@@ -288,7 +286,7 @@ describe("sessions tools", () => {
       return {};
     });
 
-    const tool = createMinionTools().find((candidate) => candidate.name === "sessions_history");
+    const tool = createOpenClawTools().find((candidate) => candidate.name === "sessions_history");
     expect(tool).toBeDefined();
     if (!tool) {
       throw new Error("missing sessions_history tool");
@@ -338,7 +336,7 @@ describe("sessions tools", () => {
       return {};
     });
 
-    const tool = createMinionTools().find((candidate) => candidate.name === "sessions_history");
+    const tool = createOpenClawTools().find((candidate) => candidate.name === "sessions_history");
     expect(tool).toBeDefined();
     if (!tool) {
       throw new Error("missing sessions_history tool");
@@ -367,7 +365,7 @@ describe("sessions tools", () => {
       return {};
     });
 
-    const tool = createMinionTools().find((candidate) => candidate.name === "sessions_history");
+    const tool = createOpenClawTools().find((candidate) => candidate.name === "sessions_history");
     expect(tool).toBeDefined();
     if (!tool) {
       throw new Error("missing sessions_history tool");
@@ -441,7 +439,7 @@ describe("sessions tools", () => {
       return {};
     });
 
-    const tool = createMinionTools({
+    const tool = createOpenClawTools({
       agentSessionKey: requesterKey,
       agentChannel: "discord",
     }).find((candidate) => candidate.name === "sessions_send");
@@ -547,7 +545,7 @@ describe("sessions tools", () => {
       return {};
     });
 
-    const tool = createMinionTools({
+    const tool = createOpenClawTools({
       agentSessionKey: "main",
       agentChannel: "discord",
     }).find((candidate) => candidate.name === "sessions_send");
@@ -639,7 +637,7 @@ describe("sessions tools", () => {
       return {};
     });
 
-    const tool = createMinionTools({
+    const tool = createOpenClawTools({
       agentSessionKey: requesterKey,
       agentChannel: "discord",
     }).find((candidate) => candidate.name === "sessions_send");
@@ -657,8 +655,12 @@ describe("sessions tools", () => {
       status: "ok",
       reply: "initial",
     });
-    await sleep(0);
-    await sleep(0);
+    await vi.waitFor(
+      () => {
+        expect(calls.filter((call) => call.method === "agent")).toHaveLength(4);
+      },
+      { timeout: 2_000, interval: 5 },
+    );
 
     const agentCalls = calls.filter((call) => call.method === "agent");
     expect(agentCalls).toHaveLength(4);
@@ -725,7 +727,7 @@ describe("sessions tools", () => {
       outcome: { status: "ok" },
     });
 
-    const tool = createMinionTools({
+    const tool = createOpenClawTools({
       agentSessionKey: "agent:main:main",
     }).find((candidate) => candidate.name === "subagents");
     expect(tool).toBeDefined();
@@ -779,7 +781,7 @@ describe("sessions tools", () => {
       }));
 
     try {
-      const tool = createMinionTools({
+      const tool = createOpenClawTools({
         agentSessionKey: "agent:main:main",
       }).find((candidate) => candidate.name === "subagents");
       expect(tool).toBeDefined();
@@ -834,7 +836,7 @@ describe("sessions tools", () => {
       }));
 
     try {
-      const tool = createMinionTools({
+      const tool = createOpenClawTools({
         agentSessionKey: "agent:main:main",
       }).find((candidate) => candidate.name === "subagents");
       expect(tool).toBeDefined();
@@ -913,7 +915,7 @@ describe("sessions tools", () => {
       outcome: { status: "ok" },
     });
 
-    const tool = createMinionTools({
+    const tool = createOpenClawTools({
       agentSessionKey: "agent:main:main",
     }).find((candidate) => candidate.name === "subagents");
     expect(tool).toBeDefined();
@@ -947,7 +949,7 @@ describe("sessions tools", () => {
       startedAt: Date.now() - 60_000,
     });
 
-    const tool = createMinionTools({
+    const tool = createOpenClawTools({
       agentSessionKey: "agent:main:main",
     }).find((candidate) => candidate.name === "subagents");
     expect(tool).toBeDefined();
@@ -994,7 +996,7 @@ describe("sessions tools", () => {
       startedAt: now - 30_000,
     });
 
-    const tool = createMinionTools({
+    const tool = createOpenClawTools({
       agentSessionKey: "agent:main:main",
     }).find((candidate) => candidate.name === "subagents");
     expect(tool).toBeDefined();

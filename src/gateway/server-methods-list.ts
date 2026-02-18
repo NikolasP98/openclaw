@@ -95,6 +95,9 @@ const BASE_METHODS = [
   "chat.history",
   "chat.abort",
   "chat.send",
+  // Reliability KPI methods
+  "reliability.events",
+  "reliability.summary",
 ];
 
 export function listGatewayMethods(): string[] {
@@ -121,4 +124,5 @@ export const GATEWAY_EVENTS = [
   "voicewake.changed",
   "exec.approval.requested",
   "exec.approval.resolved",
+  "reliability",
 ];

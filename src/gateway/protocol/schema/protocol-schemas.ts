@@ -126,6 +126,11 @@ import {
   NodeRenameParamsSchema,
 } from "./nodes.js";
 import {
+  ReliabilityEventSchema,
+  ReliabilityEventsQuerySchema,
+  ReliabilitySummaryResultSchema,
+} from "./reliability.js";
+import {
   SessionsCompactParamsSchema,
   SessionsDeleteParamsSchema,
   SessionsListParamsSchema,
@@ -271,6 +276,9 @@ export const ProtocolSchemas: Record<string, TSchema> = {
   UpdateRunParams: UpdateRunParamsSchema,
   TickEvent: TickEventSchema,
   ShutdownEvent: ShutdownEventSchema,
+  ReliabilityEvent: ReliabilityEventSchema,
+  ReliabilityEventsQuery: ReliabilityEventsQuerySchema,
+  ReliabilitySummaryResult: ReliabilitySummaryResultSchema,
 };
 
 export const PROTOCOL_VERSION = 3 as const;
