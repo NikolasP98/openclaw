@@ -4,6 +4,7 @@
       "id": "prd-tenant-faces",
       "host": "nc-faces",
       "user": "bot-prd",
+      "admin_user": "niko",
       "port": 22,
       "deployment_path": "/home/bot-prd/minion",
       "platform": "linux/amd64",
@@ -17,6 +18,7 @@
       "id": "prd-tenant-bernibites",
       "host": "bernibites",
       "user": "bot-prd",
+      "admin_user": "niko",
       "port": 22,
       "deployment_path": "/home/bot-prd/.minion",
       "platform": "linux/amd64",
@@ -24,6 +26,20 @@
       "bridge_port": 18790,
       "tenant": "bernibites",
       "region": "us-east",
+      "local_build": false
+    },
+    {
+      "id": "prd-protopi",
+      "host": "protopi",
+      "user": "minion",
+      "admin_user": "nikolas",
+      "port": 22,
+      "deployment_path": "/home/minion/.minion",
+      "platform": "linux/arm64",
+      "gateway_port": 18789,
+      "bridge_port": 18790,
+      "tenant": "protopi",
+      "region": "local",
       "local_build": false
     }
   ]
