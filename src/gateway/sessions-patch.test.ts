@@ -6,7 +6,7 @@ import { applySessionsPatchToStore } from "./sessions-patch.js";
 const SUBAGENT_MODEL = "synthetic/hf:moonshotai/Kimi-K2.5";
 const KIMI_SUBAGENT_KEY = "agent:kimi:subagent:child";
 
-async function applySubagentModelPatch(cfg: OpenClawConfig) {
+async function applySubagentModelPatch(cfg: MinionConfig) {
   const res = await applySessionsPatchToStore({
     cfg,
     store: {},
@@ -31,7 +31,7 @@ function makeKimiSubagentCfg(params: {
   agentPrimaryModel: string;
   agentSubagentModel?: string;
   defaultsSubagentModel?: string;
-}): OpenClawConfig {
+}): MinionConfig {
   return {
     agents: {
       defaults: {
@@ -51,7 +51,7 @@ function makeKimiSubagentCfg(params: {
         },
       ],
     },
-  } as OpenClawConfig;
+  } as MinionConfig;
 }
 
 describe("gateway sessions patch", () => {
@@ -212,7 +212,7 @@ describe("gateway sessions patch", () => {
   test("normalizes exec/send/group patches", async () => {
     const store: Record<string, SessionEntry> = {};
     const res = await applySessionsPatchToStore({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as MinionConfig,
       store,
       storeKey: "agent:main:main",
       patch: {
@@ -240,7 +240,7 @@ describe("gateway sessions patch", () => {
   test("rejects invalid execHost values", async () => {
     const store: Record<string, SessionEntry> = {};
     const res = await applySessionsPatchToStore({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as MinionConfig,
       store,
       storeKey: "agent:main:main",
       patch: { key: "agent:main:main", execHost: "edge" },
@@ -255,7 +255,7 @@ describe("gateway sessions patch", () => {
   test("rejects invalid sendPolicy values", async () => {
     const store: Record<string, SessionEntry> = {};
     const res = await applySessionsPatchToStore({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as MinionConfig,
       store,
       storeKey: "agent:main:main",
       patch: { key: "agent:main:main", sendPolicy: "ask" as unknown as "allow" },
@@ -270,7 +270,7 @@ describe("gateway sessions patch", () => {
   test("rejects invalid groupActivation values", async () => {
     const store: Record<string, SessionEntry> = {};
     const res = await applySessionsPatchToStore({
-      cfg: {} as OpenClawConfig,
+      cfg: {} as MinionConfig,
       store,
       storeKey: "agent:main:main",
       patch: { key: "agent:main:main", groupActivation: "never" as unknown as "mention" },

@@ -227,7 +227,7 @@ describe("resolveSessionModelRef", () => {
           model: { primary: "anthropic/claude-opus-4-6" },
         },
       },
-    } as OpenClawConfig;
+    } as MinionConfig;
 
     const resolved = resolveSessionModelRef(cfg, {
       sessionId: "s1",
@@ -248,7 +248,7 @@ describe("resolveSessionModelRef", () => {
           model: { primary: "anthropic/claude-opus-4-6" },
         },
       },
-    } as OpenClawConfig;
+    } as MinionConfig;
 
     const resolved = resolveSessionModelRef(cfg, {
       sessionId: "s2",

@@ -61,6 +61,35 @@ export function resolveVersionFromModuleUrl(moduleUrl: string): string | null {
   );
 }
 
+function firstNonEmpty(...values: Array<string | undefined>): string | undefined {
+  for (const value of values) {
+    const trimmed = value?.trim();
+    if (trimmed) {
+      return trimmed;
+    }
+  }
+  return undefined;
+}
+
+export type RuntimeVersionEnv = {
+  [key: string]: string | undefined;
+};
+
+export function resolveRuntimeServiceVersion(
+  env: RuntimeVersionEnv = process.env as RuntimeVersionEnv,
+  fallback = "dev",
+): string {
+  return (
+    firstNonEmpty(
+      env["MINION_VERSION"],
+      env["OPENCLAW_VERSION"],
+      env["MINION_SERVICE_VERSION"],
+      env["OPENCLAW_SERVICE_VERSION"],
+      env["npm_package_version"],
+    ) ?? fallback
+  );
+}
+
 // Single source of truth for the current Minion version.
 // - Embedded/bundled builds: injected define or env var.
 // - Dev/npm builds: package.json.
