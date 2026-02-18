@@ -1,3 +1,4 @@
+import type { CronJobCreate, CronJobPatch } from "./types.js";
 import { sanitizeAgentId } from "../routing/session-key.js";
 import { isRecord } from "../utils.js";
 import {
@@ -9,7 +10,6 @@ import { parseAbsoluteTimeMs } from "./parse.js";
 import { migrateLegacyCronPayload } from "./payload-migration.js";
 import { inferLegacyName } from "./service/normalize.js";
 import { normalizeCronStaggerMs, resolveDefaultCronStaggerMs } from "./stagger.js";
-import type { CronJobCreate, CronJobPatch } from "./types.js";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -218,6 +218,17 @@ function normalizeWakeMode(raw: unknown) {
   return undefined;
 }
 
+function normalizeScope(raw: unknown) {
+  if (typeof raw !== "string") {
+    return undefined;
+  }
+  const trimmed = raw.trim().toLowerCase();
+  if (trimmed === "universal" || trimmed === "session") {
+    return trimmed;
+  }
+  return undefined;
+}
+
 function copyTopLevelAgentTurnFields(next: UnknownRecord, payload: UnknownRecord) {
   const copyString = (field: "model" | "thinking") => {
     if (typeof payload[field] === "string" && payload[field].trim()) {
@@ -353,6 +364,15 @@ export function normalizeCronJobInput(
       next.wakeMode = normalized;
     } else {
       delete next.wakeMode;
+    }
+  }
+
+  if ("scope" in base) {
+    const normalized = normalizeScope(base.scope);
+    if (normalized) {
+      next.scope = normalized;
+    } else {
+      delete next.scope;
     }
   }
 

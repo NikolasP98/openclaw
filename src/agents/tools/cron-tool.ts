@@ -1,7 +1,7 @@
 import { Type } from "@sinclair/typebox";
+import type { CronDelivery, CronMessageChannel } from "../../cron/types.js";
 import { loadConfig } from "../../config/config.js";
 import { normalizeCronJobCreate, normalizeCronJobPatch } from "../../cron/normalize.js";
-import type { CronDelivery, CronMessageChannel } from "../../cron/types.js";
 import { normalizeHttpWebhookUrl } from "../../cron/webhook-url.js";
 import { parseAgentSessionKey } from "../../sessions/session-key-utils.js";
 import { extractTextFromChatContent } from "../../shared/chat-content.js";
@@ -246,6 +246,10 @@ DELIVERY (top-level):
   - webhook: send finished-run event as HTTP POST to delivery.to (URL required)
   - If the task needs to send to a specific chat/recipient, set announce delivery.channel/to; do not call messaging tools inside the run.
 
+SCOPE (top-level, optional):
+- "session" (default): Job is tied to the current conversation/user session. Events route to that session only.
+- "universal": Job runs independently of any user session. Output routes to agent's main session. Use for global reminders or background tasks not tied to a specific user.
+
 CRITICAL CONSTRAINTS:
 - sessionTarget="main" REQUIRES payload.kind="systemEvent"
 - sessionTarget="isolated" REQUIRES payload.kind="agentTurn"
@@ -300,6 +304,7 @@ Use jobId as the canonical identifier; id is accepted for compatibility. Use con
               "deleteAfterRun",
               "agentId",
               "sessionKey",
+              "scope",
               "message",
               "text",
               "model",
@@ -347,7 +352,13 @@ Use jobId as the canonical identifier; id is accepted for compatibility. Use con
                 (job as { agentId?: string }).agentId = agentId;
               }
             }
-            if (!("sessionKey" in job) && resolvedSessionKey) {
+            // Only inherit sessionKey for "session"-scoped jobs (the default).
+            // For "universal" jobs, explicitly clear sessionKey to prevent
+            // accidental binding to a specific user's session.
+            const jobScope = (job as { scope?: string }).scope ?? "session";
+            if (jobScope === "universal") {
+              delete (job as { sessionKey?: string }).sessionKey;
+            } else if (!("sessionKey" in job) && resolvedSessionKey) {
               (job as { sessionKey?: string }).sessionKey = resolvedSessionKey;
             }
           }

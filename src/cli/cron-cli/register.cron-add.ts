@@ -1,9 +1,9 @@
 import type { Command } from "commander";
 import type { CronJob } from "../../cron/types.js";
+import type { GatewayRpcOpts } from "../gateway-rpc.js";
 import { danger } from "../../globals.js";
 import { sanitizeAgentId } from "../../routing/session-key.js";
 import { defaultRuntime } from "../../runtime.js";
-import type { GatewayRpcOpts } from "../gateway-rpc.js";
 import { addGatewayClientOptions, callGatewayFromCli } from "../gateway-rpc.js";
 import { parsePositiveIntOrUndefined } from "../program/helpers.js";
 import {
@@ -71,6 +71,7 @@ export function registerCronAddCommand(cron: Command) {
       .option("--keep-after-run", "Keep one-shot job after it succeeds", false)
       .option("--agent <id>", "Agent id for this job")
       .option("--session <target>", "Session target (main|isolated)")
+      .option("--scope <scope>", "Job scope (universal|session)", "session")
       .option("--wake <mode>", "Wake mode (now|next-heartbeat)", "now")
       .option("--at <when>", "Run once at time (ISO) or +duration (e.g. 20m)")
       .option("--every <duration>", "Run every duration (e.g. 10m, 1h)")
@@ -235,6 +236,12 @@ export function registerCronAddCommand(cron: Command) {
             throw new Error("--name is required");
           }
 
+          const scopeRaw = typeof opts.scope === "string" ? opts.scope.trim().toLowerCase() : "";
+          const scope = scopeRaw === "universal" || scopeRaw === "session" ? scopeRaw : undefined;
+          if (scopeRaw && !scope) {
+            throw new Error("--scope must be universal or session");
+          }
+
           const description =
             typeof opts.description === "string" && opts.description.trim()
               ? opts.description.trim()
@@ -246,6 +253,7 @@ export function registerCronAddCommand(cron: Command) {
             enabled: !opts.disabled,
             deleteAfterRun: opts.deleteAfterRun ? true : opts.keepAfterRun ? false : undefined,
             agentId,
+            scope,
             schedule,
             sessionTarget,
             wakeMode,
