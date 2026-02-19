@@ -132,6 +132,7 @@ export function applySkillEnvOverridesFromSnapshot(params: {
 
 /**
  * Collects env overrides into a plain map instead of mutating process.env.
+ * Used by resolveSkillEnvMap / resolveSkillEnvMapFromSnapshot.
  */
 function collectSkillConfigEnv(
   map: Record<string, string>,
