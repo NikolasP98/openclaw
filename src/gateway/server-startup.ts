@@ -1,3 +1,6 @@
+import { syncGoogleCredentialsToAuthStore } from "../agents/auth-profiles/google-credential-bridge.js";
+import { startRefreshScheduler } from "../agents/auth-profiles/refresh-scheduler.js";
+import { runStartupCredentialCheck } from "../agents/auth-profiles/startup-check.js";
 import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "../agents/defaults.js";
 import { loadModelCatalog } from "../agents/model-catalog.js";
 import {
@@ -58,6 +61,17 @@ export async function startGatewaySidecars(params: {
   } catch (err) {
     params.log.warn(`session lock cleanup failed on startup: ${String(err)}`);
   }
+
+  // Bridge Google credentials into auth-profiles (Phase 1 — non-breaking).
+  try {
+    syncGoogleCredentialsToAuthStore();
+  } catch (err) {
+    params.log.warn(`Google credential bridge failed: ${String(err)}`);
+  }
+
+  // Validate credential health on startup and start proactive refresh scheduler.
+  runStartupCredentialCheck({ cfg: params.cfg });
+  const refreshScheduler = startRefreshScheduler();
 
   // Start OpenClaw browser control server (unless disabled via config).
   let browserControl: Awaited<ReturnType<typeof startBrowserControlServerIfEnabled>> = null;
@@ -187,5 +201,5 @@ export async function startGatewaySidecars(params: {
     }, 750);
   }
 
-  return { browserControl, pluginServices, gogOAuthServer };
+  return { browserControl, pluginServices, gogOAuthServer, refreshScheduler };
 }

@@ -1,4 +1,6 @@
 import { resolveDefaultAgentId } from "../agents/agent-scope.js";
+import { type AuthHealthSummary, buildAuthHealthSummary } from "../agents/auth-health.js";
+import { ensureAuthProfileStore } from "../agents/auth-profiles.js";
 import { resolveChannelDefaultAccountId } from "../channels/plugins/helpers.js";
 import { getChannelPlugin, listChannelPlugins } from "../channels/plugins/index.js";
 import type { ChannelAccountSnapshot } from "../channels/plugins/types.js";
@@ -69,6 +71,8 @@ export type HealthSummary = {
       age: number | null;
     }>;
   };
+  /** Auth profile health summary (credential status per provider). */
+  authHealth?: AuthHealthSummary;
 };
 
 const DEFAULT_TIMEOUT_MS = 10_000;
@@ -502,6 +506,14 @@ export async function getHealthSnapshot(params?: {
     }
   }
 
+  let authHealth: AuthHealthSummary | undefined;
+  try {
+    const store = ensureAuthProfileStore();
+    authHealth = buildAuthHealthSummary({ store, cfg });
+  } catch {
+    // Auth store unavailable — omit from snapshot
+  }
+
   const summary: HealthSummary = {
     ok: true,
     ts: Date.now(),
@@ -517,6 +529,7 @@ export async function getHealthSnapshot(params?: {
       count: sessions.count,
       recent: sessions.recent,
     },
+    authHealth,
   };
 
   return summary;

@@ -6,6 +6,10 @@ export const ReliabilityCategorySchema = Type.Union([
   Type.Literal("browser"),
   Type.Literal("timezone"),
   Type.Literal("general"),
+  Type.Literal("auth"),
+  Type.Literal("skill"),
+  Type.Literal("agent"),
+  Type.Literal("gateway"),
 ]);
 
 export const ReliabilitySeveritySchema = Type.Union([
@@ -49,7 +53,15 @@ export const ReliabilitySummaryResultSchema = Type.Object(
 );
 
 /** TypeScript types for use outside of schema validation */
-export type ReliabilityCategory = "cron" | "browser" | "timezone" | "general";
+export type ReliabilityCategory =
+  | "cron"
+  | "browser"
+  | "timezone"
+  | "general"
+  | "auth"
+  | "skill"
+  | "agent"
+  | "gateway";
 export type ReliabilitySeverity = "critical" | "high" | "medium" | "low";
 
 export type ReliabilityEvent = {

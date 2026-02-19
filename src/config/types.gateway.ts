@@ -276,6 +276,19 @@ export type GatewayToolsConfig = {
   allow?: string[];
 };
 
+export type HubMetricsConfig = {
+  /** Enable/disable metrics push to hub. Default: false. */
+  enabled?: boolean;
+  /** Hub URL (e.g. "https://minion-hub.vercel.app"). */
+  hubUrl?: string;
+  /** Server token for authentication (from hub server registration). */
+  apiKey?: string;
+  /** Hub-assigned server ID. */
+  serverId?: string;
+  /** Push interval in milliseconds. Default: 60000 (1 minute). */
+  pushIntervalMs?: number;
+};
+
 export type GatewayConfig = {
   /** Single multiplexed port for Gateway WS + HTTP (default: 18789). */
   port?: number;
@@ -323,4 +336,6 @@ export type GatewayConfig = {
     enabled?: boolean;
     dbPath?: string;
   };
+  /** Hub metrics push configuration. */
+  hubMetrics?: HubMetricsConfig;
 };

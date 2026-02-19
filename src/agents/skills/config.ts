@@ -1,4 +1,5 @@
 import type { OpenClawConfig, SkillConfig } from "../../config/config.js";
+import { createSubsystemLogger } from "../../logging/subsystem.js";
 import {
   evaluateRuntimeRequires,
   hasBinary,
@@ -9,6 +10,8 @@ import {
 import { ensureAuthProfileStore } from "../auth-profiles.js";
 import { resolveSkillKey } from "./frontmatter.js";
 import type { SkillEligibilityContext, SkillEntry } from "./types.js";
+
+const log = createSubsystemLogger("skills");
 
 const DEFAULT_CONFIG_VALUES: Record<string, boolean> = {
   "browser.enabled": true,
@@ -87,8 +90,9 @@ function hasAuthProfileForSkill(
         return true;
       }
     }
-  } catch {
-    // Auth store unavailable — skip
+    log.debug("no auth profile found for skill", { skillKey, envName });
+  } catch (err) {
+    log.warn("auth profile check failed", { skillKey, err: String(err) });
   }
   return false;
 }

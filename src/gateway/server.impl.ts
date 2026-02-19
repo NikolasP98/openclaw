@@ -52,6 +52,7 @@ import { startChannelHealthMonitor } from "./channel-health-monitor.js";
 import { startGatewayConfigReloader } from "./config-reload.js";
 import type { ControlUiRootState } from "./control-ui.js";
 import { ExecApprovalManager } from "./exec-approval-manager.js";
+import { startHubMetricsPush } from "./hub-metrics-push.js";
 import { NodeRegistry } from "./node-registry.js";
 import type { startBrowserControlServerIfEnabled } from "./server-browser.js";
 import { createChannelManager } from "./server-channels.js";
@@ -440,6 +441,9 @@ export async function startGatewayServer(
   const hasMobileNodeConnected = () => hasConnectedMobileNode(nodeRegistry);
   applyGatewayLaneConcurrency(cfgAtStart);
   initReliability(broadcast);
+
+  // Start hub metrics push client if configured.
+  startHubMetricsPush(cfgAtStart.gateway?.hubMetrics);
 
   let cronState = buildGatewayCronService({
     cfg: cfgAtStart,
