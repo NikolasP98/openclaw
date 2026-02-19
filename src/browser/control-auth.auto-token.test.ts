@@ -99,7 +99,7 @@ describe("ensureBrowserControlAuth", () => {
   });
 
   it("respects explicit none mode", async () => {
-    const cfg: OpenClawConfig = {
+    const cfg: MinionConfig = {
       gateway: {
         auth: {
           mode: "none",

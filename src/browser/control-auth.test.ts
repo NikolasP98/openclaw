@@ -51,7 +51,7 @@ describe("ensureBrowserControlAuth", () => {
 
   describe("none mode", () => {
     it("should not auto-generate token when auth mode is none", async () => {
-      const cfg: OpenClawConfig = {
+      const cfg: MinionConfig = {
         gateway: {
           auth: {
             mode: "none",
