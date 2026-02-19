@@ -83,6 +83,8 @@ export type ExecToolDefaults = {
   notifyOnExit?: boolean;
   notifyOnExitEmptySuccess?: boolean;
   cwd?: string;
+  /** Session-scoped env overrides (e.g. skill auth tokens). Merged between base env and params.env. */
+  envOverrides?: Record<string, string>;
 };
 
 export type { BashSandboxConfig } from "./bash-tools.shared.js";
@@ -386,6 +388,10 @@ export function createExecTool(
       }
 
       const baseEnv = coerceEnv(process.env);
+      // Layer session-scoped env overrides (e.g. skill auth tokens) between base and params.
+      const withOverrides = defaults?.envOverrides
+        ? { ...baseEnv, ...defaults.envOverrides }
+        : baseEnv;
 
       // Logic: Sandbox gets raw env. Host (gateway/node) must pass validation.
       // We validate BEFORE merging to prevent any dangerous vars from entering the stream.
@@ -393,7 +399,7 @@ export function createExecTool(
         validateHostEnv(params.env);
       }
 
-      const mergedEnv = params.env ? { ...baseEnv, ...params.env } : baseEnv;
+      const mergedEnv = params.env ? { ...withOverrides, ...params.env } : withOverrides;
 
       const env = sandbox
         ? buildSandboxEnv({

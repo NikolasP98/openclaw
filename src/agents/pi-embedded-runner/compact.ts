@@ -52,8 +52,8 @@ import {
 } from "../session-write-lock.js";
 import { detectRuntimeShell } from "../shell-utils.js";
 import {
-  applySkillEnvOverrides,
-  applySkillEnvOverridesFromSnapshot,
+  resolveSkillEnvMap,
+  resolveSkillEnvMapFromSnapshot,
   loadWorkspaceSkillEntries,
   resolveSkillsPromptForRun,
   type SkillSnapshot,
@@ -330,19 +330,18 @@ export async function compactEmbeddedPiSessionDirect(
     cwd: effectiveWorkspace,
   });
 
-  let restoreSkillEnv: (() => void) | undefined;
   process.chdir(effectiveWorkspace);
   try {
     const shouldLoadSkillEntries = !params.skillsSnapshot || !params.skillsSnapshot.resolvedSkills;
     const skillEntries = shouldLoadSkillEntries
       ? loadWorkspaceSkillEntries(effectiveWorkspace)
       : [];
-    restoreSkillEnv = params.skillsSnapshot
-      ? applySkillEnvOverridesFromSnapshot({
+    const skillEnvOverrides = params.skillsSnapshot
+      ? resolveSkillEnvMapFromSnapshot({
           snapshot: params.skillsSnapshot,
           config: params.config,
         })
-      : applySkillEnvOverrides({
+      : resolveSkillEnvMap({
           skills: skillEntries ?? [],
           config: params.config,
         });
@@ -383,6 +382,7 @@ export async function compactEmbeddedPiSessionDirect(
       modelId,
       modelContextWindowTokens: model.contextWindow,
       modelAuthMode: resolveModelAuthMode(model.provider, params.config),
+      skillEnvOverrides,
     });
     const tools = sanitizeToolsForGoogle({ tools: toolsRaw, provider });
     logToolSchemasForGoogle({ tools, provider });
@@ -717,7 +717,6 @@ export async function compactEmbeddedPiSessionDirect(
     const reason = describeUnknownError(err);
     return fail(reason);
   } finally {
-    restoreSkillEnv?.();
     process.chdir(prevCwd);
   }
 }

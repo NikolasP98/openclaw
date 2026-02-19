@@ -129,3 +129,104 @@ export function applySkillEnvOverridesFromSnapshot(params: {
 
   return createEnvReverter(updates);
 }
+
+/**
+ * Collects env overrides into a plain map instead of mutating process.env.
+ */
+function collectSkillConfigEnv(
+  map: Record<string, string>,
+  params: {
+    skillConfig: SkillConfig;
+    primaryEnv?: string | null;
+    skillKey?: string;
+    authStore?: AuthProfileStore;
+  },
+) {
+  const { skillConfig, primaryEnv, skillKey, authStore } = params;
+  if (skillConfig.env) {
+    for (const [envKey, envValue] of Object.entries(skillConfig.env)) {
+      if (!envValue || process.env[envKey] || map[envKey]) {
+        continue;
+      }
+      map[envKey] = envValue;
+    }
+  }
+
+  if (primaryEnv && skillConfig.apiKey && !process.env[primaryEnv] && !map[primaryEnv]) {
+    map[primaryEnv] = skillConfig.apiKey;
+  }
+
+  // Fallback: resolve primaryEnv from auth profiles (e.g. Notion OAuth → NOTION_API_KEY)
+  if (primaryEnv && !process.env[primaryEnv] && !map[primaryEnv] && skillKey && authStore) {
+    for (const cred of Object.values(authStore.profiles)) {
+      if (cred.provider === skillKey) {
+        const token = extractCredentialToken(cred);
+        if (token) {
+          map[primaryEnv] = token;
+          break;
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Returns a session-scoped env override map (no global process.env mutation).
+ * The returned map is intended to be passed to the exec tool as `envOverrides`.
+ */
+export function resolveSkillEnvMap(params: {
+  skills: SkillEntry[];
+  config?: OpenClawConfig;
+}): Record<string, string> {
+  const { skills, config } = params;
+  const map: Record<string, string> = {};
+  const authStore = loadAuthStoreSafe();
+
+  for (const entry of skills) {
+    const skillKey = resolveSkillKey(entry.skill, entry);
+    const skillConfig = resolveSkillConfig(config, skillKey);
+    if (!skillConfig) {
+      continue;
+    }
+
+    collectSkillConfigEnv(map, {
+      skillConfig,
+      primaryEnv: entry.metadata?.primaryEnv,
+      skillKey,
+      authStore,
+    });
+  }
+
+  return map;
+}
+
+/**
+ * Snapshot variant of resolveSkillEnvMap — returns a session-scoped env override map.
+ */
+export function resolveSkillEnvMapFromSnapshot(params: {
+  snapshot?: SkillSnapshot;
+  config?: OpenClawConfig;
+}): Record<string, string> {
+  const { snapshot, config } = params;
+  if (!snapshot) {
+    return {};
+  }
+  const map: Record<string, string> = {};
+  const authStore = loadAuthStoreSafe();
+
+  for (const skill of snapshot.skills) {
+    const skillConfig = resolveSkillConfig(config, skill.name);
+    if (!skillConfig) {
+      continue;
+    }
+
+    collectSkillConfigEnv(map, {
+      skillConfig,
+      primaryEnv: skill.primaryEnv,
+      skillKey: skill.name,
+      authStore,
+    });
+  }
+
+  return map;
+}
