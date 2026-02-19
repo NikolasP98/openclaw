@@ -257,6 +257,7 @@ export const agentsHandlers: GatewayRequestHandlers = {
     }
 
     const workspaceDir = resolveUserPath(String(params.workspace ?? "").trim());
+    const model = resolveOptionalStringParam(params.model);
 
     // Resolve agentDir against the config we're about to persist (vs the pre-write config),
     // so subsequent resolutions can't disagree about the agent's directory.
@@ -264,6 +265,7 @@ export const agentsHandlers: GatewayRequestHandlers = {
       agentId,
       name: rawName,
       workspace: workspaceDir,
+      ...(model ? { model } : {}),
     });
     const agentDir = resolveAgentDir(nextConfig, agentId);
     nextConfig = applyAgentConfig(nextConfig, { agentId, agentDir });

@@ -50,6 +50,7 @@ export const AgentsCreateParamsSchema = Type.Object(
     workspace: NonEmptyString,
     emoji: Type.Optional(Type.String()),
     avatar: Type.Optional(Type.String()),
+    model: Type.Optional(Type.String()),
   },
   { additionalProperties: false },
 );
@@ -169,6 +170,7 @@ export const ModelsListParamsSchema = Type.Object({}, { additionalProperties: fa
 export const ModelsListResultSchema = Type.Object(
   {
     models: Type.Array(ModelChoiceSchema),
+    defaultModel: Type.Optional(NonEmptyString),
   },
   { additionalProperties: false },
 );
