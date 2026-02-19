@@ -220,6 +220,9 @@ function validateConfigObjectWithPluginsBase(
     const normalizedPlugins = normalizePluginsConfig(config.plugins);
 
     for (const diag of registry.diagnostics) {
+      if (diag.level === "debug") {
+        continue;
+      }
       let path = diag.pluginId ? `plugins.entries.${diag.pluginId}` : "plugins";
       if (!diag.pluginId && diag.message.includes("plugin path not found")) {
         path = "plugins.load.paths";

@@ -575,11 +575,18 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
         throw error;
       }
       if (validated.warnings.length > 0) {
-        const details = validated.warnings
-          .map((iss) => `- ${iss.path || "<root>"}: ${iss.message}`)
-          .join("\n");
-        if (!_warnedConfigDetails.has(details)) {
-          _warnedConfigDetails.add(details);
+        const newWarnings = validated.warnings.filter((iss) => {
+          const line = `${iss.path || "<root>"}: ${iss.message}`;
+          if (_warnedConfigDetails.has(line)) {
+            return false;
+          }
+          _warnedConfigDetails.add(line);
+          return true;
+        });
+        if (newWarnings.length > 0) {
+          const details = newWarnings
+            .map((iss) => `- ${iss.path || "<root>"}: ${iss.message}`)
+            .join("\n");
           deps.logger.warn(`Config warnings:\n${details}`);
         }
       }
@@ -855,11 +862,18 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
       throw new Error(`Config validation failed: ${pathLabel}: ${issue?.message ?? "invalid"}`);
     }
     if (validated.warnings.length > 0) {
-      const details = validated.warnings
-        .map((warning) => `- ${warning.path}: ${warning.message}`)
-        .join("\n");
-      if (!_warnedConfigDetails.has(details)) {
-        _warnedConfigDetails.add(details);
+      const newWarnings = validated.warnings.filter((warning) => {
+        const line = `${warning.path || "<root>"}: ${warning.message}`;
+        if (_warnedConfigDetails.has(line)) {
+          return false;
+        }
+        _warnedConfigDetails.add(line);
+        return true;
+      });
+      if (newWarnings.length > 0) {
+        const details = newWarnings
+          .map((warning) => `- ${warning.path || "<root>"}: ${warning.message}`)
+          .join("\n");
         deps.logger.warn(`Config warnings:\n${details}`);
       }
     }
