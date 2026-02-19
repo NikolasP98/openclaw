@@ -2,6 +2,56 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import type { PermissionLevel } from "../security/permission-level.js";
+
+/**
+ * Workspace root files that only owners and admins may write.
+ * Regular users (permissionLevel === "user") are blocked from modifying these.
+ */
+export const WORKSPACE_ROOT_PROTECTED_FILES = new Set([
+  "soul.md",
+  "identity.md",
+  "user.md",
+  "agents.md",
+  "tools.md",
+  "heartbeat.md",
+  "bootstrap.md",
+]);
+
+/**
+ * Returns true if the resolved path points to a protected workspace root file.
+ */
+export function isWorkspaceRootProtectedFile(resolvedPath: string, workspaceRoot: string): boolean {
+  const rootResolved = path.resolve(workspaceRoot);
+  const relative = path.relative(rootResolved, path.resolve(resolvedPath));
+  // Must be a direct child (no separators, no going up)
+  if (!relative || relative.includes(path.sep) || relative.startsWith("..")) {
+    return false;
+  }
+  return WORKSPACE_ROOT_PROTECTED_FILES.has(relative.toLowerCase());
+}
+
+/**
+ * Throws if a write to `resolvedPath` is not permitted for the given permission level.
+ * Protected workspace root files require owner or admin access.
+ */
+export function assertWorkspaceWritePermission(params: {
+  resolvedPath: string;
+  workspaceRoot: string;
+  permissionLevel: PermissionLevel | undefined;
+}): void {
+  const { resolvedPath, workspaceRoot, permissionLevel } = params;
+  if (!isWorkspaceRootProtectedFile(resolvedPath, workspaceRoot)) {
+    return;
+  }
+  if (permissionLevel === "owner" || permissionLevel === "admin") {
+    return;
+  }
+  const filename = path.basename(resolvedPath);
+  throw new Error(
+    `Permission denied: modifying '${filename}' requires owner or admin access (current level: ${permissionLevel ?? "none"}).`,
+  );
+}
 
 const UNICODE_SPACES = /[\u00A0\u2000-\u200A\u202F\u205F\u3000]/g;
 const HTTP_URL_RE = /^https?:\/\//i;

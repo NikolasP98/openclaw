@@ -32,6 +32,12 @@ export type MinionConfig = {
     /** ISO timestamp when this config was last written. */
     lastTouchedAt?: string;
   };
+  /**
+   * Global admin peer IDs (all agents). Supports WhatsApp E164 (+15551234567),
+   * Telegram (telegram:@username or telegram:123456), Discord (user:123456789),
+   * channel-scoped (whatsapp:+15551234567), or identity link names from session.identityLinks.
+   */
+  admins?: string[];
   auth?: AuthConfig;
   env?: {
     /** Opt-in: import missing secrets from a login shell environment (exec `$SHELL -l -c 'env -0'`). */

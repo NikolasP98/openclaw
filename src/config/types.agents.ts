@@ -22,6 +22,12 @@ export type AgentConfig = {
   id: string;
   default?: boolean;
   name?: string;
+  /**
+   * Per-agent owner peer IDs. Owners can modify workspace root files and manage
+   * agent owners. Supports same formats as global admins (E164, telegram:, discord:,
+   * channel-scoped, or identity link names).
+   */
+  owners?: string[];
   workspace?: string;
   agentDir?: string;
   model?: AgentModelConfig;

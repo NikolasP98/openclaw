@@ -105,6 +105,7 @@ const HttpUrlSchema = z
 export const MinionSchema = z
   .object({
     $schema: z.string().optional(),
+    admins: z.array(z.string()).optional(),
     meta: z
       .object({
         lastTouchedVersion: z.string().optional(),

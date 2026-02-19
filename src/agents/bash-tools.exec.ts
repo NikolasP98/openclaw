@@ -26,6 +26,7 @@ import {
 } from "../infra/shell-env.js";
 import { logInfo } from "../logger.js";
 import { parseAgentSessionKey, resolveAgentIdFromSessionKey } from "../routing/session-key.js";
+import type { PermissionLevel } from "../security/permission-level.js";
 import { markBackgrounded, tail } from "./bash-process-registry.js";
 import {
   DEFAULT_APPROVAL_REQUEST_TIMEOUT_MS,
@@ -85,6 +86,8 @@ export type ExecToolDefaults = {
   cwd?: string;
   /** Session-scoped env overrides (e.g. skill auth tokens). Merged between base env and params.env. */
   envOverrides?: Record<string, string>;
+  /** Resolved permission tier for the current sender (threaded from RunEmbeddedPiAgentParams). */
+  senderPermissionLevel?: PermissionLevel;
 };
 
 export type { BashSandboxConfig } from "./bash-tools.shared.js";

@@ -36,5 +36,11 @@ export function getAvailableCommands(): AvailableCommand[] {
     { name: "queue", description: "Adjust queue mode and options." },
     { name: "bash", description: "Run a host command (if enabled)." },
     { name: "compact", description: "Compact the session history." },
+    { name: "agent", description: "List or switch active agent (admin only)." },
+    {
+      name: "owners",
+      description: "List or manage per-agent owners (owner/admin).",
+      input: { hint: "add <peer-id> | remove <peer-id>" },
+    },
   ];
 }

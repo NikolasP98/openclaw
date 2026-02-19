@@ -10,6 +10,8 @@ export type CommandAuthorization = {
   providerId?: ChannelId;
   ownerList: string[];
   senderId?: string;
+  /** All normalized sender ID candidates (e.g. E164, telegram:@..., etc.) */
+  senderCandidates: string[];
   senderIsOwner: boolean;
   isAuthorizedSender: boolean;
   from?: string;
@@ -335,6 +337,7 @@ export function resolveCommandAuthorization(params: {
     providerId,
     ownerList,
     senderId: senderId || undefined,
+    senderCandidates,
     senderIsOwner,
     isAuthorizedSender,
     from: from || undefined,

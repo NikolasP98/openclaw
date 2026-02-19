@@ -2,6 +2,7 @@ import type { SkillCommandSpec } from "../../agents/skills.js";
 import type { ChannelId } from "../../channels/plugins/types.js";
 import type { MinionConfig } from "../../config/config.js";
 import type { SessionEntry, SessionScope } from "../../config/sessions.js";
+import type { PermissionLevel } from "../../security/permission-level.js";
 import type { MsgContext } from "../templating.js";
 import type { ElevatedLevel, ReasoningLevel, ThinkLevel, VerboseLevel } from "../thinking.js";
 import type { ReplyPayload } from "../types.js";
@@ -20,6 +21,8 @@ export type CommandContext = {
   commandBodyNormalized: string;
   from?: string;
   to?: string;
+  /** Resolved permission tier for the current sender. */
+  permissionLevel: PermissionLevel;
 };
 
 export type HandleCommandsParams = {
