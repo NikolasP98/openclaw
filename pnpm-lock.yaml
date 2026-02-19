@@ -372,12 +372,6 @@ importers:
         specifier: workspace:*
         version: link:../..
 
-  extensions/lobster:
-    devDependencies:
-      '@nikolasp98/minion':
-        specifier: workspace:*
-        version: link:../..
-
   extensions/matrix:
     dependencies:
       '@matrix-org/matrix-sdk-crypto-nodejs':
