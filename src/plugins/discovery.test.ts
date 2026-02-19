@@ -127,6 +127,53 @@ describe("discoverMinionPlugins", () => {
     expect(ids).toContain("voice-call");
   });
 
+  it("emits debug diagnostic for bundled extension with missing source", async () => {
+    const stateDir = makeTempDir();
+    const bundledDir = makeTempDir();
+    const staleExt = path.join(bundledDir, "lobster");
+    fs.mkdirSync(staleExt, { recursive: true });
+    fs.writeFileSync(
+      path.join(staleExt, "package.json"),
+      JSON.stringify({
+        name: "lobster",
+        minion: { extensions: ["./index.ts"] },
+      }),
+      "utf-8",
+    );
+    // No index.ts — simulates a stale bundled extension
+
+    const { diagnostics } = await withStateDir(stateDir, async () => {
+      // Override bundled dir after withStateDir sets it to /nonexistent
+      process.env.MINION_BUNDLED_PLUGINS_DIR = bundledDir;
+      return discoverMinionPlugins({});
+    });
+    const missing = diagnostics.find((d) => d.message.includes("lobster"));
+    expect(missing).toBeDefined();
+    expect(missing!.level).toBe("debug");
+  });
+
+  it("emits warn diagnostic for global extension with missing source", async () => {
+    const stateDir = makeTempDir();
+    const globalExt = path.join(stateDir, "extensions", "stale-pack");
+    fs.mkdirSync(globalExt, { recursive: true });
+    fs.writeFileSync(
+      path.join(globalExt, "package.json"),
+      JSON.stringify({
+        name: "stale-pack",
+        minion: { extensions: ["./index.ts"] },
+      }),
+      "utf-8",
+    );
+    // No index.ts — simulates a stale global extension
+
+    const { diagnostics } = await withStateDir(stateDir, async () => {
+      return discoverMinionPlugins({});
+    });
+    const missing = diagnostics.find((d) => d.message.includes("stale-pack"));
+    expect(missing).toBeDefined();
+    expect(missing!.level).toBe("warn");
+  });
+
   it("treats configured directory paths as plugin packages", async () => {
     const stateDir = makeTempDir();
     const packDir = path.join(stateDir, "packs", "demo-plugin-dir");

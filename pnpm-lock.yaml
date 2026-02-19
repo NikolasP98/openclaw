@@ -372,12 +372,6 @@ importers:
         specifier: workspace:*
         version: link:../..
 
-  extensions/lobster:
-    devDependencies:
-      '@nikolasp98/minion':
-        specifier: workspace:*
-        version: link:../..
-
   extensions/matrix:
     dependencies:
       '@matrix-org/matrix-sdk-crypto-nodejs':
@@ -471,6 +465,12 @@ importers:
       zod:
         specifier: ^4.3.6
         version: 4.3.6
+    devDependencies:
+      '@nikolasp98/minion':
+        specifier: workspace:*
+        version: link:../..
+
+  extensions/notion-auth:
     devDependencies:
       '@nikolasp98/minion':
         specifier: workspace:*

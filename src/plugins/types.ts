@@ -285,7 +285,7 @@ export type MinionPluginApi = {
 export type PluginOrigin = "bundled" | "global" | "workspace" | "config";
 
 export type PluginDiagnostic = {
-  level: "warn" | "error";
+  level: "warn" | "error" | "debug";
   message: string;
   pluginId?: string;
   source?: string;

@@ -74,24 +74,9 @@ describe("state + config path candidates", () => {
     const home = "/home/test";
     const resolvedHome = path.resolve(home);
     const candidates = resolveDefaultConfigCandidates({} as NodeJS.ProcessEnv, () => home);
-    const expected = [
-      path.join(resolvedHome, ".minion", "minion.json"),
-      path.join(resolvedHome, ".minion", "minionbot.json"),
-      path.join(resolvedHome, ".minion", "moldbot.json"),
-      path.join(resolvedHome, ".minion", "moltbot.json"),
-      path.join(resolvedHome, ".minionbot", "minion.json"),
-      path.join(resolvedHome, ".minionbot", "minionbot.json"),
-      path.join(resolvedHome, ".minionbot", "moldbot.json"),
-      path.join(resolvedHome, ".minionbot", "moltbot.json"),
-      path.join(resolvedHome, ".moldbot", "minion.json"),
-      path.join(resolvedHome, ".moldbot", "minionbot.json"),
-      path.join(resolvedHome, ".moldbot", "moldbot.json"),
-      path.join(resolvedHome, ".moldbot", "moltbot.json"),
-      path.join(resolvedHome, ".moltbot", "minion.json"),
-      path.join(resolvedHome, ".moltbot", "minionbot.json"),
-      path.join(resolvedHome, ".moltbot", "moldbot.json"),
-      path.join(resolvedHome, ".moltbot", "moltbot.json"),
-    ];
+    const dirs = [".minion", ".openclaw", ".clawdbot", ".moldbot", ".moltbot"];
+    const files = ["minion.json", "openclaw.json", "clawdbot.json", "moldbot.json", "moltbot.json"];
+    const expected = dirs.flatMap((dir) => files.map((file) => path.join(resolvedHome, dir, file)));
     expect(candidates).toEqual(expected);
   });
 

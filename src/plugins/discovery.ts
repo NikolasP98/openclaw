@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { PluginDiagnostic, PluginOrigin } from "./types.js";
 import { resolveConfigDir, resolveUserPath } from "../utils.js";
 import { resolveBundledPluginsDir } from "./bundled-dir.js";
 import {
@@ -8,6 +7,7 @@ import {
   type MinionPackageManifest,
   type PackageManifest,
 } from "./manifest.js";
+import type { PluginDiagnostic, PluginOrigin } from "./types.js";
 
 const EXTENSION_EXTS = new Set([".ts", ".js", ".mts", ".cts", ".mjs", ".cjs"]);
 
@@ -179,7 +179,7 @@ function discoverInDirectory(params: {
         const resolved = preferCompiledSource(path.resolve(fullPath, extPath));
         if (!fs.existsSync(resolved)) {
           params.diagnostics.push({
-            level: "warn",
+            level: params.origin === "bundled" ? "debug" : "warn",
             message: `extension source not found, skipping: ${resolved}`,
             source: resolved,
           });

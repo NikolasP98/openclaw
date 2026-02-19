@@ -1,5 +1,5 @@
 {
   "name": "minion",
   "description": "Minion fork - Personal development environment with DEV/PRD workflow automation",
-  "skills": ["fork-sync", "lessons-learned", "provision-server"]
+  "skills": ["fork-sync", "lessons-learned", "provision-server", "pre-push-checks"]
 }

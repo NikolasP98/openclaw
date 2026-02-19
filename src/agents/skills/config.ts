@@ -6,6 +6,7 @@ import {
   resolveConfigPath,
   resolveRuntimePlatform,
 } from "../../shared/config-eval.js";
+import { ensureAuthProfileStore } from "../auth-profiles.js";
 import { resolveSkillKey } from "./frontmatter.js";
 import type { SkillEligibilityContext, SkillEntry } from "./types.js";
 
@@ -67,6 +68,31 @@ export function isBundledSkillAllowed(entry: SkillEntry, allowlist?: string[]): 
   return allowlist.includes(key) || allowlist.includes(entry.skill.name);
 }
 
+/** Check if an auth profile exists that could supply a skill's primaryEnv. */
+function hasAuthProfileForSkill(
+  skillKey: string,
+  envName: string,
+  primaryEnv?: string | null,
+): boolean {
+  if (envName !== primaryEnv) return false;
+  try {
+    const store = ensureAuthProfileStore();
+    for (const cred of Object.values(store.profiles)) {
+      if (cred.provider !== skillKey) continue;
+      if (
+        (cred.type === "oauth" && cred.access) ||
+        (cred.type === "api_key" && cred.key) ||
+        (cred.type === "token" && cred.token)
+      ) {
+        return true;
+      }
+    }
+  } catch {
+    // Auth store unavailable — skip
+  }
+  return false;
+}
+
 export function shouldIncludeSkill(params: {
   entry: SkillEntry;
   config?: OpenClawConfig;
@@ -105,7 +131,8 @@ export function shouldIncludeSkill(params: {
       Boolean(
         process.env[envName] ||
         skillConfig?.env?.[envName] ||
-        (skillConfig?.apiKey && entry.metadata?.primaryEnv === envName),
+        (skillConfig?.apiKey && entry.metadata?.primaryEnv === envName) ||
+        hasAuthProfileForSkill(skillKey, envName, entry.metadata?.primaryEnv),
       ),
     isConfigPathTruthy: (configPath) => isConfigPathTruthy(config, configPath),
   });
