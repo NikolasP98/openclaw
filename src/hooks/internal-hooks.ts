@@ -1,11 +1,12 @@
 /**
- * Hook system for Minion agent events
+ * Hook system for OpenClaw agent events
  *
  * Provides an extensible event-driven hook system for agent events
  * like command processing, session lifecycle, etc.
  */
 
 import type { WorkspaceBootstrapFile } from "../agents/workspace.js";
+import type { CliDeps } from "../cli/deps.js";
 import type { MinionConfig } from "../config/config.js";
 
 export type InternalHookEventType = "command" | "session" | "agent" | "gateway" | "message";
@@ -23,6 +24,18 @@ export type AgentBootstrapHookEvent = InternalHookEvent & {
   type: "agent";
   action: "bootstrap";
   context: AgentBootstrapHookContext;
+};
+
+export type GatewayStartupHookContext = {
+  cfg?: MinionConfig;
+  deps?: CliDeps;
+  workspaceDir?: string;
+};
+
+export type GatewayStartupHookEvent = InternalHookEvent & {
+  type: "gateway";
+  action: "startup";
+  context: GatewayStartupHookContext;
 };
 
 // ============================================================================
@@ -232,6 +245,14 @@ export function isAgentBootstrapEvent(event: InternalHookEvent): event is AgentB
     return false;
   }
   return Array.isArray(context.bootstrapFiles);
+}
+
+export function isGatewayStartupEvent(event: InternalHookEvent): event is GatewayStartupHookEvent {
+  if (event.type !== "gateway" || event.action !== "startup") {
+    return false;
+  }
+  const context = event.context as GatewayStartupHookContext | null;
+  return Boolean(context && typeof context === "object");
 }
 
 export function isMessageReceivedEvent(
