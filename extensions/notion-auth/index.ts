@@ -11,7 +11,8 @@ import {
 // OAuth constants — Notion requires these via env vars (per-org integration)
 const CLIENT_ID = process.env.NOTION_OAUTH_CLIENT_ID ?? "";
 const CLIENT_SECRET = process.env.NOTION_OAUTH_CLIENT_SECRET ?? "";
-const REDIRECT_URI = "http://localhost:51123/oauth-callback";
+const REDIRECT_URI =
+  process.env.NOTION_OAUTH_REDIRECT_URI ?? "http://localhost:51123/oauth-callback";
 const AUTH_URL = "https://api.notion.com/v1/oauth/authorize";
 const TOKEN_URL = "https://api.notion.com/v1/oauth/token";
 
@@ -29,8 +30,11 @@ const RESPONSE_PAGE = `<!DOCTYPE html>
   </body>
 </html>`;
 
-function shouldUseManualOAuthFlow(isRemote: boolean): boolean {
-  return isRemote || isWSL2Sync();
+/** Whether the redirect URI points to a non-localhost host (e.g. Tailscale funnel). */
+const isFunneledRedirect = !/^(localhost|127\.0\.0\.1)$/.test(new URL(REDIRECT_URI).hostname);
+
+function canOpenBrowserLocally(isRemote: boolean): boolean {
+  return !isRemote && !isWSL2Sync();
 }
 
 function buildAuthUrl(state: string): string {
@@ -212,10 +216,11 @@ async function loginNotion(params: {
 }> {
   const state = randomBytes(16).toString("hex");
   const authUrl = buildAuthUrl(state);
+  const canOpenBrowser = canOpenBrowserLocally(params.isRemote);
 
+  // Start callback server when: local use OR funneled redirect (e.g. Tailscale)
   let callbackServer: Awaited<ReturnType<typeof startCallbackServer>> | null = null;
-  const needsManual = shouldUseManualOAuthFlow(params.isRemote);
-  if (!needsManual) {
+  if (canOpenBrowser || isFunneledRedirect) {
     try {
       callbackServer = await startCallbackServer({ timeoutMs: 5 * 60 * 1000 });
     } catch {
@@ -223,24 +228,30 @@ async function loginNotion(params: {
     }
   }
 
-  if (!callbackServer) {
-    await params.note(
-      [
-        "Open the URL in your local browser.",
-        "After authorizing, copy the full redirect URL and paste it back here.",
-        "",
-        `Auth URL: ${authUrl}`,
-        `Redirect URI: ${REDIRECT_URI}`,
-      ].join("\n"),
-      "Notion OAuth",
-    );
+  // Show URL to user when browser can't auto-open or callback server failed
+  if (!canOpenBrowser || !callbackServer) {
+    const instructions = callbackServer
+      ? [
+          "Open the URL below in your browser to authorize.",
+          "The callback will be received automatically.",
+          "",
+          `Auth URL: ${authUrl}`,
+        ]
+      : [
+          "Open the URL in your local browser.",
+          "After authorizing, copy the full redirect URL and paste it back here.",
+          "",
+          `Auth URL: ${authUrl}`,
+          `Redirect URI: ${REDIRECT_URI}`,
+        ];
+    await params.note(instructions.join("\n"), "Notion OAuth");
     params.log("");
     params.log("Copy this URL:");
     params.log(authUrl);
     params.log("");
   }
 
-  if (!needsManual) {
+  if (canOpenBrowser) {
     params.progress.update("Opening Notion authorization\u2026");
     try {
       await params.openUrl(authUrl);
