@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+PREFIX="pre-push"
+
+log() { echo "[$PREFIX] $*"; }
+log_section() { echo ""; echo "[$PREFIX] ── $* ──"; }
+
+# ── Read stdin (git pre-push protocol) ───────────────────────────────
+log_section "Hook invoked"
+log "Reading push refs from stdin..."
+
+PUSH_REFS=()
+while IFS=' ' read -r local_ref local_sha remote_ref remote_sha; do
+  PUSH_REFS+=("$local_ref → $remote_ref")
+  log "  ref: $local_ref ($local_sha) → $remote_ref ($remote_sha)"
+done
+
+if [[ ${#PUSH_REFS[@]} -eq 0 ]]; then
+  log "No refs received from stdin (nothing to push)."
+  exit 0
+fi
+
+# ── Detect current branch ────────────────────────────────────────────
+log_section "Branch detection"
+BRANCH="$(git symbolic-ref --short HEAD 2>/dev/null || true)"
+
+if [[ -z "$BRANCH" ]]; then
+  log "Detached HEAD — skipping gate (not a branch push)."
+  exit 0
+fi
+
+log "Current branch: $BRANCH"
+
+if [[ "$BRANCH" != "DEV" && "$BRANCH" != "main" ]]; then
+  log "Branch '$BRANCH' is not gated (only DEV and main are gated)."
+  log "Allowing push."
+  exit 0
+fi
+
+log "Branch '$BRANCH' IS gated — CI workflow tests required."
+
+# ── Run CI validation tests ──────────────────────────────────────────
+log_section "Running CI workflow tests"
+log "Command: pnpm vitest run test/ci/"
+log "Started at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+echo ""
+
+if ! pnpm vitest run test/ci/; then
+  echo ""
+  log_section "PUSH BLOCKED"
+  log "CI workflow tests FAILED — push to $BRANCH blocked."
+  log "Fix the failures above, then try again."
+  log "Escape hatch: git push --no-verify"
+  exit 1
+fi
+
+echo ""
+log_section "PUSH ALLOWED"
+log "All CI workflow tests passed."
+log "Finished at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
