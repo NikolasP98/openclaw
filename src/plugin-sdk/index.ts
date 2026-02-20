@@ -81,6 +81,16 @@ export { emptyPluginConfigSchema } from "../plugins/config-schema.js";
 export type { MinionConfig } from "../config/config.js";
 /** @deprecated Use MinionConfig instead */
 export type { MinionConfig as MinionbotConfig } from "../config/config.js";
+/** @deprecated Use MinionConfig */
+export type { OpenClawConfig } from "../config/config.js";
+/** @deprecated Use MinionConfig */
+export type { MinionConfig as ClawdbotConfig } from "../config/config.js";
+/** @deprecated Use MinionPluginApi */
+export type { MinionPluginApi as OpenClawPluginApi } from "../plugins/types.js";
+/** @deprecated Use MinionPluginService */
+export type { MinionPluginService as OpenClawPluginService } from "../plugins/types.js";
+/** @deprecated Use MinionPluginServiceContext */
+export type { MinionPluginServiceContext as OpenClawPluginServiceContext } from "../plugins/types.js";
 
 export type { FileLockHandle, FileLockOptions } from "./file-lock.js";
 export { acquireFileLock, withFileLock } from "./file-lock.js";
@@ -454,6 +464,16 @@ export {
   stripMarkdown,
 } from "../line/markdown-to-line.js";
 export type { ProcessedLineMessage } from "../line/markdown-to-line.js";
+
+// Channel: Linq
+export {
+  listLinqAccountIds,
+  resolveDefaultLinqAccountId,
+  resolveLinqAccount,
+  type ResolvedLinqAccount,
+} from "../linq/accounts.js";
+export type { LinqProbe } from "../linq/types.js";
+export { linqOnboardingAdapter } from "../channels/plugins/onboarding/linq.js";
 
 // Media utilities
 export { loadWebMedia, type WebMediaResult } from "../web/media.js";

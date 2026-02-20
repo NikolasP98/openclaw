@@ -59,7 +59,14 @@ function makeOAuthProfile(
 
 function makeSkillEntry(skillKey: string, primaryEnv: string): SkillEntry {
   return {
-    skill: { name: skillKey, source: "test", content: "", commands: [] },
+    skill: {
+      name: skillKey,
+      description: "",
+      filePath: "",
+      baseDir: "",
+      source: "test",
+      disableModelInvocation: false,
+    },
     frontmatter: {},
     metadata: { skillKey, primaryEnv },
   };
