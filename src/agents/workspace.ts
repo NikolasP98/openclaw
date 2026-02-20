@@ -313,6 +313,9 @@ export async function ensureAgentWorkspace(params?: {
   await writeFileIfMissing(userPath, userTemplate);
   await writeFileIfMissing(heartbeatPath, heartbeatTemplate);
 
+  // Ensure memory/ directory exists for daily notes (memory/YYYY-MM-DD.md).
+  await fs.mkdir(path.join(dir, "memory"), { recursive: true });
+
   let state = await readWorkspaceOnboardingState(statePath);
   let stateDirty = false;
   const markState = (next: Partial<WorkspaceOnboardingState>) => {

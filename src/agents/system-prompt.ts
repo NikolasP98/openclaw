@@ -63,6 +63,18 @@ function buildMemorySection(params: {
       "Citations: include Source: <path#line> when it helps the user verify memory snippets.",
     );
   }
+  lines.push(
+    "",
+    "## Memory Management",
+    "Actively use memory to remember things across conversations.",
+    "- When you learn something new about the user (name, preferences, habits, context), write it to MEMORY.md.",
+    "- When something noteworthy happens in a conversation, append it to today's daily note (memory/YYYY-MM-DD.md).",
+    "- Always read MEMORY.md before writing, so you can edit to update without losing existing content.",
+    "- Keep MEMORY.md concise and organized — summarize, don't dump raw conversation.",
+    "- Proactively save memory without being asked.",
+    "- USER.md stores user preferences and profile. Update it when the user shares personal details.",
+    "- SOUL.md defines your personality. Do not overwrite it unless the user explicitly asks.",
+  );
   lines.push("");
   return lines;
 }
