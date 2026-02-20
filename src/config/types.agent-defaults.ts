@@ -1,3 +1,7 @@
+import type {
+  AgentOrchestratorConfig,
+  AgentRoutingConfig,
+} from "../auto-reply/reply/smart-routing.js";
 import type { ChannelId } from "../channels/plugins/types.js";
 import type {
   BlockStreamingChunkConfig,
@@ -235,6 +239,10 @@ export type AgentDefaultsConfig = {
      */
     includeReasoning?: boolean;
   };
+  /** Smart model routing — route messages by complexity to different model tiers. */
+  routing?: AgentRoutingConfig;
+  /** Orchestrator escalation for complex tasks. */
+  orchestrator?: AgentOrchestratorConfig;
   /** Max concurrent agent runs across all conversations. Default: 1 (sequential). */
   maxConcurrent?: number;
   /** Sub-agent defaults (spawned via sessions_spawn). */

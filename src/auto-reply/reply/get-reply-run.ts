@@ -44,6 +44,7 @@ import { resolveQueueSettings } from "./queue.js";
 import { routeReply } from "./route-reply.js";
 import { BARE_SESSION_RESET_PROMPT } from "./session-reset-prompt.js";
 import { ensureSkillSnapshot, prependSystemEvents } from "./session-updates.js";
+import { FAST_CHAT_SYSTEM_PROMPT, readMemorySnapshot } from "./smart-routing.js";
 import { resolveTypingMode } from "./typing-mode.js";
 import type { TypingController } from "./typing.js";
 import { appendUntrustedContext } from "./untrusted-context.js";
@@ -104,6 +105,10 @@ type RunPreparedReplyParams = {
   storePath?: string;
   workspaceDir: string;
   abortedLastRun: boolean;
+  /** True when smart routing overrode the model selection. */
+  smartRouted?: boolean;
+  /** True when smart routing wants tools disabled (fast tier). */
+  smartRouteDisableTools?: boolean;
 };
 
 export async function runPreparedReply(
@@ -147,6 +152,7 @@ export async function runPreparedReply(
     workspaceDir,
     sessionStore,
   } = params;
+  const { smartRouted, smartRouteDisableTools } = params;
   let {
     sessionEntry,
     resolvedThinkLevel,
@@ -187,7 +193,17 @@ export async function runPreparedReply(
   const inboundMetaPrompt = buildInboundMetaSystemPrompt(
     isNewSession ? sessionCtx : { ...sessionCtx, ThreadStarterBody: undefined },
   );
-  const extraSystemPrompt = [inboundMetaPrompt, groupChatContext, groupIntro, groupSystemPrompt]
+  const smartRoutingPrompt = smartRouted && smartRouteDisableTools ? FAST_CHAT_SYSTEM_PROMPT : "";
+  const memorySnapshot =
+    smartRouted && smartRouteDisableTools ? await readMemorySnapshot(workspaceDir) : undefined;
+  const extraSystemPrompt = [
+    inboundMetaPrompt,
+    groupChatContext,
+    groupIntro,
+    groupSystemPrompt,
+    memorySnapshot,
+    smartRoutingPrompt,
+  ]
     .filter(Boolean)
     .join("\n\n");
   const baseBody = sessionCtx.BodyStripped ?? sessionCtx.Body ?? "";

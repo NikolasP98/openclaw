@@ -23,6 +23,7 @@ import { loadInternalHooks } from "../hooks/loader.js";
 import { isTruthyEnvValue } from "../infra/env.js";
 import type { loadOpenClawPlugins } from "../plugins/loader.js";
 import { type PluginServicesHandle, startPluginServices } from "../plugins/services.js";
+import { runModelHealthChecks } from "./model-health-check.js";
 import { startBrowserControlServerIfEnabled } from "./server-browser.js";
 import {
   scheduleRestartSentinelWake,
@@ -151,6 +152,18 @@ export async function startGatewaySidecars(params: {
   } catch (err) {
     params.logHooks.error(`failed to load hooks: ${String(err)}`);
   }
+
+  // Run health checks for locally configured models (smart routing).
+  // Non-blocking: logs warnings but never prevents gateway from starting.
+  void runModelHealthChecks({
+    routing: params.cfg.agents?.defaults?.routing,
+    log: {
+      info: (msg: string) => params.logChannels.info(`[model-health] ${msg}`),
+      warn: (msg: string) => params.log.warn(`[model-health] ${msg}`),
+    },
+  }).catch((err) => {
+    params.log.warn(`model health check failed: ${String(err)}`);
+  });
 
   // Launch configured channels so gateway replies via the surface the message came from.
   // Tests can opt out via OPENCLAW_SKIP_CHANNELS (or legacy OPENCLAW_SKIP_PROVIDERS).
