@@ -1,0 +1,379 @@
+/**
+ * Smart model routing — heuristic message classifier.
+ *
+ * Classifies inbound messages into three tiers (simple / moderate / complex)
+ * using zero-LLM-cost regex/keyword heuristics. When enabled, simple messages
+ * are routed to a fast local model (e.g. 3B), moderate to a larger local model,
+ * and complex to the configured API model (e.g. Claude).
+ *
+ * Inspired by LocalClaw's 3-tier routing system.
+ *
+ * @module
+ */
+
+// ── Types ────────────────────────────────────────────────────────────────────
+
+export type MessageComplexity = "simple" | "moderate" | "complex";
+
+export type AgentRoutingConfig = {
+  /** Enable smart routing (default: false — zero behavior change without opt-in). */
+  enabled?: boolean;
+  /** Fast-tier model for simple messages (e.g. "ollama/qwen3:1.7b"). */
+  fastModel?: string;
+  /** Local-tier model for moderate messages (e.g. "ollama/gemma3:12b"). */
+  localModel?: string;
+  /** Max message length (chars) for simple classification (default: 150). */
+  maxSimpleLength?: number;
+  /** Context token cap for fast model (default: 4096). */
+  fastModelContextTokens?: number;
+};
+
+export type AgentOrchestratorConfig = {
+  /** Enable orchestrator escalation for complex messages (default: false). */
+  enabled?: boolean;
+  /** Orchestrator model (e.g. "anthropic/claude-sonnet-4"). */
+  model?: string;
+  /** Routing strategy (default: "auto"). */
+  strategy?: "auto" | "always" | "fallback-only";
+};
+
+export type SmartRoutingResult = {
+  complexity: MessageComplexity;
+  /** Provider override (undefined = use default). */
+  provider?: string;
+  /** Model override (undefined = use default). */
+  model?: string;
+  /** Whether tool calling should be disabled. */
+  disableTools: boolean;
+  /** Context token cap override (undefined = use default). */
+  contextTokensCap?: number;
+};
+
+// ── Constants ────────────────────────────────────────────────────────────────
+
+const DEFAULT_MAX_SIMPLE_LENGTH = 150;
+const DEFAULT_FAST_CONTEXT_TOKENS = 4096;
+
+/** Patterns that always indicate complex messages. */
+const COMPLEX_PATTERNS: RegExp[] = [
+  // Code blocks (triple backticks or indented code)
+  /```[\s\S]*?```/,
+  /^    \S/m,
+  // File paths (Unix or Windows)
+  /(?:\/[\w.-]+){2,}/,
+  /[A-Z]:\\[\w\\.-]+/,
+  // URLs
+  /https?:\/\/\S+/,
+  // Version numbers (e.g., v1.2.3, 3.14.0)
+  /\bv?\d+\.\d+\.\d+\b/,
+  // Import/require statements
+  /\b(?:import|require|from)\s+['"][\w@/.-]+['"]/,
+  // Stack traces
+  /at\s+\S+\s+\([\w/\\.-]+:\d+:\d+\)/,
+  // JSON-like structures
+  /\{[\s\S]*"[\w]+"\s*:/,
+  // Shell commands with pipes or redirection
+  /\|\s*\w+|[>]{1,2}\s*\S+/,
+  // Regex patterns
+  /\/[^/\s]+\/[gims]*/,
+];
+
+/** Keywords that strongly indicate complex messages (case-insensitive, word boundary). */
+const COMPLEX_KEYWORDS = new Set([
+  "fix",
+  "debug",
+  "create",
+  "build",
+  "refactor",
+  "implement",
+  "deploy",
+  "configure",
+  "install",
+  "migrate",
+  "optimize",
+  "analyze",
+  "architect",
+  "design",
+  "test",
+  "compile",
+  "transpile",
+  "bundle",
+  "lint",
+  "format",
+  "scaffold",
+  "provision",
+  "integrate",
+  "authenticate",
+  "authorize",
+  "encrypt",
+  "decrypt",
+  "serialize",
+  "parse",
+  "validate",
+  "transform",
+  "resolve",
+  "investigate",
+  "diagnose",
+  "benchmark",
+  "profile",
+  "containerize",
+  "dockerize",
+  "orchestrate",
+  "pipeline",
+  "workflow",
+  "database",
+  "schema",
+  "mutation",
+  "endpoint",
+  "middleware",
+  "component",
+  "module",
+  "package",
+  "dependency",
+  "algorithm",
+  "function",
+  "class",
+  "interface",
+  "typescript",
+  "javascript",
+  "python",
+  "rust",
+  "docker",
+  "kubernetes",
+]);
+
+/** Keywords that indicate moderate complexity (need tools or lookups). */
+const MODERATE_KEYWORDS = new Set([
+  "show",
+  "list",
+  "find",
+  "search",
+  "lookup",
+  "check",
+  "email",
+  "calendar",
+  "weather",
+  "reminder",
+  "schedule",
+  "send",
+  "read",
+  "open",
+  "download",
+  "upload",
+  "fetch",
+  "get",
+  "set",
+  "update",
+  "delete",
+  "remove",
+  "add",
+  "copy",
+  "move",
+  "rename",
+  "status",
+  "summarize",
+  "translate",
+  "calculate",
+  "convert",
+  "compare",
+  "explain",
+  "describe",
+]);
+
+/** Affirmative/confirmation patterns that indicate moderate (may need tools for context). */
+const AFFIRMATIVE_PATTERNS =
+  /^(?:go\s+ahead|do\s+it|proceed|continue|yes\s+please|sure|absolutely|go\s+for\s+it|make\s+it\s+so|execute|run\s+it|ship\s+it)\s*[.!]?\s*$/i;
+
+/** Bare ambiguous acknowledgements → simple. */
+const BARE_ACK_PATTERNS =
+  /^(?:yes|yeah|yep|yup|no|nah|nope|ok|okay|k|sure|thanks|thank\s+you|ty|thx|cool|nice|great|good|awesome|perfect|lol|haha|heh|👍|👎|❤️|🙏|😊|😂|🤣|🎉|✅|❌)\s*[.!?]?\s*$/i;
+
+// ── Classifier ───────────────────────────────────────────────────────────────
+
+/**
+ * Classify a message's complexity using heuristic rules.
+ * First match wins.
+ */
+export function classifyMessage(
+  message: string,
+  options?: { maxSimpleLength?: number },
+): MessageComplexity {
+  const maxSimple = options?.maxSimpleLength ?? DEFAULT_MAX_SIMPLE_LENGTH;
+
+  // 1. Empty / whitespace-only → simple
+  const trimmed = message.trim();
+  if (!trimmed) {
+    return "simple";
+  }
+
+  // 2. Complex patterns (code blocks, file paths, URLs, etc.)
+  for (const pattern of COMPLEX_PATTERNS) {
+    if (pattern.test(trimmed)) {
+      return "complex";
+    }
+  }
+
+  // 3. Complex keywords
+  const words = trimmed.toLowerCase().split(/\s+/);
+  for (const word of words) {
+    // Strip punctuation for matching
+    const clean = word.replace(/[^a-z]/g, "");
+    if (clean && COMPLEX_KEYWORDS.has(clean)) {
+      return "complex";
+    }
+  }
+
+  // 4. Moderate keywords
+  for (const word of words) {
+    const clean = word.replace(/[^a-z]/g, "");
+    if (clean && MODERATE_KEYWORDS.has(clean)) {
+      return "moderate";
+    }
+  }
+
+  // 5. Slash commands → complex (they invoke specific functionality)
+  if (/^\/\w+/.test(trimmed)) {
+    return "complex";
+  }
+
+  // 6. 3+ sentences → complex (long-form request)
+  const sentences = trimmed.split(/[.!?]+\s/).filter(Boolean);
+  if (sentences.length >= 3) {
+    return "complex";
+  }
+
+  // 7. Affirmative confirmations → moderate (needs tools for context)
+  if (AFFIRMATIVE_PATTERNS.test(trimmed)) {
+    return "moderate";
+  }
+
+  // 8. Bare acknowledgements → simple
+  if (BARE_ACK_PATTERNS.test(trimmed)) {
+    return "simple";
+  }
+
+  // 9. Message too long for simple
+  if (trimmed.length > maxSimple) {
+    return "moderate";
+  }
+
+  // 10. Default → simple
+  return "simple";
+}
+
+// ── Router ───────────────────────────────────────────────────────────────────
+
+/**
+ * Parse a "provider/model" string into its parts.
+ * Returns undefined if the string is empty or missing the slash.
+ */
+function parseModelRef(ref: string | undefined): { provider: string; model: string } | undefined {
+  if (!ref) {
+    return undefined;
+  }
+  const slash = ref.indexOf("/");
+  if (slash < 1) {
+    return undefined;
+  }
+  return { provider: ref.slice(0, slash), model: ref.slice(slash + 1) };
+}
+
+/**
+ * Route a message to the appropriate model tier.
+ *
+ * Returns a routing result indicating model overrides, tool disabling,
+ * and context token capping. Returns `undefined` when routing is disabled
+ * or doesn't apply (caller should use default behavior).
+ */
+export function routeMessage(params: {
+  message: string;
+  routing?: AgentRoutingConfig;
+  orchestrator?: AgentOrchestratorConfig;
+}): SmartRoutingResult | undefined {
+  const { message, routing } = params;
+
+  if (!routing?.enabled) {
+    return undefined;
+  }
+
+  const complexity = classifyMessage(message, {
+    maxSimpleLength: routing.maxSimpleLength,
+  });
+
+  const fastRef = parseModelRef(routing.fastModel);
+  const localRef = parseModelRef(routing.localModel);
+
+  switch (complexity) {
+    case "simple": {
+      if (!fastRef) {
+        // No fast model configured — fall through to default
+        return undefined;
+      }
+      return {
+        complexity: "simple",
+        provider: fastRef.provider,
+        model: fastRef.model,
+        disableTools: true,
+        contextTokensCap: routing.fastModelContextTokens ?? DEFAULT_FAST_CONTEXT_TOKENS,
+      };
+    }
+
+    case "moderate": {
+      if (!localRef) {
+        // No local model configured — fall through to default
+        return undefined;
+      }
+      return {
+        complexity: "moderate",
+        provider: localRef.provider,
+        model: localRef.model,
+        disableTools: false,
+      };
+    }
+
+    case "complex": {
+      // Use default API model — no override needed
+      return {
+        complexity: "complex",
+        disableTools: false,
+      };
+    }
+  }
+}
+
+/** System prompt suffix injected when routing to fast model (tools disabled). */
+export const FAST_CHAT_SYSTEM_PROMPT = `IMPORTANT: You are in fast chat mode. Respond conversationally in plain text only.
+Do NOT output any JSON, tool calls, function calls, or code blocks.
+Do NOT attempt to use memory_get, read, email, or any other tool.
+Just reply naturally as a helpful assistant.`;
+
+// ── Memory Snapshot ──────────────────────────────────────────────────────────
+
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+
+const MEMORY_SNAPSHOT_MAX_CHARS = 800;
+
+/**
+ * Read a concise memory snapshot for injection into the fast model's system prompt.
+ *
+ * Looks for `memory/state.md` in the workspace directory. Returns undefined if
+ * the file is missing or empty. Truncates at 800 chars to stay within small
+ * model context budgets.
+ */
+export async function readMemorySnapshot(workspaceDir: string): Promise<string | undefined> {
+  const statePath = path.join(workspaceDir, "memory", "state.md");
+  let content: string;
+  try {
+    content = await readFile(statePath, "utf-8");
+  } catch {
+    return undefined;
+  }
+  if (!content.trim()) {
+    return undefined;
+  }
+  if (content.length > MEMORY_SNAPSHOT_MAX_CHARS) {
+    content = content.slice(0, MEMORY_SNAPSHOT_MAX_CHARS) + "\n[...truncated]";
+  }
+  return `## Current Memory State (read-only snapshot)\n\n${content}`;
+}

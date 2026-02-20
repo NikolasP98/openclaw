@@ -1,0 +1,291 @@
+import fs from "node:fs/promises";
+import path from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+  classifyMessage,
+  FAST_CHAT_SYSTEM_PROMPT,
+  readMemorySnapshot,
+  routeMessage,
+  type AgentRoutingConfig,
+} from "./smart-routing.js";
+
+// ── classifyMessage ──────────────────────────────────────────────────────────
+
+describe("classifyMessage", () => {
+  describe("simple messages", () => {
+    const simpleCases = [
+      ["", "empty string"],
+      ["   ", "whitespace only"],
+      ["hi", "greeting"],
+      ["hey", "casual greeting"],
+      ["hello", "hello"],
+      ["good morning", "good morning"],
+      ["how are you?", "how are you"],
+      ["thanks", "thanks"],
+      ["thank you", "thank you"],
+      ["ok", "ok"],
+      ["yes", "yes"],
+      ["no", "no"],
+      ["cool", "cool"],
+      ["nice", "nice"],
+      ["lol", "lol"],
+      ["👍", "thumbs up emoji"],
+      ["haha", "laughter"],
+      ["what's up?", "whats up"],
+      ["good night", "good night"],
+      ["bye", "farewell"],
+    ] as const;
+
+    for (const [msg, label] of simpleCases) {
+      it(`classifies "${label}" as simple`, () => {
+        expect(classifyMessage(msg)).toBe("simple");
+      });
+    }
+  });
+
+  describe("complex messages", () => {
+    const complexCases = [
+      ["```typescript\nconst x = 1;\n```", "code block"],
+      ["fix the bug in src/gateway/server.ts", "fix keyword + file path"],
+      ["https://example.com/api/v2/users", "URL"],
+      ["v2.3.1 is broken", "version number"],
+      ["import { foo } from 'bar'", "import statement"],
+      ["at Object.<anonymous> (/app/src/index.ts:42:10)", "stack trace"],
+      ['{"name": "test", "value": 42}', "JSON structure"],
+      ["cat file.txt | grep error", "shell pipe"],
+      ["debug the authentication issue", "debug keyword"],
+      ["create a new component for the dashboard", "create keyword"],
+      ["build the Docker image and deploy", "build + deploy keywords"],
+      ["refactor the provider registry", "refactor keyword"],
+      ["implement smart routing for the gateway", "implement keyword"],
+      ["configure the Ollama endpoint", "configure keyword"],
+      ["/model claude-sonnet", "slash command"],
+      ["/think high", "think directive"],
+      ["First sentence. Second sentence. Third sentence. Fourth sentence.", "4+ sentences"],
+      ["install the dependencies and run the tests", "install + test keywords"],
+      ["migrate the database schema to v3", "migrate + schema keywords"],
+      ["optimize the query performance", "optimize keyword"],
+    ] as const;
+
+    for (const [msg, label] of complexCases) {
+      it(`classifies "${label}" as complex`, () => {
+        expect(classifyMessage(msg)).toBe("complex");
+      });
+    }
+  });
+
+  describe("moderate messages", () => {
+    const moderateCases = [
+      ["go ahead", "affirmative confirmation"],
+      ["do it", "do it confirmation"],
+      ["proceed", "proceed confirmation"],
+      ["yes please", "polite confirmation"],
+      ["show me the logs", "show keyword"],
+      ["find the config file", "find keyword"],
+      ["search for that error message", "search keyword"],
+      ["send an email to john", "send keyword"],
+      ["what's the weather like?", "weather keyword"],
+      ["set a reminder for 3pm", "reminder keyword"],
+      ["translate this to Spanish", "translate keyword"],
+    ] as const;
+
+    for (const [msg, label] of moderateCases) {
+      it(`classifies "${label}" as moderate`, () => {
+        expect(classifyMessage(msg)).toBe("moderate");
+      });
+    }
+  });
+
+  describe("edge cases", () => {
+    it("classifies long simple text as moderate", () => {
+      const longSimple = "a".repeat(200);
+      expect(classifyMessage(longSimple)).toBe("moderate");
+    });
+
+    it("respects custom maxSimpleLength", () => {
+      const msg = "a".repeat(200);
+      expect(classifyMessage(msg, { maxSimpleLength: 300 })).toBe("simple");
+      expect(classifyMessage(msg, { maxSimpleLength: 100 })).toBe("moderate");
+    });
+
+    it("handles mixed language", () => {
+      expect(classifyMessage("buenos días")).toBe("simple");
+    });
+
+    it("handles emoji-only messages", () => {
+      expect(classifyMessage("😊")).toBe("simple");
+    });
+
+    it("treats complex patterns as complex even if short", () => {
+      expect(classifyMessage("```code```")).toBe("complex");
+    });
+
+    it("does not false-positive on 'good' as complex", () => {
+      // "good" is not in complex keywords
+      expect(classifyMessage("good")).toBe("simple");
+    });
+
+    it("does not classify bare URL-less text with moderate words as complex", () => {
+      expect(classifyMessage("show")).toBe("moderate");
+    });
+  });
+});
+
+// ── routeMessage ─────────────────────────────────────────────────────────────
+
+describe("routeMessage", () => {
+  const routing: AgentRoutingConfig = {
+    enabled: true,
+    fastModel: "ollama/qwen3:1.7b",
+    localModel: "ollama/gemma3:12b",
+    fastModelContextTokens: 4096,
+  };
+
+  it("returns undefined when routing is disabled", () => {
+    expect(routeMessage({ message: "hi", routing: { enabled: false } })).toBeUndefined();
+  });
+
+  it("returns undefined when routing config is missing", () => {
+    expect(routeMessage({ message: "hi" })).toBeUndefined();
+  });
+
+  it("routes simple messages to fast model with tools disabled", () => {
+    const result = routeMessage({ message: "hey", routing });
+    expect(result).toEqual({
+      complexity: "simple",
+      provider: "ollama",
+      model: "qwen3:1.7b",
+      disableTools: true,
+      contextTokensCap: 4096,
+    });
+  });
+
+  it("routes moderate messages to local model with tools enabled", () => {
+    const result = routeMessage({ message: "show me the logs", routing });
+    expect(result).toEqual({
+      complexity: "moderate",
+      provider: "ollama",
+      model: "gemma3:12b",
+      disableTools: false,
+    });
+  });
+
+  it("routes complex messages to default (no model override)", () => {
+    const result = routeMessage({
+      message: "fix the bug in server.ts",
+      routing,
+    });
+    expect(result).toEqual({
+      complexity: "complex",
+      disableTools: false,
+    });
+  });
+
+  it("returns undefined for simple when no fast model configured", () => {
+    const result = routeMessage({
+      message: "hi",
+      routing: { enabled: true },
+    });
+    expect(result).toBeUndefined();
+  });
+
+  it("returns undefined for moderate when no local model configured", () => {
+    const result = routeMessage({
+      message: "show me the logs",
+      routing: { enabled: true, fastModel: "ollama/small" },
+    });
+    expect(result).toBeUndefined();
+  });
+
+  it("uses default context token cap when not configured", () => {
+    const result = routeMessage({
+      message: "hi",
+      routing: { enabled: true, fastModel: "ollama/small" },
+    });
+    expect(result?.contextTokensCap).toBe(4096);
+  });
+
+  it("uses custom context token cap", () => {
+    const result = routeMessage({
+      message: "hi",
+      routing: { ...routing, fastModelContextTokens: 2048 },
+    });
+    expect(result?.contextTokensCap).toBe(2048);
+  });
+});
+
+// ── FAST_CHAT_SYSTEM_PROMPT ──────────────────────────────────────────────────
+
+describe("FAST_CHAT_SYSTEM_PROMPT", () => {
+  it("contains tool prohibition", () => {
+    expect(FAST_CHAT_SYSTEM_PROMPT).toContain("Do NOT output any JSON");
+    expect(FAST_CHAT_SYSTEM_PROMPT).toContain("fast chat mode");
+  });
+});
+
+// ── readMemorySnapshot ───────────────────────────────────────────────────────
+
+describe("readMemorySnapshot", () => {
+  let tmpDir: string;
+
+  beforeEach(async () => {
+    tmpDir = await fs.mkdtemp(path.join("/tmp", "smart-routing-test-"));
+  });
+
+  afterEach(async () => {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  });
+
+  it("returns undefined when file is missing", async () => {
+    const result = await readMemorySnapshot(tmpDir);
+    expect(result).toBeUndefined();
+  });
+
+  it("returns undefined when file is empty", async () => {
+    const memDir = path.join(tmpDir, "memory");
+    await fs.mkdir(memDir, { recursive: true });
+    await fs.writeFile(path.join(memDir, "state.md"), "");
+    const result = await readMemorySnapshot(tmpDir);
+    expect(result).toBeUndefined();
+  });
+
+  it("returns undefined when file is whitespace-only", async () => {
+    const memDir = path.join(tmpDir, "memory");
+    await fs.mkdir(memDir, { recursive: true });
+    await fs.writeFile(path.join(memDir, "state.md"), "   \n  \n  ");
+    const result = await readMemorySnapshot(tmpDir);
+    expect(result).toBeUndefined();
+  });
+
+  it("returns snapshot with header for valid content", async () => {
+    const memDir = path.join(tmpDir, "memory");
+    await fs.mkdir(memDir, { recursive: true });
+    await fs.writeFile(path.join(memDir, "state.md"), "User prefers dark mode.");
+    const result = await readMemorySnapshot(tmpDir);
+    expect(result).toContain("## Current Memory State");
+    expect(result).toContain("User prefers dark mode.");
+  });
+
+  it("truncates content exceeding 800 chars", async () => {
+    const memDir = path.join(tmpDir, "memory");
+    await fs.mkdir(memDir, { recursive: true });
+    const longContent = "x".repeat(1000);
+    await fs.writeFile(path.join(memDir, "state.md"), longContent);
+    const result = await readMemorySnapshot(tmpDir);
+    expect(result).toBeDefined();
+    expect(result).toContain("[...truncated]");
+    // Header + 800 chars + truncation marker
+    expect(result!.length).toBeLessThan(900);
+  });
+
+  it("preserves content at exactly 800 chars", async () => {
+    const memDir = path.join(tmpDir, "memory");
+    await fs.mkdir(memDir, { recursive: true });
+    const exactContent = "y".repeat(800);
+    await fs.writeFile(path.join(memDir, "state.md"), exactContent);
+    const result = await readMemorySnapshot(tmpDir);
+    expect(result).toBeDefined();
+    expect(result).toContain(exactContent);
+    expect(result).not.toContain("[...truncated]");
+  });
+});
