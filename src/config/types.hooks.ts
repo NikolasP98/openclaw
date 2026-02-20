@@ -126,6 +126,13 @@ export type HooksGogOAuthConfig = {
   timeoutMinutes?: number;
   /** Public redirect URI (e.g. Tailscale Funnel URL) for headless/remote OAuth flows */
   externalRedirectUri?: string;
+  /**
+   * Path to Google OAuth client credentials JSON file (downloaded from Google Cloud Console).
+   * Supports both "installed" and "web" application types.
+   * This is checked before GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET env vars
+   * and before ~/.config/gogcli/credentials.json.
+   */
+  googleClientCredentialsFile?: string;
 };
 
 export type HooksConfig = {

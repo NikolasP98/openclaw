@@ -7,9 +7,52 @@ import fs from "fs/promises";
 import fsSync from "node:fs";
 import os from "os";
 import path from "path";
-import type { GogCredentials, TokenRefreshResponse } from "./gog-oauth-types.js";
 import { runCommandWithTimeout } from "../process/exec.js";
 import { extractGogClientCredentials } from "./gmail-setup-utils.js";
+import type { GogCredentials, TokenRefreshResponse } from "./gog-oauth-types.js";
+
+// ── Config-based Google client credentials ──────────────────────────
+
+/** Parsed client credentials from the config-specified JSON file */
+let configClientCredentials: { clientId: string; clientSecret: string } | null = null;
+
+/**
+ * Set the path to the Google client credentials JSON file (from config).
+ * Called once during gateway startup if `hooks.gogOAuth.googleClientCredentialsFile` is set.
+ * The file format matches the Google Cloud Console download (supports "installed" and "web" types).
+ */
+export function setGoogleClientCredentialsFile(filePath: string): void {
+  try {
+    const raw = fsSync.readFileSync(filePath, "utf-8");
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+
+    // Support both "installed" and "web" application types
+    const nested =
+      (parsed.installed as Record<string, unknown> | undefined) ??
+      (parsed.web as Record<string, unknown> | undefined);
+    const source = nested ?? parsed;
+
+    const clientId = source.client_id;
+    const clientSecret = source.client_secret;
+    if (
+      typeof clientId === "string" &&
+      typeof clientSecret === "string" &&
+      clientId &&
+      clientSecret
+    ) {
+      configClientCredentials = { clientId, clientSecret };
+      console.log(`[gog-credentials] Loaded Google client credentials from config: ${filePath}`);
+    } else {
+      console.warn(
+        `[gog-credentials] Config file ${filePath} exists but does not contain valid client_id/client_secret`,
+      );
+    }
+  } catch (err) {
+    console.warn(
+      `[gog-credentials] Failed to read Google client credentials file: ${filePath}: ${String(err)}`,
+    );
+  }
+}
 
 /**
  * Get the credentials directory for an agent
@@ -128,8 +171,29 @@ export async function refreshAccessToken(credentials: GogCredentials): Promise<G
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Failed to refresh token: ${error}`);
+    const errorBody = await response.text();
+    let parsed: { error?: string; error_description?: string } = {};
+    try {
+      parsed = JSON.parse(errorBody);
+    } catch {
+      // not JSON
+    }
+
+    if (parsed.error === "invalid_grant") {
+      throw new Error(
+        `Google OAuth refresh failed: invalid_grant — ${parsed.error_description || "token expired or revoked"}.\n` +
+          "Common causes:\n" +
+          "  - OAuth consent screen is in 'Testing' mode (tokens expire after 7 days)\n" +
+          "  - User revoked access in Google Account settings\n" +
+          "  - Token was already used or replaced\n" +
+          "Fix: Re-authenticate with the gog-auth-start tool. If tokens keep expiring after 7 days,\n" +
+          "move your OAuth consent screen from Testing to Production in Google Cloud Console.",
+      );
+    }
+
+    throw new Error(
+      `Failed to refresh Google OAuth token (${response.status}): ${parsed.error_description || parsed.error || errorBody}`,
+    );
   }
 
   const tokenData: TokenRefreshResponse = await response.json();
@@ -269,16 +333,25 @@ function getFileCredentials(): { clientId: string; clientSecret: string } | null
  * Priority: env var GOOGLE_CLIENT_ID > gog CLI credentials.json file
  */
 export function getGoogleClientId(): string {
+  // 1. Config file (hooks.gogOAuth.googleClientCredentialsFile)
+  if (configClientCredentials) {
+    return configClientCredentials.clientId;
+  }
+  // 2. Environment variable
   if (process.env.GOOGLE_CLIENT_ID) {
     return process.env.GOOGLE_CLIENT_ID;
   }
+  // 3. gog CLI credentials file (~/.config/gogcli/credentials.json)
   const fileCreds = getFileCredentials();
   if (fileCreds) {
     return fileCreds.clientId;
   }
   throw new Error(
-    "GOOGLE_CLIENT_ID not set and no gog CLI credentials.json found. " +
-      "Set the env var or place credentials in ~/.config/gogcli/credentials.json",
+    "Google OAuth client ID not found. Checked (in order):\n" +
+      "  1. hooks.gogOAuth.googleClientCredentialsFile in minion.json\n" +
+      "  2. GOOGLE_CLIENT_ID environment variable\n" +
+      "  3. ~/.config/gogcli/credentials.json\n" +
+      "Set one of these to your Google Cloud Console OAuth client credentials.",
   );
 }
 
@@ -287,16 +360,25 @@ export function getGoogleClientId(): string {
  * Priority: env var GOOGLE_CLIENT_SECRET > gog CLI credentials.json file
  */
 export function getGoogleClientSecret(): string {
+  // 1. Config file (hooks.gogOAuth.googleClientCredentialsFile)
+  if (configClientCredentials) {
+    return configClientCredentials.clientSecret;
+  }
+  // 2. Environment variable
   if (process.env.GOOGLE_CLIENT_SECRET) {
     return process.env.GOOGLE_CLIENT_SECRET;
   }
+  // 3. gog CLI credentials file (~/.config/gogcli/credentials.json)
   const fileCreds = getFileCredentials();
   if (fileCreds) {
     return fileCreds.clientSecret;
   }
   throw new Error(
-    "GOOGLE_CLIENT_SECRET not set and no gog CLI credentials.json found. " +
-      "Set the env var or place credentials in ~/.config/gogcli/credentials.json",
+    "Google OAuth client secret not found. Checked (in order):\n" +
+      "  1. hooks.gogOAuth.googleClientCredentialsFile in minion.json\n" +
+      "  2. GOOGLE_CLIENT_SECRET environment variable\n" +
+      "  3. ~/.config/gogcli/credentials.json\n" +
+      "Set one of these to your Google Cloud Console OAuth client credentials.",
   );
 }
 

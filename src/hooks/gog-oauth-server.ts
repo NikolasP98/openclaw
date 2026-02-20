@@ -6,18 +6,12 @@
 import crypto from "crypto";
 import http from "http";
 import { URL } from "url";
-import type {
-  OAuthServerConfig,
-  PendingOAuthFlow,
-  OAuthCallbackParams,
-  TokenExchangeResponse,
-  GogCredentials,
-} from "./gog-oauth-types.js";
 import { updateSessionStore, resolveDefaultSessionStorePath } from "../config/sessions.js";
 import {
   saveSessionCredentials,
   getGoogleClientId,
   getGoogleClientSecret,
+  setGoogleClientCredentialsFile,
   syncToGogKeyring,
 } from "./gog-credentials.js";
 import {
@@ -25,11 +19,20 @@ import {
   notifyAuthError,
   notifyAuthTimeout,
 } from "./gog-oauth-notifications.js";
+import type {
+  OAuthServerConfig,
+  PendingOAuthFlow,
+  OAuthCallbackParams,
+  TokenExchangeResponse,
+  GogCredentials,
+} from "./gog-oauth-types.js";
 
 /**
  * Default OAuth server configuration
  */
-const DEFAULT_CONFIG: Required<Omit<OAuthServerConfig, "externalRedirectUri">> = {
+const DEFAULT_CONFIG: Required<
+  Omit<OAuthServerConfig, "externalRedirectUri" | "googleClientCredentialsFile">
+> = {
   enabled: true,
   port: 51234,
   bind: "127.0.0.1",
@@ -268,7 +271,7 @@ async function handleCallback(
 async function handleRequest(
   req: http.IncomingMessage,
   res: http.ServerResponse,
-  config: Required<Omit<OAuthServerConfig, "externalRedirectUri">>,
+  config: Required<Omit<OAuthServerConfig, "externalRedirectUri" | "googleClientCredentialsFile">>,
   agentDir: string,
 ): Promise<void> {
   const url = new URL(req.url || "/", `http://${req.headers.host}`);
@@ -350,7 +353,7 @@ async function handleRequest(
 function tryStartServer(
   port: number,
   bind: string,
-  config: Required<Omit<OAuthServerConfig, "externalRedirectUri">>,
+  config: Required<Omit<OAuthServerConfig, "externalRedirectUri" | "googleClientCredentialsFile">>,
   agentDir: string,
 ): Promise<http.Server> {
   return new Promise((resolve, reject) => {
@@ -386,14 +389,21 @@ export async function startGogOAuthServer(
   port: number;
   stop: () => Promise<void>;
 }> {
-  const { externalRedirectUri, ...rest } = config;
-  const fullConfig: Required<Omit<OAuthServerConfig, "externalRedirectUri">> = {
+  const { externalRedirectUri, googleClientCredentialsFile, ...rest } = config;
+  const fullConfig: Required<
+    Omit<OAuthServerConfig, "externalRedirectUri" | "googleClientCredentialsFile">
+  > = {
     ...DEFAULT_CONFIG,
     ...rest,
   };
 
   // Store external redirect URI from config (env var takes priority in getRedirectUri)
   configuredExternalRedirectUri = externalRedirectUri;
+
+  // Load Google client credentials from config file if specified
+  if (googleClientCredentialsFile) {
+    setGoogleClientCredentialsFile(googleClientCredentialsFile);
+  }
 
   if (!fullConfig.enabled) {
     throw new Error("OAuth server is disabled in configuration");

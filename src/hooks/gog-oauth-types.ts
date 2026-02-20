@@ -18,6 +18,8 @@ export interface OAuthServerConfig {
   enabled?: boolean;
   /** Public redirect URI (e.g. Tailscale Funnel URL) for headless/remote OAuth flows */
   externalRedirectUri?: string;
+  /** Path to Google OAuth client credentials JSON file (from Google Cloud Console) */
+  googleClientCredentialsFile?: string;
 }
 
 /**

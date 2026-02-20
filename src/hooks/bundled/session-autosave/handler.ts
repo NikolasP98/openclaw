@@ -132,7 +132,10 @@ const autoSaveSession: HookHandler = async (event) => {
     const agentId = resolveAgentIdFromSessionKey(event.sessionKey);
     const workspaceDir = cfg
       ? resolveAgentWorkspaceDir(cfg, agentId)
-      : path.join(resolveStateDir(process.env, os.homedir()), "workspace");
+      : path.join(
+          resolveStateDir(process.env, () => os.homedir()),
+          "workspace",
+        );
     const sessionsDir = path.join(workspaceDir, "memory", "sessions");
     await fs.mkdir(sessionsDir, { recursive: true });
 

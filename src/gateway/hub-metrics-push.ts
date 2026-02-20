@@ -1,13 +1,18 @@
+import { resolveDefaultAgentId } from "../agents/agent-scope.js";
 import { buildAuthHealthSummary } from "../agents/auth-health.js";
 import { ensureAuthProfileStore } from "../agents/auth-profiles/store.js";
+import { loadConfig } from "../config/config.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
+import { parseAgentSessionKey, normalizeAgentId } from "../routing/session-key.js";
 import { resolveHubMetricsConfig } from "./hub-metrics-config.js";
 import type { ReliabilityEvent } from "./protocol/schema/reliability.js";
+import { loadCombinedSessionStoreForGateway, listSessionsFromStore } from "./session-utils.js";
 
 const log = createSubsystemLogger("hub-metrics");
 
 const MAX_BUFFER_SIZE = 10_000;
 const MAX_BACKOFF_MS = 30 * 60 * 1000; // 30 minutes
+const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 type SkillStatEntry = {
   skillName: string;
@@ -35,6 +40,38 @@ let instance: HubMetricsPushHandle | null = null;
 
 export function getHubMetricsPushClient(): HubMetricsPushHandle | null {
   return instance;
+}
+
+function buildSessionsBatch() {
+  try {
+    const cfg = loadConfig();
+    const { storePath, store } = loadCombinedSessionStoreForGateway(cfg);
+    const cutoff = Date.now() - SESSION_MAX_AGE_MS;
+    const result = listSessionsFromStore({
+      cfg,
+      storePath,
+      store,
+      opts: {},
+    });
+
+    return result.sessions
+      .filter((s) => (s.updatedAt ?? 0) >= cutoff)
+      .map((s) => {
+        const parsed = parseAgentSessionKey(s.key);
+        const agentId = normalizeAgentId(parsed?.agentId ?? resolveDefaultAgentId(cfg));
+        return {
+          sessionKey: s.key,
+          agentId,
+          status: "idle" as const,
+          label: s.label,
+          displayName: s.displayName,
+          totalTokens: s.totalTokens,
+          updatedAt: s.updatedAt,
+        };
+      });
+  } catch {
+    return [];
+  }
 }
 
 export function startHubMetricsPush(rawConfig: unknown): HubMetricsPushHandle | null {
@@ -92,9 +129,12 @@ export function startHubMetricsPush(rawConfig: unknown): HubMetricsPushHandle | 
       uptimeMs: Math.round(process.uptime() * 1000),
       activeSessions: 0, // Placeholder — wired up when integrated into server.impl.ts
       activeAgents: 0,
-      memoryRssMb: Math.round((process.memoryUsage.rss() / 1024 / 1024) * 100) / 100,
+      memoryRssMb: Math.round((process.memoryUsage().rss / 1024 / 1024) * 100) / 100,
       capturedAt: Date.now(),
     };
+
+    // Build sessions snapshot
+    const sessions = buildSessionsBatch();
 
     const batch: Record<string, unknown> = { heartbeat };
 
@@ -122,6 +162,10 @@ export function startHubMetricsPush(rawConfig: unknown): HubMetricsPushHandle | 
       batch.skillStats = skillStats;
     }
 
+    if (sessions.length > 0) {
+      batch.sessions = sessions;
+    }
+
     try {
       const url = `${hubUrl}/api/metrics/push`;
       const res = await fetch(url, {
@@ -145,6 +189,7 @@ export function startHubMetricsPush(rawConfig: unknown): HubMetricsPushHandle | 
       log.debug("metrics push ok", {
         events: events.length,
         skillStats: skillStats.length,
+        sessions: sessions.length,
         hasCredentialHealth: !!credentialHealth,
       });
     } catch (err) {
