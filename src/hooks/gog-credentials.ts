@@ -422,14 +422,14 @@ export async function syncToGogKeyring(credentials: GogCredentials): Promise<voi
 
     try {
       const result = await runCommandWithTimeout(
-        ["gog", "auth", "token", "import", tmpFile, "--account", credentials.email],
+        ["gog", "auth", "tokens", "import", tmpFile, "--account", credentials.email],
         { timeoutMs: 10_000 },
       );
       if (result.code === 0) {
         console.log(`[gog-credentials] Synced tokens to gog CLI keyring for ${credentials.email}`);
       } else {
         console.warn(
-          `[gog-credentials] gog auth token import failed (code=${result.code}): ${result.stderr || result.stdout}`,
+          `[gog-credentials] gog auth tokens import failed (code=${result.code}): ${result.stderr || result.stdout}`,
         );
       }
     } finally {

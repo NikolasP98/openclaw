@@ -13,6 +13,7 @@ import { createGatewayTool } from "./tools/gateway-tool.js";
 import { createGogAuthRevokeTool } from "./tools/gog-auth-revoke-tool.js";
 import { createGogAuthStartTool } from "./tools/gog-auth-start-tool.js";
 import { createGogAuthStatusTool } from "./tools/gog-auth-status-tool.js";
+import { createGogExecTool } from "./tools/gog-exec-tool.js";
 import { createImageTool } from "./tools/image-tool.js";
 import { createMessageTool } from "./tools/message-tool.js";
 import { createNodesTool } from "./tools/nodes-tool.js";
@@ -181,6 +182,10 @@ export function createOpenClawTools(options?: {
           createGogAuthRevokeTool({
             agentId,
             agentDir: options?.agentDir,
+            sessionKey: options?.agentSessionKey,
+          }),
+          createGogExecTool({
+            agentId,
             sessionKey: options?.agentSessionKey,
           }),
         ]

@@ -42,8 +42,16 @@ Minion provides **non-blocking OAuth authentication** via agent tools. When you 
 - `gog_auth_start` — Start OAuth flow (non-blocking). This is the **primary** authentication method.
 - `gog_auth_status` — Check authentication status
 - `gog_auth_revoke` — Revoke credentials
+- `gog_exec` — **Preferred way to run gog commands.** Auto-injects session credentials (account, keyring env). No need to manually set `GOG_ACCOUNT` or `--account` flags.
 
-**Note:** The `gog` CLI binary may not be installed on all servers. The agent tools above are the primary and preferred authentication path — they work independently of the CLI.
+**Usage pattern:** Authenticate with `gog_auth_start`, then use `gog_exec` for all commands:
+
+```
+gog_exec(command: "gmail search 'newer_than:7d' --max 10")
+gog_exec(command: "calendar events primary --from 2026-02-20T00:00:00Z --to 2026-02-27T00:00:00Z")
+```
+
+**Note:** The `gog` CLI binary must be installed on the server for `gog_exec` to work. The auth tools (`gog_auth_start/status/revoke`) work independently of the CLI.
 
 **Traditional manual setup** (requires `gog` CLI to be installed):
 
@@ -129,7 +137,7 @@ Email Formatting
 
 Notes
 
-- Set `GOG_ACCOUNT=you@gmail.com` to avoid repeating `--account`.
+- When using `gog_exec`, `--account` is auto-injected. For raw CLI usage, set `GOG_ACCOUNT=you@gmail.com` to avoid repeating `--account`.
 - For scripting, prefer `--json` plus `--no-input`.
 - Sheets values can be passed via `--values-json` (recommended) or as inline rows.
 - Docs supports export/cat/copy. In-place edits require a Docs API client (not in gog).
