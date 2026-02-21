@@ -4,7 +4,7 @@
 
 import { Type } from "@sinclair/typebox";
 import { buildGogEnvironment } from "../../hooks/gog-command-exec.js";
-import { getValidCredentials } from "../../hooks/gog-credentials.js";
+import { getValidCredentials, importTokensToGogKeyring } from "../../hooks/gog-credentials.js";
 import { runCommandWithTimeout } from "../../process/exec.js";
 import type { AnyAgentTool } from "./common.js";
 import { jsonResult, readStringParam } from "./common.js";
@@ -91,6 +91,15 @@ export function createGogExecTool(opts?: { agentId?: string; sessionKey?: string
         sessionKey: opts.sessionKey,
         email: credentials.email,
       });
+
+      // Just-in-time token sync: ensure gog CLI keyring has current tokens
+      // This self-heals if a prior sync failed (e.g. typo, version mismatch, crash)
+      const syncResult = await importTokensToGogKeyring(credentials, env);
+      if (!syncResult.success) {
+        return jsonResult({
+          error: `Failed to sync tokens to gog CLI keyring: ${syncResult.error}. The gog CLI cannot authenticate without this step.`,
+        });
+      }
 
       // Execute gog command
       const result = await runCommandWithTimeout(["gog", ...commandArgs], {

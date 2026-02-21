@@ -397,6 +397,53 @@ export function getGoogleClientType(): GoogleClientType {
 }
 
 /**
+ * Import OAuth tokens into the gog CLI keyring.
+ * Core sync logic — writes a temp token file, runs `gog auth tokens import`, cleans up.
+ * Caller is responsible for ensuring gog is installed and available.
+ *
+ * @param credentials - The OAuth credentials to import
+ * @param env - Optional environment override (e.g. with GOG_KEYRING_BACKEND/PASSWORD).
+ *              Defaults to process.env if not provided.
+ * @returns Result indicating success or failure with error detail
+ */
+export async function importTokensToGogKeyring(
+  credentials: GogCredentials,
+  env?: NodeJS.ProcessEnv,
+): Promise<{ success: boolean; error?: string }> {
+  const tmpDir = os.tmpdir();
+  const tmpFile = path.join(tmpDir, `gog-token-import-${Date.now()}.json`);
+  const tokenData = {
+    access_token: credentials.accessToken,
+    refresh_token: credentials.refreshToken,
+    token_type: "Bearer",
+    expiry: new Date(credentials.expiresAt).toISOString(),
+  };
+
+  fsSync.writeFileSync(tmpFile, JSON.stringify(tokenData, null, 2), { mode: 0o600 });
+
+  try {
+    const result = await runCommandWithTimeout(
+      ["gog", "auth", "tokens", "import", tmpFile, "--account", credentials.email],
+      { timeoutMs: 10_000, env },
+    );
+    if (result.code === 0) {
+      log.info(`Synced tokens to gog CLI keyring for ${credentials.email}`);
+      return { success: true };
+    } else {
+      const detail = result.stderr || result.stdout;
+      log.warn(`gog auth tokens import failed (code=${result.code}): ${detail}`);
+      return { success: false, error: `exit code ${result.code}: ${detail}` };
+    }
+  } finally {
+    try {
+      fsSync.unlinkSync(tmpFile);
+    } catch {
+      // ignore cleanup errors
+    }
+  }
+}
+
+/**
  * Sync OAuth tokens to gog CLI keyring so `gog gmail ...` commands work.
  * Best-effort: logs errors but never throws.
  */
@@ -423,38 +470,7 @@ export async function syncToGogKeyring(credentials: GogCredentials): Promise<voi
       }
     }
 
-    // Write a temporary token file in gog CLI's expected snake_case format
-    const tmpDir = os.tmpdir();
-    const tmpFile = path.join(tmpDir, `gog-token-import-${Date.now()}.json`);
-    const tokenData = {
-      access_token: credentials.accessToken,
-      refresh_token: credentials.refreshToken,
-      token_type: "Bearer",
-      expiry: new Date(credentials.expiresAt).toISOString(),
-    };
-
-    fsSync.writeFileSync(tmpFile, JSON.stringify(tokenData, null, 2), { mode: 0o600 });
-
-    try {
-      const result = await runCommandWithTimeout(
-        ["gog", "auth", "tokens", "import", tmpFile, "--account", credentials.email],
-        { timeoutMs: 10_000 },
-      );
-      if (result.code === 0) {
-        console.log(`[gog-credentials] Synced tokens to gog CLI keyring for ${credentials.email}`);
-      } else {
-        console.warn(
-          `[gog-credentials] gog auth tokens import failed (code=${result.code}): ${result.stderr || result.stdout}`,
-        );
-      }
-    } finally {
-      // Clean up temp file
-      try {
-        fsSync.unlinkSync(tmpFile);
-      } catch {
-        // ignore cleanup errors
-      }
-    }
+    await importTokensToGogKeyring(credentials);
   } catch (error) {
     console.warn("[gog-credentials] Failed to sync tokens to gog CLI keyring:", error);
   }
