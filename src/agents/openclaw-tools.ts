@@ -1,4 +1,5 @@
 import type { OpenClawConfig } from "../config/config.js";
+import { isTruthyEnvValue } from "../infra/env.js";
 import { resolvePluginTools } from "../plugins/tools.js";
 import type { GatewayMessageChannel } from "../utils/message-channel.js";
 import { resolveSessionAgentId } from "./agent-scope.js";
@@ -104,6 +105,9 @@ export function createOpenClawTools(options?: {
     sessionKey: options?.agentSessionKey,
     config: options?.config,
   });
+  const gogOAuthEnabled =
+    options?.config?.hooks?.gogOAuth?.enabled !== false &&
+    !isTruthyEnvValue(process.env.OPENCLAW_SKIP_GOG_OAUTH);
 
   const tools: AnyAgentTool[] = [
     createBrowserTool({
@@ -163,20 +167,24 @@ export function createOpenClawTools(options?: {
       agentSessionKey: options?.agentSessionKey,
       config: options?.config,
     }),
-    createGogAuthStartTool({
-      agentId,
-      agentDir: options?.agentDir,
-      sessionKey: options?.agentSessionKey,
-    }),
-    createGogAuthStatusTool({
-      agentId,
-      sessionKey: options?.agentSessionKey,
-    }),
-    createGogAuthRevokeTool({
-      agentId,
-      agentDir: options?.agentDir,
-      sessionKey: options?.agentSessionKey,
-    }),
+    ...(gogOAuthEnabled
+      ? [
+          createGogAuthStartTool({
+            agentId,
+            agentDir: options?.agentDir,
+            sessionKey: options?.agentSessionKey,
+          }),
+          createGogAuthStatusTool({
+            agentId,
+            sessionKey: options?.agentSessionKey,
+          }),
+          createGogAuthRevokeTool({
+            agentId,
+            agentDir: options?.agentDir,
+            sessionKey: options?.agentSessionKey,
+          }),
+        ]
+      : []),
     ...(webSearchTool ? [webSearchTool] : []),
     ...(webFetchTool ? [webFetchTool] : []),
     ...(imageTool ? [imageTool] : []),

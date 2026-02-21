@@ -291,7 +291,7 @@ export function buildAgentSystemPrompt(params: {
       "Show a /status-equivalent status card (usage + time + Reasoning/Verbose/Elevated); use for model-use questions (📊 session_status); optional per-session model override",
     image: "Analyze an image with the configured image model",
     gog_auth_start:
-      "Start Google OAuth flow (non-blocking). Returns a clickable authorization URL. NEVER construct OAuth URLs manually — always use this tool.",
+      "Start Google OAuth flow (non-blocking). Returns a clickable authorization URL. NEVER construct OAuth URLs manually — always use this tool. After auth completes, set GOG_ACCOUNT=<email> in exec commands for gog CLI.",
     gog_auth_status: "Check if the current session has valid Google OAuth credentials",
     gog_auth_revoke: "Revoke Google OAuth credentials for this session",
   };
@@ -314,6 +314,9 @@ export function buildAgentSystemPrompt(params: {
     "cron",
     "message",
     "gateway",
+    "gog_auth_start",
+    "gog_auth_status",
+    "gog_auth_revoke",
     "agents_list",
     "sessions_list",
     "sessions_history",
@@ -321,9 +324,6 @@ export function buildAgentSystemPrompt(params: {
     "subagents",
     "session_status",
     "image",
-    "gog_auth_start",
-    "gog_auth_status",
-    "gog_auth_revoke",
   ];
 
   const rawToolNames = (params.toolNames ?? []).map((tool) => tool.trim());

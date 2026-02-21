@@ -7,7 +7,6 @@ metadata:
     "minion":
       {
         "emoji": "🎮",
-        "requires": { "bins": ["gog"] },
         "install":
           [
             {
@@ -154,7 +153,7 @@ hooks:
 
 - `GOOGLE_CLIENT_ID` - OAuth client ID (required)
 - `GOOGLE_CLIENT_SECRET` - OAuth client secret (required)
-- `MINION_SKIP_GOG_OAUTH=1` - Disable OAuth server
+- `OPENCLAW_SKIP_GOG_OAUTH=1` - Disable OAuth server
 
 **Security:**
 
