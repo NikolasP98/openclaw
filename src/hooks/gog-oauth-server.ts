@@ -12,6 +12,7 @@ import {
   saveSessionCredentials,
   getGoogleClientId,
   getGoogleClientSecret,
+  getGoogleClientType,
   setGoogleClientCredentialsFile,
   syncToGogKeyring,
 } from "./gog-credentials.js";
@@ -57,9 +58,27 @@ let configuredExternalRedirectUri: string | undefined;
 
 /**
  * Get the redirect URI for OAuth flows.
- * Priority: env var > config > localhost fallback.
+ * Desktop ("installed") clients only support localhost redirects — Google rejects
+ * external URIs with redirect_uri_mismatch. When a Desktop client is detected,
+ * we always return the localhost URI regardless of env/config settings.
+ * For "web" or "unknown" clients: env var > config > localhost fallback.
  */
 export function getRedirectUri(): string {
+  const localhostUri = `http://localhost:${actualPort ?? DEFAULT_CONFIG.port}${DEFAULT_CONFIG.callbackPath}`;
+  const clientType = getGoogleClientType();
+
+  if (clientType === "installed") {
+    const envUri = process.env.MINION_GOG_OAUTH_REDIRECT_URI;
+    const externalUri = envUri || configuredExternalRedirectUri;
+    if (externalUri) {
+      console.warn(
+        `[gog-oauth] Desktop client detected — ignoring external redirect URI "${externalUri}" ` +
+          `(installed clients only support localhost redirects). Using: ${localhostUri}`,
+      );
+    }
+    return localhostUri;
+  }
+
   const envUri = process.env.MINION_GOG_OAUTH_REDIRECT_URI;
   if (envUri) {
     return envUri;
@@ -67,7 +86,7 @@ export function getRedirectUri(): string {
   if (configuredExternalRedirectUri) {
     return configuredExternalRedirectUri;
   }
-  return `http://localhost:${actualPort ?? DEFAULT_CONFIG.port}${DEFAULT_CONFIG.callbackPath}`;
+  return localhostUri;
 }
 
 /**

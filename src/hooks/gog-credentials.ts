@@ -16,8 +16,15 @@ const log = createSubsystemLogger("gog-credentials");
 
 // ── Config-based Google client credentials ──────────────────────────
 
+/** Google OAuth client type — determines allowed redirect URIs */
+export type GoogleClientType = "installed" | "web" | "unknown";
+
 /** Parsed client credentials from the config-specified JSON file */
-let configClientCredentials: { clientId: string; clientSecret: string } | null = null;
+let configClientCredentials: {
+  clientId: string;
+  clientSecret: string;
+  clientType: GoogleClientType;
+} | null = null;
 
 /**
  * Set the path to the Google client credentials JSON file (from config).
@@ -30,10 +37,10 @@ export function setGoogleClientCredentialsFile(filePath: string): void {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
 
     // Support both "installed" and "web" application types
-    const nested =
-      (parsed.installed as Record<string, unknown> | undefined) ??
-      (parsed.web as Record<string, unknown> | undefined);
-    const source = nested ?? parsed;
+    const installed = parsed.installed as Record<string, unknown> | undefined;
+    const web = parsed.web as Record<string, unknown> | undefined;
+    const source = installed ?? web ?? parsed;
+    const clientType: GoogleClientType = installed ? "installed" : web ? "web" : "unknown";
 
     const clientId = source.client_id;
     const clientSecret = source.client_secret;
@@ -43,8 +50,8 @@ export function setGoogleClientCredentialsFile(filePath: string): void {
       clientId &&
       clientSecret
     ) {
-      configClientCredentials = { clientId, clientSecret };
-      log.info(`Loaded Google client credentials from config: ${filePath}`);
+      configClientCredentials = { clientId, clientSecret, clientType };
+      log.info(`Loaded Google client credentials from config: ${filePath} (type: ${clientType})`);
     } else {
       log.warn(`Config file ${filePath} exists but does not contain valid client_id/client_secret`);
     }
@@ -379,6 +386,14 @@ export function getGoogleClientSecret(): string {
       "  3. ~/.config/gogcli/credentials.json\n" +
       "Set one of these to your Google Cloud Console OAuth client credentials.",
   );
+}
+
+/**
+ * Get the detected Google OAuth client type from the credentials file.
+ * Returns "unknown" if no credentials file was loaded or type couldn't be determined.
+ */
+export function getGoogleClientType(): GoogleClientType {
+  return configClientCredentials?.clientType ?? "unknown";
 }
 
 /**
