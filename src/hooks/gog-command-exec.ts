@@ -19,26 +19,12 @@ export interface GogCommandContext {
 }
 
 /**
- * Build the gog-specific environment variables.
- * Passes through GOG_KEYRING_BACKEND and GOG_KEYRING_PASSWORD from process.env
- * so that the file-based keyring works on headless servers.
+ * Build environment for gog commands.
+ * Inherits all process.env (including GOG_KEYRING_BACKEND, GOG_KEYRING_PASSWORD
+ * needed for file-based keyring on headless servers) and merges extra vars on top.
  */
 function buildGogEnv(extraEnv?: Record<string, string>): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = { ...process.env };
-
-  // Pass through keyring env vars (required for file-based keyring on headless servers)
-  if (process.env.GOG_KEYRING_BACKEND) {
-    env.GOG_KEYRING_BACKEND = process.env.GOG_KEYRING_BACKEND;
-  }
-  if (process.env.GOG_KEYRING_PASSWORD) {
-    env.GOG_KEYRING_PASSWORD = process.env.GOG_KEYRING_PASSWORD;
-  }
-
-  if (extraEnv) {
-    Object.assign(env, extraEnv);
-  }
-
-  return env;
+  return extraEnv ? { ...process.env, ...extraEnv } : { ...process.env };
 }
 
 /**

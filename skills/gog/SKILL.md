@@ -146,22 +146,33 @@ Notes
 
 ## OAuth Configuration
 
-The OAuth callback server runs automatically with the gateway and listens on `localhost:51234` by default. Configure via `config.yaml`:
+The OAuth callback server runs automatically with the gateway and listens on `localhost:51234` by default. Configure in `minion.json`:
 
-```yaml
-hooks:
-  gogOAuth:
-    enabled: true # default
-    port: 51234 # default
-    bind: "127.0.0.1" # default (localhost only for security)
-    timeoutMinutes: 5 # default
+```json
+{
+  "hooks": {
+    "gogOAuth": {
+      "enabled": true,
+      "port": 51234,
+      "bind": "127.0.0.1",
+      "timeoutMinutes": 5,
+      "googleClientCredentialsFile": "/path/to/client_secret.json"
+    }
+  }
+}
 ```
 
-**Environment variables:**
+**Client credentials** (checked in order):
 
-- `GOOGLE_CLIENT_ID` - OAuth client ID (required)
-- `GOOGLE_CLIENT_SECRET` - OAuth client secret (required)
+1. `hooks.gogOAuth.googleClientCredentialsFile` in `minion.json` — path to downloaded Google client_secret JSON (preferred)
+2. `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` env vars — fallback
+3. `~/.config/gogcli/credentials.json` — gog CLI's own credentials file
+
+**Other environment variables:**
+
 - `OPENCLAW_SKIP_GOG_OAUTH=1` - Disable OAuth server
+- `GOG_KEYRING_BACKEND=file` - Use file-based keyring (required on headless servers)
+- `GOG_KEYRING_PASSWORD=<password>` - Password for file-based keyring
 
 **Security:**
 

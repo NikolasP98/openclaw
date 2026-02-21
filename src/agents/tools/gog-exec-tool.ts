@@ -15,6 +15,11 @@ const GogExecSchema = Type.Object({
       'The gog command to run (without the "gog" prefix). Example: \'gmail search "newer_than:7d" --max 10\'',
     minLength: 1,
   }),
+  json: Type.Optional(
+    Type.Boolean({
+      description: "Auto-append --json flag and parse output as structured data (default: false)",
+    }),
+  ),
   timeout: Type.Optional(
     Type.Number({
       description: "Timeout in seconds (default: 60, max: 300)",
@@ -34,6 +39,7 @@ export function createGogExecTool(opts?: { agentId?: string; sessionKey?: string
     execute: async (_toolCallId, args) => {
       const params = args as Record<string, unknown>;
       const command = readStringParam(params, "command", { required: true });
+      const wantJson = params.json === true;
       const timeoutSec = Math.min((params.timeout as number) || 60, 300);
 
       if (!opts?.agentId || !opts?.sessionKey) {
@@ -74,6 +80,11 @@ export function createGogExecTool(opts?: { agentId?: string; sessionKey?: string
         }
       }
 
+      // Auto-append --json if requested and not already present
+      if (wantJson && !commandArgs.includes("--json")) {
+        commandArgs.push("--json");
+      }
+
       // Build environment with keyring passthrough
       const env = await buildGogEnvironment({
         agentId: opts.agentId,
@@ -103,6 +114,21 @@ export function createGogExecTool(opts?: { agentId?: string; sessionKey?: string
         });
       }
 
+      // Parse JSON output if requested
+      if (wantJson) {
+        try {
+          const parsed = JSON.parse(result.stdout);
+          return jsonResult({ data: parsed, stderr: result.stderr || undefined });
+        } catch {
+          // JSON parse failed — return raw output with a note
+          return jsonResult({
+            stdout: result.stdout,
+            stderr: result.stderr || undefined,
+            warning: "json=true was set but output was not valid JSON",
+          });
+        }
+      }
+
       return jsonResult({
         stdout: result.stdout,
         stderr: result.stderr || undefined,
@@ -113,7 +139,12 @@ export function createGogExecTool(opts?: { agentId?: string; sessionKey?: string
 
 /**
  * Parse a command string into an array of arguments, respecting quoted strings.
- * Handles single quotes, double quotes, and backslash escapes.
+ * - Single quotes: literal (no escape interpretation)
+ * - Double quotes: interprets \n, \t, \\, \"
+ * - Unquoted backslash: escapes next character
+ *
+ * Note: Does not handle shell-specific $'...' ANSI-C quoting or heredocs.
+ * For multi-line content, prefer --body-file with a temp file instead.
  */
 function parseCommandArgs(command: string): string[] {
   const args: string[] = [];
@@ -122,14 +153,27 @@ function parseCommandArgs(command: string): string[] {
   let inDouble = false;
   let escaped = false;
 
+  const DOUBLE_QUOTE_ESCAPES: Record<string, string> = {
+    n: "\n",
+    t: "\t",
+    "\\": "\\",
+    '"': '"',
+  };
+
   for (const char of command) {
     if (escaped) {
-      current += char;
+      if (inDouble) {
+        // Inside double quotes: interpret \n, \t, \\, \"
+        current += DOUBLE_QUOTE_ESCAPES[char] ?? `\\${char}`;
+      } else {
+        // Outside quotes: backslash just escapes the next char literally
+        current += char;
+      }
       escaped = false;
       continue;
     }
 
-    if (char === "\\") {
+    if (char === "\\" && !inSingle) {
       escaped = true;
       continue;
     }

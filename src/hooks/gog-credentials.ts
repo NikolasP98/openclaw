@@ -408,6 +408,21 @@ export async function syncToGogKeyring(credentials: GogCredentials): Promise<voi
       return; // gog CLI not installed, skip silently
     }
 
+    // Verify gog version supports `auth tokens` (plural, requires >= v0.11.0)
+    const versionCheck = await runCommandWithTimeout(["gog", "--version"], { timeoutMs: 3_000 });
+    if (versionCheck.code === 0) {
+      const match = versionCheck.stdout.match(/v(\d+)\.(\d+)\.(\d+)/);
+      if (match) {
+        const [, major, minor] = match.map(Number);
+        if (major === 0 && minor < 11) {
+          log.warn(
+            `gog CLI v${major}.${minor} is too old for 'auth tokens import' (requires >= v0.11.0). Skipping keyring sync.`,
+          );
+          return;
+        }
+      }
+    }
+
     // Write a temporary token file in gog CLI's expected snake_case format
     const tmpDir = os.tmpdir();
     const tmpFile = path.join(tmpDir, `gog-token-import-${Date.now()}.json`);
