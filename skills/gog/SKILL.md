@@ -28,25 +28,31 @@ Use `gog` for Gmail/Calendar/Drive/Contacts/Sheets/Docs. Requires OAuth setup.
 
 ## Authentication
 
-Minion provides **non-blocking OAuth authentication** via agent tools. When you need to access Google services, the agent will:
+> **CRITICAL: NEVER construct Google OAuth URLs manually.**
+> Always use the `gog_auth_start` tool to initiate OAuth. Do not fabricate `accounts.google.com/o/oauth2/...` URLs — the tool handles client IDs, ports, callback paths, and state tokens automatically. Manually constructed URLs will fail with "deleted_client" or "invalid_request" errors.
 
-1. Use `gog_auth_start` to initiate OAuth (provides a clickable link)
-2. Remain responsive while you authorize in your browser
+Minion provides **non-blocking OAuth authentication** via agent tools. When you need to access Google services:
+
+1. Use `gog_auth_start` to initiate OAuth (provides a clickable link with correct client ID, port, and callback path)
+2. Remain responsive while the user authorizes in their browser
 3. Receive automatic notification when authentication completes
+4. While an OAuth flow is in progress, focus on completing it (check status, guide the user) unless the user explicitly cancels
 
 **Tools available:**
 
-- `gog_auth_start` - Start OAuth flow (non-blocking)
-- `gog_auth_status` - Check authentication status
-- `gog_auth_revoke` - Revoke credentials
+- `gog_auth_start` — Start OAuth flow (non-blocking). This is the **primary** authentication method.
+- `gog_auth_status` — Check authentication status
+- `gog_auth_revoke` — Revoke credentials
 
-**Traditional manual setup** (still supported):
+**Note:** The `gog` CLI binary may not be installed on all servers. The agent tools above are the primary and preferred authentication path — they work independently of the CLI.
+
+**Traditional manual setup** (requires `gog` CLI to be installed):
 
 - `gog auth credentials /path/to/client_secret.json`
 - `gog auth add you@gmail.com --services gmail,calendar,drive,contacts,docs,sheets`
 - `gog auth list`
 
-Note: Session credentials are isolated per chat session. Each user/session maintains separate OAuth credentials stored in `~/.minion/agents/{agentId}/gog-credentials/`.
+Session credentials are isolated per chat session. Each user/session maintains separate OAuth credentials stored in `~/.minion/agents/{agentId}/gog-credentials/`.
 
 Common commands
 

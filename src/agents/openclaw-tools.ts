@@ -9,6 +9,9 @@ import { createCanvasTool } from "./tools/canvas-tool.js";
 import type { AnyAgentTool } from "./tools/common.js";
 import { createCronTool } from "./tools/cron-tool.js";
 import { createGatewayTool } from "./tools/gateway-tool.js";
+import { createGogAuthRevokeTool } from "./tools/gog-auth-revoke-tool.js";
+import { createGogAuthStartTool } from "./tools/gog-auth-start-tool.js";
+import { createGogAuthStatusTool } from "./tools/gog-auth-status-tool.js";
 import { createImageTool } from "./tools/image-tool.js";
 import { createMessageTool } from "./tools/message-tool.js";
 import { createNodesTool } from "./tools/nodes-tool.js";
@@ -97,6 +100,11 @@ export function createOpenClawTools(options?: {
         sandboxRoot: options?.sandboxRoot,
         requireExplicitTarget: options?.requireExplicitMessageTarget,
       });
+  const agentId = resolveSessionAgentId({
+    sessionKey: options?.agentSessionKey,
+    config: options?.config,
+  });
+
   const tools: AnyAgentTool[] = [
     createBrowserTool({
       sandboxBridgeUrl: options?.sandboxBrowserBridgeUrl,
@@ -155,6 +163,20 @@ export function createOpenClawTools(options?: {
       agentSessionKey: options?.agentSessionKey,
       config: options?.config,
     }),
+    createGogAuthStartTool({
+      agentId,
+      agentDir: options?.agentDir,
+      sessionKey: options?.agentSessionKey,
+    }),
+    createGogAuthStatusTool({
+      agentId,
+      sessionKey: options?.agentSessionKey,
+    }),
+    createGogAuthRevokeTool({
+      agentId,
+      agentDir: options?.agentDir,
+      sessionKey: options?.agentSessionKey,
+    }),
     ...(webSearchTool ? [webSearchTool] : []),
     ...(webFetchTool ? [webFetchTool] : []),
     ...(imageTool ? [imageTool] : []),
@@ -165,10 +187,7 @@ export function createOpenClawTools(options?: {
       config: options?.config,
       workspaceDir,
       agentDir: options?.agentDir,
-      agentId: resolveSessionAgentId({
-        sessionKey: options?.agentSessionKey,
-        config: options?.config,
-      }),
+      agentId,
       sessionKey: options?.agentSessionKey,
       messageChannel: options?.agentChannel,
       agentAccountId: options?.agentAccountId,
