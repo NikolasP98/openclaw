@@ -7,9 +7,12 @@ import fs from "fs/promises";
 import fsSync from "node:fs";
 import os from "os";
 import path from "path";
+import { createSubsystemLogger } from "../logging/subsystem.js";
 import { runCommandWithTimeout } from "../process/exec.js";
 import { extractGogClientCredentials } from "./gmail-setup-utils.js";
 import type { GogCredentials, TokenRefreshResponse } from "./gog-oauth-types.js";
+
+const log = createSubsystemLogger("gog-credentials");
 
 // ── Config-based Google client credentials ──────────────────────────
 
@@ -41,16 +44,12 @@ export function setGoogleClientCredentialsFile(filePath: string): void {
       clientSecret
     ) {
       configClientCredentials = { clientId, clientSecret };
-      console.log(`[gog-credentials] Loaded Google client credentials from config: ${filePath}`);
+      log.info(`Loaded Google client credentials from config: ${filePath}`);
     } else {
-      console.warn(
-        `[gog-credentials] Config file ${filePath} exists but does not contain valid client_id/client_secret`,
-      );
+      log.warn(`Config file ${filePath} exists but does not contain valid client_id/client_secret`);
     }
   } catch (err) {
-    console.warn(
-      `[gog-credentials] Failed to read Google client credentials file: ${filePath}: ${String(err)}`,
-    );
+    log.warn(`Failed to read Google client credentials file: ${filePath}: ${String(err)}`);
   }
 }
 

@@ -4,6 +4,9 @@
 
 /**
  * Configuration for the OAuth callback server
+ * SYNC: Fields here must also be added to:
+ *  - HooksGogOAuthConfig in src/config/types.hooks.ts
+ *  - GogOAuthSchema in src/config/zod-schema.hooks.ts
  */
 export interface OAuthServerConfig {
   /** Port to bind the server to (default: 51234) */

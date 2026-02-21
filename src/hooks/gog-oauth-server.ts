@@ -7,6 +7,7 @@ import crypto from "crypto";
 import http from "http";
 import { URL } from "url";
 import { updateSessionStore, resolveDefaultSessionStorePath } from "../config/sessions.js";
+import { logAcceptedEnvOption } from "../infra/env.js";
 import {
   saveSessionCredentials,
   getGoogleClientId,
@@ -400,9 +401,17 @@ export async function startGogOAuthServer(
   // Store external redirect URI from config (env var takes priority in getRedirectUri)
   configuredExternalRedirectUri = externalRedirectUri;
 
-  // Load Google client credentials from config file if specified
-  if (googleClientCredentialsFile) {
-    setGoogleClientCredentialsFile(googleClientCredentialsFile);
+  // Load Google client credentials: env var overrides config file
+  const envCredFile = process.env.MINION_GOOGLE_CLIENT_CREDENTIALS_FILE;
+  const credFile = envCredFile || googleClientCredentialsFile;
+  if (envCredFile) {
+    logAcceptedEnvOption({
+      key: "MINION_GOOGLE_CLIENT_CREDENTIALS_FILE",
+      description: "Google OAuth client credentials file",
+    });
+  }
+  if (credFile) {
+    setGoogleClientCredentialsFile(credFile);
   }
 
   if (!fullConfig.enabled) {

@@ -113,6 +113,11 @@ export type InternalHooksConfig = {
   installs?: Record<string, HookInstallRecord>;
 };
 
+/**
+ * SYNC: Fields here must also be added to:
+ *  - OAuthServerConfig in src/hooks/gog-oauth-types.ts
+ *  - GogOAuthSchema in src/config/zod-schema.hooks.ts (+ re-export in zod-schema.ts)
+ */
 export type HooksGogOAuthConfig = {
   /** Whether OAuth callback server is enabled (default: true) */
   enabled?: boolean;

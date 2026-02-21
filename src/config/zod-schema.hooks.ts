@@ -118,6 +118,7 @@ export const InternalHooksSchema = z
   .strict()
   .optional();
 
+/** SYNC: Fields here must match HooksGogOAuthConfig + OAuthServerConfig */
 export const GogOAuthSchema = z
   .object({
     enabled: z.boolean().optional(),
