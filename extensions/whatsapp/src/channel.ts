@@ -291,9 +291,7 @@ export const whatsappPlugin: ChannelPlugin<ResolvedWhatsAppAccount> = {
     resolveTarget: ({ to, allowFrom, mode }) =>
       resolveWhatsAppOutboundTarget({ to, allowFrom, mode }),
     sendText: async (ctx) => {
-      const { to, text, accountId, deps, gifPlayback } = ctx;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const linkPreview = (ctx as any).linkPreview as boolean | undefined;
+      const { to, text, accountId, deps, gifPlayback, linkPreview } = ctx;
       const send = deps?.sendWhatsApp ?? getWhatsAppRuntime().channel.whatsapp.sendMessageWhatsApp;
       const result = await send(to, text, {
         verbose: false,

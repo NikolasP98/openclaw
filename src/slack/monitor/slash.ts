@@ -27,6 +27,11 @@ import { resolveSlackRoomContextHints } from "./room-context.js";
 
 type SlackBlock = { type: string; [key: string]: unknown };
 
+// IMPORTANT: This action_id is embedded in Slack block messages already sent to users.
+// It was briefly renamed to "minion_cmdarg" during the openclaw→minion rebrand, but
+// that broke interactions on any messages sent during that window (Slack matches
+// block_actions events by the exact action_id string). Reverted to "openclaw_cmdarg"
+// to restore compatibility. Do NOT rename this without a dual-handler migration.
 const SLACK_COMMAND_ARG_ACTION_ID = "openclaw_cmdarg";
 const SLACK_COMMAND_ARG_VALUE_PREFIX = "cmdarg";
 const SLACK_COMMAND_ARG_BUTTON_ROW_SIZE = 5;

@@ -4,7 +4,7 @@ import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { OpenClawPluginApi } from "../../../src/plugins/types.js";
 
-type LobsterEnvelope =
+type SquidEnvelope =
   | {
       ok: true;
       status: "ok" | "needs_approval" | "cancelled";
@@ -90,13 +90,13 @@ function isWindowsSpawnErrorThatCanUseShell(err: unknown) {
   }
   const code = (err as { code?: unknown }).code;
 
-  // On Windows, spawning scripts discovered on PATH (e.g. lobster.cmd) can fail
+  // On Windows, spawning scripts discovered on PATH (e.g. squid.cmd) can fail
   // with EINVAL, and PATH discovery itself can fail with ENOENT when the binary
   // is only available via PATHEXT/script wrappers.
   return code === "EINVAL" || code === "ENOENT";
 }
 
-async function runLobsterSubprocessOnce(
+async function runSquidSubprocessOnce(
   params: {
     execPath: string;
     argv: string[];
@@ -174,7 +174,7 @@ async function runLobsterSubprocessOnce(
   });
 }
 
-async function runLobsterSubprocess(params: {
+async function runSquidSubprocess(params: {
   execPath: string;
   argv: string[];
   cwd: string;
@@ -182,16 +182,16 @@ async function runLobsterSubprocess(params: {
   maxStdoutBytes: number;
 }) {
   try {
-    return await runLobsterSubprocessOnce(params, false);
+    return await runSquidSubprocessOnce(params, false);
   } catch (err) {
     if (process.platform === "win32" && isWindowsSpawnErrorThatCanUseShell(err)) {
-      return await runLobsterSubprocessOnce(params, true);
+      return await runSquidSubprocessOnce(params, true);
     }
     throw err;
   }
 }
 
-function parseEnvelope(stdout: string): LobsterEnvelope {
+function parseEnvelope(stdout: string): SquidEnvelope {
   const trimmed = stdout.trim();
 
   const tryParse = (input: string) => {
@@ -223,13 +223,13 @@ function parseEnvelope(stdout: string): LobsterEnvelope {
 
   const ok = (parsed as { ok?: unknown }).ok;
   if (ok === true || ok === false) {
-    return parsed as LobsterEnvelope;
+    return parsed as SquidEnvelope;
   }
 
   throw new Error("squid returned invalid JSON envelope");
 }
 
-export function createLobsterTool(api: OpenClawPluginApi) {
+export function createSquidTool(api: OpenClawPluginApi) {
   return {
     name: "squid",
     label: "Squid Workflow",
@@ -308,7 +308,7 @@ export function createLobsterTool(api: OpenClawPluginApi) {
         api.logger.debug(`squid plugin runtime=${api.runtime.version}`);
       }
 
-      const { stdout } = await runLobsterSubprocess({
+      const { stdout } = await runSquidSubprocess({
         execPath,
         argv,
         cwd,

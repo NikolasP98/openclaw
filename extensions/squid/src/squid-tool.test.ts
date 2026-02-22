@@ -15,7 +15,7 @@ vi.mock("node:child_process", () => ({
   spawn: (...args: unknown[]) => spawnState.spawn(...args),
 }));
 
-let createSquidTool: typeof import("./squid-tool.js").createLobsterTool;
+let createSquidTool: typeof import("./squid-tool.js").createSquidTool;
 
 function fakeApi(overrides: Partial<MinionPluginApi> = {}): MinionPluginApi {
   return {
@@ -62,7 +62,7 @@ describe("squid plugin tool", () => {
   let squidBinPath = "";
 
   beforeAll(async () => {
-    ({ createLobsterTool: createSquidTool } = await import("./squid-tool.js"));
+    ({ createSquidTool } = await import("./squid-tool.js"));
 
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "minion-squid-plugin-"));
     squidBinPath = path.join(tempDir, process.platform === "win32" ? "squid.cmd" : "squid");
