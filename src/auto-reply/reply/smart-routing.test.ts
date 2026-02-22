@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  applyProfileBias,
   classifyMessage,
   FAST_CHAT_SYSTEM_PROMPT,
   readMemorySnapshot,
@@ -445,6 +446,91 @@ describe("orchestrator dispatch", () => {
       });
       expect(result!.resetModelAfterTurn).toBeUndefined();
     });
+  });
+});
+
+// ── applyProfileBias ──────────────────────────────────────────────────────────
+
+describe("applyProfileBias", () => {
+  it("balanced profile does not change complexity", () => {
+    expect(applyProfileBias("simple", "balanced")).toBe("simple");
+    expect(applyProfileBias("moderate", "balanced")).toBe("moderate");
+    expect(applyProfileBias("complex", "balanced")).toBe("complex");
+  });
+
+  it("undefined profile behaves as balanced", () => {
+    expect(applyProfileBias("moderate", undefined)).toBe("moderate");
+  });
+
+  it("cost-optimized downgrades tiers", () => {
+    expect(applyProfileBias("simple", "cost-optimized")).toBe("simple");
+    expect(applyProfileBias("moderate", "cost-optimized")).toBe("simple");
+    expect(applyProfileBias("complex", "cost-optimized")).toBe("moderate");
+  });
+
+  it("quality-first upgrades tiers", () => {
+    expect(applyProfileBias("simple", "quality-first")).toBe("moderate");
+    expect(applyProfileBias("moderate", "quality-first")).toBe("complex");
+    expect(applyProfileBias("complex", "quality-first")).toBe("complex");
+  });
+
+  it("local-only caps at moderate", () => {
+    expect(applyProfileBias("simple", "local-only")).toBe("simple");
+    expect(applyProfileBias("moderate", "local-only")).toBe("moderate");
+    expect(applyProfileBias("complex", "local-only")).toBe("moderate");
+  });
+});
+
+// ── Profile-aware routing ─────────────────────────────────────────────────────
+
+describe("routeMessage with profiles", () => {
+  const routing: AgentRoutingConfig = {
+    enabled: true,
+    fastModel: "ollama/qwen3:1.7b",
+    localModel: "ollama/gemma3:12b",
+  };
+
+  it("cost-optimized routes moderate messages to fast model", () => {
+    const result = routeMessage({
+      message: "show me the logs",
+      routing: { ...routing, profile: "cost-optimized" },
+    });
+    expect(result).toBeDefined();
+    expect(result!.complexity).toBe("simple");
+    expect(result!.model).toBe("qwen3:1.7b");
+  });
+
+  it("quality-first routes simple messages to local model", () => {
+    const result = routeMessage({
+      message: "hey",
+      routing: { ...routing, profile: "quality-first" },
+    });
+    expect(result).toBeDefined();
+    expect(result!.complexity).toBe("moderate");
+    expect(result!.model).toBe("gemma3:12b");
+  });
+
+  it("local-only routes complex messages to local model (downgrades to moderate tier)", () => {
+    const result = routeMessage({
+      message: "refactor the auth module",
+      routing: { ...routing, profile: "local-only" },
+    });
+    expect(result).toBeDefined();
+    // local-only downgrades complex → moderate, routed to local model
+    expect(result!.complexity).toBe("moderate");
+    expect(result!.provider).toBe("ollama");
+    expect(result!.model).toBe("gemma3:12b");
+  });
+
+  it("local-only skips orchestrator always-route", () => {
+    const result = routeMessage({
+      message: "hey",
+      routing: { ...routing, profile: "local-only" },
+      orchestrator: { enabled: true, model: "anthropic/claude-sonnet-4", strategy: "always" },
+    });
+    expect(result).toBeDefined();
+    expect(result!.orchestrated).toBeUndefined();
+    expect(result!.provider).toBe("ollama");
   });
 });
 

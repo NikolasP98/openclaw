@@ -15,9 +15,21 @@
 
 export type MessageComplexity = "simple" | "moderate" | "complex";
 
+/**
+ * Routing profile — predefined bias presets that shift tier thresholds.
+ *
+ * - "balanced" (default): standard heuristic thresholds.
+ * - "cost-optimized": aggressively routes to cheaper local models.
+ * - "quality-first": biases toward the API/orchestrator model.
+ * - "local-only": never routes to cloud — all messages stay on local models.
+ */
+export type RoutingProfile = "balanced" | "cost-optimized" | "quality-first" | "local-only";
+
 export type AgentRoutingConfig = {
   /** Enable smart routing (default: false — zero behavior change without opt-in). */
   enabled?: boolean;
+  /** Routing profile preset (default: "balanced"). */
+  profile?: RoutingProfile;
   /** Fast-tier model for simple messages (e.g. "ollama/qwen3:1.7b"). */
   fastModel?: string;
   /** Local-tier model for moderate messages (e.g. "ollama/gemma3:12b"). */
@@ -57,6 +69,10 @@ export type SmartRoutingResult = {
   resetModelAfterTurn?: boolean;
   /** Whether orchestrator was used for this routing decision. */
   orchestrated?: boolean;
+  /** Estimated cost in cents for this routing decision (from pricing table). */
+  estimatedCostCents?: number;
+  /** Percentage savings vs routing to the default API model. */
+  savingsPercent?: number;
 };
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -295,6 +311,49 @@ function parseModelRef(ref: string | undefined): { provider: string; model: stri
  * and context token capping. Returns `undefined` when routing is disabled
  * or doesn't apply (caller should use default behavior).
  */
+/**
+ * Apply profile bias to shift the classified complexity tier.
+ *
+ * - "balanced": no change.
+ * - "cost-optimized": downgrade moderate → simple, complex → moderate.
+ * - "quality-first": upgrade simple → moderate, moderate → complex.
+ * - "local-only": cap at moderate (never route to cloud API).
+ */
+export function applyProfileBias(
+  complexity: MessageComplexity,
+  profile: RoutingProfile | undefined,
+): MessageComplexity {
+  const p = profile ?? "balanced";
+  if (p === "balanced") {
+    return complexity;
+  }
+  if (p === "cost-optimized") {
+    if (complexity === "moderate") {
+      return "simple";
+    }
+    if (complexity === "complex") {
+      return "moderate";
+    }
+    return complexity;
+  }
+  if (p === "quality-first") {
+    if (complexity === "simple") {
+      return "moderate";
+    }
+    if (complexity === "moderate") {
+      return "complex";
+    }
+    return complexity;
+  }
+  if (p === "local-only") {
+    if (complexity === "complex") {
+      return "moderate";
+    }
+    return complexity;
+  }
+  return complexity;
+}
+
 export function routeMessage(params: {
   message: string;
   routing?: AgentRoutingConfig;
@@ -307,14 +366,18 @@ export function routeMessage(params: {
   }
 
   // "always" strategy: skip tier classification, route everything to orchestrator.
-  const alwaysRoute = routeAlwaysOrchestrator(params.orchestrator);
-  if (alwaysRoute) {
-    return alwaysRoute;
+  // (local-only profile disables orchestrator always-route to keep traffic local)
+  if (routing.profile !== "local-only") {
+    const alwaysRoute = routeAlwaysOrchestrator(params.orchestrator);
+    if (alwaysRoute) {
+      return alwaysRoute;
+    }
   }
 
-  const complexity = classifyMessage(message, {
+  const rawComplexity = classifyMessage(message, {
     maxSimpleLength: routing.maxSimpleLength,
   });
+  const complexity = applyProfileBias(rawComplexity, routing.profile);
 
   const fastRef = parseModelRef(routing.fastModel);
   const localRef = parseModelRef(routing.localModel);
