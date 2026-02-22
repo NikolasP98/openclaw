@@ -2,12 +2,17 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  _sessionPinInternals,
   applyProfileBias,
   classifyMessage,
+  clearAllSessionPins,
   FAST_CHAT_SYSTEM_PROMPT,
+  getSessionPin,
+  pinSession,
   readMemorySnapshot,
   routeAlwaysOrchestrator,
   routeMessage,
+  unpinSession,
   type AgentOrchestratorConfig,
   type AgentRoutingConfig,
 } from "./smart-routing.js";
@@ -568,5 +573,66 @@ describe("routeAlwaysOrchestrator", () => {
 
   it("returns undefined when no model", () => {
     expect(routeAlwaysOrchestrator({ enabled: true, strategy: "always" })).toBeUndefined();
+  });
+});
+
+// ── Session Pinning ──────────────────────────────────────────────────────────
+
+describe("session pinning", () => {
+  afterEach(() => {
+    clearAllSessionPins();
+  });
+
+  it("pins a session to a routing result", () => {
+    const result = routeMessage({
+      message: "hey",
+      routing: { enabled: true, fastModel: "ollama/qwen3:1.7b" },
+    })!;
+    pinSession("session-1", result);
+
+    const pin = getSessionPin("session-1");
+    expect(pin).toBeDefined();
+    expect(pin!.provider).toBe("ollama");
+    expect(pin!.model).toBe("qwen3:1.7b");
+    expect(pin!.complexity).toBe("simple");
+    expect(pin!.pinnedAt).toBeGreaterThan(0);
+  });
+
+  it("does not pin when result has no provider/model", () => {
+    pinSession("session-2", { complexity: "complex", disableTools: false });
+    expect(getSessionPin("session-2")).toBeUndefined();
+  });
+
+  it("unpins a session", () => {
+    pinSession("session-3", {
+      complexity: "simple",
+      provider: "ollama",
+      model: "qwen3:1.7b",
+      disableTools: true,
+    });
+    expect(unpinSession("session-3")).toBe(true);
+    expect(getSessionPin("session-3")).toBeUndefined();
+  });
+
+  it("unpinSession returns false for unknown session", () => {
+    expect(unpinSession("nonexistent")).toBe(false);
+  });
+
+  it("clearAllSessionPins clears all pins", () => {
+    pinSession("s1", { complexity: "simple", provider: "a", model: "b", disableTools: false });
+    pinSession("s2", { complexity: "moderate", provider: "c", model: "d", disableTools: false });
+    clearAllSessionPins();
+    expect(getSessionPin("s1")).toBeUndefined();
+    expect(getSessionPin("s2")).toBeUndefined();
+    expect(_sessionPinInternals.sessionPins.size).toBe(0);
+  });
+
+  it("overwrites existing pin on re-pin", () => {
+    pinSession("s1", { complexity: "simple", provider: "a", model: "b", disableTools: false });
+    pinSession("s1", { complexity: "complex", provider: "x", model: "y", disableTools: false });
+    const pin = getSessionPin("s1");
+    expect(pin!.provider).toBe("x");
+    expect(pin!.model).toBe("y");
+    expect(pin!.complexity).toBe("complex");
   });
 });

@@ -491,6 +491,69 @@ export function routeAlwaysOrchestrator(
   };
 }
 
+// ── Session Pinning ──────────────────────────────────────────────────────────
+
+export type SessionPin = {
+  provider: string;
+  model: string;
+  complexity: MessageComplexity;
+  pinnedAt: number;
+};
+
+/**
+ * In-memory session pin map.
+ *
+ * When a session's first message is routed to a specific model, subsequent
+ * messages reuse that model without re-classifying — preventing jarring
+ * mid-conversation model switches.
+ *
+ * Pins are scoped by session key and auto-expire when the session resets.
+ */
+const sessionPins = new Map<string, SessionPin>();
+
+/**
+ * Pin a session to a specific model routing result.
+ */
+export function pinSession(sessionKey: string, result: SmartRoutingResult): void {
+  if (!result.provider || !result.model) {
+    return;
+  }
+  sessionPins.set(sessionKey, {
+    provider: result.provider,
+    model: result.model,
+    complexity: result.complexity,
+    pinnedAt: Date.now(),
+  });
+}
+
+/**
+ * Get the current pin for a session, or undefined if not pinned.
+ */
+export function getSessionPin(sessionKey: string): SessionPin | undefined {
+  return sessionPins.get(sessionKey);
+}
+
+/**
+ * Remove a session's pin (e.g. on session reset or model change command).
+ */
+export function unpinSession(sessionKey: string): boolean {
+  return sessionPins.delete(sessionKey);
+}
+
+/**
+ * Clear all session pins (e.g. on config reload).
+ */
+export function clearAllSessionPins(): void {
+  sessionPins.clear();
+}
+
+/** @internal — exposed for tests only */
+export const _sessionPinInternals = {
+  sessionPins,
+} as const;
+
+// ── System Prompt ────────────────────────────────────────────────────────────
+
 /** System prompt suffix injected when routing to fast model (tools disabled). */
 export const FAST_CHAT_SYSTEM_PROMPT = `IMPORTANT: You are in fast chat mode. Respond conversationally in plain text only.
 Do NOT output any JSON, tool calls, function calls, or code blocks.
