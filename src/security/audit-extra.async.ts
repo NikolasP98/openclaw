@@ -15,7 +15,7 @@ import type { SandboxToolPolicy } from "../agents/sandbox/types.js";
 import { loadWorkspaceSkillEntries } from "../agents/skills.js";
 import { resolveToolProfilePolicy } from "../agents/tool-policy.js";
 import { listAgentWorkspaceDirs } from "../agents/workspace-dirs.js";
-import { MANIFEST_KEY } from "../compat/legacy-names.js";
+import { LEGACY_MANIFEST_KEYS, MANIFEST_KEY } from "../compat/legacy-names.js";
 import { resolveNativeSkillsEnabled } from "../config/commands.js";
 import type { OpenClawConfig, ConfigFileSnapshot } from "../config/config.js";
 import { createConfigIO } from "../config/config.js";
@@ -72,10 +72,10 @@ async function readPluginManifestExtensions(pluginPath: string): Promise<string[
     return [];
   }
 
-  const parsed = JSON.parse(raw) as Partial<
-    Record<typeof MANIFEST_KEY, { extensions?: unknown }>
-  > | null;
-  const extensions = parsed?.[MANIFEST_KEY]?.extensions;
+  const parsed = JSON.parse(raw) as Partial<Record<string, { extensions?: unknown }>> | null;
+  const extensions =
+    parsed?.[MANIFEST_KEY]?.extensions ??
+    LEGACY_MANIFEST_KEYS.reduce<unknown>((acc, key) => acc ?? parsed?.[key]?.extensions, undefined);
   if (!Array.isArray(extensions)) {
     return [];
   }

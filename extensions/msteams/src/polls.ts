@@ -102,6 +102,7 @@ export function extractMSTeamsPollVote(
     return null;
   }
   const pollId =
+    readNestedString(value, ["openclawPollId"]) ??
     readNestedString(value, ["minionPollId"]) ??
     readNestedString(value, ["pollId"]) ??
     readNestedString(value, ["minion", "pollId"]) ??
