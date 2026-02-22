@@ -6,8 +6,8 @@ const mocks = vi.hoisted(() => ({
   otherRegister: vi.fn(),
 }));
 
-vi.mock("./loader.js", () => ({
-  loadMinionPlugins: () => ({
+vi.mock("./loader.js", () => {
+  const loadFn = () => ({
     cliRegistrars: [
       {
         pluginId: "memory-core",
@@ -22,8 +22,12 @@ vi.mock("./loader.js", () => ({
         source: "bundled",
       },
     ],
-  }),
-}));
+  });
+  return {
+    loadMinionPlugins: loadFn,
+    loadOpenClawPlugins: loadFn,
+  };
+});
 
 import { registerPluginCliCommands } from "./cli.js";
 

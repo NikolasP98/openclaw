@@ -71,7 +71,7 @@ describe("nodes camera helpers", () => {
         tmpDir: dir,
         id: "clip1",
       });
-      expect(out).toBe(path.join(dir, "openclaw-camera-clip-front-clip1.mp4"));
+      expect(out).toBe(path.join(dir, "minion-camera-clip-front-clip1.mp4"));
       await expect(fs.readFile(out, "utf8")).resolves.toBe("hi");
     } finally {
       await fs.rm(dir, { recursive: true, force: true });
@@ -173,6 +173,6 @@ describe("nodes screen helpers", () => {
       tmpDir: "/tmp",
       id: "id1",
     });
-    expect(p).toBe(path.join("/tmp", "openclaw-screen-record-id1.mp4"));
+    expect(p).toBe(path.join("/tmp", "minion-screen-record-id1.mp4"));
   });
 });

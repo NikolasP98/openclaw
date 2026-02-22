@@ -565,11 +565,15 @@ export const nodeHandlers: GatewayRequestHandlers = {
     await respondUnavailableOnThrow(respond, async () => {
       const { handleNodeEvent } = await import("../server-node-events.js");
       const nodeId = client?.connect?.device?.id ?? client?.connect?.client?.id ?? "node";
+      const nodeConnId = client?.connId;
       const nodeContext = {
         deps: context.deps,
         broadcast: context.broadcast,
         nodeSendToSession: context.nodeSendToSession,
-        nodeSubscribe: context.nodeSubscribe,
+        // Bind the connection ID so subscriptions are scoped to this connection,
+        // enabling connId-aware cleanup on reconnect.
+        nodeSubscribe: (nodeId: string, sessionKey: string) =>
+          context.nodeSubscribe(nodeId, sessionKey, nodeConnId),
         nodeUnsubscribe: context.nodeUnsubscribe,
         broadcastVoiceWakeChanged: context.broadcastVoiceWakeChanged,
         addChatRun: context.addChatRun,

@@ -11,8 +11,17 @@ const ciWorkers = isWindows ? 2 : 3;
 
 export default defineConfig({
   resolve: {
-    // Keep this ordered: the base `openclaw/plugin-sdk` alias is a prefix match.
+    // Keep this ordered: more specific subpath aliases must come before base aliases.
     alias: [
+      {
+        find: "minion/plugin-sdk/account-id",
+        replacement: path.join(repoRoot, "src", "plugin-sdk", "account-id.ts"),
+      },
+      {
+        find: "minion/plugin-sdk",
+        replacement: path.join(repoRoot, "src", "plugin-sdk", "index.ts"),
+      },
+      // Legacy openclaw aliases kept for any remaining imports.
       {
         find: "openclaw/plugin-sdk/account-id",
         replacement: path.join(repoRoot, "src", "plugin-sdk", "account-id.ts"),

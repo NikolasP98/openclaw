@@ -24,7 +24,7 @@ describe("resolveProviderAuths key normalization", () => {
   ): Promise<T> {
     const base = path.join(suiteRoot, `case-${++suiteCase}`);
     await fs.mkdir(base, { recursive: true });
-    await fs.mkdir(path.join(base, ".openclaw", "agents", "main", "sessions"), { recursive: true });
+    await fs.mkdir(path.join(base, ".minion", "agents", "main", "sessions"), { recursive: true });
 
     const keysToRestore = new Set<string>([
       "HOME",
@@ -43,7 +43,7 @@ describe("resolveProviderAuths key normalization", () => {
     process.env.HOME = base;
     process.env.USERPROFILE = base;
     delete process.env.OPENCLAW_HOME;
-    process.env.OPENCLAW_STATE_DIR = path.join(base, ".openclaw");
+    process.env.OPENCLAW_STATE_DIR = path.join(base, ".minion");
     for (const [key, value] of Object.entries(env)) {
       if (value === undefined) {
         delete process.env[key];

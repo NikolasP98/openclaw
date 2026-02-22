@@ -9,6 +9,7 @@ let cfg: Record<string, unknown> = {};
 // Perf: keep this suite pure unit. Mock heavyweight config/session modules.
 vi.mock("../config/config.js", () => ({
   loadConfig: () => cfg,
+  STATE_DIR: "/tmp/minion-test",
 }));
 
 vi.mock("../config/sessions.js", () => ({
@@ -51,7 +52,7 @@ vi.mock("../plugins/tools.js", () => ({
 
 // Perf: the real tool factory instantiates many tools per request; for these HTTP
 // routing/policy tests we only need a small set of tool names.
-vi.mock("../agents/minion-tools.js", () => {
+vi.mock("../agents/openclaw-tools.js", () => {
   const toolInputError = (message: string) => {
     const err = new Error(message);
     err.name = "ToolInputError";
@@ -110,7 +111,7 @@ vi.mock("../agents/minion-tools.js", () => {
   ];
 
   return {
-    createMinionTools: () => tools,
+    createOpenClawTools: () => tools,
   };
 });
 

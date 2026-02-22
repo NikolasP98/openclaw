@@ -117,9 +117,13 @@ vi.mock("../../utils/message-channel.js", () => ({
   isMarkdownCapableMessageChannel: vi.fn(() => true),
 }));
 
-vi.mock("../agent-paths.js", () => ({
-  resolveMinionAgentDir: vi.fn(() => "/tmp/agent-dir"),
-}));
+vi.mock("../agent-paths.js", () => {
+  const fn = vi.fn(() => "/tmp/agent-dir");
+  return {
+    resolveMinionAgentDir: fn,
+    resolveOpenClawAgentDir: fn,
+  };
+});
 
 vi.mock("../defaults.js", () => ({
   DEFAULT_CONTEXT_TOKENS: 200000,

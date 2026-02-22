@@ -64,14 +64,14 @@ describe("resolveSystemdUserUnitPath", () => {
   it("uses default service name when OPENCLAW_PROFILE is unset", () => {
     const env = { HOME: "/home/test" };
     expect(resolveSystemdUserUnitPath(env)).toBe(
-      "/home/test/.config/systemd/user/openclaw-gateway.service",
+      "/home/test/.config/systemd/user/minion-gateway.service",
     );
   });
 
   it("uses profile-specific service name when OPENCLAW_PROFILE is set to a custom value", () => {
     const env = { HOME: "/home/test", OPENCLAW_PROFILE: "jbphoenix" };
     expect(resolveSystemdUserUnitPath(env)).toBe(
-      "/home/test/.config/systemd/user/openclaw-gateway-jbphoenix.service",
+      "/home/test/.config/systemd/user/minion-gateway-jbphoenix.service",
     );
   });
 
@@ -163,7 +163,7 @@ describe("systemd service control", () => {
     execFileMock
       .mockImplementationOnce((_cmd, _args, _opts, cb) => cb(null, "", ""))
       .mockImplementationOnce((_cmd, args, _opts, cb) => {
-        expect(args).toEqual(["--user", "stop", "openclaw-gateway.service"]);
+        expect(args).toEqual(["--user", "stop", "minion-gateway.service"]);
         cb(null, "", "");
       });
     const write = vi.fn();
@@ -179,7 +179,7 @@ describe("systemd service control", () => {
     execFileMock
       .mockImplementationOnce((_cmd, _args, _opts, cb) => cb(null, "", ""))
       .mockImplementationOnce((_cmd, args, _opts, cb) => {
-        expect(args).toEqual(["--user", "restart", "openclaw-gateway-work.service"]);
+        expect(args).toEqual(["--user", "restart", "minion-gateway-work.service"]);
         cb(null, "", "");
       });
     const write = vi.fn();

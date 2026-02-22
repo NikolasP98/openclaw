@@ -31,12 +31,12 @@ describe("resolveGatewayLaunchAgentLabel", () => {
   it("returns default label when no profile is set", () => {
     const result = resolveGatewayLaunchAgentLabel();
     expect(result).toBe(GATEWAY_LAUNCH_AGENT_LABEL);
-    expect(result).toBe("ai.openclaw.gateway");
+    expect(result).toBe("ai.minion.gateway");
   });
 
   it("returns profile-specific label when profile is set", () => {
     const result = resolveGatewayLaunchAgentLabel("dev");
-    expect(result).toBe("ai.openclaw.dev");
+    expect(result).toBe("ai.minion.dev");
   });
 });
 
@@ -44,12 +44,12 @@ describe("resolveGatewaySystemdServiceName", () => {
   it("returns default service name when no profile is set", () => {
     const result = resolveGatewaySystemdServiceName();
     expect(result).toBe(GATEWAY_SYSTEMD_SERVICE_NAME);
-    expect(result).toBe("openclaw-gateway");
+    expect(result).toBe("minion-gateway");
   });
 
   it("returns profile-specific service name when profile is set", () => {
     const result = resolveGatewaySystemdServiceName("dev");
-    expect(result).toBe("openclaw-gateway-dev");
+    expect(result).toBe("minion-gateway-dev");
   });
 });
 
@@ -57,12 +57,12 @@ describe("resolveGatewayWindowsTaskName", () => {
   it("returns default task name when no profile is set", () => {
     const result = resolveGatewayWindowsTaskName();
     expect(result).toBe(GATEWAY_WINDOWS_TASK_NAME);
-    expect(result).toBe("OpenClaw Gateway");
+    expect(result).toBe("Minion Gateway");
   });
 
   it("returns profile-specific task name when profile is set", () => {
     const result = resolveGatewayWindowsTaskName("dev");
-    expect(result).toBe("OpenClaw Gateway (dev)");
+    expect(result).toBe("Minion Gateway (dev)");
   });
 });
 
@@ -87,24 +87,24 @@ describe("resolveGatewayProfileSuffix", () => {
 
 describe("formatGatewayServiceDescription", () => {
   it("returns default description when no profile/version", () => {
-    expect(formatGatewayServiceDescription()).toBe("OpenClaw Gateway");
+    expect(formatGatewayServiceDescription()).toBe("Minion Gateway");
   });
 
   it("includes profile when set", () => {
     expect(formatGatewayServiceDescription({ profile: "work" })).toBe(
-      "OpenClaw Gateway (profile: work)",
+      "Minion Gateway (profile: work)",
     );
   });
 
   it("includes version when set", () => {
     expect(formatGatewayServiceDescription({ version: "2026.1.10" })).toBe(
-      "OpenClaw Gateway (v2026.1.10)",
+      "Minion Gateway (v2026.1.10)",
     );
   });
 
   it("includes profile and version when set", () => {
     expect(formatGatewayServiceDescription({ profile: "dev", version: "1.2.3" })).toBe(
-      "OpenClaw Gateway (profile: dev, v1.2.3)",
+      "Minion Gateway (profile: dev, v1.2.3)",
     );
   });
 });
@@ -125,6 +125,6 @@ describe("resolveGatewayServiceDescription", () => {
         env: { OPENCLAW_PROFILE: "work", OPENCLAW_SERVICE_VERSION: "local" },
         environment: { OPENCLAW_SERVICE_VERSION: "remote" },
       }),
-    ).toBe("OpenClaw Gateway (profile: work, vremote)");
+    ).toBe("Minion Gateway (profile: work, vremote)");
   });
 });

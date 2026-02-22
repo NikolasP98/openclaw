@@ -20,7 +20,7 @@ function enableAdvertiserUnitMode(hostname = "test-host") {
   delete process.env.VITEST;
   process.env.NODE_ENV = "development";
   vi.spyOn(os, "hostname").mockReturnValue(hostname);
-  process.env.OPENCLAW_MDNS_HOSTNAME = hostname;
+  process.env.MINION_MDNS_HOSTNAME = hostname;
 }
 
 function mockCiaoService(params?: {
@@ -134,7 +134,7 @@ describe("gateway bonjour advertiser", () => {
 
     expect(createService).toHaveBeenCalledTimes(1);
     const [gatewayCall] = createService.mock.calls as Array<[Record<string, unknown>]>;
-    expect(gatewayCall?.[0]?.type).toBe("openclaw-gw");
+    expect(gatewayCall?.[0]?.type).toBe("minion-gw");
     const gatewayType = asString(gatewayCall?.[0]?.type, "");
     expect(gatewayType.length).toBeLessThanOrEqual(15);
     expect(gatewayCall?.[0]?.port).toBe(18789);
@@ -289,6 +289,7 @@ describe("gateway bonjour advertiser", () => {
     process.env.NODE_ENV = "development";
 
     vi.spyOn(os, "hostname").mockReturnValue("Mac.localdomain");
+    process.env.MINION_MDNS_HOSTNAME = "Mac.localdomain";
 
     const destroy = vi.fn().mockResolvedValue(undefined);
     const advertise = vi.fn().mockResolvedValue(undefined);
@@ -300,10 +301,10 @@ describe("gateway bonjour advertiser", () => {
     });
 
     const [gatewayCall] = createService.mock.calls as Array<[ServiceCall]>;
-    expect(gatewayCall?.[0]?.name).toBe("openclaw (OpenClaw)");
+    expect(gatewayCall?.[0]?.name).toBe("Mac (Minion)");
     expect(gatewayCall?.[0]?.domain).toBe("local");
-    expect(gatewayCall?.[0]?.hostname).toBe("openclaw");
-    expect((gatewayCall?.[0]?.txt as Record<string, string>)?.lanHost).toBe("openclaw.local");
+    expect(gatewayCall?.[0]?.hostname).toBe("Mac");
+    expect((gatewayCall?.[0]?.txt as Record<string, string>)?.lanHost).toBe("Mac.local");
 
     await started.stop();
   });

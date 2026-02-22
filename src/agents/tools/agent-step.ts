@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { stripHeartbeatToken } from "../../auto-reply/heartbeat.js";
 import { callGateway } from "../../gateway/call.js";
 import { INTERNAL_MESSAGE_CHANNEL } from "../../utils/message-channel.js";
 import { AGENT_LANE_NESTED } from "../lanes.js";
@@ -23,6 +24,11 @@ export async function readLatestAssistantReply(params: {
     }
     const text = extractAssistantText(candidate);
     if (!text?.trim()) {
+      continue;
+    }
+    // Skip heartbeat-only replies so a concurrent heartbeat poll doesn't get
+    // picked up as the "latest" assistant reply and propagate into the A2A loop.
+    if (stripHeartbeatToken(text, { mode: "heartbeat" }).shouldSkip) {
       continue;
     }
     return text;

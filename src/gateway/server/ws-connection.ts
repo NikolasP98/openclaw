@@ -235,7 +235,9 @@ export function attachGatewayWsConnectionHandler(params: {
         const nodeId = context.nodeRegistry.unregister(connId);
         if (nodeId) {
           removeRemoteNodeInfo(nodeId);
-          context.nodeUnsubscribeAll(nodeId);
+          // Pass connId so only subscriptions registered by this connection are
+          // removed, protecting subscriptions already claimed by a reconnect.
+          context.nodeUnsubscribeAll(nodeId, connId);
         }
       }
       logWs("out", "close", {

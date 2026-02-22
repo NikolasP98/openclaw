@@ -1,5 +1,5 @@
-import type { CliDeps } from "../cli/deps.js";
 import { resolveDefaultAgentId } from "../agents/agent-scope.js";
+import type { CliDeps } from "../cli/deps.js";
 import { loadConfig } from "../config/config.js";
 import {
   canonicalizeMainSessionAlias,
@@ -14,6 +14,7 @@ import { resolveCronStorePath } from "../cron/store.js";
 import { normalizeHttpWebhookUrl } from "../cron/webhook-url.js";
 import { runHeartbeatOnce } from "../infra/heartbeat-runner.js";
 import { requestHeartbeatNow } from "../infra/heartbeat-wake.js";
+import { fetchWithSsrFGuard } from "../infra/net/fetch-guard.js";
 import { enqueueSystemEvent } from "../infra/system-events.js";
 import { getChildLogger } from "../logging.js";
 import { emitReliabilityEvent } from "../logging/reliability.js";
@@ -291,12 +292,16 @@ export function buildGatewayCronService(params: {
           const timeout = setTimeout(() => {
             abortController.abort();
           }, CRON_WEBHOOK_TIMEOUT_MS);
-          void fetch(webhookTarget.url, {
-            method: "POST",
-            headers,
-            body: JSON.stringify(evt),
-            signal: abortController.signal,
+          void fetchWithSsrFGuard({
+            url: webhookTarget.url,
+            init: {
+              method: "POST",
+              headers,
+              body: JSON.stringify(evt),
+              signal: abortController.signal,
+            },
           })
+            .then(({ response }) => response)
             .catch((err) => {
               cronLogger.warn(
                 {

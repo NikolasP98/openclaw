@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import { callGateway } from "../../gateway/call.js";
 import { formatErrorMessage } from "../../infra/errors.js";
 import { createSubsystemLogger } from "../../logging/subsystem.js";
@@ -127,7 +126,8 @@ export async function runSessionsSendA2AFlow(params: {
             message: announceReply.trim(),
             channel: announceTarget.channel,
             accountId: announceTarget.accountId,
-            idempotencyKey: crypto.randomUUID(),
+            // Derive a stable idempotency key from the run so announce retries are deduped.
+            idempotencyKey: `a2a-announce:${runContextId}`,
           },
           timeoutMs: 10_000,
         });

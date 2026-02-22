@@ -7,9 +7,9 @@ export type NodeSendEventFn = (opts: {
 export type NodeListConnectedFn = () => Array<{ nodeId: string }>;
 
 export type NodeSubscriptionManager = {
-  subscribe: (nodeId: string, sessionKey: string) => void;
+  subscribe: (nodeId: string, sessionKey: string, connId?: string) => void;
   unsubscribe: (nodeId: string, sessionKey: string) => void;
-  unsubscribeAll: (nodeId: string) => void;
+  unsubscribeAll: (nodeId: string, connId?: string) => void;
   sendToSession: (
     sessionKey: string,
     event: string,
@@ -31,27 +31,26 @@ export type NodeSubscriptionManager = {
 };
 
 export function createNodeSubscriptionManager(): NodeSubscriptionManager {
-  const nodeSubscriptions = new Map<string, Set<string>>();
+  // nodeId → Map<sessionKey, registeredConnId> (empty string if no connId provided)
+  const nodeSubscriptions = new Map<string, Map<string, string>>();
   const sessionSubscribers = new Map<string, Set<string>>();
 
   const toPayloadJSON = (payload: unknown) => (payload ? JSON.stringify(payload) : null);
 
-  const subscribe = (nodeId: string, sessionKey: string) => {
+  const subscribe = (nodeId: string, sessionKey: string, connId?: string) => {
     const normalizedNodeId = nodeId.trim();
     const normalizedSessionKey = sessionKey.trim();
     if (!normalizedNodeId || !normalizedSessionKey) {
       return;
     }
 
-    let nodeSet = nodeSubscriptions.get(normalizedNodeId);
-    if (!nodeSet) {
-      nodeSet = new Set<string>();
-      nodeSubscriptions.set(normalizedNodeId, nodeSet);
+    let nodeMap = nodeSubscriptions.get(normalizedNodeId);
+    if (!nodeMap) {
+      nodeMap = new Map<string, string>();
+      nodeSubscriptions.set(normalizedNodeId, nodeMap);
     }
-    if (nodeSet.has(normalizedSessionKey)) {
-      return;
-    }
-    nodeSet.add(normalizedSessionKey);
+    // Always update the connId so the latest connection owns this subscription.
+    nodeMap.set(normalizedSessionKey, connId ?? "");
 
     let sessionSet = sessionSubscribers.get(normalizedSessionKey);
     if (!sessionSet) {
@@ -68,9 +67,9 @@ export function createNodeSubscriptionManager(): NodeSubscriptionManager {
       return;
     }
 
-    const nodeSet = nodeSubscriptions.get(normalizedNodeId);
-    nodeSet?.delete(normalizedSessionKey);
-    if (nodeSet?.size === 0) {
+    const nodeMap = nodeSubscriptions.get(normalizedNodeId);
+    nodeMap?.delete(normalizedSessionKey);
+    if (nodeMap?.size === 0) {
       nodeSubscriptions.delete(normalizedNodeId);
     }
 
@@ -81,20 +80,29 @@ export function createNodeSubscriptionManager(): NodeSubscriptionManager {
     }
   };
 
-  const unsubscribeAll = (nodeId: string) => {
+  const unsubscribeAll = (nodeId: string, connId?: string) => {
     const normalizedNodeId = nodeId.trim();
-    const nodeSet = nodeSubscriptions.get(normalizedNodeId);
-    if (!nodeSet) {
+    const nodeMap = nodeSubscriptions.get(normalizedNodeId);
+    if (!nodeMap) {
       return;
     }
-    for (const sessionKey of nodeSet) {
+    for (const [sessionKey, registeredConnId] of nodeMap) {
+      // If a connId is provided, only remove subscriptions that were registered
+      // by that specific connection. This prevents a stale close event from
+      // wiping subscriptions that belong to a newer reconnected connection.
+      if (connId && registeredConnId && registeredConnId !== connId) {
+        continue;
+      }
+      nodeMap.delete(sessionKey);
       const sessionSet = sessionSubscribers.get(sessionKey);
       sessionSet?.delete(normalizedNodeId);
       if (sessionSet?.size === 0) {
         sessionSubscribers.delete(sessionKey);
       }
     }
-    nodeSubscriptions.delete(normalizedNodeId);
+    if (nodeMap.size === 0) {
+      nodeSubscriptions.delete(normalizedNodeId);
+    }
   };
 
   const sendToSession = (

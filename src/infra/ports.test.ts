@@ -59,7 +59,7 @@ describe("ports helpers", () => {
     ).catch(() => {});
 
     const messages = runtime.error.mock.calls.map((call) => stripAnsi(String(call[0] ?? "")));
-    expect(messages.join("\n")).toContain("another OpenClaw instance is already running");
+    expect(messages.join("\n")).toContain("another Minion instance is already running");
   });
 
   it("classifies ssh and gateway listeners", () => {

@@ -42,9 +42,9 @@ export type GatewayRequestContext = {
   broadcastToConnIds: GatewayBroadcastToConnIdsFn;
   nodeSendToSession: (sessionKey: string, event: string, payload: unknown) => void;
   nodeSendToAllSubscribed: (event: string, payload: unknown) => void;
-  nodeSubscribe: (nodeId: string, sessionKey: string) => void;
+  nodeSubscribe: (nodeId: string, sessionKey: string, connId?: string) => void;
   nodeUnsubscribe: (nodeId: string, sessionKey: string) => void;
-  nodeUnsubscribeAll: (nodeId: string) => void;
+  nodeUnsubscribeAll: (nodeId: string, connId?: string) => void;
   hasConnectedMobileNode: () => boolean;
   nodeRegistry: NodeRegistry;
   agentRunSeq: Map<string, number>;

@@ -277,9 +277,9 @@ describe("buildServiceEnvironment", () => {
     expect(env.MINION_SERVICE_MARKER).toBe("minion");
     expect(env.MINION_SERVICE_KIND).toBe("gateway");
     expect(typeof env.MINION_SERVICE_VERSION).toBe("string");
-    expect(env.MINION_SYSTEMD_UNIT).toBe("minion-gateway.service");
+    expect(env.OPENCLAW_SYSTEMD_UNIT).toBe("minion-gateway.service");
     if (process.platform === "darwin") {
-      expect(env.MINION_LAUNCHD_LABEL).toBe("ai.minion.gateway");
+      expect(env.OPENCLAW_LAUNCHD_LABEL).toBe("ai.minion.gateway");
     }
   });
 
@@ -304,9 +304,9 @@ describe("buildServiceEnvironment", () => {
       env: { HOME: "/home/user", MINION_PROFILE: "work" },
       port: 18789,
     });
-    expect(env.MINION_SYSTEMD_UNIT).toBe("minion-gateway-work.service");
+    expect(env.OPENCLAW_SYSTEMD_UNIT).toBe("minion-gateway-work.service");
     if (process.platform === "darwin") {
-      expect(env.MINION_LAUNCHD_LABEL).toBe("ai.minion.work");
+      expect(env.OPENCLAW_LAUNCHD_LABEL).toBe("ai.minion.work");
     }
   });
 });
@@ -337,17 +337,17 @@ describe("buildNodeServiceEnvironment", () => {
 describe("resolveGatewayStateDir", () => {
   it("uses the default state dir when no overrides are set", () => {
     const env = { HOME: "/Users/test" };
-    expect(resolveGatewayStateDir(env)).toBe(path.join("/Users/test", ".openclaw"));
+    expect(resolveGatewayStateDir(env)).toBe(path.join("/Users/test", ".minion"));
   });
 
   it("appends the profile suffix when set", () => {
     const env = { HOME: "/Users/test", OPENCLAW_PROFILE: "rescue" };
-    expect(resolveGatewayStateDir(env)).toBe(path.join("/Users/test", ".openclaw-rescue"));
+    expect(resolveGatewayStateDir(env)).toBe(path.join("/Users/test", ".minion-rescue"));
   });
 
   it("treats default profiles as the base state dir", () => {
     const env = { HOME: "/Users/test", OPENCLAW_PROFILE: "Default" };
-    expect(resolveGatewayStateDir(env)).toBe(path.join("/Users/test", ".openclaw"));
+    expect(resolveGatewayStateDir(env)).toBe(path.join("/Users/test", ".minion"));
   });
 
   it("uses OPENCLAW_STATE_DIR when provided", () => {

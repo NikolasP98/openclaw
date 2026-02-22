@@ -6,8 +6,8 @@ describe("buildPairingReply", () => {
   let envSnapshot: ReturnType<typeof captureEnv>;
 
   beforeEach(() => {
-    envSnapshot = captureEnv(["OPENCLAW_PROFILE"]);
-    process.env.OPENCLAW_PROFILE = "isolated";
+    envSnapshot = captureEnv(["MINION_PROFILE"]);
+    process.env.MINION_PROFILE = "isolated";
   });
 
   afterEach(() => {
@@ -54,7 +54,7 @@ describe("buildPairingReply", () => {
       expect(text).toContain(`Pairing code: ${testCase.code}`);
       // CLI commands should respect OPENCLAW_PROFILE when set (most tests run with isolated profile)
       const commandRe = new RegExp(
-        `(?:openclaw|openclaw) --profile isolated pairing approve ${testCase.channel} ${testCase.code}`,
+        `(?:minion|minion) --profile isolated pairing approve ${testCase.channel} ${testCase.code}`,
       );
       expect(text).toMatch(commandRe);
     });

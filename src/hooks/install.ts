@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { MANIFEST_KEY } from "../compat/legacy-names.js";
+import { LEGACY_MANIFEST_KEYS, MANIFEST_KEY } from "../compat/legacy-names.js";
 import {
   extractArchive,
   fileExists,
@@ -73,13 +73,18 @@ export function resolveHookInstallDir(hookId: string, hooksDir?: string): string
 }
 
 async function ensureOpenClawHooks(manifest: HookPackageManifest) {
-  const hooks = manifest[MANIFEST_KEY]?.hooks;
+  // Check current manifest key, then fall back to legacy keys for backward compat.
+  const allKeys = [MANIFEST_KEY, ...LEGACY_MANIFEST_KEYS];
+  const hooks = allKeys.reduce<string[] | undefined>(
+    (acc, key) => acc ?? manifest[key as typeof MANIFEST_KEY]?.hooks,
+    undefined,
+  );
   if (!Array.isArray(hooks)) {
-    throw new Error("package.json missing openclaw.hooks");
+    throw new Error(`package.json missing ${MANIFEST_KEY}.hooks`);
   }
   const list = hooks.map((e) => (typeof e === "string" ? e.trim() : "")).filter(Boolean);
   if (list.length === 0) {
-    throw new Error("package.json openclaw.hooks is empty");
+    throw new Error(`package.json ${MANIFEST_KEY}.hooks is empty`);
   }
   return list;
 }

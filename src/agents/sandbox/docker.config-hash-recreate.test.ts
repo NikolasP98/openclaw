@@ -54,7 +54,7 @@ vi.mock("node:child_process", async (importOriginal) => {
       } else if (
         args[0] === "inspect" &&
         args[1] === "-f" &&
-        args[2]?.includes('index .Config.Labels "openclaw.configHash"')
+        args[2]?.includes('index .Config.Labels "minion.configHash"')
       ) {
         stdout = `${spawnState.labelHash}\n`;
       } else if (
@@ -180,7 +180,7 @@ describe("ensureSandboxContainer config-hash recreation", () => {
     ).toBe(true);
     const createCall = dockerCalls.find((call) => call.args[0] === "create");
     expect(createCall).toBeDefined();
-    expect(createCall?.args).toContain(`openclaw.configHash=${newHash}`);
+    expect(createCall?.args).toContain(`minion.configHash=${newHash}`);
     expect(registryMocks.updateRegistry).toHaveBeenCalledWith(
       expect.objectContaining({
         containerName: "oc-test-shared",

@@ -37,15 +37,13 @@ describe("schtasks runtime parsing", () => {
 describe("resolveTaskScriptPath", () => {
   it("uses default path when OPENCLAW_PROFILE is unset", () => {
     const env = { USERPROFILE: "C:\\Users\\test" };
-    expect(resolveTaskScriptPath(env)).toBe(
-      path.join("C:\\Users\\test", ".openclaw", "gateway.cmd"),
-    );
+    expect(resolveTaskScriptPath(env)).toBe(path.join("C:\\Users\\test", ".minion", "gateway.cmd"));
   });
 
   it("uses profile-specific path when OPENCLAW_PROFILE is set to a custom value", () => {
     const env = { USERPROFILE: "C:\\Users\\test", OPENCLAW_PROFILE: "jbphoenix" };
     expect(resolveTaskScriptPath(env)).toBe(
-      path.join("C:\\Users\\test", ".openclaw-jbphoenix", "gateway.cmd"),
+      path.join("C:\\Users\\test", ".minion-jbphoenix", "gateway.cmd"),
     );
   });
 
@@ -60,7 +58,7 @@ describe("resolveTaskScriptPath", () => {
 
   it("falls back to HOME when USERPROFILE is not set", () => {
     const env = { HOME: "/home/test", OPENCLAW_PROFILE: "default" };
-    expect(resolveTaskScriptPath(env)).toBe(path.join("/home/test", ".openclaw", "gateway.cmd"));
+    expect(resolveTaskScriptPath(env)).toBe(path.join("/home/test", ".minion", "gateway.cmd"));
   });
 });
 

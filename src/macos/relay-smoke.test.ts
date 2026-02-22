@@ -32,8 +32,8 @@ describe("parseRelaySmokeTest", () => {
   });
 
   it("supports OPENCLAW_SMOKE=qr only when no args", () => {
-    expect(parseRelaySmokeTest([], { OPENCLAW_SMOKE: "qr" })).toBe("qr");
-    expect(parseRelaySmokeTest(["send"], { OPENCLAW_SMOKE: "qr" })).toBe(null);
+    expect(parseRelaySmokeTest([], { MINION_SMOKE: "qr" })).toBe("qr");
+    expect(parseRelaySmokeTest(["send"], { MINION_SMOKE: "qr" })).toBe(null);
   });
 
   it("rejects unknown smoke values", () => {
