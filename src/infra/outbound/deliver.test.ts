@@ -191,7 +191,7 @@ describe("deliverOutboundPayloads", () => {
       "hi",
       expect.objectContaining({
         mediaUrl: "file:///tmp/f.png",
-        mediaLocalRoots: expect.arrayContaining([path.join(STATE_DIR, "workspace-work")]),
+        mediaLocalRoots: expect.arrayContaining([path.join(STATE_DIR, "workspaces", "work")]),
       }),
     );
   });

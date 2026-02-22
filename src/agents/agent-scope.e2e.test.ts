@@ -268,7 +268,7 @@ describe("resolveAgentConfig", () => {
     vi.stubEnv("MINION_HOME", home);
 
     const workspace = resolveAgentWorkspaceDir({} as MinionConfig, "main");
-    expect(workspace).toBe(path.join(path.resolve(home), ".minion", "workspace"));
+    expect(workspace).toBe(path.join(path.resolve(home), ".minion", "workspaces"));
   });
 
   it("uses MINION_HOME for default agentDir", () => {

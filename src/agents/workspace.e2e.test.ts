@@ -22,7 +22,7 @@ describe("resolveDefaultAgentWorkspaceDir", () => {
       HOME: "/home/other",
     } as NodeJS.ProcessEnv);
 
-    expect(dir).toBe(path.join(path.resolve("/srv/minion-home"), ".minion", "workspace"));
+    expect(dir).toBe(path.join(path.resolve("/srv/minion-home"), ".minion", "workspaces"));
   });
 });
 
