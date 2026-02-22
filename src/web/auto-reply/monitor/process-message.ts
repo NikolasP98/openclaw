@@ -174,6 +174,20 @@ export async function processMessage(params: {
     storePath,
     sessionKey: params.route.sessionKey,
   });
+  // Transcribe quoted audio so the LLM sees the transcript instead of <media:audio>.
+  if (
+    params.msg.replyToMediaPath &&
+    params.msg.replyToBody &&
+    MEDIA_PLACEHOLDER_RE.test(params.msg.replyToBody.trim())
+  ) {
+    const transcript = await transcribeFirstAudio({
+      ctx: { MediaPath: params.msg.replyToMediaPath, MediaType: params.msg.replyToMediaType },
+      cfg: params.cfg,
+    }).catch(() => undefined);
+    if (transcript) {
+      params.msg.replyToBody = transcript;
+    }
+  }
   let combinedBody = buildInboundLine({
     cfg: params.cfg,
     msg: params.msg,
