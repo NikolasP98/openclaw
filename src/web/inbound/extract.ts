@@ -329,3 +329,22 @@ export function describeReplyContext(rawMessage: proto.IMessage | undefined): {
     senderE164,
   };
 }
+
+/**
+ * Returns the normalized quoted IMessage if the raw message is a reply to an audio message,
+ * otherwise undefined. Used by monitor.ts to decide whether to attempt a quoted-audio download.
+ */
+export function extractQuotedAudioMessage(
+  rawMessage: proto.IMessage | undefined,
+): proto.IMessage | undefined {
+  const message = unwrapMessage(rawMessage);
+  if (!message) {
+    return undefined;
+  }
+  const contextInfo = extractContextInfo(message);
+  const quoted = normalizeMessageContent(contextInfo?.quotedMessage as proto.IMessage | undefined);
+  if (!quoted?.audioMessage) {
+    return undefined;
+  }
+  return quoted;
+}
