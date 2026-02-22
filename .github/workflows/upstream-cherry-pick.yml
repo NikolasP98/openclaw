@@ -1,0 +1,106 @@
+name: Upstream Cherry-Pick
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_range:
+        description: "Commit range to cherry-pick (e.g. abc123..def456 or a single SHA)"
+        required: true
+        type: string
+      target_branch:
+        description: "Target branch (default: DEV)"
+        required: false
+        default: "DEV"
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  cherry-pick:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_branch }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure upstream remote
+        run: |
+          git remote add upstream "${{ vars.UPSTREAM_REPO_URL }}" 2>/dev/null || true
+          git fetch upstream main --no-tags
+
+      - name: Create sync branch
+        run: |
+          BRANCH="upstream-sync/$(date +%Y%m%d-%H%M%S)"
+          git checkout -b "$BRANCH"
+          echo "SYNC_BRANCH=$BRANCH" >> "$GITHUB_ENV"
+
+      - name: Cherry-pick commits
+        id: cherry-pick
+        run: |
+          RANGE="${{ inputs.commit_range }}"
+
+          # Determine if it's a range or single commit
+          if [[ "$RANGE" == *".."* ]]; then
+            COMMITS=$(git log --reverse --format="%H" "$RANGE" -- 2>/dev/null)
+          else
+            COMMITS="$RANGE"
+          fi
+
+          FAILED=""
+          SUCCEEDED=""
+
+          for SHA in $COMMITS; do
+            SHORT=$(git log -1 --format="%h %s" "$SHA" 2>/dev/null || echo "$SHA")
+            echo "Cherry-picking: $SHORT"
+
+            if git cherry-pick "$SHA" --no-commit 2>/dev/null; then
+              git commit -m "upstream: cherry-pick $SHORT" --no-verify
+              SUCCEEDED="$SUCCEEDED\n- $SHORT"
+            else
+              echo "Conflict detected for $SHORT"
+              git cherry-pick --abort 2>/dev/null || true
+              FAILED="$FAILED\n- $SHORT"
+            fi
+          done
+
+          echo "succeeded<<EOF" >> "$GITHUB_OUTPUT"
+          echo -e "$SUCCEEDED" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+          echo "failed<<EOF" >> "$GITHUB_OUTPUT"
+          echo -e "$FAILED" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Push sync branch
+        run: git push origin "$SYNC_BRANCH"
+
+      - name: Create pull request
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const succeeded = `${{ steps.cherry-pick.outputs.succeeded }}`.trim();
+            const failed = `${{ steps.cherry-pick.outputs.failed }}`.trim();
+
+            let body = '## Upstream Cherry-Pick Results\n\n';
+            if (succeeded) {
+              body += '### Successfully cherry-picked\n' + succeeded + '\n\n';
+            }
+            if (failed) {
+              body += '### Failed (conflicts)\n' + failed + '\n\n';
+              body += 'Run the **Upstream Copilot Resolve** workflow to attempt automated conflict resolution.\n';
+            }
+
+            const pr = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `upstream: sync ${new Date().toISOString().split('T')[0]}`,
+              body,
+              head: process.env.SYNC_BRANCH,
+              base: '${{ inputs.target_branch }}',
+            });
+
+            core.info(`PR created: ${pr.data.html_url}`);
