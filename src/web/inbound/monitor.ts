@@ -1,5 +1,5 @@
 import type { AnyMessageContent, proto, WAMessage } from "@whiskeysockets/baileys";
-import { DisconnectReason, isJidGroup } from "@whiskeysockets/baileys";
+import { DisconnectReason, downloadMediaMessage, isJidGroup } from "@whiskeysockets/baileys";
 import { createInboundDebouncer } from "../../auto-reply/inbound-debounce.js";
 import { formatLocationText } from "../../channels/location.js";
 import { logVerbose, shouldLogVerbose } from "../../globals.js";
@@ -263,9 +263,10 @@ export async function monitorWebInbox(options: {
               : 50;
           const maxBytes = maxMb * 1024 * 1024;
           const mimetype = quotedAudio.audioMessage?.mimetype ?? "audio/ogg; codecs=opus";
-          const { downloadMediaMessage } = await import("@whiskeysockets/baileys");
+          // Note: the quoted message has no `key`, so re-upload on expired CDN URLs
+          // will fail silently — acceptable since the outer .catch() degrades gracefully.
           const buffer = await downloadMediaMessage(
-            { message: quotedAudio } as import("@whiskeysockets/baileys").WAMessage,
+            { message: quotedAudio } as WAMessage,
             "buffer",
             {},
             { reuploadRequest: sock.updateMediaMessage, logger: sock.logger },
