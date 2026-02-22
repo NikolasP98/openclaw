@@ -271,4 +271,37 @@ describe("web processMessage inbound contract", () => {
     const ctx = capturedCtx as any;
     expect(ctx.InboundHistory[0].body).toBe("hello from voice note");
   });
+
+  it("transcribes quoted audio in replyToBody before building context", async () => {
+    capturedCtx = undefined;
+
+    vi.mocked(transcribeFirstAudio).mockResolvedValueOnce("she said the meeting is at 3pm");
+
+    await processMessage(
+      makeProcessMessageArgs({
+        routeSessionKey: "agent:main:whatsapp:direct:+1000",
+        groupHistoryKey: "+1000",
+        msg: {
+          id: "msg2",
+          from: "+1000",
+          to: "+2000",
+          chatType: "direct",
+          body: "what did she say?",
+          senderE164: "+1000",
+          replyToBody: "<media:audio>",
+          replyToSender: "+3000",
+          replyToId: "quoted1",
+          replyToMediaPath: "/tmp/fake-quoted.ogg",
+          replyToMediaType: "audio/ogg",
+        },
+      }),
+    );
+
+    // oxlint-disable-next-line typescript/no-explicit-any
+    const ctx = capturedCtx as any;
+    expect(ctx.ReplyToBody).toBe("she said the meeting is at 3pm");
+    // Combined body should also contain the transcript, not the placeholder
+    expect(ctx.Body).toContain("she said the meeting is at 3pm");
+    expect(ctx.Body).not.toContain("<media:audio>");
+  });
 });
