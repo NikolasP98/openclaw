@@ -195,6 +195,8 @@ import {
   SkillsStatusParamsSchema,
   type SkillsUpdateParams,
   SkillsUpdateParamsSchema,
+  type AgentsSkillsSetParams,
+  AgentsSkillsSetParamsSchema,
   type Snapshot,
   SnapshotSchema,
   type StateVersion,
@@ -334,6 +336,9 @@ export const validateSkillsBinsParams = ajv.compile<SkillsBinsParams>(SkillsBins
 export const validateSkillsInstallParams =
   ajv.compile<SkillsInstallParams>(SkillsInstallParamsSchema);
 export const validateSkillsUpdateParams = ajv.compile<SkillsUpdateParams>(SkillsUpdateParamsSchema);
+export const validateAgentsSkillsSetParams = ajv.compile<AgentsSkillsSetParams>(
+  AgentsSkillsSetParamsSchema,
+);
 export const validateCronListParams = ajv.compile<CronListParams>(CronListParamsSchema);
 export const validateCronStatusParams = ajv.compile<CronStatusParams>(CronStatusParamsSchema);
 export const validateCronAddParams = ajv.compile<CronAddParams>(CronAddParamsSchema);
@@ -600,6 +605,7 @@ export type {
   SkillsBinsResult,
   SkillsInstallParams,
   SkillsUpdateParams,
+  AgentsSkillsSetParams,
   NodePairRejectParams,
   NodePairVerifyParams,
   NodeListParams,

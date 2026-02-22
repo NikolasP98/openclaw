@@ -1,5 +1,7 @@
 import {
+  listAgentEntries,
   listAgentIds,
+  resolveAgentSkillsFilter,
   resolveAgentWorkspaceDir,
   resolveDefaultAgentId,
 } from "../../agents/agent-scope.js";
@@ -16,6 +18,7 @@ import {
   ErrorCodes,
   errorShape,
   formatValidationErrors,
+  validateAgentsSkillsSetParams,
   validateSkillsBinsParams,
   validateSkillsInstallParams,
   validateSkillsStatusParams,
@@ -86,7 +89,14 @@ export const skillsHandlers: GatewayRequestHandlers = {
       config: cfg,
       eligibility: { remote: getRemoteSkillEligibility() },
     });
-    respond(true, report, undefined);
+    // Augment report with per-agent filter info
+    const agentFilter = resolveAgentSkillsFilter(cfg, agentId) ?? null;
+    const filterSet = agentFilter ? new Set(agentFilter) : null;
+    const augmentedSkills = report.skills.map((skill) => ({
+      ...skill,
+      agentEnabled: filterSet ? filterSet.has(skill.skillKey) : true,
+    }));
+    respond(true, { ...report, skills: augmentedSkills, agentFilter }, undefined);
   },
   "skills.bins": ({ params, respond }) => {
     if (!validateSkillsBinsParams(params)) {
@@ -200,5 +210,50 @@ export const skillsHandlers: GatewayRequestHandlers = {
     };
     await writeConfigFile(nextConfig);
     respond(true, { ok: true, skillKey: p.skillKey, config: current }, undefined);
+  },
+  "agents.skills.set": async ({ params, respond }) => {
+    if (!validateAgentsSkillsSetParams(params)) {
+      respond(
+        false,
+        undefined,
+        errorShape(
+          ErrorCodes.INVALID_REQUEST,
+          `invalid agents.skills.set params: ${formatValidationErrors(validateAgentsSkillsSetParams.errors)}`,
+        ),
+      );
+      return;
+    }
+    const p = params as { agentId: string; skills: string[] | null };
+    const cfg = loadConfig();
+    const agentId = normalizeAgentId(p.agentId);
+    const agents = listAgentEntries(cfg);
+    const agentIndex = agents.findIndex((entry) => normalizeAgentId(entry.id) === agentId);
+    if (agentIndex < 0) {
+      respond(
+        false,
+        undefined,
+        errorShape(ErrorCodes.INVALID_REQUEST, `unknown agent id "${p.agentId}"`),
+      );
+      return;
+    }
+    // Build the updated config
+    const nextAgentsList = [...(cfg.agents?.list ?? [])];
+    const updatedEntry = { ...nextAgentsList[agentIndex] };
+    if (p.skills === null) {
+      delete updatedEntry.skills;
+    } else {
+      updatedEntry.skills = p.skills;
+    }
+    nextAgentsList[agentIndex] = updatedEntry;
+    const nextConfig: OpenClawConfig = {
+      ...cfg,
+      agents: {
+        ...cfg.agents,
+        list: nextAgentsList,
+      },
+    };
+    await writeConfigFile(nextConfig);
+    const resultSkills = updatedEntry.skills;
+    respond(true, { ok: true, agentId, skills: resultSkills }, undefined);
   },
 };

@@ -1,4 +1,3 @@
-import type { GatewayRequestHandlers, GatewayRequestOptions } from "./server-methods/types.js";
 import { ErrorCodes, errorShape } from "./protocol/index.js";
 import { agentHandlers } from "./server-methods/agent.js";
 import { agentsHandlers } from "./server-methods/agents.js";
@@ -23,6 +22,7 @@ import { specialistsHandlers } from "./server-methods/specialists.js";
 import { systemHandlers } from "./server-methods/system.js";
 import { talkHandlers } from "./server-methods/talk.js";
 import { ttsHandlers } from "./server-methods/tts.js";
+import type { GatewayRequestHandlers, GatewayRequestOptions } from "./server-methods/types.js";
 import { updateHandlers } from "./server-methods/update.js";
 import { usageHandlers } from "./server-methods/usage.js";
 import { voicewakeHandlers } from "./server-methods/voicewake.js";
@@ -163,6 +163,7 @@ function authorizeGatewayMethod(method: string, client: GatewayRequestOptions["c
     method === "agents.delete" ||
     method === "skills.install" ||
     method === "skills.update" ||
+    method === "agents.skills.set" ||
     method === "cron.add" ||
     method === "cron.update" ||
     method === "cron.remove" ||

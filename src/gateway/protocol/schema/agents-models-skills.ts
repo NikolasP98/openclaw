@@ -209,3 +209,11 @@ export const SkillsUpdateParamsSchema = Type.Object(
   },
   { additionalProperties: false },
 );
+
+export const AgentsSkillsSetParamsSchema = Type.Object(
+  {
+    agentId: NonEmptyString,
+    skills: Type.Union([Type.Array(Type.String()), Type.Null()]),
+  },
+  { additionalProperties: false },
+);
