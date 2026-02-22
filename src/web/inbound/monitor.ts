@@ -13,7 +13,7 @@ import { checkInboundAccessControl } from "./access-control.js";
 import { isRecentInboundMessage } from "./dedupe.js";
 import {
   describeReplyContext,
-  extractQuotedAudioMessage,
+  extractQuotedAudioContext,
   extractLocationData,
   extractMediaPlaceholder,
   extractMentionedJids,
@@ -254,30 +254,55 @@ export async function monitorWebInbox(options: {
 
       let replyToMediaPath: string | undefined;
       let replyToMediaType: string | undefined;
-      const quotedAudio = extractQuotedAudioMessage(msg.message as proto.IMessage | undefined);
-      if (quotedAudio) {
+      const quotedAudioCtx = extractQuotedAudioContext(msg.message as proto.IMessage | undefined);
+      if (quotedAudioCtx) {
         try {
           const maxMb =
             typeof options.mediaMaxMb === "number" && options.mediaMaxMb > 0
               ? options.mediaMaxMb
               : 50;
           const maxBytes = maxMb * 1024 * 1024;
-          const mimetype = quotedAudio.audioMessage?.mimetype ?? "audio/ogg; codecs=opus";
-          // Note: the quoted message has no `key`, so re-upload on expired CDN URLs
-          // will fail silently — acceptable since the outer .catch() degrades gracefully.
+          const mimetype =
+            quotedAudioCtx.quotedMessage.audioMessage?.mimetype ?? "audio/ogg; codecs=opus";
+          const hasUrl = Boolean(quotedAudioCtx.quotedMessage.audioMessage?.url);
+          const hasDirectPath = Boolean(quotedAudioCtx.quotedMessage.audioMessage?.directPath);
+          const hasMediaKey = Boolean(quotedAudioCtx.quotedMessage.audioMessage?.mediaKey);
+          logVerbose(
+            `Quoted audio detected: url=${hasUrl} directPath=${hasDirectPath} mediaKey=${hasMediaKey}`,
+          );
+
+          // Build a WAMessage with a reconstructed key so Baileys' reupload mechanism
+          // can work if the media URL has expired.
+          const quotedWAMessage = {
+            key: {
+              remoteJid: remoteJid,
+              fromMe: false,
+              id: quotedAudioCtx.stanzaId,
+              participant: quotedAudioCtx.participant,
+            },
+            message: quotedAudioCtx.quotedMessage,
+          } as WAMessage;
+
           const buffer = await downloadMediaMessage(
-            { message: quotedAudio } as WAMessage,
+            quotedWAMessage,
             "buffer",
             {},
             { reuploadRequest: sock.updateMediaMessage, logger: sock.logger },
-          ).catch(() => undefined);
+          ).catch((err: unknown) => {
+            logVerbose(`Quoted audio downloadMediaMessage failed: ${String(err)}`);
+            return undefined;
+          });
           if (buffer) {
             const saved = await saveMediaBuffer(buffer, mimetype, "inbound-reply", maxBytes).catch(
-              () => undefined,
+              (err: unknown) => {
+                logVerbose(`Quoted audio saveMediaBuffer failed: ${String(err)}`);
+                return undefined;
+              },
             );
             if (saved) {
               replyToMediaPath = saved.path;
               replyToMediaType = mimetype;
+              logVerbose(`Quoted audio saved to ${saved.path}`);
             }
           }
         } catch (err) {
