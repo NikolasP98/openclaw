@@ -1,0 +1,62 @@
+name: Upstream Monitor
+
+on:
+  schedule:
+    # Check upstream every 6 hours
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check-upstream:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure upstream remote
+        run: |
+          git remote add upstream "${{ vars.UPSTREAM_REPO_URL }}" 2>/dev/null || true
+          git fetch upstream main --no-tags
+
+      - name: Detect new upstream commits
+        id: detect
+        run: |
+          # Find commits on upstream/main not in our DEV branch
+          NEW_COMMITS=$(git log DEV..upstream/main --oneline --no-merges 2>/dev/null || echo "")
+          COUNT=$(echo "$NEW_COMMITS" | grep -c . || echo "0")
+
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "commits<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$NEW_COMMITS" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Create tracking issue
+        if: steps.detect.outputs.count > 0
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const count = '${{ steps.detect.outputs.count }}';
+            const commits = `${{ steps.detect.outputs.commits }}`;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Upstream sync: ${count} new commit(s) available`,
+              body: [
+                '## New upstream commits detected',
+                '',
+                '```',
+                commits,
+                '```',
+                '',
+                `Total: ${count} commit(s)`,
+                '',
+                'Run the **Upstream Cherry-Pick** workflow to integrate these changes.',
+              ].join('\n'),
+              labels: ['upstream-sync'],
+            });
