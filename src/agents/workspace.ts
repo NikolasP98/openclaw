@@ -250,8 +250,22 @@ async function ensureGitRepo(dir: string, isBrandNewWorkspace: boolean) {
   }
   try {
     await runCommandWithTimeout(["git", "init"], { cwd: dir, timeoutMs: 10_000 });
+    await runCommandWithTimeout(["git", "add", "."], { cwd: dir, timeoutMs: 10_000 });
+    await runCommandWithTimeout(
+      [
+        "git",
+        "-c",
+        "user.name=Minion",
+        "-c",
+        "user.email=minion@localhost",
+        "commit",
+        "-m",
+        "chore: scaffold workspace",
+      ],
+      { cwd: dir, timeoutMs: 10_000 },
+    );
   } catch {
-    // Ignore git init failures; workspace creation should still succeed.
+    // Ignore git init/commit failures; workspace creation should still succeed.
   }
 }
 
