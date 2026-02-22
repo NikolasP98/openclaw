@@ -1,0 +1,54 @@
+{
+  "_source": "U.S. Bureau of Labor Statistics, May 2024 estimates",
+  "_note": "Median hourly wages by SOC code. Used for ROI estimation.",
+  "occupations": {
+    "software_developer": {
+      "soc": "15-1252",
+      "title": "Software Developers",
+      "medianHourly": 63.44,
+      "meanHourly": 65.57
+    },
+    "devops_engineer": {
+      "soc": "15-1244",
+      "title": "Network and Computer Systems Administrators",
+      "medianHourly": 46.26,
+      "meanHourly": 48.55
+    },
+    "data_scientist": {
+      "soc": "15-2051",
+      "title": "Data Scientists",
+      "medianHourly": 55.63,
+      "meanHourly": 58.39
+    },
+    "technical_writer": {
+      "soc": "27-3042",
+      "title": "Technical Writers",
+      "medianHourly": 40.82,
+      "meanHourly": 43.15
+    },
+    "project_manager": {
+      "soc": "11-9199",
+      "title": "Computer and Information Systems Managers",
+      "medianHourly": 82.69,
+      "meanHourly": 87.02
+    },
+    "qa_engineer": {
+      "soc": "15-1253",
+      "title": "Software Quality Assurance Analysts and Testers",
+      "medianHourly": 49.67,
+      "meanHourly": 51.82
+    },
+    "customer_support": {
+      "soc": "15-1232",
+      "title": "Computer User Support Specialists",
+      "medianHourly": 28.44,
+      "meanHourly": 30.56
+    },
+    "general_office": {
+      "soc": "43-9061",
+      "title": "Office Clerks, General",
+      "medianHourly": 19.28,
+      "meanHourly": 20.86
+    }
+  }
+}
