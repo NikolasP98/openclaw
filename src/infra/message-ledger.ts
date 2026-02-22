@@ -18,6 +18,7 @@ import type {
   PluginHookMessageInboundEvent,
   PluginHookMessageSentEvent,
 } from "../plugins/types.js";
+import { applySqlitePragmas } from "../memory/sqlite-pragmas.js";
 import { requireNodeSqlite } from "../memory/sqlite.js";
 
 type DatabaseSync = InstanceType<ReturnType<typeof requireNodeSqlite>["DatabaseSync"]>;
@@ -57,6 +58,7 @@ export function openMessageLedger(dbPath: string): void {
   }
   const { DatabaseSync } = requireNodeSqlite();
   db = new DatabaseSync(dbPath);
+  applySqlitePragmas(db);
   db.exec(INIT_SQL);
 }
 

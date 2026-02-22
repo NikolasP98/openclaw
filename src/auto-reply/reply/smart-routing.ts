@@ -47,6 +47,16 @@ export type SmartRoutingResult = {
   disableTools: boolean;
   /** Context token cap override (undefined = use default). */
   contextTokensCap?: number;
+  /**
+   * When true, the caller should reset the model back to the local/fast
+   * tier after this turn completes. Prevents a single complex message from
+   * locking all subsequent messages to the expensive orchestrator model.
+   *
+   * Inspired by LocalClaw's per-message model reset pattern.
+   */
+  resetModelAfterTurn?: boolean;
+  /** Whether orchestrator was used for this routing decision. */
+  orchestrated?: boolean;
 };
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -296,6 +306,12 @@ export function routeMessage(params: {
     return undefined;
   }
 
+  // "always" strategy: skip tier classification, route everything to orchestrator.
+  const alwaysRoute = routeAlwaysOrchestrator(params.orchestrator);
+  if (alwaysRoute) {
+    return alwaysRoute;
+  }
+
   const complexity = classifyMessage(message, {
     maxSimpleLength: routing.maxSimpleLength,
   });
@@ -332,13 +348,84 @@ export function routeMessage(params: {
     }
 
     case "complex": {
-      // Use default API model — no override needed
+      return routeComplex(params.orchestrator);
+    }
+  }
+}
+
+// ── Orchestrator dispatch ────────────────────────────────────────────────────
+
+/**
+ * Route a complex message based on the orchestrator strategy.
+ *
+ * - `auto` (default): complex → orchestrator model, simple/moderate → local.
+ * - `always`: always use orchestrator. Simple/moderate handled by caller via
+ *   the "always" strategy check before tier routing.
+ * - `fallback-only`: use local/default for everything; orchestrator only on
+ *   failure (handled at the caller level, not here).
+ */
+function routeComplex(orchestrator?: AgentOrchestratorConfig): SmartRoutingResult {
+  const strategy = orchestrator?.strategy ?? "auto";
+
+  if (orchestrator?.enabled && orchestrator.model) {
+    const orchRef = parseModelRef(orchestrator.model);
+
+    if (strategy === "auto" && orchRef) {
       return {
         complexity: "complex",
+        provider: orchRef.provider,
+        model: orchRef.model,
         disableTools: false,
+        resetModelAfterTurn: true,
+        orchestrated: true,
+      };
+    }
+
+    // "always" strategy complex case — same as auto.
+    if (strategy === "always" && orchRef) {
+      return {
+        complexity: "complex",
+        provider: orchRef.provider,
+        model: orchRef.model,
+        disableTools: false,
+        resetModelAfterTurn: true,
+        orchestrated: true,
       };
     }
   }
+
+  // fallback-only or no orchestrator configured — use default API model.
+  return {
+    complexity: "complex",
+    disableTools: false,
+  };
+}
+
+/**
+ * For the "always" strategy: route ANY message to the orchestrator, regardless
+ * of classification tier. Local model is used as fallback only if orchestrator
+ * is unreachable (handled by the caller).
+ *
+ * Returns undefined if the strategy isn't "always" or orchestrator isn't configured.
+ */
+export function routeAlwaysOrchestrator(
+  orchestrator?: AgentOrchestratorConfig,
+): SmartRoutingResult | undefined {
+  if (!orchestrator?.enabled || orchestrator.strategy !== "always" || !orchestrator.model) {
+    return undefined;
+  }
+  const orchRef = parseModelRef(orchestrator.model);
+  if (!orchRef) {
+    return undefined;
+  }
+  return {
+    complexity: "complex",
+    provider: orchRef.provider,
+    model: orchRef.model,
+    disableTools: false,
+    resetModelAfterTurn: true,
+    orchestrated: true,
+  };
 }
 
 /** System prompt suffix injected when routing to fast model (tools disabled). */

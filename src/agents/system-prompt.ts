@@ -43,6 +43,7 @@ function buildMemorySection(params: {
   isMinimal: boolean;
   availableTools: Set<string>;
   citationsMode?: MemoryCitationsMode;
+  chatType?: "direct" | "group" | "channel";
 }) {
   if (params.isMinimal) {
     return [];
@@ -50,6 +51,20 @@ function buildMemorySection(params: {
   if (!params.availableTools.has("memory_search") && !params.availableTools.has("memory_get")) {
     return [];
   }
+
+  // Group chat privacy: omit personal memory recall/management when in group context.
+  // Only SOUL.md (identity) is relevant in groups; USER.md and MEMORY.md contain
+  // personal information that shouldn't be exposed to group participants.
+  // Inspired by IronClaw v0.9.0 "group chat privacy" feature.
+  if (params.chatType === "group" || params.chatType === "channel") {
+    return [
+      "## Memory (group context)",
+      "You are in a group conversation. Personal memory (USER.md, MEMORY.md) is not loaded to protect privacy.",
+      "Respond based on SOUL.md identity and conversation context only.",
+      "",
+    ];
+  }
+
   const lines = [
     "## Memory Recall",
     "Before answering anything about prior work, decisions, dates, people, preferences, or todos: run memory_search on MEMORY.md + memory/*.md; then use memory_get to pull only the needed lines. If low confidence after search, say you checked.",
@@ -261,6 +276,8 @@ export function buildAgentSystemPrompt(params: {
   memoryCitationsMode?: MemoryCitationsMode;
   /** Permission tier of the current sender (injected as a soft guard for the LLM). */
   senderPermissionLevel?: PermissionLevel;
+  /** Chat context type — group chats omit personal memory for privacy. */
+  chatType?: "direct" | "group" | "channel";
 }) {
   const coreToolSummaries: Record<string, string> = {
     read: "Read file contents",
@@ -435,6 +452,7 @@ export function buildAgentSystemPrompt(params: {
     isMinimal,
     availableTools,
     citationsMode: params.memoryCitationsMode,
+    chatType: params.chatType,
   });
   const docsSection = buildDocsSection({
     docsPath: params.docsPath,

@@ -23,6 +23,7 @@ import type { ModelsConfig } from "./types.models.js";
 import type { NodeHostConfig } from "./types.node-host.js";
 import type { PluginsConfig } from "./types.plugins.js";
 import type { SkillsConfig } from "./types.skills.js";
+import type { SecurityAutonomyConfig } from "./types.security.js";
 import type { ToolsConfig } from "./types.tools.js";
 
 export type MinionConfig = {
@@ -103,6 +104,7 @@ export type MinionConfig = {
   talk?: TalkConfig;
   gateway?: GatewayConfig;
   memory?: MemoryConfig;
+  security?: SecurityAutonomyConfig;
 };
 
 export type ConfigValidationIssue = {

@@ -5,7 +5,9 @@ import {
   classifyMessage,
   FAST_CHAT_SYSTEM_PROMPT,
   readMemorySnapshot,
+  routeAlwaysOrchestrator,
   routeMessage,
+  type AgentOrchestratorConfig,
   type AgentRoutingConfig,
 } from "./smart-routing.js";
 
@@ -287,5 +289,198 @@ describe("readMemorySnapshot", () => {
     expect(result).toBeDefined();
     expect(result).toContain(exactContent);
     expect(result).not.toContain("[...truncated]");
+  });
+});
+
+// ── Orchestrator dispatch ────────────────────────────────────────────────────
+
+describe("orchestrator dispatch", () => {
+  const routing: AgentRoutingConfig = {
+    enabled: true,
+    fastModel: "ollama/qwen3:1.7b",
+    localModel: "ollama/gemma3:12b",
+  };
+
+  const orchestrator: AgentOrchestratorConfig = {
+    enabled: true,
+    model: "anthropic/claude-sonnet-4",
+    strategy: "auto",
+  };
+
+  describe("auto strategy", () => {
+    it("routes complex messages to orchestrator model", () => {
+      const result = routeMessage({
+        message: "refactor the authentication middleware to use JWT",
+        routing,
+        orchestrator,
+      });
+      expect(result).toBeDefined();
+      expect(result!.orchestrated).toBe(true);
+      expect(result!.provider).toBe("anthropic");
+      expect(result!.model).toBe("claude-sonnet-4");
+      expect(result!.resetModelAfterTurn).toBe(true);
+    });
+
+    it("routes simple messages to fast model (not orchestrator)", () => {
+      const result = routeMessage({ message: "hey", routing, orchestrator });
+      expect(result).toBeDefined();
+      expect(result!.complexity).toBe("simple");
+      expect(result!.orchestrated).toBeUndefined();
+      expect(result!.provider).toBe("ollama");
+    });
+
+    it("routes moderate messages to local model (not orchestrator)", () => {
+      const result = routeMessage({
+        message: "show me the weather",
+        routing,
+        orchestrator,
+      });
+      expect(result).toBeDefined();
+      expect(result!.complexity).toBe("moderate");
+      expect(result!.orchestrated).toBeUndefined();
+    });
+  });
+
+  describe("always strategy", () => {
+    const alwaysOrch: AgentOrchestratorConfig = {
+      ...orchestrator,
+      strategy: "always",
+    };
+
+    it("routes ALL messages to orchestrator", () => {
+      // Even simple messages go to orchestrator.
+      const result = routeMessage({
+        message: "hey",
+        routing,
+        orchestrator: alwaysOrch,
+      });
+      expect(result).toBeDefined();
+      expect(result!.orchestrated).toBe(true);
+      expect(result!.provider).toBe("anthropic");
+      expect(result!.resetModelAfterTurn).toBe(true);
+    });
+
+    it("routes moderate messages to orchestrator", () => {
+      const result = routeMessage({
+        message: "show me the weather",
+        routing,
+        orchestrator: alwaysOrch,
+      });
+      expect(result!.orchestrated).toBe(true);
+    });
+  });
+
+  describe("fallback-only strategy", () => {
+    const fallbackOrch: AgentOrchestratorConfig = {
+      ...orchestrator,
+      strategy: "fallback-only",
+    };
+
+    it("routes complex messages to default (no orchestrator override)", () => {
+      const result = routeMessage({
+        message: "refactor the authentication middleware to use JWT",
+        routing,
+        orchestrator: fallbackOrch,
+      });
+      expect(result).toBeDefined();
+      expect(result!.complexity).toBe("complex");
+      expect(result!.orchestrated).toBeUndefined();
+      expect(result!.provider).toBeUndefined();
+    });
+
+    it("routes simple messages to fast model normally", () => {
+      const result = routeMessage({
+        message: "hey",
+        routing,
+        orchestrator: fallbackOrch,
+      });
+      expect(result!.complexity).toBe("simple");
+      expect(result!.provider).toBe("ollama");
+    });
+  });
+
+  describe("orchestrator disabled or missing", () => {
+    it("returns no orchestrator override when disabled", () => {
+      const result = routeMessage({
+        message: "refactor the auth module",
+        routing,
+        orchestrator: { enabled: false, model: "anthropic/claude-sonnet-4" },
+      });
+      expect(result!.orchestrated).toBeUndefined();
+    });
+
+    it("returns no orchestrator override when no model configured", () => {
+      const result = routeMessage({
+        message: "refactor the auth module",
+        routing,
+        orchestrator: { enabled: true },
+      });
+      expect(result!.orchestrated).toBeUndefined();
+    });
+
+    it("returns no orchestrator override when orchestrator is undefined", () => {
+      const result = routeMessage({
+        message: "refactor the auth module",
+        routing,
+      });
+      expect(result!.orchestrated).toBeUndefined();
+    });
+  });
+
+  describe("resetModelAfterTurn", () => {
+    it("is true when orchestrator is used", () => {
+      const result = routeMessage({
+        message: "refactor the auth module",
+        routing,
+        orchestrator,
+      });
+      expect(result!.resetModelAfterTurn).toBe(true);
+    });
+
+    it("is undefined when orchestrator is not used", () => {
+      const result = routeMessage({
+        message: "hey",
+        routing,
+        orchestrator,
+      });
+      expect(result!.resetModelAfterTurn).toBeUndefined();
+    });
+  });
+});
+
+describe("routeAlwaysOrchestrator", () => {
+  it("returns route when strategy is always and enabled", () => {
+    const result = routeAlwaysOrchestrator({
+      enabled: true,
+      model: "anthropic/claude-sonnet-4",
+      strategy: "always",
+    });
+    expect(result).toBeDefined();
+    expect(result!.provider).toBe("anthropic");
+    expect(result!.orchestrated).toBe(true);
+  });
+
+  it("returns undefined when strategy is auto", () => {
+    expect(
+      routeAlwaysOrchestrator({
+        enabled: true,
+        model: "anthropic/claude-sonnet-4",
+        strategy: "auto",
+      }),
+    ).toBeUndefined();
+  });
+
+  it("returns undefined when disabled", () => {
+    expect(
+      routeAlwaysOrchestrator({
+        enabled: false,
+        model: "anthropic/claude-sonnet-4",
+        strategy: "always",
+      }),
+    ).toBeUndefined();
+  });
+
+  it("returns undefined when no model", () => {
+    expect(routeAlwaysOrchestrator({ enabled: true, strategy: "always" })).toBeUndefined();
   });
 });
