@@ -24,6 +24,7 @@ import {
 } from "../../../config/sessions.js";
 import { logVerbose, shouldLogVerbose } from "../../../globals.js";
 import type { getChildLogger } from "../../../logging.js";
+import { transcribeFirstAudio } from "../../../media-understanding/audio-preflight.js";
 import { getAgentScopedMediaLocalRoots } from "../../../media/local-roots.js";
 import { readChannelAllowFromStore } from "../../../pairing/pairing-store.js";
 import type { resolveAgentRoute } from "../../../routing/resolve-route.js";
@@ -45,6 +46,8 @@ export type GroupHistoryEntry = {
   timestamp?: number;
   id?: string;
   senderJid?: string;
+  mediaPath?: string;
+  mediaType?: string;
 };
 
 function normalizeAllowFromE164(values: Array<string | number> | undefined): string[] {
@@ -108,6 +111,32 @@ async function resolveWhatsAppCommandAuthorized(params: {
   return normalizeAllowFromE164(allowFrom).includes(senderE164);
 }
 
+const MEDIA_PLACEHOLDER_RE = /^<media:[^>]+>/;
+
+async function resolveHistoryAudioBodies(
+  history: GroupHistoryEntry[],
+  cfg: ReturnType<typeof loadConfig>,
+): Promise<GroupHistoryEntry[]> {
+  if (!history.some((e) => e.mediaPath && MEDIA_PLACEHOLDER_RE.test(e.body.trim()))) {
+    return history;
+  }
+  return Promise.all(
+    history.map(async (entry) => {
+      if (!entry.mediaPath || !MEDIA_PLACEHOLDER_RE.test(entry.body.trim())) {
+        return entry;
+      }
+      const transcript = await transcribeFirstAudio({
+        ctx: { MediaPath: entry.mediaPath, MediaType: entry.mediaType },
+        cfg,
+      }).catch(() => undefined);
+      if (!transcript) {
+        return entry;
+      }
+      return { ...entry, body: transcript };
+    }),
+  );
+}
+
 export async function processMessage(params: {
   cfg: ReturnType<typeof loadConfig>;
   msg: WebInboundMsg;
@@ -153,9 +182,12 @@ export async function processMessage(params: {
     envelope: envelopeOptions,
   });
   let shouldClearGroupHistory = false;
+  let history: GroupHistoryEntry[] = [];
 
   if (params.msg.chatType === "group") {
-    const history = params.groupHistory ?? params.groupHistories.get(params.groupHistoryKey) ?? [];
+    const rawHistory =
+      params.groupHistory ?? params.groupHistories.get(params.groupHistoryKey) ?? [];
+    history = await resolveHistoryAudioBodies(rawHistory, params.cfg);
     if (history.length > 0) {
       const historyEntries: HistoryEntry[] = history.map((m) => ({
         sender: m.sender,
@@ -275,13 +307,11 @@ export async function processMessage(params: {
 
   const inboundHistory =
     params.msg.chatType === "group"
-      ? (params.groupHistory ?? params.groupHistories.get(params.groupHistoryKey) ?? []).map(
-          (entry) => ({
-            sender: entry.sender,
-            body: entry.body,
-            timestamp: entry.timestamp,
-          }),
-        )
+      ? history.map((entry) => ({
+          sender: entry.sender,
+          body: entry.body,
+          timestamp: entry.timestamp,
+        }))
       : undefined;
 
   const ctxPayload = finalizeInboundContext({

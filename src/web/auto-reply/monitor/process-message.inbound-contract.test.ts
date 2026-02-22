@@ -22,8 +22,11 @@ function makeProcessMessageArgs(params: {
   routeSessionKey: string;
   groupHistoryKey: string;
   cfg?: unknown;
-  groupHistories?: Map<string, Array<{ sender: string; body: string }>>;
-  groupHistory?: Array<{ sender: string; body: string }>;
+  groupHistories?: Map<
+    string,
+    Array<{ sender: string; body: string; mediaPath?: string; mediaType?: string }>
+  >;
+  groupHistory?: Array<{ sender: string; body: string; mediaPath?: string; mediaType?: string }>;
 }) {
   return {
     // oxlint-disable-next-line typescript/no-explicit-any
@@ -56,6 +59,10 @@ function makeProcessMessageArgs(params: {
   } as any;
 }
 
+vi.mock("../../../media-understanding/audio-preflight.js", () => ({
+  transcribeFirstAudio: vi.fn(async () => undefined),
+}));
+
 vi.mock("../../../auto-reply/reply/provider-dispatcher.js", () => ({
   // oxlint-disable-next-line typescript/no-explicit-any
   dispatchReplyWithBufferedBlockDispatcher: vi.fn(async (params: any) => {
@@ -75,6 +82,7 @@ vi.mock("./last-route.js", () => ({
   updateLastRouteInBackground: vi.fn(),
 }));
 
+import { transcribeFirstAudio } from "../../../media-understanding/audio-preflight.js";
 import { processMessage } from "./process-message.js";
 
 describe("web processMessage inbound contract", () => {
@@ -228,5 +236,39 @@ describe("web processMessage inbound contract", () => {
     );
 
     expect(groupHistories.get("whatsapp:default:group:123@g.us") ?? []).toHaveLength(0);
+  });
+
+  it("transcribes audio entries in group history before building context", async () => {
+    capturedCtx = undefined;
+
+    vi.mocked(transcribeFirstAudio).mockResolvedValueOnce("hello from voice note");
+
+    await processMessage(
+      makeProcessMessageArgs({
+        routeSessionKey: "agent:main:whatsapp:group:grp1",
+        groupHistoryKey: "grp1@g.us",
+        groupHistory: [
+          {
+            sender: "Alice (+1)",
+            body: "<media:audio>",
+            mediaPath: "/tmp/fake-audio.ogg",
+            mediaType: "audio/ogg",
+          },
+        ],
+        msg: {
+          id: "msg1",
+          from: "grp1@g.us",
+          to: "+2",
+          chatType: "group",
+          body: "@bot what did she say?",
+          senderName: "Bob",
+          senderE164: "+2",
+        },
+      }),
+    );
+
+    // oxlint-disable-next-line typescript/no-explicit-any
+    const ctx = capturedCtx as any;
+    expect(ctx.InboundHistory[0].body).toBe("hello from voice note");
   });
 });
