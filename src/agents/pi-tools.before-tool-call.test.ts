@@ -6,13 +6,19 @@ import {
 } from "../infra/diagnostic-events.js";
 import { resetDiagnosticSessionStateForTest } from "../logging/diagnostic-session-state.js";
 import { getGlobalHookRunner } from "../plugins/hook-runner-global.js";
-import { wrapToolWithBeforeToolCallHook } from "./pi-tools.before-tool-call.js";
+import { checkCommandAutonomy } from "../security/autonomy-enforcement.js";
+import {
+  runBeforeToolCallHook,
+  wrapToolWithBeforeToolCallHook,
+} from "./pi-tools.before-tool-call.js";
 import { CRITICAL_THRESHOLD, GLOBAL_CIRCUIT_BREAKER_THRESHOLD } from "./tool-loop-detection.js";
 import type { AnyAgentTool } from "./tools/common.js";
 
 vi.mock("../plugins/hook-runner-global.js");
+vi.mock("../security/autonomy-enforcement.js");
 
 const mockGetGlobalHookRunner = vi.mocked(getGlobalHookRunner);
+const mockCheckCommandAutonomy = vi.mocked(checkCommandAutonomy);
 
 describe("before_tool_call loop detection behavior", () => {
   let hookRunner: {
@@ -41,6 +47,7 @@ describe("before_tool_call loop detection behavior", () => {
     // oxlint-disable-next-line typescript/no-explicit-any
     mockGetGlobalHookRunner.mockReturnValue(hookRunner as any);
     hookRunner.hasHooks.mockReturnValue(false);
+    mockCheckCommandAutonomy.mockReturnValue(null);
   });
 
   function createWrappedTool(
@@ -307,5 +314,70 @@ describe("before_tool_call loop detection behavior", () => {
       expect(loopEvent?.count).toBe(CRITICAL_THRESHOLD);
       expect(loopEvent?.toolName).toBe("process");
     });
+  });
+});
+
+describe("autonomy enforcement wiring", () => {
+  beforeEach(() => {
+    mockCheckCommandAutonomy.mockReset();
+    mockGetGlobalHookRunner.mockReturnValue(null);
+  });
+
+  it("blocks tool call when autonomy check returns blocked", async () => {
+    mockCheckCommandAutonomy.mockReturnValue({
+      blocked: true,
+      reason: "Command 'rm -rf /' blocked by readonly mode",
+    });
+
+    const outcome = await runBeforeToolCallHook({
+      toolName: "exec",
+      params: { command: "rm -rf /" },
+    });
+
+    expect(outcome.blocked).toBe(true);
+    expect(outcome).toHaveProperty("reason");
+    if (outcome.blocked) {
+      expect(outcome.reason).toContain("readonly mode");
+    }
+  });
+
+  it("allows tool call when autonomy check returns not blocked", async () => {
+    mockCheckCommandAutonomy.mockReturnValue({ blocked: false });
+
+    const outcome = await runBeforeToolCallHook({
+      toolName: "exec",
+      params: { command: "echo hello" },
+    });
+
+    expect(outcome.blocked).toBe(false);
+  });
+
+  it("allows tool call when autonomy check returns null (non-exec tool)", async () => {
+    mockCheckCommandAutonomy.mockReturnValue(null);
+
+    const outcome = await runBeforeToolCallHook({
+      toolName: "read_file",
+      params: { path: "/tmp/file.txt" },
+    });
+
+    expect(outcome.blocked).toBe(false);
+  });
+
+  it("passes config from hook context to autonomy check", async () => {
+    mockCheckCommandAutonomy.mockReturnValue(null);
+
+    const config = { security: { level: "readonly" as const } };
+    await runBeforeToolCallHook({
+      toolName: "exec",
+      params: { command: "ls" },
+      ctx: { config: config as never },
+    });
+
+    expect(mockCheckCommandAutonomy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        toolName: "exec",
+        config,
+      }),
+    );
   });
 });
