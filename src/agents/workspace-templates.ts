@@ -1,7 +1,9 @@
+import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { resolveMinionPackageRoot } from "../infra/minion-root.js";
 import { pathExists } from "../utils.js";
+import { EMBEDDED_TEMPLATES } from "./embedded-templates.generated.js";
 
 const FALLBACK_TEMPLATE_DIR = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -56,4 +58,24 @@ export async function resolveWorkspaceTemplateDir(opts?: {
 export function resetWorkspaceTemplateDirCache() {
   cachedTemplateDir = undefined;
   resolvingTemplateDir = undefined;
+}
+
+/**
+ * Read a workspace template file, falling back to embedded templates
+ * when the filesystem template is unavailable.
+ */
+export async function readWorkspaceTemplate(name: string): Promise<string | undefined> {
+  try {
+    const dir = await resolveWorkspaceTemplateDir();
+    const filePath = path.join(dir, name);
+    if (await pathExists(filePath)) {
+      return await fs.readFile(filePath, "utf-8");
+    }
+  } catch {
+    // Filesystem unavailable — fall through to embedded
+  }
+
+  // Fallback to embedded templates
+  const embedded = EMBEDDED_TEMPLATES[name];
+  return embedded ?? undefined;
 }

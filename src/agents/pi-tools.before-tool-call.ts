@@ -1,7 +1,9 @@
+import type { MinionConfig } from "../config/config.js";
 import type { ToolLoopDetectionConfig } from "../config/types.tools.js";
 import type { SessionState } from "../logging/diagnostic-session-state.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { getGlobalHookRunner } from "../plugins/hook-runner-global.js";
+import { checkCommandAutonomy } from "../security/autonomy-enforcement.js";
 import { isPlainObject } from "../utils.js";
 import { normalizeToolName } from "./tool-policy.js";
 import type { AnyAgentTool } from "./tools/common.js";
@@ -10,6 +12,8 @@ export type HookContext = {
   agentId?: string;
   sessionKey?: string;
   loopDetection?: ToolLoopDetectionConfig;
+  /** Config for autonomy enforcement checks on exec/shell tools. */
+  config?: MinionConfig;
 };
 
 type HookOutcome = { blocked: true; reason: string } | { blocked: false; params: unknown };
@@ -130,6 +134,18 @@ export async function runBeforeToolCallHook(args: {
     }
 
     recordToolCall(sessionState, toolName, params, args.toolCallId, args.ctx.loopDetection);
+  }
+
+  // ── Autonomy enforcement ────────────────────────────────────────────────
+  // Check exec/shell tools against the configured autonomy mode (full/supervised/readonly).
+  const autonomyResult = checkCommandAutonomy({
+    toolName,
+    toolParams: params,
+    config: args.ctx?.config,
+  });
+  if (autonomyResult?.blocked) {
+    log.warn(`[autonomy] Blocked ${toolName}: ${autonomyResult.reason}`);
+    return { blocked: true, reason: autonomyResult.reason };
   }
 
   const hookRunner = getGlobalHookRunner();

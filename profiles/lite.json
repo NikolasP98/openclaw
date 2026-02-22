@@ -1,0 +1,52 @@
+{
+  "$schema": "../docs/config-schema.json",
+  "_description": "Lite profile — minimal resource footprint for constrained environments. Disables optional features, reduces concurrency, and uses conservative defaults.",
+  "logging": {
+    "level": "warn",
+    "consoleLevel": "error"
+  },
+  "agents": {
+    "defaults": {
+      "contextTokens": 8192,
+      "maxConcurrent": 1,
+      "bootstrapMaxChars": 5000,
+      "bootstrapTotalMaxChars": 20000,
+      "thinkingDefault": "off",
+      "verboseDefault": "off",
+      "blockStreamingDefault": "off",
+      "typingMode": "never",
+      "compaction": {
+        "mode": "safeguard",
+        "maxHistoryShare": 0.3
+      },
+      "subagents": {
+        "maxConcurrent": 1,
+        "maxSpawnDepth": 1,
+        "maxChildrenPerAgent": 2
+      },
+      "memorySearch": {
+        "mode": "off"
+      }
+    }
+  },
+  "browser": {
+    "enabled": false
+  },
+  "memory": {
+    "backend": "builtin"
+  },
+  "discovery": {
+    "wideArea": {
+      "enabled": false
+    },
+    "mdns": {
+      "mode": "off"
+    }
+  },
+  "canvasHost": {
+    "enabled": false
+  },
+  "web": {
+    "enabled": false
+  }
+}
