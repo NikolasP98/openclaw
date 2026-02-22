@@ -13,6 +13,7 @@ import { checkInboundAccessControl } from "./access-control.js";
 import { isRecentInboundMessage } from "./dedupe.js";
 import {
   describeReplyContext,
+  extractQuotedAudioMessage,
   extractLocationData,
   extractMediaPlaceholder,
   extractMentionedJids,
@@ -251,6 +252,38 @@ export async function monitorWebInbox(options: {
       }
       const replyContext = describeReplyContext(msg.message as proto.IMessage | undefined);
 
+      let replyToMediaPath: string | undefined;
+      let replyToMediaType: string | undefined;
+      const quotedAudio = extractQuotedAudioMessage(msg.message as proto.IMessage | undefined);
+      if (quotedAudio) {
+        try {
+          const maxMb =
+            typeof options.mediaMaxMb === "number" && options.mediaMaxMb > 0
+              ? options.mediaMaxMb
+              : 50;
+          const maxBytes = maxMb * 1024 * 1024;
+          const mimetype = quotedAudio.audioMessage?.mimetype ?? "audio/ogg; codecs=opus";
+          const { downloadMediaMessage } = await import("@whiskeysockets/baileys");
+          const buffer = await downloadMediaMessage(
+            { message: quotedAudio } as import("@whiskeysockets/baileys").WAMessage,
+            "buffer",
+            {},
+            { reuploadRequest: sock.updateMediaMessage, logger: sock.logger },
+          ).catch(() => undefined);
+          if (buffer) {
+            const saved = await saveMediaBuffer(buffer, mimetype, "inbound-reply", maxBytes).catch(
+              () => undefined,
+            );
+            if (saved) {
+              replyToMediaPath = saved.path;
+              replyToMediaType = mimetype;
+            }
+          }
+        } catch (err) {
+          logVerbose(`Quoted audio download failed: ${String(err)}`);
+        }
+      }
+
       let mediaPath: string | undefined;
       let mediaType: string | undefined;
       let mediaFileName: string | undefined;
@@ -318,6 +351,8 @@ export async function monitorWebInbox(options: {
         replyToSender: replyContext?.sender,
         replyToSenderJid: replyContext?.senderJid,
         replyToSenderE164: replyContext?.senderE164,
+        replyToMediaPath,
+        replyToMediaType,
         groupSubject,
         groupParticipants,
         mentionedJids: mentionedJids ?? undefined,
