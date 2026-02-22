@@ -1,4 +1,5 @@
 import type { OpenClawConfig } from "../config/config.js";
+import { modelFitsContext } from "../providers/model-catalog.js";
 import {
   ensureAuthProfileStore,
   getSoonestCooldownExpiry,
@@ -180,6 +181,8 @@ function resolveFallbackCandidates(params: {
   model: string;
   /** Optional explicit fallbacks list; when provided (even empty), replaces agents.defaults.model.fallbacks. */
   fallbacksOverride?: string[];
+  /** Estimated context tokens for the current conversation — filters out models with insufficient context windows. */
+  estimatedContextTokens?: number;
 }): ModelCandidate[] {
   const primary = params.cfg
     ? resolveConfiguredModelRef({
@@ -233,6 +236,17 @@ function resolveFallbackCandidates(params: {
 
   if (params.fallbacksOverride === undefined && primary?.provider && primary.model) {
     addCandidate({ provider: primary.provider, model: primary.model }, false);
+  }
+
+  // Filter by context window when estimated context tokens are provided.
+  if (params.estimatedContextTokens && params.estimatedContextTokens > 0) {
+    const filtered = candidates.filter((c) =>
+      modelFitsContext(c.model, params.estimatedContextTokens!),
+    );
+    // Only apply filter if it leaves at least one candidate (fail-open).
+    if (filtered.length > 0) {
+      return filtered;
+    }
   }
 
   return candidates;
@@ -289,6 +303,8 @@ export async function runWithModelFallback<T>(params: {
   agentDir?: string;
   /** Optional explicit fallbacks list; when provided (even empty), replaces agents.defaults.model.fallbacks. */
   fallbacksOverride?: string[];
+  /** Estimated context tokens — used to filter out models with insufficient context windows. */
+  estimatedContextTokens?: number;
   run: (provider: string, model: string) => Promise<T>;
   onError?: ModelFallbackErrorHandler;
 }): Promise<ModelFallbackRunResult<T>> {
@@ -297,6 +313,7 @@ export async function runWithModelFallback<T>(params: {
     provider: params.provider,
     model: params.model,
     fallbacksOverride: params.fallbacksOverride,
+    estimatedContextTokens: params.estimatedContextTokens,
   });
   const authStore = params.cfg
     ? ensureAuthProfileStore(params.agentDir, { allowKeychainPrompt: false })

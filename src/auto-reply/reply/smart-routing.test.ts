@@ -2,11 +2,17 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  _sessionPinInternals,
+  applyProfileBias,
   classifyMessage,
+  clearAllSessionPins,
   FAST_CHAT_SYSTEM_PROMPT,
+  getSessionPin,
+  pinSession,
   readMemorySnapshot,
   routeAlwaysOrchestrator,
   routeMessage,
+  unpinSession,
   type AgentOrchestratorConfig,
   type AgentRoutingConfig,
 } from "./smart-routing.js";
@@ -448,6 +454,91 @@ describe("orchestrator dispatch", () => {
   });
 });
 
+// ── applyProfileBias ──────────────────────────────────────────────────────────
+
+describe("applyProfileBias", () => {
+  it("balanced profile does not change complexity", () => {
+    expect(applyProfileBias("simple", "balanced")).toBe("simple");
+    expect(applyProfileBias("moderate", "balanced")).toBe("moderate");
+    expect(applyProfileBias("complex", "balanced")).toBe("complex");
+  });
+
+  it("undefined profile behaves as balanced", () => {
+    expect(applyProfileBias("moderate", undefined)).toBe("moderate");
+  });
+
+  it("cost-optimized downgrades tiers", () => {
+    expect(applyProfileBias("simple", "cost-optimized")).toBe("simple");
+    expect(applyProfileBias("moderate", "cost-optimized")).toBe("simple");
+    expect(applyProfileBias("complex", "cost-optimized")).toBe("moderate");
+  });
+
+  it("quality-first upgrades tiers", () => {
+    expect(applyProfileBias("simple", "quality-first")).toBe("moderate");
+    expect(applyProfileBias("moderate", "quality-first")).toBe("complex");
+    expect(applyProfileBias("complex", "quality-first")).toBe("complex");
+  });
+
+  it("local-only caps at moderate", () => {
+    expect(applyProfileBias("simple", "local-only")).toBe("simple");
+    expect(applyProfileBias("moderate", "local-only")).toBe("moderate");
+    expect(applyProfileBias("complex", "local-only")).toBe("moderate");
+  });
+});
+
+// ── Profile-aware routing ─────────────────────────────────────────────────────
+
+describe("routeMessage with profiles", () => {
+  const routing: AgentRoutingConfig = {
+    enabled: true,
+    fastModel: "ollama/qwen3:1.7b",
+    localModel: "ollama/gemma3:12b",
+  };
+
+  it("cost-optimized routes moderate messages to fast model", () => {
+    const result = routeMessage({
+      message: "show me the logs",
+      routing: { ...routing, profile: "cost-optimized" },
+    });
+    expect(result).toBeDefined();
+    expect(result!.complexity).toBe("simple");
+    expect(result!.model).toBe("qwen3:1.7b");
+  });
+
+  it("quality-first routes simple messages to local model", () => {
+    const result = routeMessage({
+      message: "hey",
+      routing: { ...routing, profile: "quality-first" },
+    });
+    expect(result).toBeDefined();
+    expect(result!.complexity).toBe("moderate");
+    expect(result!.model).toBe("gemma3:12b");
+  });
+
+  it("local-only routes complex messages to local model (downgrades to moderate tier)", () => {
+    const result = routeMessage({
+      message: "refactor the auth module",
+      routing: { ...routing, profile: "local-only" },
+    });
+    expect(result).toBeDefined();
+    // local-only downgrades complex → moderate, routed to local model
+    expect(result!.complexity).toBe("moderate");
+    expect(result!.provider).toBe("ollama");
+    expect(result!.model).toBe("gemma3:12b");
+  });
+
+  it("local-only skips orchestrator always-route", () => {
+    const result = routeMessage({
+      message: "hey",
+      routing: { ...routing, profile: "local-only" },
+      orchestrator: { enabled: true, model: "anthropic/claude-sonnet-4", strategy: "always" },
+    });
+    expect(result).toBeDefined();
+    expect(result!.orchestrated).toBeUndefined();
+    expect(result!.provider).toBe("ollama");
+  });
+});
+
 describe("routeAlwaysOrchestrator", () => {
   it("returns route when strategy is always and enabled", () => {
     const result = routeAlwaysOrchestrator({
@@ -482,5 +573,66 @@ describe("routeAlwaysOrchestrator", () => {
 
   it("returns undefined when no model", () => {
     expect(routeAlwaysOrchestrator({ enabled: true, strategy: "always" })).toBeUndefined();
+  });
+});
+
+// ── Session Pinning ──────────────────────────────────────────────────────────
+
+describe("session pinning", () => {
+  afterEach(() => {
+    clearAllSessionPins();
+  });
+
+  it("pins a session to a routing result", () => {
+    const result = routeMessage({
+      message: "hey",
+      routing: { enabled: true, fastModel: "ollama/qwen3:1.7b" },
+    })!;
+    pinSession("session-1", result);
+
+    const pin = getSessionPin("session-1");
+    expect(pin).toBeDefined();
+    expect(pin!.provider).toBe("ollama");
+    expect(pin!.model).toBe("qwen3:1.7b");
+    expect(pin!.complexity).toBe("simple");
+    expect(pin!.pinnedAt).toBeGreaterThan(0);
+  });
+
+  it("does not pin when result has no provider/model", () => {
+    pinSession("session-2", { complexity: "complex", disableTools: false });
+    expect(getSessionPin("session-2")).toBeUndefined();
+  });
+
+  it("unpins a session", () => {
+    pinSession("session-3", {
+      complexity: "simple",
+      provider: "ollama",
+      model: "qwen3:1.7b",
+      disableTools: true,
+    });
+    expect(unpinSession("session-3")).toBe(true);
+    expect(getSessionPin("session-3")).toBeUndefined();
+  });
+
+  it("unpinSession returns false for unknown session", () => {
+    expect(unpinSession("nonexistent")).toBe(false);
+  });
+
+  it("clearAllSessionPins clears all pins", () => {
+    pinSession("s1", { complexity: "simple", provider: "a", model: "b", disableTools: false });
+    pinSession("s2", { complexity: "moderate", provider: "c", model: "d", disableTools: false });
+    clearAllSessionPins();
+    expect(getSessionPin("s1")).toBeUndefined();
+    expect(getSessionPin("s2")).toBeUndefined();
+    expect(_sessionPinInternals.sessionPins.size).toBe(0);
+  });
+
+  it("overwrites existing pin on re-pin", () => {
+    pinSession("s1", { complexity: "simple", provider: "a", model: "b", disableTools: false });
+    pinSession("s1", { complexity: "complex", provider: "x", model: "y", disableTools: false });
+    const pin = getSessionPin("s1");
+    expect(pin!.provider).toBe("x");
+    expect(pin!.model).toBe("y");
+    expect(pin!.complexity).toBe("complex");
   });
 });
