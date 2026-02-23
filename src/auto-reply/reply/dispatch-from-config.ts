@@ -192,6 +192,8 @@ export async function dispatchReplyFromConfig(params: {
           channelId,
           accountId: ctx.AccountId,
           conversationId,
+          sessionKey: sessionKey ?? undefined,
+          agentId: sessionKey ? resolveSessionAgentId({ sessionKey, config: cfg }) : undefined,
         },
       )
       .catch((err) => {

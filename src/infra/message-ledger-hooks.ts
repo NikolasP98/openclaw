@@ -2,6 +2,7 @@ import type { PluginRegistry } from "../plugins/registry.js";
 import type {
   PluginHookMessageContext,
   PluginHookMessageInboundEvent,
+  PluginHookMessageReceivedEvent,
   PluginHookMessageSentEvent,
 } from "../plugins/types.js";
 import {
@@ -9,6 +10,7 @@ import {
   openMessageLedger,
   recordInboundMessage,
   recordOutboundMessage,
+  updateInboundSessionInfo,
 } from "./message-ledger.js";
 
 const PLUGIN_ID = "minion:message-ledger";
@@ -36,6 +38,14 @@ export function registerMessageLedgerHooks(registry: PluginRegistry, dbPath: str
       hookName: "message_inbound",
       handler: (event: PluginHookMessageInboundEvent) => {
         recordInboundMessage(event);
+      },
+      source: "internal",
+    },
+    {
+      pluginId: PLUGIN_ID,
+      hookName: "message_received",
+      handler: (_event: PluginHookMessageReceivedEvent, ctx: PluginHookMessageContext) => {
+        updateInboundSessionInfo(ctx);
       },
       source: "internal",
     },

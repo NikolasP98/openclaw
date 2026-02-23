@@ -470,6 +470,7 @@ async function deliverOutboundPayloadsCore(
               channelId: channel,
               accountId: accountId ?? undefined,
               conversationId: to,
+              sessionKey: sessionKeyForInternalHooks ?? undefined,
             },
           )
           .catch(() => {});

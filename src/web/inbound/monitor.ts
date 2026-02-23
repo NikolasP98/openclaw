@@ -7,6 +7,7 @@ import { recordChannelActivity } from "../../infra/channel-activity.js";
 import { getChildLogger } from "../../logging/logger.js";
 import { createSubsystemLogger } from "../../logging/subsystem.js";
 import { saveMediaBuffer } from "../../media/store.js";
+import { getGlobalHookRunner } from "../../plugins/hook-runner-global.js";
 import { jidToE164, resolveJidToE164 } from "../../utils.js";
 import { createWaSocket, getStatusCode, waitForWaConnection } from "../session.js";
 import { checkInboundAccessControl } from "./access-control.js";
@@ -87,6 +88,29 @@ export async function monitorWebInbox(options: {
       if (!last) {
         return;
       }
+
+      // Fire message_inbound hook for each raw entry before any filtering
+      const hookRunner = getGlobalHookRunner();
+      if (hookRunner?.hasHooks("message_inbound")) {
+        for (const entry of entries) {
+          void hookRunner.runMessageInbound(
+            {
+              channel: "whatsapp",
+              accountId: entry.accountId,
+              chatId: entry.chatId,
+              senderId: entry.senderE164 ?? entry.senderJid,
+              senderName: entry.senderName ?? entry.pushName,
+              isBot: false,
+              isGroup: entry.chatType === "group",
+              content: entry.body,
+              messageId: entry.id,
+              timestamp: entry.timestamp,
+            },
+            { channelId: "whatsapp", accountId: entry.accountId },
+          );
+        }
+      }
+
       if (entries.length === 1) {
         await options.onMessage(last);
         return;
