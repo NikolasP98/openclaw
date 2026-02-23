@@ -139,6 +139,10 @@ export function recordOutboundMessage(
 /**
  * Update the most recent inbound row for a chat with the resolved session key
  * and agent ID. Called from the `message_received` hook which fires post-routing.
+ *
+ * Note: message_inbound stores channel-native chat IDs (e.g. WhatsApp JID)
+ * while message_received uses normalised identifiers (e.g. E.164). We match
+ * on channel + account_id + recency instead of chat_id to avoid mismatches.
  */
 export function updateInboundSessionInfo(ctx: PluginHookMessageContext): void {
   if (!db || !ctx.sessionKey) {
@@ -152,17 +156,21 @@ export function updateInboundSessionInfo(ctx: PluginHookMessageContext): void {
         SELECT id FROM messages
         WHERE direction = 'inbound'
           AND channel = ?
-          AND chat_id = ?
+          AND account_id = ?
+          AND session_key IS NULL
+          AND created_at > ?
         ORDER BY id DESC
         LIMIT 1
       )
-      AND session_key IS NULL
     `);
+    // 30-second window — message_received fires shortly after message_inbound
+    const cutoff = Date.now() - 30_000;
     stmt.run(
       ctx.sessionKey,
       ctx.agentId ?? null,
       ctx.channelId ?? null,
-      ctx.conversationId ?? null,
+      ctx.accountId ?? null,
+      cutoff,
     );
   } catch {
     // fire-and-forget — never block the message pipeline
