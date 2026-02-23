@@ -263,6 +263,22 @@ export async function doctorCommand(
     }
   }
 
+  // Browser profile sanity: warn when headless but defaultProfile is "chrome" (extension relay)
+  if (
+    cfg.browser?.enabled !== false &&
+    cfg.browser?.headless === true &&
+    cfg.browser?.defaultProfile === "chrome"
+  ) {
+    note(
+      [
+        'browser.headless is true but browser.defaultProfile is "chrome" (extension relay).',
+        "The extension relay requires a desktop Chrome with the Minion extension — it will always fail on headless servers.",
+        'Fix: set "browser.defaultProfile": "minion" in your config, or remove the explicit override to use the new auto-detection.',
+      ].join("\n"),
+      "Browser",
+    );
+  }
+
   noteWorkspaceStatus(cfg);
   await noteMemorySearchHealth(cfg);
 

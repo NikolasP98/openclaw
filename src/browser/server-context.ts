@@ -286,8 +286,11 @@ function createProfileContext(
         return;
       }
       // Relay server is up, but no attached tab yet. Prompt user to attach.
+      const hint = current.resolved.headless
+        ? ` On headless servers, set "browser.defaultProfile": "minion" in your config to use Playwright instead.`
+        : ` Click the Minion Chrome extension icon on a tab to attach it.`;
       throw new Error(
-        `Chrome extension relay is running, but no tab is connected. Click the OpenClaw Chrome extension icon on a tab to attach it (profile "${profile.name}").`,
+        `Chrome extension relay is running, but no tab is connected (profile "${profile.name}").${hint}`,
       );
     }
 
