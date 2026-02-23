@@ -1,3 +1,4 @@
+import { resolveAgentDir } from "../../../agents/agent-scope.js";
 import { resolveIdentityNamePrefix } from "../../../agents/identity.js";
 import { resolveChunkMode, resolveTextChunkLimit } from "../../../auto-reply/chunk.js";
 import { shouldComputeCommandAuthorized } from "../../../auto-reply/command-detection.js";
@@ -116,6 +117,7 @@ const MEDIA_PLACEHOLDER_RE = /^<media:[^>]+>/;
 async function resolveHistoryAudioBodies(
   history: GroupHistoryEntry[],
   cfg: ReturnType<typeof loadConfig>,
+  agentDir?: string,
 ): Promise<GroupHistoryEntry[]> {
   if (!history.some((e) => e.mediaPath && MEDIA_PLACEHOLDER_RE.test(e.body.trim()))) {
     return history;
@@ -128,6 +130,7 @@ async function resolveHistoryAudioBodies(
       const transcript = await transcribeFirstAudio({
         ctx: { MediaPath: entry.mediaPath, MediaType: entry.mediaType },
         cfg,
+        agentDir,
       }).catch(() => undefined);
       if (!transcript) {
         return entry;
@@ -166,6 +169,7 @@ export async function processMessage(params: {
   suppressGroupHistoryClear?: boolean;
 }) {
   const conversationId = params.msg.conversationId ?? params.msg.from;
+  const agentDir = resolveAgentDir(params.cfg, params.route.agentId);
   const storePath = resolveStorePath(params.cfg.session?.store, {
     agentId: params.route.agentId,
   });
@@ -183,6 +187,7 @@ export async function processMessage(params: {
     const transcript = await transcribeFirstAudio({
       ctx: { MediaPath: params.msg.replyToMediaPath, MediaType: params.msg.replyToMediaType },
       cfg: params.cfg,
+      agentDir,
     }).catch(() => undefined);
     if (transcript) {
       params.msg.replyToBody = transcript;
@@ -201,7 +206,7 @@ export async function processMessage(params: {
   if (params.msg.chatType === "group") {
     const rawHistory =
       params.groupHistory ?? params.groupHistories.get(params.groupHistoryKey) ?? [];
-    history = await resolveHistoryAudioBodies(rawHistory, params.cfg);
+    history = await resolveHistoryAudioBodies(rawHistory, params.cfg, agentDir);
     if (history.length > 0) {
       const historyEntries: HistoryEntry[] = history.map((m) => ({
         sender: m.sender,

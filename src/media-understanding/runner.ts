@@ -15,6 +15,7 @@ import type {
   MediaUnderstandingModelConfig,
 } from "../config/types.tools.js";
 import { logVerbose, shouldLogVerbose } from "../globals.js";
+import { getLogger } from "../logging/logger.js";
 import { runExec } from "../process/exec.js";
 import { MediaAttachmentCache, normalizeAttachments, selectAttachments } from "./attachments.js";
 import {
@@ -626,9 +627,10 @@ async function runAttachmentEntries(params: {
           reason: String(err),
         }),
       );
-      if (shouldLogVerbose()) {
-        logVerbose(`${capability} understanding failed: ${String(err)}`);
-      }
+      getLogger().warn(
+        { capability, provider: entry.provider, model: entry.model },
+        `media understanding failed: ${String(err)}`,
+      );
     }
   }
 
