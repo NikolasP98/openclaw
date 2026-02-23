@@ -5,6 +5,7 @@ import { wrapWebContent } from "../../security/external-content.js";
 import { normalizeSecretInput } from "../../utils/normalize-secret-input.js";
 import type { AnyAgentTool } from "./common.js";
 import { jsonResult, readNumberParam, readStringParam } from "./common.js";
+import { isBrowserSearchAvailable, runBrowserSearch } from "./web-search-browser.js";
 import {
   CacheEntry,
   DEFAULT_CACHE_TTL_MINUTES,
@@ -740,10 +741,31 @@ export function createWebSearchTool(options?: {
             ? resolveGrokApiKey(grokConfig)
             : resolveSearchApiKey(search);
 
+      const params = args as Record<string, unknown>;
       if (!apiKey) {
+        const browserFallbackEnabled = search?.browserFallback !== false;
+        if (browserFallbackEnabled && isBrowserSearchAvailable()) {
+          try {
+            const result = await runBrowserSearch({
+              query: readStringParam(params, "query", { required: true }),
+              count: resolveSearchCount(
+                readNumberParam(params, "count", { integer: true }) ??
+                  search?.maxResults ??
+                  undefined,
+                DEFAULT_SEARCH_COUNT,
+              ),
+              cacheTtlMs: resolveCacheTtlMs(search?.cacheTtlMinutes, DEFAULT_CACHE_TTL_MINUTES),
+            });
+            return jsonResult(result);
+          } catch (browserErr) {
+            return jsonResult({
+              ...missingSearchKeyPayload(provider),
+              browserFallbackError: String(browserErr),
+            });
+          }
+        }
         return jsonResult(missingSearchKeyPayload(provider));
       }
-      const params = args as Record<string, unknown>;
       const query = readStringParam(params, "query", { required: true });
       const count =
         readNumberParam(params, "count", { integer: true }) ?? search?.maxResults ?? undefined;
