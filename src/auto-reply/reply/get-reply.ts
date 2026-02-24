@@ -106,7 +106,7 @@ export async function getReplyFromConfig(
   });
   const workspaceDir = workspace.dir;
   const agentDir = resolveAgentDir(cfg, agentId);
-  const timeoutMs = resolveAgentTimeoutMs({ cfg, overrideSeconds: opts?.timeoutOverrideSeconds });
+  let timeoutMs = resolveAgentTimeoutMs({ cfg, overrideSeconds: opts?.timeoutOverrideSeconds });
   const configuredTypingSeconds =
     agentCfg?.typingIntervalSeconds ?? sessionCfg?.typingIntervalSeconds;
   const typingIntervalSeconds =
@@ -261,6 +261,10 @@ export async function getReplyFromConfig(
   }
   if (smartRoute?.contextTokensCap) {
     contextTokens = Math.min(contextTokens, smartRoute.contextTokensCap);
+  }
+  // B.3: Override timeout when smart routing specifies a tier-specific timeout.
+  if (smartRoute?.timeoutMs) {
+    timeoutMs = smartRoute.timeoutMs;
   }
   const smartRouteDisableTools = smartRoute?.disableTools ?? false;
   // ── End smart routing ───────────────────────────────────────────────────

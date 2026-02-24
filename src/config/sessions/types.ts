@@ -101,6 +101,8 @@ export type SessionEntry = {
   lastThreadId?: string | number;
   skillsSnapshot?: SessionSkillSnapshot;
   systemPromptReport?: SessionSystemPromptReport;
+  /** Timestamp (ms) when the last inbound user message was received (persisted before agent loop). */
+  lastInboundAt?: number;
   /** Path to Google OAuth credentials file for this session */
   gogCredentialsFile?: string;
   /** Associated Google account email */

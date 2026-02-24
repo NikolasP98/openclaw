@@ -165,6 +165,7 @@ describe("routeMessage", () => {
       model: "qwen3:1.7b",
       disableTools: true,
       contextTokensCap: 4096,
+      timeoutMs: 600_000,
     });
   });
 
@@ -175,6 +176,7 @@ describe("routeMessage", () => {
       provider: "ollama",
       model: "gemma3:12b",
       disableTools: false,
+      timeoutMs: 600_000,
     });
   });
 

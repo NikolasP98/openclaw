@@ -14,6 +14,7 @@ import {
   resolveSessionFilePathOptions,
   type SessionEntry,
   updateSessionStore,
+  updateSessionStoreEntry,
 } from "../../config/sessions.js";
 import { logVerbose } from "../../globals.js";
 import { clearCommandLane, getQueueSize } from "../../process/command-queue.js";
@@ -451,6 +452,19 @@ export async function runPreparedReply(
       ...(isReasoningTagProvider(provider) ? { enforceFinalTag: true } : {}),
     },
   };
+
+  // A.12: Persist user message metadata to session store before entering the
+  // agent loop so the inbound message survives agent crashes.
+  if (storePath && sessionKey && sessionEntry) {
+    await updateSessionStoreEntry({
+      storePath,
+      sessionKey,
+      update: async () => ({
+        updatedAt: Date.now(),
+        lastInboundAt: Date.now(),
+      }),
+    });
+  }
 
   return runReplyAgent({
     commandBody: prefixedCommandBody,
