@@ -27,12 +27,26 @@ export function limitHistoryTurns(
     if (messages[i].role === "user") {
       userCount++;
       if (userCount > limit) {
-        return messages.slice(lastUserIndex);
+        return trimOrphanedLeadingTools(messages.slice(lastUserIndex));
       }
       lastUserIndex = i;
     }
   }
   return messages;
+}
+
+/**
+ * If the first message in a sliced history is an orphaned tool result
+ * (no preceding tool_use), skip forward to the first user message.
+ */
+function trimOrphanedLeadingTools(msgs: AgentMessage[]): AgentMessage[] {
+  if (msgs.length === 0 || msgs[0].role === "user") {
+    return msgs;
+  }
+  const firstUserIdx = msgs.findIndex((m) => m.role === "user");
+  if (firstUserIdx > 0) return msgs.slice(firstUserIdx);
+  if (firstUserIdx === -1) return []; // all orphaned, degenerate case
+  return msgs;
 }
 
 /**
