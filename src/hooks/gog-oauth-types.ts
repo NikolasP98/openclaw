@@ -48,6 +48,14 @@ export interface PendingOAuthFlow {
 }
 
 /**
+ * Discriminated result from getValidCredentials — lets callers distinguish
+ * "no credentials at all" from "credentials exist but refresh failed".
+ */
+export type CredentialResult =
+  | { credentials: GogCredentials; error?: undefined }
+  | { credentials: null; error: string; refreshFailed: boolean };
+
+/**
  * Stored Google credentials
  */
 export interface GogCredentials {
@@ -134,6 +142,8 @@ export interface OAuthStatusResult {
   expiresAt?: number;
   /** Whether there's a pending auth flow */
   pending?: boolean;
+  /** Error detail when credentials exist but refresh failed */
+  error?: string;
 }
 
 /**

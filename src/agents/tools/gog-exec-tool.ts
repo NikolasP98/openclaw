@@ -59,13 +59,14 @@ export function createGogExecTool(opts?: { agentId?: string; sessionKey?: string
       }
 
       // Get valid credentials (auto-refreshes if expired)
-      const credentials = await getValidCredentials(opts.agentId, opts.sessionKey);
-      if (!credentials) {
-        return jsonResult({
-          error:
-            "Not authenticated with Google. Use gog_auth_start first to authorize, then retry.",
-        });
+      const credResult = await getValidCredentials(opts.agentId, opts.sessionKey);
+      if (!credResult.credentials) {
+        const detail = credResult.refreshFailed
+          ? `Google token refresh failed: ${credResult.error}. Re-authenticate with gog_auth_start.`
+          : "Not authenticated with Google. Use gog_auth_start first to authorize, then retry.";
+        return jsonResult({ error: detail });
       }
+      const credentials = credResult.credentials;
 
       // Parse command string into args (respects quoted strings)
       const commandArgs = parseCommandArgs(command);
@@ -94,11 +95,11 @@ export function createGogExecTool(opts?: { agentId?: string; sessionKey?: string
 
       // Just-in-time token sync: ensure gog CLI keyring has current tokens
       // This self-heals if a prior sync failed (e.g. typo, version mismatch, crash)
+      // Non-fatal: some gog commands may work without keyring sync (e.g. token passed via env)
       const syncResult = await importTokensToGogKeyring(credentials, env);
+      let keyringSyncWarning: string | undefined;
       if (!syncResult.success) {
-        return jsonResult({
-          error: `Failed to sync tokens to gog CLI keyring: ${syncResult.error}. The gog CLI cannot authenticate without this step.`,
-        });
+        keyringSyncWarning = `Keyring sync failed: ${syncResult.error}. The gog command will still be attempted.`;
       }
 
       // Execute gog command
@@ -120,6 +121,7 @@ export function createGogExecTool(opts?: { agentId?: string; sessionKey?: string
           error: `gog exited with code ${result.code}`,
           stdout: result.stdout,
           stderr: result.stderr,
+          keyringSyncWarning,
         });
       }
 
@@ -141,6 +143,7 @@ export function createGogExecTool(opts?: { agentId?: string; sessionKey?: string
       return jsonResult({
         stdout: result.stdout,
         stderr: result.stderr || undefined,
+        keyringSyncWarning,
       });
     },
   };

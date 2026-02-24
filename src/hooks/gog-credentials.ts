@@ -10,7 +10,7 @@ import path from "path";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { runCommandWithTimeout } from "../process/exec.js";
 import { extractGogClientCredentials } from "./gmail-setup-utils.js";
-import type { GogCredentials, TokenRefreshResponse } from "./gog-oauth-types.js";
+import type { CredentialResult, GogCredentials, TokenRefreshResponse } from "./gog-oauth-types.js";
 
 const log = createSubsystemLogger("gog-credentials");
 
@@ -226,31 +226,38 @@ export function isTokenExpired(credentials: GogCredentials): boolean {
 }
 
 /**
- * Get valid credentials, refreshing if necessary
+ * Get valid credentials, refreshing if necessary.
+ * Returns a discriminated CredentialResult so callers can distinguish
+ * "no credentials" from "refresh failed" and surface actionable errors.
  */
 export async function getValidCredentials(
   agentId: string,
   sessionKey: string,
   email?: string,
-): Promise<GogCredentials | null> {
+): Promise<CredentialResult> {
   const credentials = await loadSessionCredentials(agentId, sessionKey, email);
 
   if (!credentials) {
-    return null;
+    return {
+      credentials: null,
+      error: "No Google credentials found for this session",
+      refreshFailed: false,
+    };
   }
 
   // Refresh if expired
   if (isTokenExpired(credentials)) {
     try {
-      return await refreshAccessToken(credentials);
+      const refreshed = await refreshAccessToken(credentials);
+      return { credentials: refreshed };
     } catch (error) {
-      console.error("Failed to refresh token:", error);
-      // Return null so caller can prompt for re-authentication
-      return null;
+      const msg = error instanceof Error ? error.message : String(error);
+      log.warn(`Token refresh failed: ${msg}`);
+      return { credentials: null, error: msg, refreshFailed: true };
     }
   }
 
-  return credentials;
+  return { credentials };
 }
 
 /**
@@ -445,14 +452,17 @@ export async function importTokensToGogKeyring(
 
 /**
  * Sync OAuth tokens to gog CLI keyring so `gog gmail ...` commands work.
- * Best-effort: logs errors but never throws.
+ * Best-effort: logs errors but never throws. Returns result so callers can
+ * surface warnings to the user.
  */
-export async function syncToGogKeyring(credentials: GogCredentials): Promise<void> {
+export async function syncToGogKeyring(
+  credentials: GogCredentials,
+): Promise<{ success: boolean; error?: string }> {
   try {
     // Check if gog binary is available
     const gogCheck = await runCommandWithTimeout(["which", "gog"], { timeoutMs: 2_000 });
     if (gogCheck.code !== 0) {
-      return; // gog CLI not installed, skip silently
+      return { success: false, error: "gog CLI not installed" };
     }
 
     // Verify gog version supports `auth tokens` (plural, requires >= v0.11.0)
@@ -462,16 +472,17 @@ export async function syncToGogKeyring(credentials: GogCredentials): Promise<voi
       if (match) {
         const [, major, minor] = match.map(Number);
         if (major === 0 && minor < 11) {
-          log.warn(
-            `gog CLI v${major}.${minor} is too old for 'auth tokens import' (requires >= v0.11.0). Skipping keyring sync.`,
-          );
-          return;
+          const msg = `gog CLI v${major}.${minor} is too old for 'auth tokens import' (requires >= v0.11.0)`;
+          log.warn(`${msg}. Skipping keyring sync.`);
+          return { success: false, error: msg };
         }
       }
     }
 
-    await importTokensToGogKeyring(credentials);
+    return await importTokensToGogKeyring(credentials);
   } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
     console.warn("[gog-credentials] Failed to sync tokens to gog CLI keyring:", error);
+    return { success: false, error: msg };
   }
 }

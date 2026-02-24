@@ -247,8 +247,8 @@ async function handleCallback(
     // Save credentials
     const credPath = await saveSessionCredentials(credentials);
 
-    // Best-effort sync to gog CLI keyring
-    await syncToGogKeyring(credentials);
+    // Best-effort sync to gog CLI keyring — capture result for notification
+    const syncResult = await syncToGogKeyring(credentials);
 
     // Update session entry
     const storePath = resolveDefaultSessionStorePath(flow.agentId);
@@ -262,8 +262,14 @@ async function handleCallback(
       }
     });
 
-    // Notify user of success
-    await notifyAuthSuccess(flow.sessionKey, flow.agentId, flow.email, flow.services);
+    // Notify user of success (include keyring sync warning if applicable)
+    await notifyAuthSuccess(
+      flow.sessionKey,
+      flow.agentId,
+      flow.email,
+      flow.services,
+      syncResult.success ? undefined : syncResult.error,
+    );
 
     return {
       status: 200,

@@ -40,7 +40,7 @@ export async function executeGogCommand(
 
   // Try to load session credentials if sessionKey is provided
   if (context.sessionKey) {
-    const credentials = await getValidCredentials(
+    const { credentials } = await getValidCredentials(
       context.agentId,
       context.sessionKey,
       context.email,
@@ -79,7 +79,7 @@ export async function buildGogEnvironment(context: GogCommandContext): Promise<N
   const extraEnv: Record<string, string> = {};
 
   if (context.sessionKey) {
-    const credentials = await getValidCredentials(
+    const { credentials } = await getValidCredentials(
       context.agentId,
       context.sessionKey,
       context.email,
@@ -104,7 +104,11 @@ export async function addAccountFlag(
     return args;
   }
 
-  const credentials = await getValidCredentials(context.agentId, context.sessionKey, context.email);
+  const { credentials } = await getValidCredentials(
+    context.agentId,
+    context.sessionKey,
+    context.email,
+  );
 
   if (!credentials) {
     return args;

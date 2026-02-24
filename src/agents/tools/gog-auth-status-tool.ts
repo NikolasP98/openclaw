@@ -3,10 +3,10 @@
  */
 
 import { Type } from "@sinclair/typebox";
-import type { OAuthStatusResult } from "../../hooks/gog-oauth-types.js";
-import type { AnyAgentTool } from "./common.js";
 import { loadSessionStore } from "../../config/sessions.js";
 import { getValidCredentials } from "../../hooks/gog-credentials.js";
+import type { OAuthStatusResult } from "../../hooks/gog-oauth-types.js";
+import type { AnyAgentTool } from "./common.js";
 import { jsonResult } from "./common.js";
 
 const GogAuthStatusSchema = Type.Object({});
@@ -34,12 +34,13 @@ export function createGogAuthStatusTool(opts?: {
       const hasPendingAuth = !!session?.gogAuthPending;
 
       // Try to load valid credentials
-      const credentials = await getValidCredentials(opts.agentId, opts.sessionKey);
+      const credResult = await getValidCredentials(opts.agentId, opts.sessionKey);
 
-      if (!credentials) {
+      if (!credResult.credentials) {
         const result: OAuthStatusResult = {
           authenticated: false,
           pending: hasPendingAuth,
+          error: credResult.error,
         };
         return jsonResult(result);
       }
@@ -47,9 +48,9 @@ export function createGogAuthStatusTool(opts?: {
       // Return status with credentials info
       const result: OAuthStatusResult = {
         authenticated: true,
-        email: credentials.email,
-        services: credentials.services,
-        expiresAt: credentials.expiresAt,
+        email: credResult.credentials.email,
+        services: credResult.credentials.services,
+        expiresAt: credResult.credentials.expiresAt,
         pending: false,
       };
 
