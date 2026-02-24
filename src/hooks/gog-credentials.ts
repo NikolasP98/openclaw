@@ -420,6 +420,7 @@ export async function importTokensToGogKeyring(
   const tmpDir = os.tmpdir();
   const tmpFile = path.join(tmpDir, `gog-token-import-${Date.now()}.json`);
   const tokenData = {
+    email: credentials.email,
     access_token: credentials.accessToken,
     refresh_token: credentials.refreshToken,
     token_type: "Bearer",
