@@ -49,6 +49,10 @@ export type AgentOrchestratorConfig = {
   strategy?: "auto" | "always" | "fallback-only";
 };
 
+/** B.3: Default timeouts for local model tiers. */
+const LOCAL_TIER_TIMEOUT_MS = 240_000; // 4 min when fallback model available
+const LOCAL_ONLY_TIER_TIMEOUT_MS = 600_000; // 10 min when no cloud fallback
+
 export type SmartRoutingResult = {
   complexity: MessageComplexity;
   /** Provider override (undefined = use default). */
@@ -59,6 +63,8 @@ export type SmartRoutingResult = {
   disableTools: boolean;
   /** Context token cap override (undefined = use default). */
   contextTokensCap?: number;
+  /** Timeout in ms for the LLM call. When exceeded, caller should escalate to fallback. */
+  timeoutMs?: number;
   /**
    * When true, the caller should reset the model back to the local/fast
    * tier after this turn completes. Prevents a single complex message from
@@ -381,6 +387,9 @@ export function routeMessage(params: {
 
   const fastRef = parseModelRef(routing.fastModel);
   const localRef = parseModelRef(routing.localModel);
+  // B.3: Pick timeout based on whether a cloud fallback exists.
+  const hasFallback = Boolean(params.orchestrator?.enabled && params.orchestrator.model);
+  const localTimeoutMs = hasFallback ? LOCAL_TIER_TIMEOUT_MS : LOCAL_ONLY_TIER_TIMEOUT_MS;
 
   switch (complexity) {
     case "simple": {
@@ -394,6 +403,7 @@ export function routeMessage(params: {
         model: fastRef.model,
         disableTools: true,
         contextTokensCap: routing.fastModelContextTokens ?? DEFAULT_FAST_CONTEXT_TOKENS,
+        timeoutMs: localTimeoutMs,
       };
     }
 
@@ -407,6 +417,7 @@ export function routeMessage(params: {
         provider: localRef.provider,
         model: localRef.model,
         disableTools: false,
+        timeoutMs: localTimeoutMs,
       };
     }
 

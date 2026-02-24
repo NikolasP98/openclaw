@@ -388,6 +388,15 @@ export function createExecTool(
         containerWorkdir = resolved.containerWorkdir;
       } else {
         workdir = resolveWorkdir(rawWorkdir, warnings);
+        // A.13: Validate working_dir stays inside workspace root (non-sandbox path).
+        if (params.workdir && defaults?.cwd) {
+          const { isRealPathInside } = await import("../security/scan-paths.js");
+          if (!isRealPathInside(defaults.cwd, workdir)) {
+            throw new Error(
+              `working_dir escapes workspace: "${params.workdir}" resolves outside "${defaults.cwd}"`,
+            );
+          }
+        }
       }
 
       const baseEnv = coerceEnv(process.env);
