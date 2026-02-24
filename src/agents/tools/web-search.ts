@@ -19,7 +19,7 @@ import {
   writeCache,
 } from "./web-shared.js";
 
-const SEARCH_PROVIDERS = ["brave", "perplexity", "grok"] as const;
+const SEARCH_PROVIDERS = ["brave", "gemini", "perplexity", "grok"] as const;
 const DEFAULT_SEARCH_COUNT = 5;
 const MAX_SEARCH_COUNT = 10;
 
@@ -198,6 +198,14 @@ function missingSearchKeyPayload(provider: (typeof SEARCH_PROVIDERS)[number]) {
       docs: "https://docs.openclaw.ai/tools/web",
     };
   }
+  if (provider === "gemini") {
+    return {
+      error: "missing_google_api_key",
+      message:
+        "web_search (gemini) needs a Google API key. Set GOOGLE_API_KEY in the Gateway environment, or configure tools.web.search.gemini.apiKey.",
+      docs: "https://docs.openclaw.ai/tools/web",
+    };
+  }
   if (provider === "grok") {
     return {
       error: "missing_xai_api_key",
@@ -221,11 +229,21 @@ function resolveSearchProvider(search?: WebSearchConfig): (typeof SEARCH_PROVIDE
   if (raw === "perplexity") {
     return "perplexity";
   }
+  if (raw === "gemini") {
+    return "gemini";
+  }
   if (raw === "grok") {
     return "grok";
   }
   if (raw === "brave") {
     return "brave";
+  }
+  // Auto-detection priority: brave (if key) → gemini (if key) → perplexity → grok → brave
+  if (normalizeApiKey(process.env.BRAVE_API_KEY)) {
+    return "brave";
+  }
+  if (normalizeApiKey(process.env.GOOGLE_API_KEY)) {
+    return "gemini";
   }
   return "brave";
 }
@@ -366,6 +384,93 @@ function resolveGrokModel(grok?: GrokConfig): string {
 
 function resolveGrokInlineCitations(grok?: GrokConfig): boolean {
   return grok?.inlineCitations === true;
+}
+
+// ── Gemini Google Search Grounding ─────────────────────────────────────────
+
+const GEMINI_API_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
+const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash";
+
+type GeminiConfig = {
+  apiKey?: string;
+  model?: string;
+};
+
+type GeminiSearchResponse = {
+  candidates?: Array<{
+    content?: {
+      parts?: Array<{ text?: string }>;
+    };
+    groundingMetadata?: {
+      searchEntryPoint?: { renderedContent?: string };
+      groundingChunks?: Array<{
+        web?: { uri?: string; title?: string };
+      }>;
+      webSearchQueries?: string[];
+    };
+  }>;
+};
+
+function resolveGeminiConfig(search?: WebSearchConfig): GeminiConfig {
+  if (!search || typeof search !== "object") {
+    return {};
+  }
+  const gemini = "gemini" in search ? search.gemini : undefined;
+  if (!gemini || typeof gemini !== "object") {
+    return {};
+  }
+  return gemini as GeminiConfig;
+}
+
+function resolveGeminiApiKey(gemini?: GeminiConfig): string | undefined {
+  const fromConfig = normalizeApiKey(gemini?.apiKey);
+  if (fromConfig) {
+    return fromConfig;
+  }
+  const fromEnv = normalizeApiKey(process.env.GOOGLE_API_KEY);
+  return fromEnv || undefined;
+}
+
+function resolveGeminiModel(gemini?: GeminiConfig): string {
+  const fromConfig =
+    gemini && "model" in gemini && typeof gemini.model === "string" ? gemini.model.trim() : "";
+  return fromConfig || DEFAULT_GEMINI_MODEL;
+}
+
+async function runGeminiSearch(params: {
+  query: string;
+  apiKey: string;
+  model: string;
+  timeoutSeconds: number;
+}): Promise<{ content: string; citations: string[] }> {
+  const endpoint = `${GEMINI_API_ENDPOINT}/${params.model}:generateContent?key=${params.apiKey}`;
+
+  const body = {
+    contents: [{ parts: [{ text: params.query }] }],
+    tools: [{ googleSearch: {} }],
+  };
+
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal: withTimeout(undefined, params.timeoutSeconds * 1000),
+  });
+
+  if (!res.ok) {
+    const detailResult = await readResponseText(res, { maxBytes: 64_000 });
+    const detail = detailResult.text;
+    throw new Error(`Gemini API error (${res.status}): ${detail || res.statusText}`);
+  }
+
+  const data = (await res.json()) as GeminiSearchResponse;
+  const candidate = data.candidates?.[0];
+  const text = candidate?.content?.parts?.map((p) => p.text).join("") ?? "No response";
+  const citations = (candidate?.groundingMetadata?.groundingChunks ?? [])
+    .map((chunk) => chunk.web?.uri)
+    .filter((uri): uri is string => !!uri);
+
+  return { content: text, citations: [...new Set(citations)] };
 }
 
 function resolveSearchCount(value: unknown, fallback: number): number {
@@ -567,13 +672,16 @@ async function runWebSearch(params: {
   perplexityModel?: string;
   grokModel?: string;
   grokInlineCitations?: boolean;
+  geminiModel?: string;
 }): Promise<Record<string, unknown>> {
   const cacheKey = normalizeCacheKey(
     params.provider === "brave"
       ? `${params.provider}:${params.query}:${params.count}:${params.country || "default"}:${params.search_lang || "default"}:${params.ui_lang || "default"}:${params.freshness || "default"}`
       : params.provider === "perplexity"
         ? `${params.provider}:${params.query}:${params.perplexityBaseUrl ?? DEFAULT_PERPLEXITY_BASE_URL}:${params.perplexityModel ?? DEFAULT_PERPLEXITY_MODEL}:${params.freshness || "default"}`
-        : `${params.provider}:${params.query}:${params.grokModel ?? DEFAULT_GROK_MODEL}:${String(params.grokInlineCitations ?? false)}`,
+        : params.provider === "gemini"
+          ? `${params.provider}:${params.query}:${params.geminiModel ?? DEFAULT_GEMINI_MODEL}`
+          : `${params.provider}:${params.query}:${params.grokModel ?? DEFAULT_GROK_MODEL}:${String(params.grokInlineCitations ?? false)}`,
   );
   const cached = readCache(SEARCH_CACHE, cacheKey);
   if (cached) {
@@ -633,6 +741,32 @@ async function runWebSearch(params: {
       content: wrapWebContent(content),
       citations,
       inlineCitations,
+    };
+    writeCache(SEARCH_CACHE, cacheKey, payload, params.cacheTtlMs);
+    return payload;
+  }
+
+  if (params.provider === "gemini") {
+    const { content, citations } = await runGeminiSearch({
+      query: params.query,
+      apiKey: params.apiKey,
+      model: params.geminiModel ?? DEFAULT_GEMINI_MODEL,
+      timeoutSeconds: params.timeoutSeconds,
+    });
+
+    const payload = {
+      query: params.query,
+      provider: params.provider,
+      model: params.geminiModel ?? DEFAULT_GEMINI_MODEL,
+      tookMs: Date.now() - start,
+      externalContent: {
+        untrusted: true,
+        source: "web_search",
+        provider: params.provider,
+        wrapped: true,
+      },
+      content: wrapWebContent(content),
+      citations,
     };
     writeCache(SEARCH_CACHE, cacheKey, payload, params.cacheTtlMs);
     return payload;
@@ -718,13 +852,16 @@ export function createWebSearchTool(options?: {
   const provider = resolveSearchProvider(search);
   const perplexityConfig = resolvePerplexityConfig(search);
   const grokConfig = resolveGrokConfig(search);
+  const geminiConfig = resolveGeminiConfig(search);
 
   const description =
     provider === "perplexity"
       ? "Search the web using Perplexity Sonar (direct or via OpenRouter). Returns AI-synthesized answers with citations from real-time web search."
-      : provider === "grok"
-        ? "Search the web using xAI Grok. Returns AI-synthesized answers with citations from real-time web search."
-        : "Search the web using Brave Search API. Supports region-specific and localized search via country and language parameters. Returns titles, URLs, and snippets for fast research.";
+      : provider === "gemini"
+        ? "Search the web using Google Gemini with Search grounding. Returns AI-synthesized answers with citations from Google Search."
+        : provider === "grok"
+          ? "Search the web using xAI Grok. Returns AI-synthesized answers with citations from real-time web search."
+          : "Search the web using Brave Search API. Supports region-specific and localized search via country and language parameters. Returns titles, URLs, and snippets for fast research.";
 
   return {
     label: "Web Search",
@@ -737,9 +874,11 @@ export function createWebSearchTool(options?: {
       const apiKey =
         provider === "perplexity"
           ? perplexityAuth?.apiKey
-          : provider === "grok"
-            ? resolveGrokApiKey(grokConfig)
-            : resolveSearchApiKey(search);
+          : provider === "gemini"
+            ? resolveGeminiApiKey(geminiConfig)
+            : provider === "grok"
+              ? resolveGrokApiKey(grokConfig)
+              : resolveSearchApiKey(search);
 
       const params = args as Record<string, unknown>;
       if (!apiKey) {
@@ -808,6 +947,7 @@ export function createWebSearchTool(options?: {
         perplexityModel: resolvePerplexityModel(perplexityConfig),
         grokModel: resolveGrokModel(grokConfig),
         grokInlineCitations: resolveGrokInlineCitations(grokConfig),
+        geminiModel: resolveGeminiModel(geminiConfig),
       });
       return jsonResult(result);
     },
