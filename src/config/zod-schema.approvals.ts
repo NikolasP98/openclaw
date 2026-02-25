@@ -20,9 +20,25 @@ const ExecApprovalForwardingSchema = z
   .strict()
   .optional();
 
+const ApprovalGateModeSchema = z
+  .union([z.literal("auto"), z.literal("confirm"), z.literal("admin-only")])
+  .optional();
+
+const ApprovalGateCategorySchema = z
+  .object({
+    shell: ApprovalGateModeSchema,
+    file_write: ApprovalGateModeSchema,
+    network: ApprovalGateModeSchema,
+    database: ApprovalGateModeSchema,
+    timeoutMs: z.number().int().positive().optional(),
+  })
+  .strict()
+  .optional();
+
 export const ApprovalsSchema = z
   .object({
     exec: ExecApprovalForwardingSchema,
+    gate: ApprovalGateCategorySchema,
   })
   .strict()
   .optional();
