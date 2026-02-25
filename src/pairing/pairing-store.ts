@@ -8,6 +8,7 @@ import { resolveOAuthDir, resolveStateDir } from "../config/paths.js";
 import { withFileLock as withPathLock } from "../infra/file-lock.js";
 import { resolveRequiredHomeDir } from "../infra/home-dir.js";
 import { readJsonFileWithFallback, writeJsonFileAtomically } from "../plugin-sdk/json-store.js";
+import { hashToken, migrateToken, verifyToken } from "./token-hash.js";
 
 const PAIRING_CODE_LENGTH = 8;
 const PAIRING_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -193,10 +194,15 @@ function randomCode(): string {
   return out;
 }
 
-function generateUniqueCode(existing: Set<string>): string {
+/**
+ * Generate a unique pairing code not already in the set of stored code hashes.
+ * `existingHashes` contains SHA-256 hashes (or legacy plaintext) of pending codes.
+ */
+function generateUniqueCode(existingHashes: Set<string>): string {
   for (let attempt = 0; attempt < 500; attempt += 1) {
     const code = randomCode();
-    if (!existing.has(code)) {
+    const { hash } = migrateToken(code);
+    if (!existingHashes.has(hash)) {
       return code;
     }
   }
@@ -473,22 +479,19 @@ export async function upsertChannelPairingRequest(params: {
       );
       reqs = prunedExpired;
       const existingIdx = reqs.findIndex((r) => r.id === id);
+      // Build a set of existing code hashes for collision detection.
+      // Migrates any legacy plaintext codes to hashes on the fly.
       const existingCodes = new Set(
-        reqs.map((req) =>
-          String(req.code ?? "")
-            .trim()
-            .toUpperCase(),
-        ),
+        reqs.map((req) => migrateToken(String(req.code ?? "").trim()).hash),
       );
 
       if (existingIdx >= 0) {
         const existing = reqs[existingIdx];
-        const existingCode =
-          existing && typeof existing.code === "string" ? existing.code.trim() : "";
-        const code = existingCode || generateUniqueCode(existingCodes);
+        // Generate a fresh code — stored value is a hash so we can't recover the original.
+        const code = generateUniqueCode(existingCodes);
         const next: PairingRequest = {
           id,
-          code,
+          code: hashToken(code),
           createdAt: existing?.createdAt ?? now,
           lastSeenAt: now,
           meta: meta ?? existing?.meta,
@@ -519,7 +522,7 @@ export async function upsertChannelPairingRequest(params: {
       const code = generateUniqueCode(existingCodes);
       const next: PairingRequest = {
         id,
-        code,
+        code: hashToken(code),
         createdAt: now,
         lastSeenAt: now,
         ...(meta ? { meta } : {}),
@@ -553,7 +556,10 @@ export async function approveChannelPairingCode(params: {
       const { requests: pruned, removed } = await readPrunedPairingRequests(filePath);
       const normalizedAccountId = normalizePairingAccountId(params.accountId);
       const idx = pruned.findIndex((r) => {
-        if (String(r.code ?? "").toUpperCase() !== code) {
+        const storedValue = String(r.code ?? "").trim();
+        // Migrate legacy plaintext codes to hash for comparison.
+        const { hash: storedHash } = migrateToken(storedValue);
+        if (!verifyToken(code, storedHash)) {
           return false;
         }
         return requestMatchesAccountId(r, normalizedAccountId);
