@@ -268,16 +268,20 @@ load_defaults() {
     log_debug "Loading defaults from $defaults_file"
 
     if command -v yq &> /dev/null; then
-        # Use yq for proper YAML parsing
-        PNPM_VERSION="${PNPM_VERSION:-$(yq '.system.pnpm_version // ""' "$defaults_file")}"
-        NODE_VERSION="${NODE_VERSION:-$(yq '.system.node_version // ""' "$defaults_file")}"
-        GATEWAY_PORT="${GATEWAY_PORT:-$(yq '.gateway.port_start // ""' "$defaults_file")}"
-        GATEWAY_BIND="${GATEWAY_BIND:-$(yq '.gateway.bind // ""' "$defaults_file")}"
-        INSTALL_METHOD="${INSTALL_METHOD:-$(yq '.install.method // ""' "$defaults_file")}"
-        PACKAGE_NAME="${PACKAGE_NAME:-$(yq '.install.package_name // ""' "$defaults_file")}"
-        PACKAGE_MANAGER="${PACKAGE_MANAGER:-$(yq '.install.package_manager // ""' "$defaults_file")}"
-        SANDBOX_MODE="${SANDBOX_MODE:-$(yq '.security.sandbox_mode // ""' "$defaults_file")}"
-        DM_POLICY="${DM_POLICY:-$(yq '.security.dm_policy // ""' "$defaults_file")}"
+        # Use yq for proper YAML parsing.
+        # -r = raw output (no surrounding quotes, compatible with yq v3 and v4).
+        # head -1 = guard against multi-document YAML files returning multiple lines.
+        _yq() { yq -r "${1} // \"\"" "$defaults_file" 2>/dev/null | head -1; }
+        PNPM_VERSION="${PNPM_VERSION:-$(_yq '.system.pnpm_version')}"
+        NODE_VERSION="${NODE_VERSION:-$(_yq '.system.node_version')}"
+        GATEWAY_PORT="${GATEWAY_PORT:-$(_yq '.gateway.port_start')}"
+        GATEWAY_BIND="${GATEWAY_BIND:-$(_yq '.gateway.bind')}"
+        INSTALL_METHOD="${INSTALL_METHOD:-$(_yq '.install.method')}"
+        PACKAGE_NAME="${PACKAGE_NAME:-$(_yq '.install.package_name')}"
+        PACKAGE_MANAGER="${PACKAGE_MANAGER:-$(_yq '.install.package_manager')}"
+        SANDBOX_MODE="${SANDBOX_MODE:-$(_yq '.security.sandbox_mode')}"
+        DM_POLICY="${DM_POLICY:-$(_yq '.security.dm_policy')}"
+        unset -f _yq
     else
         # Fallback: section-aware grep-based extraction for key defaults.
         # Searches for "key:" under a specific top-level "section:" header

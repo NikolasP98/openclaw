@@ -41,12 +41,14 @@ source "${SCRIPT_DIR}/lib/logging.sh"
 source "${SCRIPT_DIR}/lib/variables.sh"
 source "${SCRIPT_DIR}/lib/network.sh"
 source "${SCRIPT_DIR}/lib/templates.sh"
+source "${SCRIPT_DIR}/lib/interactive.sh"
 
 # Load defaults from config/defaults.yaml (before CLI args, so args can override)
 load_defaults
 
 # Default values
 DRY_RUN=false
+NON_INTERACTIVE=false
 SKIP_PHASES=()
 START_FROM_PHASE=""
 PROFILE=""
@@ -108,6 +110,7 @@ System:
     --node-method=METHOD    Node.js install method: apt, nvm, skip (default: apt)
 
 Execution:
+    --non-interactive       Skip the interactive wizard; all values must be provided via flags
     --dry-run               Show what would be done without executing
     --skip-phase=PHASE      Skip specific phase (can be repeated)
     --start-from=PHASE      Start from specific phase (resume deployment)
@@ -116,20 +119,30 @@ Execution:
     --help                  Show this help message
 
 Examples:
-    # Package install (default — fast, no build step)
-    ./setup/setup.sh --api-key=sk-ant-xxx --agent-name=mybot
+    # Interactive mode (default — wizard prompts for all settings)
+    ./setup/setup.sh
 
-    # Package install with pnpm
-    ./setup/setup.sh --api-key=sk-ant-xxx --pkg-manager=pnpm
+    # Interactive with a pre-filled API key (wizard shows it as default)
+    ./setup/setup.sh --api-key=sk-ant-xxx
 
-    # Source install (git clone + build)
-    ./setup/setup.sh --install-method=source --api-key=sk-ant-xxx
+    # Non-interactive (for agent-driven provisioning — all values via flags)
+    ./setup/setup.sh --non-interactive \
+       --vps-hostname=server.example.com \
+       --agent-name=mybot \
+       --api-key=sk-ant-xxx \
+       --gateway-port=18789
 
-    # Remote mode (from local machine to VPS via SSH)
-    ./setup/setup.sh --vps-hostname=server.example.com \
-       --profile=customer-support --api-key=sk-ant-xxx
+    # Non-interactive with Google OAuth (Tailscale Funnel)
+    ./setup/setup.sh --non-interactive \
+       --vps-hostname=server.example.com \
+       --api-key=sk-ant-xxx \
+       --tailscale-funnel \
+       --tailscale-key=tskey-xxx
 
-    # Update existing install
+    # Non-interactive with source install
+    ./setup/setup.sh --non-interactive --install-method=source --api-key=sk-ant-xxx
+
+    # Update existing install (always non-interactive)
     ./setup/setup.sh --update --verbose
 
     # Decommission (stop services, free disk, preserve config)
@@ -238,6 +251,9 @@ parse_args() {
                 ;;
             --node-method=*)
                 NODE_INSTALL_METHOD="${1#*=}"
+                ;;
+            --non-interactive)
+                NON_INTERACTIVE=true
                 ;;
             --dry-run)
                 DRY_RUN=true
@@ -362,6 +378,7 @@ export_variables() {
     export MEMORY_LIMIT CPU_QUOTA
     export MINION_TENANT
     export TAILSCALE_FUNNEL_ENABLED OAUTH_CALLBACK_PORT
+    export EXEC_USER NON_INTERACTIVE
     export DRY_RUN VERBOSE CURRENT_LOG_LEVEL
     export LOG_DIR LOG_FILE
 } 2>/dev/null  # suppress errors for unset variables
@@ -391,8 +408,23 @@ BANNER
     # Parse arguments
     parse_args "$@"
 
-    # Load profile (before deriving so profile values take effect)
+    # Load profile (before wizard, so profile values show as pre-filled defaults)
     load_profile_if_specified
+
+    # Run interactive wizard unless suppressed
+    # Skipped for: --non-interactive, --update, --decommission, --dry-run, non-TTY stdin
+    if [ "$NON_INTERACTIVE" = "false" ] && \
+       [ "$UPDATE_MODE" = "false" ] && \
+       [ "$DECOMMISSION_MODE" = "false" ] && \
+       [ "$DRY_RUN" = "false" ] && \
+       [ -t 0 ]; then
+        if ! run_interactive_wizard; then
+            log_error "Setup wizard aborted."
+            exit 1
+        fi
+    elif [ "$NON_INTERACTIVE" = "true" ]; then
+        log_info "Non-interactive mode: using provided flags and defaults"
+    fi
 
     # Derive system variables from inputs
     derive_system_variables

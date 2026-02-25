@@ -172,7 +172,6 @@ documentation:
   include_examples: true # Include usage examples
   deployment_report: true # Generate deployment report
 
----
 # Notes:
 # - All paths are relative to agent home directory unless absolute
 # - Boolean values: true/false (lowercase)
