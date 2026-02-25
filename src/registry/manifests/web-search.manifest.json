@@ -1,0 +1,13 @@
+{
+  "id": "web-search",
+  "name": "Web Search",
+  "description": "Search the web and fetch URLs for real-time information retrieval",
+  "version": "1.0.0",
+  "tools": ["web_search", "web_fetch"],
+  "requires": [],
+  "handler": "../../agents/tools/web-tools.js",
+  "testCoverage": 85,
+  "meta": {
+    "tags": ["web", "search", "fetch"]
+  }
+}

@@ -148,6 +148,19 @@ const coreEntries: CoreCliEntry[] = [
   {
     commands: [
       {
+        name: "import-chatgpt",
+        description: "Import ChatGPT conversation history into the knowledge graph",
+        hasSubcommands: false,
+      },
+    ],
+    register: async ({ program }) => {
+      const mod = await import("../import-chatgpt.js");
+      mod.registerImportChatGptCli(program);
+    },
+  },
+  {
+    commands: [
+      {
         name: "agent",
         description: "Run one agent turn via the Gateway",
         hasSubcommands: false,

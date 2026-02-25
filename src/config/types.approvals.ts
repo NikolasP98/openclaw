@@ -24,6 +24,20 @@ export type ExecApprovalForwardingConfig = {
   targets?: ExecApprovalForwardTarget[];
 };
 
+/** Per-category approval mode for the human-in-the-loop gate (Sprint E.1). */
+export type ApprovalGateMode = "auto" | "confirm" | "admin-only";
+
+export type ApprovalGateCategoryConfig = {
+  shell?: ApprovalGateMode;
+  file_write?: ApprovalGateMode;
+  network?: ApprovalGateMode;
+  database?: ApprovalGateMode;
+  /** Milliseconds to wait for user confirmation before auto-aborting. Default: 60000. */
+  timeoutMs?: number;
+};
+
 export type ApprovalsConfig = {
   exec?: ExecApprovalForwardingConfig;
+  /** Human-in-the-loop gate applied before tool execution. */
+  gate?: ApprovalGateCategoryConfig;
 };

@@ -1,0 +1,14 @@
+{
+  "id": "knowledge-graph",
+  "name": "Knowledge Graph",
+  "description": "Persistent entity graph — remember, recall, and link facts across sessions",
+  "version": "1.0.0",
+  "tools": ["remember", "recall_entity", "find_related", "forget", "search_facts"],
+  "requires": [],
+  "handler": "../../memory/knowledge-graph.js",
+  "testCoverage": 100,
+  "meta": {
+    "sprint": "F",
+    "tags": ["memory", "knowledge-graph"]
+  }
+}
