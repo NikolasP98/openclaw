@@ -21,6 +21,9 @@ const OAUTH_PROVIDER_IDS = new Set<string>(getOAuthProviders().map((provider) =>
 const isOAuthProvider = (provider: string): provider is OAuthProvider =>
   OAUTH_PROVIDER_IDS.has(provider);
 
+/** Returns true if the provider is supported by the pi-ai OAuth refresh mechanism. */
+export const isKnownOAuthProvider = (provider: string): boolean => OAUTH_PROVIDER_IDS.has(provider);
+
 const resolveOAuthProvider = (provider: string): OAuthProvider | null =>
   isOAuthProvider(provider) ? provider : null;
 

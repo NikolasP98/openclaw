@@ -1,6 +1,6 @@
 import { emitReliabilityEvent } from "../../logging/reliability.js";
 import { createSubsystemLogger } from "../../logging/subsystem.js";
-import { refreshOAuthTokenWithLock } from "./oauth.js";
+import { isKnownOAuthProvider, refreshOAuthTokenWithLock } from "./oauth.js";
 import { ensureAuthProfileStore } from "./store.js";
 
 const log = createSubsystemLogger("auth/refresh-scheduler");
@@ -84,14 +84,23 @@ async function sweepAndRefresh(proactiveWindowMs: number): Promise<void> {
           metadata: { profileId, provider: cred.provider },
         });
       } else {
-        log.warn("proactive refresh returned null", { profileId, provider: cred.provider });
-        emitReliabilityEvent({
-          category: "auth",
-          severity: "high",
-          event: "credential.refresh.failed",
-          message: `Proactive refresh for ${cred.provider} "${profileId}" returned null`,
-          metadata: { profileId, provider: cred.provider },
-        });
+        if (!isKnownOAuthProvider(cred.provider)) {
+          // Provider not supported by pi-ai refresh (e.g. google-workspace uses gogcli instead).
+          // This is expected — skip silently.
+          log.debug("proactive refresh skipped: provider not managed by pi-ai", {
+            profileId,
+            provider: cred.provider,
+          });
+        } else {
+          log.warn("proactive refresh returned null", { profileId, provider: cred.provider });
+          emitReliabilityEvent({
+            category: "auth",
+            severity: "high",
+            event: "credential.refresh.failed",
+            message: `Proactive refresh for ${cred.provider} "${profileId}" returned null`,
+            metadata: { profileId, provider: cred.provider },
+          });
+        }
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

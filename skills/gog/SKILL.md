@@ -77,7 +77,12 @@ Common commands
 - Calendar create with color: `gog calendar create <calendarId> --summary "Title" --from <iso> --to <iso> --event-color 7`
 - Calendar update event: `gog calendar update <calendarId> <eventId> --summary "New Title" --event-color 4`
 - Calendar show colors: `gog calendar colors`
+- Drive list root: `gog drive ls --max 20`
+- Drive list folder: `gog drive ls --parent FOLDER_ID --max 50`
 - Drive search: `gog drive search "query" --max 10`
+- Drive create folder: `gog drive mkdir "Folder Name" --parent PARENT_FOLDER_ID`
+- Drive upload file: `gog drive upload /path/to/file --parent FOLDER_ID`
+- Drive copy file: `gog drive copy FILE_ID "new name" --parent FOLDER_ID`
 - Contacts: `gog contacts list --max 20`
 - Sheets get: `gog sheets get <sheetId> "Tab!A1:D10" --json`
 - Sheets update: `gog sheets update <sheetId> "Tab!A1:B2" --values-json '[["A","B"],["1","2"]]' --input USER_ENTERED`

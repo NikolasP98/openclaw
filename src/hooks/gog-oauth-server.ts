@@ -8,6 +8,7 @@ import http from "http";
 import { URL } from "url";
 import { updateSessionStore, resolveDefaultSessionStorePath } from "../config/sessions.js";
 import { logAcceptedEnvOption } from "../infra/env.js";
+import { runCommandWithTimeout } from "../process/exec.js";
 import {
   saveSessionCredentials,
   getGoogleClientId,
@@ -406,6 +407,32 @@ function tryStartServer(
 }
 
 /**
+ * Register Google OAuth client credentials with the gog CLI keyring (best-effort).
+ * Runs `gog auth credentials <file>` so subsequent `gog auth tokens import` calls succeed.
+ * Skips silently if gog is not installed.
+ */
+async function registerGogClientCredentials(credFile: string): Promise<void> {
+  try {
+    const gogCheck = await runCommandWithTimeout(["which", "gog"], { timeoutMs: 2_000 });
+    if (gogCheck.code !== 0) {
+      return; // gog not installed — skip silently
+    }
+    const result = await runCommandWithTimeout(["gog", "auth", "credentials", credFile], {
+      timeoutMs: 10_000,
+    });
+    if (result.code === 0) {
+      console.log("[gog-oauth] Registered Google client credentials with gog CLI");
+    } else {
+      console.warn(
+        `[gog-oauth] gog auth credentials failed (code=${result.code}): ${result.stderr || result.stdout}`,
+      );
+    }
+  } catch (err) {
+    console.warn(`[gog-oauth] Failed to register gog client credentials: ${String(err)}`);
+  }
+}
+
+/**
  * Start the OAuth callback server with port fallback
  */
 export async function startGogOAuthServer(
@@ -437,6 +464,8 @@ export async function startGogOAuthServer(
   }
   if (credFile) {
     setGoogleClientCredentialsFile(credFile);
+    // Register credentials with gog CLI so `gog auth tokens import` works (best-effort)
+    void registerGogClientCredentials(credFile);
   }
 
   if (!fullConfig.enabled) {
