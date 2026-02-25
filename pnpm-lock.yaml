@@ -560,6 +560,16 @@ importers:
         specifier: workspace:*
         version: link:../..
 
+  extensions/wati:
+    dependencies:
+      openclaw:
+        specifier: '>=2026.1.26'
+        version: 2026.2.15(@napi-rs/canvas@0.1.93)(@types/express@5.0.6)(audio-decode@2.2.3)(hono@4.11.9)(node-llama-cpp@3.15.1(typescript@5.9.3))(signal-polyfill@0.2.2)
+    devDependencies:
+      '@nikolasp98/minion':
+        specifier: workspace:*
+        version: link:../..
+
   extensions/whatsapp:
     devDependencies:
       '@nikolasp98/minion':
