@@ -7,6 +7,7 @@ import crypto from "crypto";
 import http from "http";
 import { URL } from "url";
 import { updateSessionStore, resolveDefaultSessionStorePath } from "../config/sessions.js";
+import { upsertSharedEnvVar } from "../infra/env-file.js";
 import { logAcceptedEnvOption } from "../infra/env.js";
 import { runCommandWithTimeout } from "../process/exec.js";
 import {
@@ -433,6 +434,33 @@ async function registerGogClientCredentials(credFile: string): Promise<void> {
 }
 
 /**
+ * Ensure GOG_KEYRING_BACKEND and GOG_KEYRING_PASSWORD are set in process.env
+ * and persisted to ~/.minion/.env. Called once at gateway startup.
+ * Self-healing: generates a secure random password on first run, then reuses it.
+ * No-ops if variables are already present (from systemd Environment= or .env).
+ */
+function ensureGogKeyringEnv(): void {
+  let dirty = false;
+
+  if (!process.env.GOG_KEYRING_BACKEND) {
+    process.env.GOG_KEYRING_BACKEND = "file";
+    upsertSharedEnvVar({ key: "GOG_KEYRING_BACKEND", value: "file" });
+    dirty = true;
+  }
+
+  if (!process.env.GOG_KEYRING_PASSWORD) {
+    const password = crypto.randomBytes(32).toString("hex");
+    process.env.GOG_KEYRING_PASSWORD = password;
+    upsertSharedEnvVar({ key: "GOG_KEYRING_PASSWORD", value: password });
+    dirty = true;
+  }
+
+  if (dirty) {
+    console.log("[gog-oauth] Initialized GOG keyring credentials and persisted to .env");
+  }
+}
+
+/**
  * Start the OAuth callback server with port fallback
  */
 export async function startGogOAuthServer(
@@ -442,6 +470,8 @@ export async function startGogOAuthServer(
   port: number;
   stop: () => Promise<void>;
 }> {
+  ensureGogKeyringEnv();
+
   const { externalRedirectUri, googleClientCredentialsFile, ...rest } = config;
   const fullConfig: Required<
     Omit<OAuthServerConfig, "externalRedirectUri" | "googleClientCredentialsFile">

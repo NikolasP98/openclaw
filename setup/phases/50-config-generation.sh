@@ -33,6 +33,41 @@ source "${SCRIPT_DIR}/../lib/network.sh"
 # Ensure derived variables are populated (idempotent)
 derive_system_variables
 
+setup_gog_keyring_credentials() {
+    local config_dir="${1:-${MINION_CONFIG_DIR:-${AGENT_HOME_DIR:-$HOME}/.minion}}"
+    local env_file="${config_dir}/.env"
+    local needs_keyring_setup=false
+
+    if [ "${EXEC_MODE:-local}" = "remote" ]; then
+        if ! run_cmd "grep -q 'GOG_KEYRING_PASSWORD' '${env_file}' 2>/dev/null"; then
+            needs_keyring_setup=true
+        fi
+    else
+        if ! grep -q "GOG_KEYRING_PASSWORD" "${env_file}" 2>/dev/null; then
+            needs_keyring_setup=true
+        fi
+    fi
+
+    if [ "$needs_keyring_setup" = true ]; then
+        local gog_password
+        gog_password=$(openssl rand -hex 32 2>/dev/null || python3 -c "import secrets; print(secrets.token_hex(32))")
+
+        if [ "${EXEC_MODE:-local}" = "remote" ]; then
+            run_cmd "touch '${env_file}' && chmod 600 '${env_file}'"
+            run_cmd "grep -q 'GOG_KEYRING_BACKEND' '${env_file}' || echo 'GOG_KEYRING_BACKEND=file' >> '${env_file}'"
+            run_cmd "echo 'GOG_KEYRING_PASSWORD=${gog_password}' >> '${env_file}'"
+        else
+            touch "${env_file}" && chmod 600 "${env_file}"
+            grep -q "GOG_KEYRING_BACKEND" "${env_file}" || echo "GOG_KEYRING_BACKEND=file" >> "${env_file}"
+            echo "GOG_KEYRING_PASSWORD=${gog_password}" >> "${env_file}"
+        fi
+        log_success "Generated GOG CLI file-keyring credentials in ${env_file}"
+        log_warn "Do NOT set GOG_KEYRING_PASSWORD in systemd override files — use .env only"
+    else
+        log_info "GOG keyring credentials already present in .env"
+    fi
+}
+
 generate_configuration() {
     phase_start "Configuration Generation" "50"
 
@@ -191,6 +226,9 @@ AUTHEOF
     rm -rf "$temp_dir"
 
     log_success "Configuration files deployed successfully"
+
+    # --- Generate GOG CLI file-keyring credentials (headless file keyring) ---
+    setup_gog_keyring_credentials "$config_dir"
 
     phase_end "Configuration Generation" "success"
     save_checkpoint "50-config-generation"
