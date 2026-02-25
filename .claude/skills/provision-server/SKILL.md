@@ -35,16 +35,17 @@ at `setup/setup.sh`.
 
 ### Phase Sequence
 
-| Phase | Name          | Purpose                                           |
-| ----- | ------------- | ------------------------------------------------- |
-| 00    | Preflight     | Validate environment, test SSH connectivity       |
-| 20    | User Creation | Create agent user, directories, enable linger     |
-| 30    | Environment   | Install/verify Node.js, pnpm, gh CLI, build tools |
-| 40    | Install       | Clone repo, checkout branch, pnpm install + build |
-| 45    | Alias         | Create `~/.local/bin/minion` wrapper              |
-| 50    | Config        | Render templates, deploy with correct permissions |
-| 60    | Service       | Enable + start systemd user service               |
-| 70    | Verification  | Health checks, deployment summary                 |
+| Phase | Name             | Purpose                                                    |
+| ----- | ---------------- | ---------------------------------------------------------- |
+| 00    | Preflight        | Validate environment, test SSH connectivity                |
+| 20    | User Creation    | Create agent user, directories, enable linger              |
+| 30    | Environment      | Install/verify Node.js, pnpm, gh CLI, build tools          |
+| 40    | Install          | Clone repo, checkout branch, pnpm install + build          |
+| 45    | Alias            | Create `~/.local/bin/minion` wrapper                       |
+| 50    | Config           | Render templates, deploy with correct permissions          |
+| 60    | Service          | Enable + start systemd user service                        |
+| 65    | Tailscale Funnel | Expose gateway + OAuth callback over public HTTPS (opt-in) |
+| 70    | Verification     | Health checks, deployment summary                          |
 
 ### Server Config Files
 
@@ -110,6 +111,19 @@ Review the output to confirm:
 - Correct `AGENT_USERNAME` derivation (minion-{agent-name})
 - Correct `AGENT_HOME_DIR` path
 - No variable conflicts with existing deployments
+
+### Step 3b: Plan Tailscale Funnel (if Google OAuth or other public callbacks needed)
+
+If the agent will use Google Workspace (gogcli), or any service requiring a public HTTPS callback URL, Tailscale Funnel **must** be configured. This exposes the gateway and the OAuth callback server over HTTPS via the server's Tailscale domain.
+
+Ask the user:
+
+- Does this agent need Google OAuth (Drive, Gmail, Calendar)?
+- Does this server have Tailscale installed and authenticated?
+
+If yes to both, add `--tailscale-funnel` to the setup command. Also confirm `--tailscale-key` if Tailscale needs to be authenticated.
+
+**Critical constraint**: Never run `tailscale serve` on a Funnel-enabled server — it removes the Funnel flag from the entire HTTPS endpoint. Always use `tailscale funnel` for all route changes.
 
 ### Step 4: Collect Credentials
 
@@ -183,6 +197,9 @@ After provisioning, review the full output for improvement observations using th
 - `--github-pat=TOKEN` — GitHub PAT for private repo access
 - `--tenant=NAME` — Tenant identifier for multi-tenant setups
 - `--profile=PROFILE` — Load from profile file
+- `--tailscale-funnel` — Enable Tailscale Funnel (Phase 65). **Required for Google OAuth and any public HTTPS callback.** The server must have Tailscale installed and authenticated.
+- `--tailscale-key=KEY` — Tailscale auth key (if Tailscale needs to be authenticated during provisioning)
+- `--oauth-callback-port=PORT` — OAuth callback server port (default: 51234)
 
 ### Execution Control
 

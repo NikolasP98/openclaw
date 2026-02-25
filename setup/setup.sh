@@ -82,10 +82,12 @@ Configuration:
     --vps-hostname=HOST     VPS hostname or IP address (implies --mode=remote)
     --api-key=KEY           Anthropic API key (required)
     --tailscale-key=KEY     Tailscale auth key
+    --tailscale-funnel      Enable Tailscale Funnel (required for Google OAuth & public HTTPS callbacks)
     --github-pat=TOKEN      GitHub Personal Access Token
     --gateway-port=PORT     Gateway listen port (default: 18789)
     --gateway-bind=MODE     Bind mode: loopback, lan, tailnet (default: loopback)
     --gateway-token=TOKEN   Gateway auth token (auto-generated if omitted)
+    --oauth-callback-port=PORT  OAuth callback server port (default: 51234)
 
 Agent:
     --agent-name=NAME       Agent name
@@ -176,6 +178,12 @@ parse_args() {
                 ;;
             --tailscale-key=*)
                 TAILSCALE_AUTH_KEY="${1#*=}"
+                ;;
+            --tailscale-funnel)
+                TAILSCALE_FUNNEL_ENABLED=true
+                ;;
+            --oauth-callback-port=*)
+                OAUTH_CALLBACK_PORT="${1#*=}"
                 ;;
             --github-pat=*)
                 GITHUB_PAT="${1#*=}"
@@ -353,6 +361,7 @@ export_variables() {
     export GITHUB_REPO GITHUB_BRANCH EXEC_MODE
     export MEMORY_LIMIT CPU_QUOTA
     export MINION_TENANT
+    export TAILSCALE_FUNNEL_ENABLED OAUTH_CALLBACK_PORT
     export DRY_RUN VERBOSE CURRENT_LOG_LEVEL
     export LOG_DIR LOG_FILE
 } 2>/dev/null  # suppress errors for unset variables
@@ -417,6 +426,7 @@ BANNER
         "45-alias-setup.sh"
         "50-config-generation.sh"
         "60-service-setup.sh"
+        "65-tailscale-funnel.sh"
         "70-verification.sh"
     )
 
