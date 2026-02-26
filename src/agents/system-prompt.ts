@@ -94,6 +94,29 @@ function buildMemorySection(params: {
   return lines;
 }
 
+function buildKnowledgeGraphSection(params: { isMinimal: boolean; availableTools: Set<string> }) {
+  if (params.isMinimal) {
+    return [];
+  }
+  if (!params.availableTools.has("remember")) {
+    return [];
+  }
+  return [
+    "## Knowledge Graph",
+    "Use the knowledge graph to store and recall structured facts across conversations.",
+    "- remember: when you learn a typed fact (a preference, a person, a habit, a decision), store it immediately — don't wait to be asked",
+    "- recall_entity: before answering questions about a person, place, or thing, look them up first",
+    "- find_related: when you need context around an entity (e.g. what decisions relate to a project)",
+    "- search_facts: broad search when you're not sure what entity to look up",
+    "- forget: when a fact is superseded or wrong",
+    "",
+    "Use knowledge graph for structured/typed facts (people, preferences, entities, decisions).",
+    "Use MEMORY.md + daily notes for prose context and session summaries.",
+    "Both complement each other — a preference stored in the graph and a summary in MEMORY.md are both valuable.",
+    "",
+  ];
+}
+
 function buildUserIdentitySection(ownerLine: string | undefined, isMinimal: boolean) {
   if (!ownerLine || isMinimal) {
     return [];
@@ -454,6 +477,10 @@ export function buildAgentSystemPrompt(params: {
     citationsMode: params.memoryCitationsMode,
     chatType: params.chatType,
   });
+  const knowledgeGraphSection = buildKnowledgeGraphSection({
+    isMinimal,
+    availableTools,
+  });
   const docsSection = buildDocsSection({
     docsPath: params.docsPath,
     isMinimal,
@@ -515,6 +542,7 @@ export function buildAgentSystemPrompt(params: {
     "",
     ...skillsSection,
     ...memorySection,
+    ...knowledgeGraphSection,
     // Skip self-update for subagent/none modes
     hasGateway && !isMinimal ? "## OpenClaw Self-Update" : "",
     hasGateway && !isMinimal

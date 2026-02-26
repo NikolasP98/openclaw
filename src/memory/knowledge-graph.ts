@@ -54,7 +54,9 @@ export function remember(params: {
   data?: Record<string, unknown>;
   ttl?: number | null;
 }): string {
-  if (!isDbReady()) return "";
+  if (!isDbReady()) {
+    return "";
+  }
   // Check for existing entity with the same label to avoid duplication
   if (params.type === "entity") {
     const existing = recallEntity(params.label);
@@ -72,13 +74,15 @@ export function remember(params: {
  * Returns null if not found or DB not ready.
  */
 export function recallEntity(name: string): MemoryObject | null {
-  if (!isDbReady()) return null;
+  if (!isDbReady()) {
+    return null;
+  }
   // Exact match via FTS
   const hits = searchObjects(name, "entity");
-  const exact = hits.find(
-    (h) => h.label.trim().toLowerCase() === name.trim().toLowerCase(),
-  );
-  if (exact) return exact;
+  const exact = hits.find((h) => h.label.trim().toLowerCase() === name.trim().toLowerCase());
+  if (exact) {
+    return exact;
+  }
   // Return best FTS match
   return hits[0] ?? null;
 }
@@ -89,7 +93,9 @@ export function recallEntity(name: string): MemoryObject | null {
  * Returns empty array if DB not ready or entity not found.
  */
 export function findRelated(entityId: string, relType?: RelType): MemoryObject[] {
-  if (!isDbReady()) return [];
+  if (!isDbReady()) {
+    return [];
+  }
   return getRelated(entityId, relType);
 }
 
@@ -98,7 +104,9 @@ export function findRelated(entityId: string, relType?: RelType): MemoryObject[]
  * Cascades to its relationships.
  */
 export function forget(id: string): void {
-  if (!isDbReady()) return;
+  if (!isDbReady()) {
+    return;
+  }
   deleteObject(id);
 }
 
@@ -107,7 +115,9 @@ export function forget(id: string): void {
  * Returns matching Fact objects sorted by relevance.
  */
 export function searchFacts(query: string): MemoryObject[] {
-  if (!isDbReady()) return [];
+  if (!isDbReady()) {
+    return [];
+  }
   return searchObjects(query, "fact");
 }
 
@@ -115,13 +125,10 @@ export function searchFacts(query: string): MemoryObject[] {
  * Link two objects with a typed relationship.
  * No-op if DB is not ready.
  */
-export function linkObjects(
-  fromId: string,
-  toId: string,
-  relType: RelType,
-  weight = 1.0,
-): void {
-  if (!isDbReady()) return;
+export function linkObjects(fromId: string, toId: string, relType: RelType, weight = 1.0): void {
+  if (!isDbReady()) {
+    return;
+  }
   createRelationship({ fromId, toId, relType, weight });
 }
 
@@ -129,7 +136,9 @@ export function linkObjects(
  * Get all objects of a given type.
  */
 export function listByType(type: ObjectType): MemoryObject[] {
-  if (!isDbReady()) return [];
+  if (!isDbReady()) {
+    return [];
+  }
   return listObjectsByType(type);
 }
 
@@ -137,7 +146,9 @@ export function listByType(type: ObjectType): MemoryObject[] {
  * Get a single object by ID.
  */
 export function getMemoryObject(id: string): MemoryObject | null {
-  if (!isDbReady()) return null;
+  if (!isDbReady()) {
+    return null;
+  }
   return getObject(id);
 }
 
@@ -202,11 +213,11 @@ export function createKnowledgeGraphTools(): AnyAgentTool[] {
     label: "Remember",
     name: "remember",
     description:
-      "Store a new memory object (entity, fact, preference, etc.) in the knowledge graph. Returns the object ID.",
+      "Store a typed fact permanently (person, preference, decision, event, etc.). Call this proactively whenever you learn something worth remembering across sessions — don't wait to be asked.",
     parameters: RememberSchema,
     execute: async (_id, args) => {
       const params = args as Record<string, unknown>;
-      const label = String(params["label"] ?? "");
+      const label = (params["label"] as string | undefined) ?? "";
       const type = (params["type"] ?? "fact") as ObjectType;
       const data =
         params["data"] && typeof params["data"] === "object" && !Array.isArray(params["data"])
@@ -224,11 +235,11 @@ export function createKnowledgeGraphTools(): AnyAgentTool[] {
     label: "Recall Entity",
     name: "recall_entity",
     description:
-      "Look up an entity in the knowledge graph by name. Returns the entity data or null.",
+      "Look up a known entity by name before answering questions about a person, place, or thing. Use this first; fall back to search_facts for broad queries.",
     parameters: RecallEntitySchema,
     execute: async (_id, args) => {
       const params = args as Record<string, unknown>;
-      const name = String(params["name"] ?? "");
+      const name = (params["name"] as string | undefined) ?? "";
       const entity = recallEntity(name);
       if (!entity) {
         return textResult(`No entity found for: ${name}`);
@@ -243,19 +254,17 @@ export function createKnowledgeGraphTools(): AnyAgentTool[] {
     label: "Find Related",
     name: "find_related",
     description:
-      "Traverse the knowledge graph to find objects related to a given entity ID.",
+      "Find all facts, events, or entities connected to a known entity. Use when you need surrounding context (e.g. preferences linked to a person, decisions linked to a project).",
     parameters: FindRelatedSchema,
     execute: async (_id, args) => {
       const params = args as Record<string, unknown>;
-      const entityId = String(params["entityId"] ?? "");
+      const entityId = (params["entityId"] as string | undefined) ?? "";
       const relType = params["relType"] as RelType | undefined;
       const related = findRelated(entityId, relType);
       if (related.length === 0) {
         return textResult("No related objects found.");
       }
-      const summary = related
-        .map((o) => `[${o.type}] ${o.label} (id: ${o.id})`)
-        .join("\n");
+      const summary = related.map((o) => `[${o.type}] ${o.label} (id: ${o.id})`).join("\n");
       return textResult(summary);
     },
   };
@@ -263,12 +272,15 @@ export function createKnowledgeGraphTools(): AnyAgentTool[] {
   const forgetTool: AnyAgentTool = {
     label: "Forget",
     name: "forget",
-    description: "Delete a memory object from the knowledge graph by its ID.",
+    description:
+      "Remove a fact that is outdated, wrong, or superseded. Prefer updating via remember (upsert) unless the fact should be fully erased.",
     parameters: ForgetSchema,
     execute: async (_id, args) => {
       const params = args as Record<string, unknown>;
-      const objectId = String(params["id"] ?? "");
-      if (!objectId) return textResult("Error: id is required");
+      const objectId = (params["id"] as string | undefined) ?? "";
+      if (!objectId) {
+        return textResult("Error: id is required");
+      }
       forget(objectId);
       return textResult(`Deleted memory object: ${objectId}`);
     },
@@ -277,19 +289,24 @@ export function createKnowledgeGraphTools(): AnyAgentTool[] {
   const searchFactsTool: AnyAgentTool = {
     label: "Search Facts",
     name: "search_facts",
-    description: "Full-text search over stored facts in the knowledge graph.",
+    description:
+      "Full-text search across all stored facts. Use when you don't know the entity name yet, or want to find anything related to a keyword.",
     parameters: SearchFactsSchema,
     execute: async (_id, args) => {
       const params = args as Record<string, unknown>;
-      const query = String(params["query"] ?? "");
-      if (!query) return textResult("Error: query is required");
+      const query = (params["query"] as string | undefined) ?? "";
+      if (!query) {
+        return textResult("Error: query is required");
+      }
       const facts = searchFacts(query);
       if (facts.length === 0) {
         return textResult(`No facts found for: ${query}`);
       }
       const summary = facts
         .slice(0, 10)
-        .map((f) => `• ${f.label}${Object.keys(f.data).length ? ` — ${JSON.stringify(f.data)}` : ""}`)
+        .map(
+          (f) => `• ${f.label}${Object.keys(f.data).length ? ` — ${JSON.stringify(f.data)}` : ""}`,
+        )
         .join("\n");
       return textResult(summary);
     },
