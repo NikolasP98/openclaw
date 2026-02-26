@@ -18,13 +18,13 @@ import { logVerbose, shouldLogVerbose } from "../../../../globals.js";
 import { recordChannelActivity } from "../../../../infra/channel-activity.js";
 import { enqueueSystemEvent } from "../../../../infra/system-events.js";
 import { logDebug } from "../../../../logger.js";
+import { getChildLogger } from "../../../../logging.js";
 import { buildPairingReply } from "../../../../pairing/pairing-messages.js";
 import {
   readChannelAllowFromStore,
   upsertChannelPairingRequest,
 } from "../../../../pairing/pairing-store.js";
 import { resolveAgentRoute } from "../../../../routing/resolve-route.js";
-import { getChildLogger } from "../../../logging.js";
 import { fetchPluralKitMessageInfo } from "../pluralkit.js";
 import { sendMessageDiscord } from "../send.js";
 import {

@@ -6,8 +6,8 @@ import { resolveSessionKey, type SessionScope } from "../../../../config/session
 import type { DmPolicy, GroupPolicy } from "../../../../config/types.js";
 import { logVerbose } from "../../../../globals.js";
 import { createDedupeCache } from "../../../../infra/dedupe.js";
+import { getChildLogger } from "../../../../logging.js";
 import type { RuntimeEnv } from "../../../../runtime.js";
-import { getChildLogger } from "../../../logging.js";
 import type { SlackMessageEvent } from "../types.js";
 import { normalizeAllowList, normalizeAllowListLower, normalizeSlackSlug } from "./allow-list.js";
 import type { SlackChannelConfigEntries } from "./channel-config.js";
