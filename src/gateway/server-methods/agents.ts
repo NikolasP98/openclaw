@@ -84,11 +84,17 @@ function resolveAgentWorkspaceFileOrRespondError(
   const name = (
     typeof rawName === "string" || typeof rawName === "number" ? String(rawName) : ""
   ).trim();
-  if (!ALLOWED_FILE_NAMES.has(name)) {
+  if (!name) {
     respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, `unsupported file "${name}"`));
     return null;
   }
   const workspaceDir = resolveAgentWorkspaceDir(cfg, agentId);
+  // Validate that the resolved path stays within the workspace (no path traversal).
+  const resolved = path.resolve(workspaceDir, name);
+  if (!resolved.startsWith(workspaceDir + path.sep) && resolved !== workspaceDir) {
+    respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, `unsupported file "${name}"`));
+    return null;
+  }
   return { cfg, agentId, workspaceDir, name };
 }
 
@@ -112,14 +118,20 @@ async function statFile(filePath: string): Promise<FileMeta | null> {
   }
 }
 
-async function listAgentFiles(workspaceDir: string, options?: { hideBootstrap?: boolean }) {
-  const files: Array<{
-    name: string;
-    path: string;
-    missing: boolean;
-    size?: number;
-    updatedAtMs?: number;
-  }> = [];
+type FileEntry = {
+  name: string;
+  path: string;
+  missing: boolean;
+  isDir?: boolean;
+  size?: number;
+  updatedAtMs?: number;
+};
+
+async function listAgentFiles(
+  workspaceDir: string,
+  options?: { hideBootstrap?: boolean },
+): Promise<FileEntry[]> {
+  const files: FileEntry[] = [];
 
   const bootstrapFileNames = options?.hideBootstrap
     ? BOOTSTRAP_FILE_NAMES_POST_ONBOARDING
@@ -163,6 +175,79 @@ async function listAgentFiles(workspaceDir: string, options?: { hideBootstrap?: 
       });
     } else {
       files.push({ name: DEFAULT_MEMORY_FILENAME, path: primaryMemoryPath, missing: true });
+    }
+  }
+
+  // Scan for subdirectories in the workspace root, excluding known file names.
+  const namedFiles = new Set(ALLOWED_FILE_NAMES);
+  try {
+    const entries = await fs.readdir(workspaceDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (namedFiles.has(entry.name)) {
+        continue;
+      }
+      if (entry.name.startsWith(".")) {
+        continue;
+      }
+      if (entry.isDirectory()) {
+        const dirPath = path.join(workspaceDir, entry.name);
+        const stat = await fs.stat(dirPath).catch(() => null);
+        files.push({
+          name: entry.name,
+          path: dirPath,
+          missing: false,
+          isDir: true,
+          updatedAtMs: stat ? Math.floor(stat.mtimeMs) : undefined,
+        });
+      }
+    }
+  } catch {
+    // Non-critical: workspace may not exist yet.
+  }
+
+  return files;
+}
+
+async function listDirectoryContents(
+  workspaceDir: string,
+  relPath: string,
+): Promise<FileEntry[] | null> {
+  // Resolve and validate — must stay within workspaceDir.
+  const resolved = path.resolve(workspaceDir, relPath);
+  if (!resolved.startsWith(workspaceDir + path.sep) && resolved !== workspaceDir) {
+    return null;
+  }
+
+  let entries;
+  try {
+    entries = await fs.readdir(resolved, { withFileTypes: true });
+  } catch {
+    return null;
+  }
+
+  const files: FileEntry[] = [];
+  for (const entry of entries) {
+    const entryPath = path.join(resolved, entry.name);
+    // Relative name within workspace: relPath/entryName
+    const relativeName = path.join(relPath, entry.name);
+    if (entry.isDirectory()) {
+      const stat = await fs.stat(entryPath).catch(() => null);
+      files.push({
+        name: relativeName,
+        path: entryPath,
+        missing: false,
+        isDir: true,
+        updatedAtMs: stat ? Math.floor(stat.mtimeMs) : undefined,
+      });
+    } else if (entry.isFile()) {
+      const meta = await statFile(entryPath);
+      files.push({
+        name: relativeName,
+        path: entryPath,
+        missing: false,
+        size: meta?.size,
+        updatedAtMs: meta?.updatedAtMs,
+      });
     }
   }
 
@@ -426,13 +511,28 @@ export const agentsHandlers: GatewayRequestHandlers = {
       return;
     }
     const workspaceDir = resolveAgentWorkspaceDir(cfg, agentId);
-    let hideBootstrap = false;
-    try {
-      hideBootstrap = await isWorkspaceOnboardingCompleted(workspaceDir);
-    } catch {
-      // Fall back to showing BOOTSTRAP if workspace state cannot be read.
+    const dirPath = typeof params.path === "string" ? params.path.trim() : "";
+    let files: FileEntry[];
+    if (dirPath) {
+      const entries = await listDirectoryContents(workspaceDir, dirPath);
+      if (!entries) {
+        respond(
+          false,
+          undefined,
+          errorShape(ErrorCodes.INVALID_REQUEST, `directory not found: "${dirPath}"`),
+        );
+        return;
+      }
+      files = entries;
+    } else {
+      let hideBootstrap = false;
+      try {
+        hideBootstrap = await isWorkspaceOnboardingCompleted(workspaceDir);
+      } catch {
+        // Fall back to showing BOOTSTRAP if workspace state cannot be read.
+      }
+      files = await listAgentFiles(workspaceDir, { hideBootstrap });
     }
-    const files = await listAgentFiles(workspaceDir, { hideBootstrap });
     respond(true, { agentId, workspace: workspaceDir, files }, undefined);
   },
   "agents.files.get": async ({ params, respond }) => {

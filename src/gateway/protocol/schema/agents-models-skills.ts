@@ -106,6 +106,7 @@ export const AgentsFileEntrySchema = Type.Object(
     name: NonEmptyString,
     path: NonEmptyString,
     missing: Type.Boolean(),
+    isDir: Type.Optional(Type.Boolean()),
     size: Type.Optional(Type.Integer({ minimum: 0 })),
     updatedAtMs: Type.Optional(Type.Integer({ minimum: 0 })),
     content: Type.Optional(Type.String()),
@@ -116,6 +117,7 @@ export const AgentsFileEntrySchema = Type.Object(
 export const AgentsFilesListParamsSchema = Type.Object(
   {
     agentId: NonEmptyString,
+    path: Type.Optional(Type.String()),
   },
   { additionalProperties: false },
 );
