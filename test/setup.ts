@@ -29,7 +29,7 @@ const [{ installProcessWarningFilter }, { setActivePluginRegistry }, { createTes
   await Promise.all([
     import("../src/infra/warning-filter.js"),
     import("../src/plugins/runtime.js"),
-    import("../src/test-utils/channel-plugins.js"),
+    import("../src/test-support/channel-plugins.js"),
   ]);
 
 installProcessWarningFilter();
