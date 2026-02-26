@@ -6,7 +6,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   expectSingleNpmInstallIgnoreScriptsCall,
   expectSingleNpmPackIgnoreScriptsCall,
-} from "../test-utils/exec-assertions.js";
+} from "../test-support/exec-assertions.js";
 import { isAddressInUseError } from "./gmail-watcher.js";
 
 const fixtureRoot = path.join(os.tmpdir(), `openclaw-hook-install-${randomUUID()}`);
@@ -21,7 +21,7 @@ const tarEvilIdBuffer = fs.readFileSync(path.join(fixturesDir, "tar-evil-id.tar"
 const tarReservedIdBuffer = fs.readFileSync(path.join(fixturesDir, "tar-reserved-id.tar"));
 const npmPackHooksBuffer = fs.readFileSync(path.join(fixturesDir, "npm-pack-hooks.tgz"));
 
-vi.mock("../process/exec.js", () => ({
+vi.mock("../platform/process/exec.js", () => ({
   runCommandWithTimeout: vi.fn(),
 }));
 
@@ -32,7 +32,7 @@ function makeTempDir() {
   return dir;
 }
 
-const { runCommandWithTimeout } = await import("../process/exec.js");
+const { runCommandWithTimeout } = await import("../platform/process/exec.js");
 const { installHooksFromArchive, installHooksFromNpmSpec, installHooksFromPath } =
   await import("./install.js");
 

@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { OpenClawConfig, ConfigFileSnapshot } from "../config/types.openclaw.js";
 import type { UpdateRunResult } from "../infra/update-runner.js";
-import { captureEnv } from "../test-utils/env.js";
+import { captureEnv } from "../test-support/env.js";
 
 const confirm = vi.fn();
 const select = vi.fn();
@@ -64,7 +64,7 @@ vi.mock("node:child_process", async () => {
   };
 });
 
-vi.mock("../process/exec.js", () => ({
+vi.mock("../platform/process/exec.js", () => ({
   runCommandWithTimeout: vi.fn(),
 }));
 
@@ -78,7 +78,7 @@ vi.mock("./update-cli/shared.js", async (importOriginal) => {
   };
 });
 
-vi.mock("../daemon/service.js", () => ({
+vi.mock("../platform/daemon/service.js", () => ({
   resolveGatewayService: vi.fn(() => ({
     isLoaded: (...args: unknown[]) => serviceLoaded(...args),
   })),
@@ -112,7 +112,7 @@ const { resolveOpenClawPackageRoot } = await import("../infra/openclaw-root.js")
 const { readConfigFileSnapshot, writeConfigFile } = await import("../config/config.js");
 const { checkUpdateStatus, fetchNpmTagVersion, resolveNpmChannelTag } =
   await import("../infra/update-check.js");
-const { runCommandWithTimeout } = await import("../process/exec.js");
+const { runCommandWithTimeout } = await import("../platform/process/exec.js");
 const { runDaemonRestart } = await import("./daemon-cli.js");
 const { doctorCommand } = await import("../commands/doctor.js");
 const { defaultRuntime } = await import("../runtime.js");

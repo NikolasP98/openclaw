@@ -68,8 +68,8 @@ async function main() {
     import("../infra/restart.js"),
     import("../runtime.js"),
     import("../logging.js"),
-    import("../process/command-queue.js"),
-    import("../process/restart-recovery.js"),
+    import("../platform/process/command-queue.js"),
+    import("../platform/process/restart-recovery.js"),
   ] as const);
 
   enableConsoleCapture();

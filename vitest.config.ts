@@ -90,7 +90,7 @@ export default defineConfig({
         "src/logging.ts",
         "src/cli/**",
         "src/commands/**",
-        "src/daemon/**",
+        "src/platform/daemon/**",
         "src/hooks/**",
         "src/macos/**",
 
@@ -136,8 +136,8 @@ export default defineConfig({
 
         // Process bridges are hard to unit-test in isolation.
         "src/gateway/call.ts",
-        "src/process/tau-rpc.ts",
-        "src/process/exec.ts",
+        "src/platform/process/tau-rpc.ts",
+        "src/platform/process/exec.ts",
         // Interactive UIs/flows are intentionally validated via manual/e2e runs.
         "src/tui/**",
         "src/wizard/**",

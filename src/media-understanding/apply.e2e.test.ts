@@ -25,7 +25,7 @@ vi.mock("../media/fetch.js", () => ({
   fetchRemoteMedia: vi.fn(),
 }));
 
-vi.mock("../process/exec.js", () => ({
+vi.mock("../platform/process/exec.js", () => ({
   runExec: vi.fn(),
 }));
 
@@ -288,7 +288,7 @@ describe("applyMediaUnderstanding", () => {
       },
     };
 
-    const execModule = await import("../process/exec.js");
+    const execModule = await import("../platform/process/exec.js");
     vi.mocked(execModule.runExec).mockResolvedValue({
       stdout: "cli transcript\n",
       stderr: "",
@@ -340,7 +340,7 @@ describe("applyMediaUnderstanding", () => {
       },
     };
 
-    const execModule = await import("../process/exec.js");
+    const execModule = await import("../platform/process/exec.js");
     vi.mocked(execModule.runExec).mockResolvedValue({
       stdout: "image description\n",
       stderr: "",
@@ -385,7 +385,7 @@ describe("applyMediaUnderstanding", () => {
       },
     };
 
-    const execModule = await import("../process/exec.js");
+    const execModule = await import("../platform/process/exec.js");
     vi.mocked(execModule.runExec).mockResolvedValue({
       stdout: "shared description\n",
       stderr: "",
