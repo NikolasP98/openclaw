@@ -89,7 +89,7 @@ export default defineConfig({
         "src/extensionAPI.ts",
         "src/logging.ts",
         "src/cli/**",
-        "src/commands/**",
+        "src/cli/commands/**",
         "src/platform/daemon/**",
         "src/hooks/**",
         "src/macos/**",
