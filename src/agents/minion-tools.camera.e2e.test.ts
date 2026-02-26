@@ -10,7 +10,7 @@ vi.mock("../media/image-ops.js", () => ({
   resizeToJpeg: vi.fn(async () => Buffer.from("jpeg")),
 }));
 
-import "./test-helpers/fast-core-tools.js";
+import "./test-support/fast-core-tools.js";
 import { createOpenClawTools } from "./openclaw-tools.js";
 
 const NODE_ID = "mac-1";

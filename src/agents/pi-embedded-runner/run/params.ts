@@ -1,8 +1,8 @@
 import type { ImageContent } from "@mariozechner/pi-ai";
 import type { ReasoningLevel, ThinkLevel, VerboseLevel } from "../../../auto-reply/thinking.js";
-import type { AgentStreamParams } from "../../../commands/agent/types.js";
+import type { AgentStreamParams } from "../../../cli/commands/agent/types.js";
 import type { MinionConfig } from "../../../config/config.js";
-import type { enqueueCommand } from "../../../process/command-queue.js";
+import type { enqueueCommand } from "../../../platform/process/command-queue.js";
 import type { PermissionLevel } from "../../../security/permission-level.js";
 import type { InputProvenance } from "../../../sessions/input-provenance.js";
 import type { ExecElevatedDefaults, ExecToolDefaults } from "../../bash-tools.js";

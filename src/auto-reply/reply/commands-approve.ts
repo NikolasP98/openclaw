@@ -4,7 +4,7 @@ import {
   GATEWAY_CLIENT_MODES,
   GATEWAY_CLIENT_NAMES,
   isInternalMessageChannel,
-} from "../../utils/message-channel.js";
+} from "../../shared/message-channel.js";
 import type { CommandHandler } from "./commands-types.js";
 
 const COMMAND = "/approve";

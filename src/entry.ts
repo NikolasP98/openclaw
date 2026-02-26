@@ -6,7 +6,7 @@ import { shouldSkipRespawnForArgv } from "./cli/respawn-policy.js";
 import { normalizeWindowsArgv } from "./cli/windows-argv.js";
 import { isTruthyEnvValue, normalizeEnv } from "./infra/env.js";
 import { installProcessWarningFilter } from "./infra/warning-filter.js";
-import { attachChildProcessBridge } from "./process/child-process-bridge.js";
+import { attachChildProcessBridge } from "./platform/process/child-process-bridge.js";
 
 process.title = "minion";
 installProcessWarningFilter();

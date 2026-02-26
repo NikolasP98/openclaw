@@ -2,8 +2,8 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { SILENT_REPLY_TOKEN } from "../auto-reply/tokens.js";
+import { agentCommand } from "../cli/commands/agent.js";
 import type { CliDeps } from "../cli/deps.js";
-import { agentCommand } from "../commands/agent.js";
 import type { OpenClawConfig } from "../config/config.js";
 import {
   resolveAgentIdFromSessionKey,

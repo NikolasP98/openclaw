@@ -11,7 +11,7 @@ import {
 import { getCustomProviderApiKey, resolveEnvApiKey } from "../agents/model-auth.js";
 import { normalizeProviderId } from "../agents/model-selection.js";
 import { loadConfig } from "../config/config.js";
-import { normalizeSecretInput } from "../utils/normalize-secret-input.js";
+import { normalizeSecretInput } from "../shared/normalize-secret-input.js";
 import type { UsageProviderId } from "./provider-usage.types.js";
 
 export type ProviderAuth = {

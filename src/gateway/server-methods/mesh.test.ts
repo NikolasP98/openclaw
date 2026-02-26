@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { GatewayRequestContext } from "./types.js";
 import { __resetMeshRunsForTest, meshHandlers } from "./mesh.js";
+import type { GatewayRequestContext } from "./types.js";
 
 const mocks = vi.hoisted(() => ({
   agent: vi.fn(),
@@ -15,7 +15,7 @@ vi.mock("./agent.js", () => ({
   },
 }));
 
-vi.mock("../../commands/agent.js", () => ({
+vi.mock("../../cli/commands/agent.js", () => ({
   agentCommand: (...args: unknown[]) => mocks.agentCommand(...args),
 }));
 

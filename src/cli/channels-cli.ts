@@ -7,7 +7,7 @@ import {
   channelsRemoveCommand,
   channelsResolveCommand,
   channelsStatusCommand,
-} from "../commands/channels.js";
+} from "../cli/commands/channels.js";
 import { danger } from "../globals.js";
 import { defaultRuntime } from "../runtime.js";
 import { formatDocsLink } from "../terminal/links.js";

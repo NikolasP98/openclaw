@@ -1,8 +1,8 @@
 import fs from "node:fs/promises";
 import type { ThinkLevel } from "../../auto-reply/thinking.js";
+import { enqueueCommandInLane } from "../../platform/process/command-queue.js";
 import { getGlobalHookRunner } from "../../plugins/hook-runner-global.js";
-import { enqueueCommandInLane } from "../../process/command-queue.js";
-import { isMarkdownCapableMessageChannel } from "../../utils/message-channel.js";
+import { isMarkdownCapableMessageChannel } from "../../shared/message-channel.js";
 import { resolveOpenClawAgentDir } from "../agent-paths.js";
 import {
   isProfileInCooldown,

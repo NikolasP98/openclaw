@@ -4,8 +4,8 @@ import {
   createAgendaCard,
   createDeviceControlCard,
   createAppleTvRemoteCard,
-} from "../../line/flex-templates.js";
-import type { LineChannelData } from "../../line/types.js";
+} from "../../channels/impl/line/flex-templates.js";
+import type { LineChannelData } from "../../channels/impl/line/types.js";
 import type { ReplyPayload } from "../types.js";
 
 /**

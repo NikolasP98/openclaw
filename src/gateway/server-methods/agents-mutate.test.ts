@@ -34,7 +34,7 @@ vi.mock("../../config/config.js", () => ({
   writeConfigFile: mocks.writeConfigFile,
 }));
 
-vi.mock("../../commands/agents.config.js", () => ({
+vi.mock("../../cli/commands/agents.config.js", () => ({
   applyAgentConfig: mocks.applyAgentConfig,
   findAgentEntryIndex: mocks.findAgentEntryIndex,
   listAgentEntries: mocks.listAgentEntries,

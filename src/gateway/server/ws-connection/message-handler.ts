@@ -21,7 +21,7 @@ import { upsertPresence } from "../../../infra/system-presence.js";
 import { loadVoiceWakeConfig } from "../../../infra/voicewake.js";
 import { rawDataToString } from "../../../infra/ws.js";
 import type { createSubsystemLogger } from "../../../logging/subsystem.js";
-import { isGatewayCliClient, isWebchatClient } from "../../../utils/message-channel.js";
+import { isGatewayCliClient, isWebchatClient } from "../../../shared/message-channel.js";
 import { resolveRuntimeServiceVersion } from "../../../version.js";
 import {
   AUTH_RATE_LIMIT_SCOPE_DEVICE_TOKEN,

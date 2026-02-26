@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { OnboardOptions } from "../commands/onboard-types.js";
+import type { OnboardOptions } from "../cli/commands/onboard-types.js";
 import type { RuntimeEnv } from "../runtime.js";
 import { finalizeOnboardingWizard } from "./onboarding.finalize.js";
 import type { WizardPrompter } from "./prompts.js";
@@ -16,8 +16,8 @@ const mocks = vi.hoisted(() => ({
   runTui: vi.fn(async () => {}),
 }));
 
-vi.mock("../commands/onboard-helpers.js", async (importActual) => {
-  const actual = await importActual<typeof import("../commands/onboard-helpers.js")>();
+vi.mock("../cli/commands/onboard-helpers.js", async (importActual) => {
+  const actual = await importActual<typeof import("../cli/commands/onboard-helpers.js")>();
   return {
     ...actual,
     detectBrowserOpenSupport: mocks.detectBrowserOpenSupport,

@@ -5,13 +5,13 @@ import { formatCliCommand } from "../cli/command-format.js";
 import {
   buildGatewayInstallPlan,
   gatewayInstallErrorHint,
-} from "../commands/daemon-install-helpers.js";
+} from "../cli/commands/daemon-install-helpers.js";
 import {
   DEFAULT_GATEWAY_DAEMON_RUNTIME,
   GATEWAY_DAEMON_RUNTIME_OPTIONS,
-} from "../commands/daemon-runtime.js";
-import { formatHealthCheckFailure } from "../commands/health-format.js";
-import { healthCommand } from "../commands/health.js";
+} from "../cli/commands/daemon-runtime.js";
+import { formatHealthCheckFailure } from "../cli/commands/health-format.js";
+import { healthCommand } from "../cli/commands/health.js";
 import {
   detectBrowserOpenSupport,
   formatControlUiSshHint,
@@ -19,12 +19,12 @@ import {
   probeGatewayReachable,
   waitForGatewayReachable,
   resolveControlUiLinks,
-} from "../commands/onboard-helpers.js";
-import type { OnboardOptions } from "../commands/onboard-types.js";
+} from "../cli/commands/onboard-helpers.js";
+import type { OnboardOptions } from "../cli/commands/onboard-types.js";
 import type { OpenClawConfig } from "../config/config.js";
-import { resolveGatewayService } from "../daemon/service.js";
-import { isSystemdUserServiceAvailable } from "../daemon/systemd.js";
 import { ensureControlUiAssetsBuilt } from "../infra/control-ui-assets.js";
+import { resolveGatewayService } from "../platform/daemon/service.js";
+import { isSystemdUserServiceAvailable } from "../platform/daemon/systemd.js";
 import type { RuntimeEnv } from "../runtime.js";
 import { restoreTerminalState } from "../terminal/restore.js";
 import { runTui } from "../tui/tui.js";
@@ -72,7 +72,8 @@ export async function finalizeOnboardingWizard(
   }
 
   if (process.platform === "linux" && systemdAvailable) {
-    const { ensureSystemdUserLingerInteractive } = await import("../commands/systemd-linger.js");
+    const { ensureSystemdUserLingerInteractive } =
+      await import("../cli/commands/systemd-linger.js");
     await ensureSystemdUserLingerInteractive({
       runtime,
       prompter: {

@@ -2,7 +2,7 @@ import {
   formatUpdateAvailableHint,
   formatUpdateOneLiner,
   resolveUpdateAvailability,
-} from "../../commands/status.update.js";
+} from "../../cli/commands/status.update.js";
 import { readConfigFileSnapshot } from "../../config/config.js";
 import {
   normalizeUpdateChannel,

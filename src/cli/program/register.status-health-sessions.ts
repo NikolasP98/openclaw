@@ -1,7 +1,7 @@
 import type { Command } from "commander";
-import { healthCommand } from "../../commands/health.js";
-import { sessionsCommand } from "../../commands/sessions.js";
-import { statusCommand } from "../../commands/status.js";
+import { healthCommand } from "../../cli/commands/health.js";
+import { sessionsCommand } from "../../cli/commands/sessions.js";
+import { statusCommand } from "../../cli/commands/status.js";
 import { setVerbose } from "../../globals.js";
 import { defaultRuntime } from "../../runtime.js";
 import { formatDocsLink } from "../../terminal/links.js";

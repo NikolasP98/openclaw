@@ -1,7 +1,7 @@
 import { EventEmitter } from "node:events";
 import type { IncomingMessage } from "node:http";
 import { describe, expect, it } from "vitest";
-import { createMockServerResponse } from "../test-utils/mock-http-response.js";
+import { createMockServerResponse } from "../test-support/mock-http-response.js";
 import {
   installRequestBodyLimitGuard,
   isRequestBodyLimitError,

@@ -1,10 +1,10 @@
 import { loadConfig } from "../../config/config.js";
 import { resolveIsNixMode } from "../../config/paths.js";
-import { checkTokenDrift } from "../../daemon/service-audit.js";
-import type { GatewayService } from "../../daemon/service.js";
-import { renderSystemdUnavailableHints } from "../../daemon/systemd-hints.js";
-import { isSystemdUserServiceAvailable } from "../../daemon/systemd.js";
 import { isWSL } from "../../infra/wsl.js";
+import { checkTokenDrift } from "../../platform/daemon/service-audit.js";
+import type { GatewayService } from "../../platform/daemon/service.js";
+import { renderSystemdUnavailableHints } from "../../platform/daemon/systemd-hints.js";
+import { isSystemdUserServiceAvailable } from "../../platform/daemon/systemd.js";
 import { defaultRuntime } from "../../runtime.js";
 import {
   buildDaemonServiceSnapshot,

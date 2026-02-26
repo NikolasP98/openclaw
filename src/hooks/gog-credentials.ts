@@ -8,7 +8,7 @@ import fsSync from "node:fs";
 import os from "os";
 import path from "path";
 import { createSubsystemLogger } from "../logging/subsystem.js";
-import { runCommandWithTimeout } from "../process/exec.js";
+import { runCommandWithTimeout } from "../platform/process/exec.js";
 import { extractGogClientCredentials } from "./gmail-setup-utils.js";
 import type { CredentialResult, GogCredentials, TokenRefreshResponse } from "./gog-oauth-types.js";
 

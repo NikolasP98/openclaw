@@ -90,7 +90,7 @@ vi.mock("./update-cli/restart-helper.js", () => ({
 }));
 
 // Mock doctor (heavy module; should not run in unit tests)
-vi.mock("../commands/doctor.js", () => ({
+vi.mock("../cli/commands/doctor.js", () => ({
   doctorCommand: vi.fn(),
 }));
 // Mock the daemon-cli module
@@ -114,7 +114,7 @@ const { checkUpdateStatus, fetchNpmTagVersion, resolveNpmChannelTag } =
   await import("../infra/update-check.js");
 const { runCommandWithTimeout } = await import("../platform/process/exec.js");
 const { runDaemonRestart } = await import("./daemon-cli.js");
-const { doctorCommand } = await import("../commands/doctor.js");
+const { doctorCommand } = await import("../cli/commands/doctor.js");
 const { defaultRuntime } = await import("../runtime.js");
 const { updateCommand, registerUpdateCli, updateStatusCommand, updateWizardCommand } =
   await import("./update-cli.js");

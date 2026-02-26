@@ -14,7 +14,7 @@ import {
   type GlobalInstallManager,
 } from "../../infra/update-global.js";
 import type { UpdateStepProgress, UpdateStepResult } from "../../infra/update-runner.js";
-import { runCommandWithTimeout } from "../../process/exec.js";
+import { runCommandWithTimeout } from "../../platform/process/exec.js";
 import { defaultRuntime } from "../../runtime.js";
 import { theme } from "../../terminal/theme.js";
 import { pathExists } from "../../utils.js";

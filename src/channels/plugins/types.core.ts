@@ -3,7 +3,7 @@ import type { TSchema } from "@sinclair/typebox";
 import type { MsgContext } from "../../auto-reply/templating.js";
 import type { MinionConfig } from "../../config/config.js";
 import type { PollInput } from "../../polls.js";
-import type { GatewayClientMode, GatewayClientName } from "../../utils/message-channel.js";
+import type { GatewayClientMode, GatewayClientName } from "../../shared/message-channel.js";
 import type { ChatType } from "../chat-type.js";
 import type { ChatChannelId } from "../registry.js";
 import type { ChannelMessageActionName as ChannelMessageActionNameFromList } from "./message-action-names.js";

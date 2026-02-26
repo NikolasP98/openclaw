@@ -4,7 +4,7 @@ import type {
   OnboardMode,
   OnboardOptions,
   ResetScope,
-} from "../commands/onboard-types.js";
+} from "../cli/commands/onboard-types.js";
 import type { OpenClawConfig } from "../config/config.js";
 import {
   DEFAULT_GATEWAY_PORT,
@@ -66,7 +66,7 @@ export async function runOnboardingWizard(
   runtime: RuntimeEnv = defaultRuntime,
   prompter: WizardPrompter,
 ) {
-  const onboardHelpers = await import("../commands/onboard-helpers.js");
+  const onboardHelpers = await import("../cli/commands/onboard-helpers.js");
   onboardHelpers.printWizardHeader(runtime);
   await prompter.intro("OpenClaw onboarding");
   await requireRiskAcknowledgement({ opts, prompter });
@@ -312,7 +312,7 @@ export async function runOnboardingWizard(
         })) as OnboardMode));
 
   if (mode === "remote") {
-    const { promptRemoteGatewayConfig } = await import("../commands/onboard-remote.js");
+    const { promptRemoteGatewayConfig } = await import("../cli/commands/onboard-remote.js");
     const { logConfigUpdated } = await import("../config/logging.js");
     let nextConfig = await promptRemoteGatewayConfig(baseConfig, prompter);
     nextConfig = onboardHelpers.applyWizardMetadata(nextConfig, { command: "onboard", mode });
@@ -333,15 +333,15 @@ export async function runOnboardingWizard(
 
   const workspaceDir = resolveUserPath(workspaceInput.trim() || onboardHelpers.DEFAULT_WORKSPACE);
 
-  const { applyOnboardingLocalWorkspaceConfig } = await import("../commands/onboard-config.js");
+  const { applyOnboardingLocalWorkspaceConfig } = await import("../cli/commands/onboard-config.js");
   let nextConfig: OpenClawConfig = applyOnboardingLocalWorkspaceConfig(baseConfig, workspaceDir);
 
   const { ensureAuthProfileStore } = await import("../agents/auth-profiles.js");
-  const { promptAuthChoiceGrouped } = await import("../commands/auth-choice-prompt.js");
-  const { promptCustomApiConfig } = await import("../commands/onboard-custom.js");
+  const { promptAuthChoiceGrouped } = await import("../cli/commands/auth-choice-prompt.js");
+  const { promptCustomApiConfig } = await import("../cli/commands/onboard-custom.js");
   const { applyAuthChoice, resolvePreferredProviderForAuthChoice, warnIfModelConfigLooksOff } =
-    await import("../commands/auth-choice.js");
-  const { applyPrimaryModel, promptDefaultModel } = await import("../commands/model-picker.js");
+    await import("../cli/commands/auth-choice.js");
+  const { applyPrimaryModel, promptDefaultModel } = await import("../cli/commands/model-picker.js");
 
   const authStore = ensureAuthProfileStore(undefined, {
     allowKeychainPrompt: false,
@@ -413,7 +413,7 @@ export async function runOnboardingWizard(
     await prompter.note("Skipping channel setup.", "Channels");
   } else {
     const { listChannelPlugins } = await import("../channels/plugins/index.js");
-    const { setupChannels } = await import("../commands/onboard-channels.js");
+    const { setupChannels } = await import("../cli/commands/onboard-channels.js");
     const quickstartAllowFromChannels =
       flow === "quickstart"
         ? listChannelPlugins()
@@ -439,12 +439,12 @@ export async function runOnboardingWizard(
   if (opts.skipSkills) {
     await prompter.note("Skipping skills setup.", "Skills");
   } else {
-    const { setupSkills } = await import("../commands/onboard-skills.js");
+    const { setupSkills } = await import("../cli/commands/onboard-skills.js");
     nextConfig = await setupSkills(nextConfig, workspaceDir, runtime, prompter);
   }
 
   // Setup hooks (session memory on /new)
-  const { setupInternalHooks } = await import("../commands/onboard-hooks.js");
+  const { setupInternalHooks } = await import("../cli/commands/onboard-hooks.js");
   nextConfig = await setupInternalHooks(nextConfig, runtime, prompter);
 
   nextConfig = onboardHelpers.applyWizardMetadata(nextConfig, { command: "onboard", mode });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { CronJob } from "../../cron/types.js";
+import type { CronJob } from "../../platform/cron/types.js";
 import type { RuntimeEnv } from "../../runtime.js";
 import { printCronList } from "./shared.js";
 

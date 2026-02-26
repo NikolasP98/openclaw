@@ -76,7 +76,7 @@ vi.mock("../infra/provider-usage.js", () => ({
   formatUsageSummaryLine: () => null,
 }));
 
-import "./test-helpers/fast-core-tools.js";
+import "./test-support/fast-core-tools.js";
 import { createOpenClawTools } from "./openclaw-tools.js";
 
 function resetSessionStore(store: Record<string, unknown>) {

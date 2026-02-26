@@ -4,7 +4,7 @@ import {
   type DeliveryContext,
   deliveryContextKey,
   normalizeDeliveryContext,
-} from "../utils/delivery-context.js";
+} from "../shared/delivery-context.js";
 import {
   applyQueueRuntimeSettings,
   applyQueueDropPolicy,
@@ -15,7 +15,7 @@ import {
   hasCrossChannelItems,
   previewQueueSummaryPrompt,
   waitForQueueDebounce,
-} from "../utils/queue-helpers.js";
+} from "../shared/queue-helpers.js";
 
 export type AnnounceQueueItem = {
   // Stable announce identity shared by direct + queued delivery paths.

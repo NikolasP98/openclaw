@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import "./test-helpers/fast-core-tools.js";
+import "./test-support/fast-core-tools.js";
 import {
   getCallGatewayMock,
   getSessionsSpawnTool,

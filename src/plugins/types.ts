@@ -6,7 +6,7 @@ import type { AnyAgentTool } from "../agents/tools/common.js";
 import type { ReplyPayload } from "../auto-reply/types.js";
 import type { ChannelDock } from "../channels/dock.js";
 import type { ChannelId, ChannelPlugin } from "../channels/plugins/types.js";
-import type { createVpsAwareOAuthHandlers } from "../commands/oauth-flow.js";
+import type { createVpsAwareOAuthHandlers } from "../cli/commands/oauth-flow.js";
 import type { MinionConfig } from "../config/config.js";
 import type { ModelProviderConfig } from "../config/types.js";
 import type { GatewayRequestHandler } from "../gateway/server-methods/types.js";

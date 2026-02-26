@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const messageCommandMock = vi.fn(async () => {});
-vi.mock("../../../commands/message.js", () => ({
+vi.mock("../../../cli/commands/message.js", () => ({
   messageCommand: messageCommandMock,
 }));
 

@@ -24,7 +24,7 @@ import {
   modelsSetCommand,
   modelsSetImageCommand,
   modelsStatusCommand,
-} from "../commands/models.js";
+} from "../cli/commands/models.js";
 import { defaultRuntime } from "../runtime.js";
 import { formatDocsLink } from "../terminal/links.js";
 import { theme } from "../terminal/theme.js";

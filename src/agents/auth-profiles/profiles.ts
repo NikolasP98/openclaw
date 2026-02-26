@@ -1,4 +1,4 @@
-import { normalizeSecretInput } from "../../utils/normalize-secret-input.js";
+import { normalizeSecretInput } from "../../shared/normalize-secret-input.js";
 import { normalizeProviderId } from "../model-selection.js";
 import {
   ensureAuthProfileStore,

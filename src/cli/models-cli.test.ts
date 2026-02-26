@@ -4,7 +4,7 @@ const githubCopilotLoginCommand = vi.fn();
 const modelsStatusCommand = vi.fn().mockResolvedValue(undefined);
 const noopAsync = vi.fn(async () => undefined);
 
-vi.mock("../commands/models.js", () => ({
+vi.mock("../cli/commands/models.js", () => ({
   githubCopilotLoginCommand,
   modelsStatusCommand,
   modelsAliasesAddCommand: noopAsync,

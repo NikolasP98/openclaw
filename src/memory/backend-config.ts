@@ -10,8 +10,8 @@ import type {
   MemoryQmdIndexPath,
   MemoryQmdSearchMode,
 } from "../config/types.memory.js";
+import { splitShellArgs } from "../shared/shell-argv.js";
 import { resolveUserPath } from "../utils.js";
-import { splitShellArgs } from "../utils/shell-argv.js";
 
 export type ResolvedMemoryBackendConfig = {
   backend: MemoryBackend;

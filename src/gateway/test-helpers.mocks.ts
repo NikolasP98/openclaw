@@ -558,10 +558,10 @@ vi.mock("../agents/pi-embedded.js", async () => {
   };
 });
 
-vi.mock("../commands/health.js", () => ({
+vi.mock("../cli/commands/health.js", () => ({
   getHealthSnapshot: vi.fn().mockResolvedValue({ ok: true, stub: true }),
 }));
-vi.mock("../commands/status.js", () => ({
+vi.mock("../cli/commands/status.js", () => ({
   getStatusSummary: vi.fn().mockResolvedValue({ ok: true }),
 }));
 vi.mock("../web/outbound.js", () => ({
@@ -580,7 +580,7 @@ vi.mock("../channels/web/index.js", async () => {
       (hoisted.sendWhatsAppMock as (...args: unknown[]) => unknown)(...args),
   };
 });
-vi.mock("../commands/agent.js", () => ({
+vi.mock("../cli/commands/agent.js", () => ({
   agentCommand,
 }));
 vi.mock("../auto-reply/reply.js", () => ({

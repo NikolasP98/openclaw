@@ -1,18 +1,18 @@
-import { buildNodeInstallPlan } from "../../commands/node-daemon-install-helpers.js";
+import { buildNodeInstallPlan } from "../../cli/commands/node-daemon-install-helpers.js";
 import {
   DEFAULT_NODE_DAEMON_RUNTIME,
   isNodeDaemonRuntime,
-} from "../../commands/node-daemon-runtime.js";
+} from "../../cli/commands/node-daemon-runtime.js";
 import { resolveIsNixMode } from "../../config/paths.js";
+import { loadNodeHostConfig } from "../../node-host/config.js";
 import {
   resolveNodeLaunchAgentLabel,
   resolveNodeSystemdServiceName,
   resolveNodeWindowsTaskName,
-} from "../../daemon/constants.js";
-import { resolveGatewayLogPaths } from "../../daemon/launchd.js";
-import { resolveNodeService } from "../../daemon/node-service.js";
-import type { GatewayServiceRuntime } from "../../daemon/service-runtime.js";
-import { loadNodeHostConfig } from "../../node-host/config.js";
+} from "../../platform/daemon/constants.js";
+import { resolveGatewayLogPaths } from "../../platform/daemon/launchd.js";
+import { resolveNodeService } from "../../platform/daemon/node-service.js";
+import type { GatewayServiceRuntime } from "../../platform/daemon/service-runtime.js";
 import { defaultRuntime } from "../../runtime.js";
 import { colorize } from "../../terminal/theme.js";
 import { formatCliCommand } from "../command-format.js";

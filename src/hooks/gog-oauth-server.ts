@@ -9,7 +9,7 @@ import { URL } from "url";
 import { updateSessionStore, resolveDefaultSessionStorePath } from "../config/sessions.js";
 import { upsertSharedEnvVar } from "../infra/env-file.js";
 import { logAcceptedEnvOption } from "../infra/env.js";
-import { runCommandWithTimeout } from "../process/exec.js";
+import { runCommandWithTimeout } from "../platform/process/exec.js";
 import {
   saveSessionCredentials,
   getGoogleClientId,

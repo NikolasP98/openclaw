@@ -28,12 +28,12 @@ import { logVerbose } from "../../globals.js";
 import { formatTimeAgo } from "../../infra/format-time/format-relative.ts";
 import { parseAgentSessionKey } from "../../routing/session-key.js";
 import { extractTextFromChatContent } from "../../shared/chat-content.js";
+import { INTERNAL_MESSAGE_CHANNEL } from "../../shared/message-channel.js";
 import {
   formatDurationCompact,
   formatTokenUsageDisplay,
   truncateLine,
 } from "../../shared/subagents-format.js";
-import { INTERNAL_MESSAGE_CHANNEL } from "../../utils/message-channel.js";
 import { stopSubagentsForRequester } from "./abort.js";
 import type { CommandHandler } from "./commands-types.js";
 import { clearSessionQueues } from "./queue.js";

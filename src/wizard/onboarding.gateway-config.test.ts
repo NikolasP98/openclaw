@@ -6,8 +6,8 @@ const mocks = vi.hoisted(() => ({
   randomToken: vi.fn(),
 }));
 
-vi.mock("../commands/onboard-helpers.js", async (importActual) => {
-  const actual = await importActual<typeof import("../commands/onboard-helpers.js")>();
+vi.mock("../cli/commands/onboard-helpers.js", async (importActual) => {
+  const actual = await importActual<typeof import("../cli/commands/onboard-helpers.js")>();
   return {
     ...actual,
     randomToken: mocks.randomToken,

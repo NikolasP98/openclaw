@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { messageCommand } from "../../../commands/message.js";
+import { messageCommand } from "../../../cli/commands/message.js";
 import { danger, setVerbose } from "../../../globals.js";
 import { CHANNEL_TARGET_DESCRIPTION } from "../../../infra/outbound/channel-target.js";
 import { runGlobalGatewayStopSafely } from "../../../plugins/hook-runner-global.js";

@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import "./test-helpers/fast-core-tools.js";
+import "./test-support/fast-core-tools.js";
 import { createOpenClawTools } from "./openclaw-tools.js";
 
 describe("architect_pipeline tool", () => {

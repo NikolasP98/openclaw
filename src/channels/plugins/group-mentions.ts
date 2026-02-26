@@ -1,3 +1,4 @@
+import { resolveSlackAccount } from "../../channels/impl/slack/accounts.js";
 import type { OpenClawConfig } from "../../config/config.js";
 import {
   resolveChannelGroupRequireMention,
@@ -10,7 +11,6 @@ import type {
   GroupToolPolicyConfig,
 } from "../../config/types.tools.js";
 import { normalizeAtHashSlug, normalizeHyphenSlug } from "../../shared/string-normalization.js";
-import { resolveSlackAccount } from "../../slack/accounts.js";
 
 type GroupMentionParams = {
   cfg: OpenClawConfig;

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import "./test-helpers/fast-coding-tools.js";
+import "./test-support/fast-coding-tools.js";
 import { createMinionCodingTools } from "./pi-tools.js";
 
 vi.mock("./channel-tools.js", () => {

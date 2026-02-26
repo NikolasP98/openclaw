@@ -29,6 +29,7 @@ import type {
   TelegramTopicConfig,
 } from "../../../config/types.js";
 import { danger, logVerbose } from "../../../globals.js";
+import { getChildLogger } from "../../../logging.js";
 import { getAgentScopedMediaLocalRoots } from "../../../media/local-roots.js";
 import {
   executePluginCommand,
@@ -38,7 +39,6 @@ import {
 import { resolveAgentRoute } from "../../../routing/resolve-route.js";
 import { resolveThreadSessionKeys } from "../../../routing/session-key.js";
 import type { RuntimeEnv } from "../../../runtime.js";
-import { getChildLogger } from "../../logging.js";
 import { withTelegramApiErrorLogging } from "./api-logging.js";
 import { firstDefined, isSenderAllowed, normalizeAllowFromWithStore } from "./bot-access.js";
 import {

@@ -3,6 +3,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertMediaNotDataUrl, resolveSandboxedMediaSource } from "../../agents/sandbox-paths.js";
 import { readStringParam } from "../../agents/tools/common.js";
+import { parseSlackTarget } from "../../channels/impl/slack/targets.js";
+import { parseTelegramTarget } from "../../channels/impl/telegram/targets.js";
 import type {
   ChannelId,
   ChannelMessageActionName,
@@ -10,8 +12,6 @@ import type {
 } from "../../channels/plugins/types.js";
 import type { OpenClawConfig } from "../../config/config.js";
 import { extensionForMime } from "../../media/mime.js";
-import { parseSlackTarget } from "../../slack/targets.js";
-import { parseTelegramTarget } from "../../telegram/targets.js";
 import { loadWebMedia } from "../../web/media.js";
 
 export function readBooleanParam(

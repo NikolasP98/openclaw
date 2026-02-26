@@ -7,13 +7,13 @@ import {
   signDevicePayload,
 } from "../infra/device-identity.js";
 import { rawDataToString } from "../infra/ws.js";
-import { getDeterministicFreePortBlock } from "../test-utils/ports.js";
 import {
   GATEWAY_CLIENT_MODES,
   GATEWAY_CLIENT_NAMES,
   type GatewayClientMode,
   type GatewayClientName,
-} from "../utils/message-channel.js";
+} from "../shared/message-channel.js";
+import { getDeterministicFreePortBlock } from "../test-support/ports.js";
 import { GatewayClient } from "./client.js";
 import { buildDeviceAuthPayload } from "./device-auth.js";
 import { PROTOCOL_VERSION } from "./protocol/index.js";

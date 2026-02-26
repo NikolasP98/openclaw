@@ -1,1 +1,1 @@
-export { createTestRegistry as createRegistry } from "../test-utils/channel-plugins.js";
+export { createTestRegistry as createRegistry } from "../test-support/channel-plugins.js";

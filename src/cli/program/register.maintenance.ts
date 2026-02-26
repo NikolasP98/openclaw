@@ -1,8 +1,8 @@
 import type { Command } from "commander";
-import { dashboardCommand } from "../../commands/dashboard.js";
-import { doctorCommand } from "../../commands/doctor.js";
-import { resetCommand } from "../../commands/reset.js";
-import { uninstallCommand } from "../../commands/uninstall.js";
+import { dashboardCommand } from "../../cli/commands/dashboard.js";
+import { doctorCommand } from "../../cli/commands/doctor.js";
+import { resetCommand } from "../../cli/commands/reset.js";
+import { uninstallCommand } from "../../cli/commands/uninstall.js";
 import { defaultRuntime } from "../../runtime.js";
 import { formatDocsLink } from "../../terminal/links.js";
 import { theme } from "../../terminal/theme.js";

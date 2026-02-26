@@ -16,7 +16,7 @@ vi.mock("../config/config.js", async (importOriginal) => {
   };
 });
 
-import "./test-helpers/fast-core-tools.js";
+import "./test-support/fast-core-tools.js";
 import { createMinionTools } from "./minion-tools.js";
 
 describe("agents_list", () => {

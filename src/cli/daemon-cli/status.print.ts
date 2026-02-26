@@ -1,16 +1,16 @@
-import { resolveControlUiLinks } from "../../commands/onboard-helpers.js";
+import { resolveControlUiLinks } from "../../cli/commands/onboard-helpers.js";
+import { isWSLEnv } from "../../infra/wsl.js";
+import { getResolvedLoggerSettings } from "../../logging.js";
 import {
   resolveGatewayLaunchAgentLabel,
   resolveGatewaySystemdServiceName,
-} from "../../daemon/constants.js";
-import { renderGatewayServiceCleanupHints } from "../../daemon/inspect.js";
-import { resolveGatewayLogPaths } from "../../daemon/launchd.js";
+} from "../../platform/daemon/constants.js";
+import { renderGatewayServiceCleanupHints } from "../../platform/daemon/inspect.js";
+import { resolveGatewayLogPaths } from "../../platform/daemon/launchd.js";
 import {
   isSystemdUnavailableDetail,
   renderSystemdUnavailableHints,
-} from "../../daemon/systemd-hints.js";
-import { isWSLEnv } from "../../infra/wsl.js";
-import { getResolvedLoggerSettings } from "../../logging.js";
+} from "../../platform/daemon/systemd-hints.js";
 import { defaultRuntime } from "../../runtime.js";
 import { colorize } from "../../terminal/theme.js";
 import { shortenHomePath } from "../../utils.js";

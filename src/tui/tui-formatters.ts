@@ -1,6 +1,6 @@
 import { formatRawAssistantErrorForUi } from "../agents/pi-embedded-helpers.js";
+import { formatTokenCount } from "../shared/usage-format.js";
 import { stripAnsi } from "../terminal/ansi.js";
-import { formatTokenCount } from "../utils/usage-format.js";
 
 const REPLACEMENT_CHAR_RE = /\uFFFD/g;
 const MAX_TOKEN_CHARS = 32;

@@ -24,7 +24,7 @@ import {
   findAgentEntryIndex,
   listAgentEntries,
   pruneAgentConfig,
-} from "../../commands/agents.config.js";
+} from "../../cli/commands/agents.config.js";
 import { loadConfig, writeConfigFile } from "../../config/config.js";
 import { resolveSessionTranscriptsDirForAgent } from "../../config/sessions/paths.js";
 import { DEFAULT_AGENT_ID, normalizeAgentId } from "../../routing/session-key.js";

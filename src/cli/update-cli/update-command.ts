@@ -3,10 +3,9 @@ import { confirm, isCancel } from "@clack/prompts";
 import {
   checkShellCompletionStatus,
   ensureCompletionCacheExists,
-} from "../../commands/doctor-completion.js";
-import { doctorCommand } from "../../commands/doctor.js";
+} from "../../cli/commands/doctor-completion.js";
+import { doctorCommand } from "../../cli/commands/doctor.js";
 import { readConfigFileSnapshot, writeConfigFile } from "../../config/config.js";
-import { resolveGatewayService } from "../../daemon/service.js";
 import {
   channelToNpmTag,
   DEFAULT_GIT_CHANNEL,
@@ -24,8 +23,9 @@ import {
   resolveGlobalPackageRoot,
 } from "../../infra/update-global.js";
 import { runGatewayUpdate, type UpdateRunResult } from "../../infra/update-runner.js";
+import { resolveGatewayService } from "../../platform/daemon/service.js";
+import { runCommandWithTimeout } from "../../platform/process/exec.js";
 import { syncPluginsForUpdateChannel, updateNpmInstalledPlugins } from "../../plugins/update.js";
-import { runCommandWithTimeout } from "../../process/exec.js";
 import { defaultRuntime } from "../../runtime.js";
 import { stylePromptMessage } from "../../terminal/prompt-style.js";
 import { theme } from "../../terminal/theme.js";

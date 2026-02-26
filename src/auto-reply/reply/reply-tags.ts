@@ -1,4 +1,4 @@
-import { parseInlineDirectives } from "../../utils/directive-tags.js";
+import { parseInlineDirectives } from "../../shared/directive-tags.js";
 
 export function extractReplyToTag(
   text?: string,

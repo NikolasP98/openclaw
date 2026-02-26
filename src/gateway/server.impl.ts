@@ -41,10 +41,10 @@ import { scheduleGatewayUpdateCheck } from "../infra/update-startup.js";
 import { startDiagnosticHeartbeat, stopDiagnosticHeartbeat } from "../logging/diagnostic.js";
 import { initReliability } from "../logging/reliability.js";
 import { createSubsystemLogger, runtimeForLogger } from "../logging/subsystem.js";
+import { getTotalQueueSize } from "../platform/process/command-queue.js";
 import { getGlobalHookRunner, runGlobalGatewayStopSafely } from "../plugins/hook-runner-global.js";
 import { createEmptyPluginRegistry } from "../plugins/registry.js";
 import type { PluginServicesHandle } from "../plugins/services.js";
-import { getTotalQueueSize } from "../process/command-queue.js";
 import type { RuntimeEnv } from "../runtime.js";
 import { runOnboardingWizard } from "../wizard/onboarding.js";
 import { createAuthRateLimiter, type AuthRateLimiter } from "./auth-rate-limit.js";
@@ -157,7 +157,7 @@ export type GatewayServerOptions = {
    * Test-only: override the onboarding wizard runner.
    */
   wizardRunner?: (
-    opts: import("../commands/onboard-types.js").OnboardOptions,
+    opts: import("../cli/commands/onboard-types.js").OnboardOptions,
     runtime: import("../runtime.js").RuntimeEnv,
     prompter: import("../wizard/prompts.js").WizardPrompter,
   ) => Promise<void>;

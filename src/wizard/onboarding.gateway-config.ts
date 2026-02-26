@@ -2,8 +2,8 @@ import {
   normalizeGatewayTokenInput,
   randomToken,
   validateGatewayPasswordInput,
-} from "../commands/onboard-helpers.js";
-import type { GatewayAuthChoice } from "../commands/onboard-types.js";
+} from "../cli/commands/onboard-helpers.js";
+import type { GatewayAuthChoice } from "../cli/commands/onboard-types.js";
 import type { GatewayBindMode, GatewayTailscaleMode, OpenClawConfig } from "../config/config.js";
 import {
   TAILSCALE_DOCS_LINES,

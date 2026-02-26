@@ -16,7 +16,7 @@ import type {
 } from "../config/types.tools.js";
 import { logVerbose, shouldLogVerbose } from "../globals.js";
 import { getLogger } from "../logging/logger.js";
-import { runExec } from "../process/exec.js";
+import { runExec } from "../platform/process/exec.js";
 import { MediaAttachmentCache, normalizeAttachments, selectAttachments } from "./attachments.js";
 import {
   AUTO_AUDIO_KEY_PROVIDERS,

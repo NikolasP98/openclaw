@@ -1,4 +1,4 @@
-import { loadAndMaybeMigrateDoctorConfig } from "../../commands/doctor-config-flow.js";
+import { loadAndMaybeMigrateDoctorConfig } from "../../cli/commands/doctor-config-flow.js";
 import { readConfigFileSnapshot } from "../../config/config.js";
 import type { RuntimeEnv } from "../../runtime.js";
 import { colorize, isRich, theme } from "../../terminal/theme.js";

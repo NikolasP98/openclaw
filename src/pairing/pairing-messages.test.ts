@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { captureEnv } from "../test-utils/env.js";
+import { captureEnv } from "../test-support/env.js";
 import { buildPairingReply } from "./pairing-messages.js";
 
 describe("buildPairingReply", () => {

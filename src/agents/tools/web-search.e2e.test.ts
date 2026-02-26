@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { withEnv } from "../../test-utils/env.js";
+import { withEnv } from "../../test-support/env.js";
 import { __testing } from "./web-search.js";
 
 const {

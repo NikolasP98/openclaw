@@ -4,7 +4,7 @@ import { DEFAULT_GEMINI_EMBEDDING_MODEL } from "./embeddings-gemini.js";
 import { createEmbeddingProvider, DEFAULT_LOCAL_MODEL } from "./embeddings.js";
 
 vi.mock("../agents/model-auth.js", async () => {
-  const { createModelAuthMockModule } = await import("../test-utils/model-auth-mock.js");
+  const { createModelAuthMockModule } = await import("../test-support/model-auth-mock.js");
   return createModelAuthMockModule();
 });
 

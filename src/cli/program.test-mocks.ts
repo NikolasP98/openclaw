@@ -28,9 +28,9 @@ export const runtime: {
 };
 
 export function installBaseProgramMocks() {
-  vi.mock("../commands/message.js", () => ({ messageCommand }));
-  vi.mock("../commands/status.js", () => ({ statusCommand }));
-  vi.mock("../commands/configure.js", () => ({
+  vi.mock("../cli/commands/message.js", () => ({ messageCommand }));
+  vi.mock("../cli/commands/status.js", () => ({ statusCommand }));
+  vi.mock("../cli/commands/configure.js", () => ({
     CONFIGURE_WIZARD_SECTIONS: [
       "workspace",
       "model",
@@ -51,8 +51,8 @@ export function installBaseProgramMocks() {
       return configureCommand({}, runtime);
     },
   }));
-  vi.mock("../commands/setup.js", () => ({ setupCommand }));
-  vi.mock("../commands/onboard.js", () => ({ onboardCommand }));
+  vi.mock("../cli/commands/setup.js", () => ({ setupCommand }));
+  vi.mock("../cli/commands/onboard.js", () => ({ onboardCommand }));
   vi.mock("../runtime.js", () => ({ defaultRuntime: runtime }));
   vi.mock("./channel-auth.js", () => ({ runChannelLogin, runChannelLogout }));
   vi.mock("../tui/tui.js", () => ({ runTui }));
@@ -70,7 +70,7 @@ export function installBaseProgramMocks() {
 
 export function installSmokeProgramMocks() {
   vi.mock("./plugin-registry.js", () => ({ ensurePluginRegistryLoaded }));
-  vi.mock("../commands/doctor-config-flow.js", () => ({
+  vi.mock("../cli/commands/doctor-config-flow.js", () => ({
     loadAndMaybeMigrateDoctorConfig,
   }));
   vi.mock("./program/config-guard.js", () => ({ ensureConfigReady }));

@@ -1,13 +1,13 @@
-import type { OpenClawConfig } from "../../../config/config.js";
-import type { DmPolicy } from "../../../config/types.js";
-import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "../../../routing/session-key.js";
 import {
   listSlackAccountIds,
   resolveDefaultSlackAccountId,
   resolveSlackAccount,
-} from "../../../slack/accounts.js";
-import { resolveSlackChannelAllowlist } from "../../../slack/resolve-channels.js";
-import { resolveSlackUserAllowlist } from "../../../slack/resolve-users.js";
+} from "../../../channels/impl/slack/accounts.js";
+import { resolveSlackChannelAllowlist } from "../../../channels/impl/slack/resolve-channels.js";
+import { resolveSlackUserAllowlist } from "../../../channels/impl/slack/resolve-users.js";
+import type { OpenClawConfig } from "../../../config/config.js";
+import type { DmPolicy } from "../../../config/types.js";
+import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "../../../routing/session-key.js";
 import { formatDocsLink } from "../../../terminal/links.js";
 import type { WizardPrompter } from "../../../wizard/prompts.js";
 import type { ChannelOnboardingAdapter, ChannelOnboardingDmPolicy } from "../onboarding-types.js";

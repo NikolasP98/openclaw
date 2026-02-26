@@ -5,7 +5,7 @@
 import { Type } from "@sinclair/typebox";
 import { buildGogEnvironment } from "../../hooks/gog-command-exec.js";
 import { getValidCredentials, importTokensToGogKeyring } from "../../hooks/gog-credentials.js";
-import { runCommandWithTimeout } from "../../process/exec.js";
+import { runCommandWithTimeout } from "../../platform/process/exec.js";
 import type { AnyAgentTool } from "./common.js";
 import { jsonResult, readStringParam } from "./common.js";
 

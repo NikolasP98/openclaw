@@ -13,7 +13,7 @@ import type { OpenClawConfig } from "../../config/config.js";
 import { loadConfig, writeConfigFile } from "../../config/config.js";
 import { getRemoteSkillEligibility } from "../../infra/skills-remote.js";
 import { normalizeAgentId } from "../../routing/session-key.js";
-import { normalizeSecretInput } from "../../utils/normalize-secret-input.js";
+import { normalizeSecretInput } from "../../shared/normalize-secret-input.js";
 import {
   ErrorCodes,
   errorShape,

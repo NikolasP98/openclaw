@@ -1,12 +1,12 @@
+import { fetchChannelPermissionsDiscord } from "../../../channels/impl/discord/send.js";
+import { parseDiscordTarget } from "../../../channels/impl/discord/targets.js";
+import { fetchSlackScopes, type SlackScopesResult } from "../../../channels/impl/slack/scopes.js";
 import { resolveChannelDefaultAccountId } from "../../../channels/plugins/helpers.js";
 import { getChannelPlugin, listChannelPlugins } from "../../../channels/plugins/index.js";
 import type { ChannelCapabilities, ChannelPlugin } from "../../../channels/plugins/types.js";
 import type { OpenClawConfig } from "../../../config/config.js";
-import { fetchChannelPermissionsDiscord } from "../../../discord/send.js";
-import { parseDiscordTarget } from "../../../discord/targets.js";
 import { danger } from "../../../globals.js";
 import { defaultRuntime, type RuntimeEnv } from "../../../runtime.js";
-import { fetchSlackScopes, type SlackScopesResult } from "../../../slack/scopes.js";
 import { theme } from "../../../terminal/theme.js";
 import { formatChannelAccountLabel, requireValidConfig } from "./shared.js";
 

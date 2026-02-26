@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as ssrf from "../../../infra/net/ssrf.js";
-import { withFetchPreconnect } from "../../../test-utils/fetch-mock.js";
+import { withFetchPreconnect } from "../../../test-support/fetch-mock.js";
 import { describeGeminiVideo } from "./video.js";
 
 const TEST_NET_IP = "203.0.113.10";

@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import type { MockFn } from "../test-utils/vitest-mock-fn.js";
+import type { MockFn } from "../test-support/vitest-mock-fn.js";
 
 export type LoadedConfig = ReturnType<(typeof import("../config/config.js"))["loadConfig"]>;
 

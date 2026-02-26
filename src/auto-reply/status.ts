@@ -20,6 +20,12 @@ import type { MediaUnderstandingDecision } from "../media-understanding/types.js
 import { listPluginCommands } from "../plugins/commands.js";
 import { resolveAgentIdFromSessionKey } from "../routing/session-key.js";
 import {
+  estimateUsageCost,
+  formatTokenCount as formatTokenCountShared,
+  formatUsd,
+  resolveModelCostConfig,
+} from "../shared/usage-format.js";
+import {
   getTtsMaxLength,
   getTtsProvider,
   isSummarizationEnabled,
@@ -27,12 +33,6 @@ import {
   resolveTtsConfig,
   resolveTtsPrefsPath,
 } from "../tts/tts.js";
-import {
-  estimateUsageCost,
-  formatTokenCount as formatTokenCountShared,
-  formatUsd,
-  resolveModelCostConfig,
-} from "../utils/usage-format.js";
 import { VERSION } from "../version.js";
 import {
   listChatCommands,

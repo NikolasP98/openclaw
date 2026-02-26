@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import {
   resolveGatewayLaunchAgentLabel,
   resolveGatewaySystemdServiceName,
-} from "../daemon/constants.js";
+} from "../platform/daemon/constants.js";
 
 export type RestartAttempt = {
   ok: boolean;

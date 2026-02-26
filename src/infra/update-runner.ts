@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { type CommandOptions, runCommandWithTimeout } from "../process/exec.js";
+import { type CommandOptions, runCommandWithTimeout } from "../platform/process/exec.js";
 import {
   resolveControlUiDistIndexHealth,
   resolveControlUiDistIndexPathForRoot,

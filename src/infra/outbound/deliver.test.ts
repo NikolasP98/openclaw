@@ -1,15 +1,18 @@
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { markdownToSignalTextChunks } from "../../channels/impl/signal/format.js";
 import { signalOutbound } from "../../channels/plugins/outbound/signal.js";
 import { telegramOutbound } from "../../channels/plugins/outbound/telegram.js";
 import { whatsappOutbound } from "../../channels/plugins/outbound/whatsapp.js";
 import type { OpenClawConfig } from "../../config/config.js";
 import { STATE_DIR } from "../../config/paths.js";
 import { setActivePluginRegistry } from "../../plugins/runtime.js";
-import { markdownToSignalTextChunks } from "../../signal/format.js";
-import { createOutboundTestPlugin, createTestRegistry } from "../../test-utils/channel-plugins.js";
-import { createIMessageTestPlugin } from "../../test-utils/imessage-test-plugin.js";
-import { createInternalHookEventPayload } from "../../test-utils/internal-hook-event-payload.js";
+import {
+  createOutboundTestPlugin,
+  createTestRegistry,
+} from "../../test-support/channel-plugins.js";
+import { createIMessageTestPlugin } from "../../test-support/imessage-test-plugin.js";
+import { createInternalHookEventPayload } from "../../test-support/internal-hook-event-payload.js";
 
 const mocks = vi.hoisted(() => ({
   appendAssistantMessageToSessionTranscript: vi.fn(async () => ({ ok: true, sessionFile: "x" })),

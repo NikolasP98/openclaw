@@ -27,7 +27,7 @@ vi.mock("../../runtime.js", () => ({
   defaultRuntime,
 }));
 
-vi.mock("../../commands/gateway-status.js", () => ({
+vi.mock("../../cli/commands/gateway-status.js", () => ({
   gatewayStatusCommand: (opts: unknown, runtime: unknown) => gatewayStatusCommand(opts, runtime),
 }));
 
@@ -55,7 +55,7 @@ vi.mock("../daemon-cli.js", () => ({
   addGatewayServiceCommands: () => undefined,
 }));
 
-vi.mock("../../commands/health.js", () => ({
+vi.mock("../../cli/commands/health.js", () => ({
   formatHealthChannelLines: () => [],
 }));
 
@@ -89,7 +89,7 @@ vi.mock("../../terminal/theme.js", () => ({
   },
 }));
 
-vi.mock("../../utils/usage-format.js", () => ({
+vi.mock("../../shared/usage-format.js", () => ({
   formatTokenCount: () => "0",
   formatUsd: () => "$0.00",
 }));

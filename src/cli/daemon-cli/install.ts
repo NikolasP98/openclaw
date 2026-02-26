@@ -1,9 +1,9 @@
-import { buildGatewayInstallPlan } from "../../commands/daemon-install-helpers.js";
+import { buildGatewayInstallPlan } from "../../cli/commands/daemon-install-helpers.js";
 import {
   DEFAULT_GATEWAY_DAEMON_RUNTIME,
   isGatewayDaemonRuntime,
-} from "../../commands/daemon-runtime.js";
-import { randomToken } from "../../commands/onboard-helpers.js";
+} from "../../cli/commands/daemon-runtime.js";
+import { randomToken } from "../../cli/commands/onboard-helpers.js";
 import {
   loadConfig,
   readConfigFileSnapshot,
@@ -11,8 +11,8 @@ import {
   writeConfigFile,
 } from "../../config/config.js";
 import { resolveIsNixMode } from "../../config/paths.js";
-import { resolveGatewayService } from "../../daemon/service.js";
 import { resolveGatewayAuth } from "../../gateway/auth.js";
+import { resolveGatewayService } from "../../platform/daemon/service.js";
 import { defaultRuntime } from "../../runtime.js";
 import { formatCliCommand } from "../command-format.js";
 import {

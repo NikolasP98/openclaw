@@ -1,6 +1,6 @@
 import os from "node:os";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { runExec } from "../process/exec.js";
+import type { runExec } from "../platform/process/exec.js";
 import type { RuntimeEnv } from "../runtime.js";
 import { ensureBinary } from "./binaries.js";
 import {

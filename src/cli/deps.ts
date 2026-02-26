@@ -1,10 +1,10 @@
+import type { sendMessageDiscord } from "../channels/impl/discord/send.js";
+import type { sendMessageIMessage } from "../channels/impl/imessage/send.js";
+import type { sendMessageSignal } from "../channels/impl/signal/send.js";
+import type { sendMessageSlack } from "../channels/impl/slack/send.js";
+import type { sendMessageTelegram } from "../channels/impl/telegram/send.js";
 import type { sendMessageWhatsApp } from "../channels/web/index.js";
-import type { sendMessageDiscord } from "../discord/send.js";
-import type { sendMessageIMessage } from "../imessage/send.js";
 import type { OutboundSendDeps } from "../infra/outbound/deliver.js";
-import type { sendMessageSignal } from "../signal/send.js";
-import type { sendMessageSlack } from "../slack/send.js";
-import type { sendMessageTelegram } from "../telegram/send.js";
 
 export type CliDeps = {
   sendMessageWhatsApp: typeof sendMessageWhatsApp;
@@ -22,23 +22,23 @@ export function createDefaultDeps(): CliDeps {
       return await sendMessageWhatsApp(...args);
     },
     sendMessageTelegram: async (...args) => {
-      const { sendMessageTelegram } = await import("../telegram/send.js");
+      const { sendMessageTelegram } = await import("../channels/impl/telegram/send.js");
       return await sendMessageTelegram(...args);
     },
     sendMessageDiscord: async (...args) => {
-      const { sendMessageDiscord } = await import("../discord/send.js");
+      const { sendMessageDiscord } = await import("../channels/impl/discord/send.js");
       return await sendMessageDiscord(...args);
     },
     sendMessageSlack: async (...args) => {
-      const { sendMessageSlack } = await import("../slack/send.js");
+      const { sendMessageSlack } = await import("../channels/impl/slack/send.js");
       return await sendMessageSlack(...args);
     },
     sendMessageSignal: async (...args) => {
-      const { sendMessageSignal } = await import("../signal/send.js");
+      const { sendMessageSignal } = await import("../channels/impl/signal/send.js");
       return await sendMessageSignal(...args);
     },
     sendMessageIMessage: async (...args) => {
-      const { sendMessageIMessage } = await import("../imessage/send.js");
+      const { sendMessageIMessage } = await import("../channels/impl/imessage/send.js");
       return await sendMessageIMessage(...args);
     },
   };

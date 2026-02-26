@@ -1,5 +1,5 @@
 import os from "node:os";
-import { runExec } from "../process/exec.js";
+import { runExec } from "../platform/process/exec.js";
 
 export type ExecFn = typeof runExec;
 

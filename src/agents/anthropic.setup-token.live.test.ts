@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import {
   ANTHROPIC_SETUP_TOKEN_PREFIX,
   validateAnthropicSetupToken,
-} from "../commands/auth-token.js";
+} from "../cli/commands/auth-token.js";
 import { loadConfig } from "../config/config.js";
 import { isTruthyEnvValue } from "../infra/env.js";
 import { resolveMinionAgentDir } from "./agent-paths.js";

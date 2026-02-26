@@ -5,7 +5,7 @@ import { getChannelDock } from "../../channels/dock.js";
 import type { OpenClawConfig } from "../../config/config.js";
 import type { SessionEntry } from "../../config/sessions.js";
 import { logVerbose } from "../../globals.js";
-import { resolveGatewayMessageChannel } from "../../utils/message-channel.js";
+import { resolveGatewayMessageChannel } from "../../shared/message-channel.js";
 import {
   listReservedChatSlashCommandNames,
   listSkillCommandsForWorkspace,

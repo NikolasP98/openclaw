@@ -30,7 +30,7 @@ import {
 import { assertSupportedRuntime } from "./infra/runtime-guard.js";
 import { installUnhandledRejectionHandler } from "./infra/unhandled-rejections.js";
 import { enableConsoleCapture } from "./logging.js";
-import { runCommandWithTimeout, runExec } from "./process/exec.js";
+import { runCommandWithTimeout, runExec } from "./platform/process/exec.js";
 import { assertWebChannel, normalizeE164, toWhatsappJid } from "./utils.js";
 
 loadDotEnv({ quiet: true });
