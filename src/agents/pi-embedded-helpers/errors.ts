@@ -497,6 +497,11 @@ export function formatAssistantErrorText(
     return formatRawAssistantErrorForUi(raw);
   }
 
+  // Catch internal library errors about unhandled stop reasons
+  if (/unhandled stop reason/i.test(raw)) {
+    return "LLM request failed unexpectedly. Please try again.";
+  }
+
   // Never return raw unhandled errors - log for debugging but return safe message
   if (raw.length > 600) {
     console.warn("[formatAssistantErrorText] Long error truncated:", raw.slice(0, 200));

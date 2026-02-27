@@ -5,7 +5,6 @@ import { isSilentReplyText, SILENT_REPLY_TOKEN } from "../../../auto-reply/token
 import { formatToolAggregate } from "../../../auto-reply/tool-meta.js";
 import type { OpenClawConfig } from "../../../config/config.js";
 import {
-  BILLING_ERROR_USER_MESSAGE,
   formatAssistantErrorText,
   formatRawAssistantErrorForUi,
   getApiErrorPayloadFingerprint,
@@ -129,9 +128,6 @@ export function buildEmbeddedRunPayloads(params: {
   const normalizedRawErrorText = rawErrorMessage
     ? normalizeTextForComparison(rawErrorMessage)
     : null;
-  const normalizedErrorText = errorText ? normalizeTextForComparison(errorText) : null;
-  const normalizedGenericBillingErrorText = normalizeTextForComparison(BILLING_ERROR_USER_MESSAGE);
-  const genericErrorText = "The AI service returned an error. Please try again.";
   if (errorText) {
     replyItems.push({ text: errorText, isError: true });
   }
@@ -172,7 +168,9 @@ export function buildEmbeddedRunPayloads(params: {
     replyItems.push({ text: reasoningText });
   }
 
-  const fallbackAnswerText = params.lastAssistant ? extractAssistantText(params.lastAssistant) : "";
+  // Don't extract fallback text from an errored last assistant — it may be partial/truncated content
+  const fallbackAnswerText =
+    params.lastAssistant && !lastAssistantErrored ? extractAssistantText(params.lastAssistant) : "";
   const shouldSuppressRawErrorText = (text: string) => {
     if (!lastAssistantErrored) {
       return false;
@@ -180,22 +178,6 @@ export function buildEmbeddedRunPayloads(params: {
     const trimmed = text.trim();
     if (!trimmed) {
       return false;
-    }
-    if (errorText) {
-      const normalized = normalizeTextForComparison(trimmed);
-      if (normalized && normalizedErrorText && normalized === normalizedErrorText) {
-        return true;
-      }
-      if (trimmed === genericErrorText) {
-        return true;
-      }
-      if (
-        normalized &&
-        normalizedGenericBillingErrorText &&
-        normalized === normalizedGenericBillingErrorText
-      ) {
-        return true;
-      }
     }
     if (rawErrorMessage && trimmed === rawErrorMessage) {
       return true;
