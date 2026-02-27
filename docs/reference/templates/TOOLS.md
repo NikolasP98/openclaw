@@ -23,6 +23,18 @@ Things like:
 ## Examples
 
 ```markdown
+### Knowledge Graph
+
+Use `remember` to store structured facts that should persist across sessions:
+
+- Entities: people, projects, services, devices (type: entity)
+- Preferences: "user prefers dark mode", "always use bun not npm" (type: preference)
+- Decisions: "we decided to use SQLite over Postgres" (type: belief)
+- Recurring facts: "prod server is on port 18789" (type: fact)
+
+Use `recall_entity` before answering questions about known things.
+Use `search_facts` for broad keyword lookup.
+
 ### Cameras
 
 - living-room → Main area, 180° wide angle
