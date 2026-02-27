@@ -20,7 +20,7 @@ import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AnyAgentTool } from "../agents/tools/common.js";
 import { resolveStateDir } from "../config/paths.js";
-import type { MemoryObject, ObjectType, RelType } from "./typed-schema.js";
+import type { MemoryObject, MemoryRelationship, ObjectType, RelType } from "./typed-schema.js";
 import {
   createObject,
   createObjectInDb,
@@ -34,6 +34,8 @@ import {
   getRelated,
   getRelatedInDb,
   getTypedMemoryDb,
+  listAllObjectsInDb,
+  listAllRelationshipsInDb,
   listObjectsByType,
   listObjectsByTypeInDb,
   searchObjects,
@@ -42,7 +44,7 @@ import {
 
 // ── Re-exports for callers ─────────────────────────────────────────────────────
 
-export type { MemoryObject, ObjectType, RelType };
+export type { MemoryObject, MemoryRelationship, ObjectType, RelType };
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -229,6 +231,14 @@ export class KnowledgeGraphSession {
 
   listByType(type: ObjectType): MemoryObject[] {
     return listObjectsByTypeInDb(this.db, type);
+  }
+
+  listAll(): MemoryObject[] {
+    return listAllObjectsInDb(this.db);
+  }
+
+  listAllRelationships(): MemoryRelationship[] {
+    return listAllRelationshipsInDb(this.db);
   }
 
   getMemoryObject(id: string): MemoryObject | null {

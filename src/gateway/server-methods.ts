@@ -11,6 +11,7 @@ import { deviceHandlers } from "./server-methods/devices.js";
 import { execApprovalsHandlers } from "./server-methods/exec-approvals.js";
 import { healthHandlers } from "./server-methods/health.js";
 import { logsHandlers } from "./server-methods/logs.js";
+import { memoryHandlers } from "./server-methods/memory.js";
 import { meshHandlers } from "./server-methods/mesh.js";
 import { modelsHandlers } from "./server-methods/models.js";
 import { nodeHandlers } from "./server-methods/nodes.js";
@@ -84,6 +85,7 @@ const READ_METHODS = new Set([
   "talk.config",
   "mesh.plan",
   "mesh.status",
+  "memory.snapshot",
 ]);
 const WRITE_METHODS = new Set([
   "send",
@@ -207,6 +209,7 @@ export const coreGatewayHandlers: GatewayRequestHandlers = {
   ...specialistsHandlers,
   ...browserHandlers,
   ...reliabilityHandlers,
+  ...memoryHandlers,
 };
 
 export async function handleGatewayRequest(

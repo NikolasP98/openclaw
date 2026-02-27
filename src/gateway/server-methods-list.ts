@@ -99,6 +99,7 @@ const BASE_METHODS = [
   // Reliability KPI methods
   "reliability.events",
   "reliability.summary",
+  "memory.snapshot",
 ];
 
 export function listGatewayMethods(): string[] {

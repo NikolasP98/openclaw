@@ -445,6 +445,21 @@ export function listObjectsByTypeInDb(db: DatabaseSync, type: ObjectType): Memor
   return rows.map(rowToMemoryObject);
 }
 
+/** List all memory objects, newest first. */
+export function listAllObjectsInDb(db: DatabaseSync): MemoryObject[] {
+  const rows = db.prepare("SELECT * FROM memory_objects ORDER BY updated_at DESC").all() as Record<
+    string,
+    unknown
+  >[];
+  return rows.map(rowToMemoryObject);
+}
+
+/** List all relationships. */
+export function listAllRelationshipsInDb(db: DatabaseSync): MemoryRelationship[] {
+  const rows = db.prepare("SELECT * FROM memory_relationships").all() as Record<string, unknown>[];
+  return rows.map(rowToRelationship);
+}
+
 export function getRelatedInDb(db: DatabaseSync, id: string, relType?: RelType): MemoryObject[] {
   const rows: Record<string, unknown>[] = relType
     ? (db
