@@ -4,13 +4,19 @@ import {
   findRelated,
   forget,
   getMemoryObject,
+  KnowledgeGraphSession,
   linkObjects,
   listByType,
   recallEntity,
   remember,
   searchFacts,
 } from "./knowledge-graph.js";
-import { openTypedMemoryDb, resetTypedMemoryDbForTest } from "./typed-schema.js";
+import {
+  closeAndEvictDb,
+  openTypedMemoryDb,
+  resetDbRegistryForTest,
+  resetTypedMemoryDbForTest,
+} from "./typed-schema.js";
 
 beforeEach(() => {
   openTypedMemoryDb(":memory:");
@@ -18,6 +24,8 @@ beforeEach(() => {
 
 afterEach(() => {
   resetTypedMemoryDbForTest();
+  closeAndEvictDb(":memory:");
+  resetDbRegistryForTest();
 });
 
 describe("remember", () => {
@@ -276,5 +284,113 @@ describe("createKnowledgeGraphTools", () => {
       const result = await tool.execute("call-10", { query: "" });
       expect(result.content[0].text).toContain("Error");
     });
+  });
+});
+
+describe("KnowledgeGraphSession", () => {
+  afterEach(() => {
+    closeAndEvictDb(":memory:");
+    resetDbRegistryForTest();
+  });
+
+  it("KnowledgeGraphSession.open(':memory:') creates a working session", () => {
+    const session = KnowledgeGraphSession.open(":memory:");
+    expect(session).toBeTruthy();
+  });
+
+  it("session.remember stores an object and returns a non-empty id", () => {
+    const session = KnowledgeGraphSession.open(":memory:");
+    const id = session.remember({ label: "test-entity", type: "entity" });
+    expect(id).toBeTruthy();
+  });
+
+  it("session.recallEntity finds stored entities", () => {
+    const session = KnowledgeGraphSession.open(":memory:");
+    session.remember({ label: "test-entity", type: "entity" });
+    const entity = session.recallEntity("test-entity");
+    expect(entity).not.toBeNull();
+    expect(entity!.label).toBe("test-entity");
+  });
+
+  it("session.recallEntity deduplicates entities with same label", () => {
+    const session = KnowledgeGraphSession.open(":memory:");
+    const id1 = session.remember({ label: "dup-entity", type: "entity" });
+    const id2 = session.remember({ label: "dup-entity", type: "entity" });
+    expect(id1).toBe(id2);
+  });
+
+  it("session.forget removes an entity", () => {
+    const session = KnowledgeGraphSession.open(":memory:");
+    const id = session.remember({ label: "to-delete", type: "entity" });
+    session.forget(id);
+    expect(session.recallEntity("to-delete")).toBeNull();
+  });
+
+  it("session.findRelated returns linked objects", () => {
+    const session = KnowledgeGraphSession.open(":memory:");
+    const id1 = session.remember({ label: "node-A", type: "entity" });
+    const id2 = session.remember({ label: "node-B", type: "entity" });
+    session.linkObjects(id1, id2, "related_to");
+    const related = session.findRelated(id1);
+    expect(related).toHaveLength(1);
+    expect(related[0].label).toBe("node-B");
+  });
+
+  it("session.searchFacts returns matching facts", () => {
+    const session = KnowledgeGraphSession.open(":memory:");
+    session.remember({ label: "TypeScript is a superset of JavaScript", type: "fact" });
+    const results = session.searchFacts("TypeScript");
+    expect(results.length).toBeGreaterThan(0);
+  });
+
+  it("session.listByType returns objects of that type only", () => {
+    const session = KnowledgeGraphSession.open(":memory:");
+    session.remember({ label: "ent-1", type: "entity" });
+    session.remember({ label: "fact-1", type: "fact" });
+    const entities = session.listByType("entity");
+    expect(entities).toHaveLength(1);
+    expect(entities[0].label).toBe("ent-1");
+  });
+
+  it("session.getMemoryObject returns the object by id", () => {
+    const session = KnowledgeGraphSession.open(":memory:");
+    const id = session.remember({ label: "my-entity", type: "entity" });
+    const obj = session.getMemoryObject(id);
+    expect(obj).not.toBeNull();
+    expect(obj!.label).toBe("my-entity");
+  });
+
+  it("two sessions on different paths are isolated", () => {
+    // Both use :memory: but different registry entries
+    const session1 = KnowledgeGraphSession.open(":memory:");
+    session1.remember({ label: "agent1-entity", type: "entity" });
+
+    // Reset to simulate different agent path
+    closeAndEvictDb(":memory:");
+    const session2 = KnowledgeGraphSession.open(":memory:");
+
+    // session2 should not see session1's data
+    expect(session2.recallEntity("agent1-entity")).toBeNull();
+  });
+
+  it("tool execution via createKnowledgeGraphTools(session) uses session DB", async () => {
+    const session = KnowledgeGraphSession.open(":memory:");
+    const tools = createKnowledgeGraphTools(session);
+    const rememberTool = tools.find((t) => t.name === "remember")!;
+    const result = await rememberTool.execute("call-s1", {
+      label: "session-entity",
+      type: "entity",
+    });
+    expect((result.content[0] as { text: string }).text).toMatch(/^Stored entity with id:/);
+    // Verify stored in session, not in module-level DB
+    expect(session.recallEntity("session-entity")).not.toBeNull();
+  });
+
+  it("createKnowledgeGraphTools() without session degrades gracefully (no DB)", async () => {
+    // Module-level DB is not initialised in this test group
+    const tools = createKnowledgeGraphTools();
+    const recallTool = tools.find((t) => t.name === "recall_entity")!;
+    const result = await recallTool.execute("call-s2", { name: "anything" });
+    expect((result.content[0] as { text: string }).text).toContain("No entity found");
   });
 });

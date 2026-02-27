@@ -19,14 +19,9 @@
  * @module
  */
 
-import {
-  findRelated,
-  linkObjects,
-  listByType,
-  recallEntity,
-  remember,
-} from "../memory/knowledge-graph.js";
-import type { MemoryObject, ObjectType } from "../memory/knowledge-graph.js";
+import type { AgentMessage } from "@mariozechner/pi-agent-core";
+import { KnowledgeGraphSession, listByType } from "../memory/knowledge-graph.js";
+import type { ObjectType } from "../memory/knowledge-graph.js";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -73,19 +68,71 @@ function estimateTokens(text: string): number {
 export function detectEntityMentions(message: string): string[] {
   const matches = message.match(/\b[A-Z][a-zA-Z0-9]*(?:\s+[A-Z][a-zA-Z0-9]*){0,2}\b/g) ?? [];
   const STOP_WORDS = new Set([
-    "I", "The", "A", "An", "In", "Of", "To", "And", "Or", "For", "But",
-    "Not", "With", "Is", "It", "If", "As", "On", "At", "My", "We", "You",
-    "He", "She", "They", "What", "How", "Why", "When", "Where", "Which",
-    "This", "That", "These", "Those", "Could", "Would", "Should", "Please",
-    "Yes", "No", "Can", "Will", "Do", "Did", "Has", "Have", "Had",
-    "Be", "Are", "Was", "Were", "Tell", "Show", "Give", "Get",
+    "I",
+    "The",
+    "A",
+    "An",
+    "In",
+    "Of",
+    "To",
+    "And",
+    "Or",
+    "For",
+    "But",
+    "Not",
+    "With",
+    "Is",
+    "It",
+    "If",
+    "As",
+    "On",
+    "At",
+    "My",
+    "We",
+    "You",
+    "He",
+    "She",
+    "They",
+    "What",
+    "How",
+    "Why",
+    "When",
+    "Where",
+    "Which",
+    "This",
+    "That",
+    "These",
+    "Those",
+    "Could",
+    "Would",
+    "Should",
+    "Please",
+    "Yes",
+    "No",
+    "Can",
+    "Will",
+    "Do",
+    "Did",
+    "Has",
+    "Have",
+    "Had",
+    "Be",
+    "Are",
+    "Was",
+    "Were",
+    "Tell",
+    "Show",
+    "Give",
+    "Get",
   ]);
-  return [...new Set(
-    matches
-      .map((m) => m.trim())
-      .filter((m) => m.length >= 2 && !STOP_WORDS.has(m))
-      .filter((m) => !/^\d+$/.test(m)),
-  )];
+  return [
+    ...new Set(
+      matches
+        .map((m) => m.trim())
+        .filter((m) => m.length >= 2 && !STOP_WORDS.has(m))
+        .filter((m) => !/^\d+$/.test(m)),
+    ),
+  ];
 }
 
 // ── Pre-turn: build context block ─────────────────────────────────────────────
@@ -105,6 +152,7 @@ export function detectEntityMentions(message: string): string[] {
  */
 export function buildMemoryContext(
   userMessage: string,
+  session: KnowledgeGraphSession,
   opts: MemoryIntegrationOptions = {},
 ): MemoryContextResult {
   const maxTokens = opts.maxTokens ?? 500;
@@ -120,10 +168,14 @@ export function buildMemoryContext(
   let objectCount = 0;
 
   for (const mention of mentions) {
-    if (totalTokens >= maxTokens) break;
+    if (totalTokens >= maxTokens) {
+      break;
+    }
 
-    const entity = recallEntity(mention);
-    if (!entity) continue;
+    const entity = session.recallEntity(mention);
+    if (!entity) {
+      continue;
+    }
 
     const lines: string[] = [`**${entity.label}** (${entity.type})`];
     if (Object.keys(entity.data).length > 0) {
@@ -131,7 +183,7 @@ export function buildMemoryContext(
     }
 
     // One-hop relationships
-    const related = findRelated(entity.id).slice(0, maxRelated);
+    const related = session.findRelated(entity.id).slice(0, maxRelated);
     for (const r of related) {
       lines.push(`  → [${r.type}] ${r.label}`);
     }
@@ -164,18 +216,17 @@ export function buildMemoryContext(
 /**
  * Heuristic fallback extractor — simple pattern matching when no LLM is available.
  */
-function heuristicExtract(
-  userMessage: string,
-  assistantResponse: string,
-): ExtractedItem[] {
+function heuristicExtract(userMessage: string, assistantResponse: string): ExtractedItem[] {
   const items: ExtractedItem[] = [];
   const combined = `${userMessage} ${assistantResponse}`;
 
   // Stated facts: "X is Y", "X uses Y", "X runs on Y"
-  const factPattern = /\b(\w[\w\s-]{1,30})\s+(?:is|are|uses|runs on|requires|supports)\s+([^.!?\n]{5,80})/gi;
+  const factPattern =
+    /\b(\w[\w\s-]{1,30})\s+(?:is|are|uses|runs on|requires|supports)\s+([^.!?\n]{5,80})/gi;
   let match: RegExpExecArray | null;
   while ((match = factPattern.exec(combined)) !== null) {
-    const label = `${match[1].trim()} ${match[0].split(/is|uses|runs on|requires|supports/)[1]?.trim() ?? ""}`.trim();
+    const label =
+      `${match[1].trim()} ${match[0].split(/is|uses|runs on|requires|supports/)[1]?.trim() ?? ""}`.trim();
     if (label.length > 10 && label.length < 150) {
       items.push({ label, type: "fact" });
     }
@@ -207,6 +258,7 @@ function heuristicExtract(
 export async function extractAndStoreMemory(
   userMessage: string,
   assistantResponse: string,
+  session: KnowledgeGraphSession,
   extractFn?: ExtractFn,
 ): Promise<number> {
   let items: ExtractedItem[];
@@ -227,14 +279,18 @@ export async function extractAndStoreMemory(
   const mentions = detectEntityMentions(userMessage);
   const existingIds: string[] = [];
   for (const mention of mentions) {
-    const entity = recallEntity(mention);
-    if (entity) existingIds.push(entity.id);
+    const entity = session.recallEntity(mention);
+    if (entity) {
+      existingIds.push(entity.id);
+    }
   }
 
   for (const item of items) {
-    if (!item.label?.trim()) continue;
+    if (!item.label?.trim()) {
+      continue;
+    }
     try {
-      const id = remember({
+      const id = session.remember({
         label: item.label.trim(),
         type: item.type,
         data: item.data ?? {},
@@ -245,7 +301,7 @@ export async function extractAndStoreMemory(
           // Link new objects to existing context entities
           for (const existingId of existingIds.slice(0, 3)) {
             try {
-              linkObjects(id, existingId, "related_to", 0.8);
+              session.linkObjects(id, existingId, "related_to", 0.8);
             } catch {
               // ignore duplicate relationship errors
             }
@@ -260,6 +316,29 @@ export async function extractAndStoreMemory(
   return written;
 }
 
+/**
+ * Extract the text content of the last assistant message from a messages array.
+ * Returns empty string if no assistant message is found.
+ */
+export function extractLastAssistantText(messages: AgentMessage[]): string {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+    if (!msg || msg.role !== "assistant") {
+      continue;
+    }
+    if (typeof msg.content === "string") {
+      return msg.content;
+    }
+    if (Array.isArray(msg.content)) {
+      return msg.content
+        .filter((b): b is { type: "text"; text: string } => b != null && b.type === "text")
+        .map((b) => b.text)
+        .join("\n");
+    }
+  }
+  return "";
+}
+
 // ── Context summary utilities ──────────────────────────────────────────────────
 
 /**
@@ -267,7 +346,14 @@ export async function extractAndStoreMemory(
  */
 export function getMemoryStats(): Record<string, number> {
   const types: ObjectType[] = [
-    "entity", "fact", "event", "preference", "task", "belief", "interaction", "skill",
+    "entity",
+    "fact",
+    "event",
+    "preference",
+    "task",
+    "belief",
+    "interaction",
+    "skill",
   ];
   const stats: Record<string, number> = {};
   for (const type of types) {

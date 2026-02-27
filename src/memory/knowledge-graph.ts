@@ -14,18 +14,30 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { mkdirSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AnyAgentTool } from "../agents/tools/common.js";
+import { resolveStateDir } from "../config/paths.js";
 import type { MemoryObject, ObjectType, RelType } from "./typed-schema.js";
 import {
   createObject,
+  createObjectInDb,
   createRelationship,
+  createRelationshipInDb,
   deleteObject,
+  deleteObjectInDb,
   getObject,
+  getObjectInDb,
+  getOrOpenDb,
   getRelated,
+  getRelatedInDb,
   getTypedMemoryDb,
   listObjectsByType,
+  listObjectsByTypeInDb,
   searchObjects,
+  searchObjectsInDb,
 } from "./typed-schema.js";
 
 // ── Re-exports for callers ─────────────────────────────────────────────────────
@@ -152,6 +164,78 @@ export function getMemoryObject(id: string): MemoryObject | null {
   return getObject(id);
 }
 
+// ── KnowledgeGraphSession ─────────────────────────────────────────────────────
+
+/**
+ * Per-agent knowledge graph session.
+ * Each agent gets its own isolated SQLite DB at {stateDir}/memory/{agentId}.sqlite.
+ */
+export class KnowledgeGraphSession {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  constructor(private readonly db: any) {}
+
+  /** Open a session for the given DB file path (creates if absent). */
+  static open(dbPath: string): KnowledgeGraphSession {
+    return new KnowledgeGraphSession(getOrOpenDb(dbPath));
+  }
+
+  /** Open a session for a named agent, using the configured state directory. */
+  static forAgent(agentId: string): KnowledgeGraphSession {
+    const stateDir = resolveStateDir(process.env, os.homedir.bind(os));
+    const memoryDir = path.join(stateDir, "memory");
+    mkdirSync(memoryDir, { recursive: true });
+    const dbPath = path.join(memoryDir, `${agentId}.sqlite`);
+    return KnowledgeGraphSession.open(dbPath);
+  }
+
+  remember(params: {
+    label: string;
+    type: ObjectType;
+    data?: Record<string, unknown>;
+    ttl?: number | null;
+  }): string {
+    if (params.type === "entity") {
+      const existing = this.recallEntity(params.label);
+      if (existing) {
+        return existing.id;
+      }
+    }
+    const id = randomUUID();
+    createObjectInDb(this.db, { id, ...params });
+    return id;
+  }
+
+  recallEntity(name: string): MemoryObject | null {
+    const hits = searchObjectsInDb(this.db, name, "entity");
+    const exact = hits.find((h) => h.label.trim().toLowerCase() === name.trim().toLowerCase());
+    return exact ?? hits[0] ?? null;
+  }
+
+  findRelated(entityId: string, relType?: RelType): MemoryObject[] {
+    return getRelatedInDb(this.db, entityId, relType);
+  }
+
+  forget(id: string): void {
+    deleteObjectInDb(this.db, id);
+  }
+
+  searchFacts(query: string): MemoryObject[] {
+    return searchObjectsInDb(this.db, query, "fact");
+  }
+
+  linkObjects(fromId: string, toId: string, relType: RelType, weight = 1.0): void {
+    createRelationshipInDb(this.db, { fromId, toId, relType, weight });
+  }
+
+  listByType(type: ObjectType): MemoryObject[] {
+    return listObjectsByTypeInDb(this.db, type);
+  }
+
+  getMemoryObject(id: string): MemoryObject | null {
+    return getObjectInDb(this.db, id);
+  }
+}
+
 // ── Agent tool definitions ─────────────────────────────────────────────────────
 
 const RememberSchema = Type.Object({
@@ -206,9 +290,10 @@ const SearchFactsSchema = Type.Object({
 
 /**
  * Create the set of knowledge graph agent tools.
- * Register by spreading the returned array into your tool list.
+ * When a `session` is provided, all operations use the session's isolated DB.
+ * When omitted, falls back to the module-level singleton (CLI / legacy path).
  */
-export function createKnowledgeGraphTools(): AnyAgentTool[] {
+export function createKnowledgeGraphTools(session?: KnowledgeGraphSession): AnyAgentTool[] {
   const rememberTool: AnyAgentTool = {
     label: "Remember",
     name: "remember",
@@ -226,7 +311,9 @@ export function createKnowledgeGraphTools(): AnyAgentTool[] {
       if (!label) {
         return textResult("Error: label is required");
       }
-      const objectId = remember({ label, type, data });
+      const objectId = session
+        ? session.remember({ label, type, data })
+        : remember({ label, type, data });
       return textResult(objectId ? `Stored ${type} with id: ${objectId}` : "DB not ready");
     },
   };
@@ -240,7 +327,7 @@ export function createKnowledgeGraphTools(): AnyAgentTool[] {
     execute: async (_id, args) => {
       const params = args as Record<string, unknown>;
       const name = (params["name"] as string | undefined) ?? "";
-      const entity = recallEntity(name);
+      const entity = session ? session.recallEntity(name) : recallEntity(name);
       if (!entity) {
         return textResult(`No entity found for: ${name}`);
       }
@@ -260,7 +347,9 @@ export function createKnowledgeGraphTools(): AnyAgentTool[] {
       const params = args as Record<string, unknown>;
       const entityId = (params["entityId"] as string | undefined) ?? "";
       const relType = params["relType"] as RelType | undefined;
-      const related = findRelated(entityId, relType);
+      const related = session
+        ? session.findRelated(entityId, relType)
+        : findRelated(entityId, relType);
       if (related.length === 0) {
         return textResult("No related objects found.");
       }
@@ -281,7 +370,11 @@ export function createKnowledgeGraphTools(): AnyAgentTool[] {
       if (!objectId) {
         return textResult("Error: id is required");
       }
-      forget(objectId);
+      if (session) {
+        session.forget(objectId);
+      } else {
+        forget(objectId);
+      }
       return textResult(`Deleted memory object: ${objectId}`);
     },
   };
@@ -298,7 +391,7 @@ export function createKnowledgeGraphTools(): AnyAgentTool[] {
       if (!query) {
         return textResult("Error: query is required");
       }
-      const facts = searchFacts(query);
+      const facts = session ? session.searchFacts(query) : searchFacts(query);
       if (facts.length === 0) {
         return textResult(`No facts found for: ${query}`);
       }

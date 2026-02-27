@@ -11,6 +11,7 @@ import { resolveTelegramReactionLevel } from "../../../channels/impl/telegram/re
 import { resolveChannelCapabilities } from "../../../config/channel-capabilities.js";
 import { getMachineDisplayName } from "../../../infra/machine-name.js";
 import { MAX_IMAGE_BYTES } from "../../../media/constants.js";
+import { KnowledgeGraphSession } from "../../../memory/knowledge-graph.js";
 import { getGlobalHookRunner } from "../../../plugins/hook-runner-global.js";
 import {
   isCronSessionKey,
@@ -34,6 +35,11 @@ import { DEFAULT_CONTEXT_TOKENS } from "../../defaults.js";
 import { resolveOpenClawDocsPath } from "../../docs-path.js";
 import { isTimeoutError } from "../../failover-error.js";
 import { resolveImageSanitizationLimits } from "../../image-sanitization.js";
+import {
+  buildMemoryContext,
+  extractAndStoreMemory,
+  extractLastAssistantText,
+} from "../../memory-integration.js";
 import { resolveModelAuthMode } from "../../model-auth.js";
 import { resolveDefaultModelForAgent } from "../../model-selection.js";
 import { createOllamaStreamFn, OLLAMA_NATIVE_BASE_URL } from "../../ollama-stream.js";
@@ -381,6 +387,12 @@ export async function runEmbeddedAttempt(
       sessionKey: params.sessionKey,
       config: params.config,
     });
+    let kgSession: KnowledgeGraphSession | undefined;
+    try {
+      kgSession = KnowledgeGraphSession.forAgent(sessionAgentId);
+    } catch (err) {
+      log.warn(`KG session open failed for ${sessionAgentId}: ${String(err)}`);
+    }
     const sandboxInfo = buildEmbeddedSandboxInfo(sandbox, params.bashElevated);
     const reasoningTagHint = isReasoningTagProvider(params.provider);
     // Resolve channel-specific message actions for system prompt
@@ -934,6 +946,17 @@ export async function runEmbeddedAttempt(
           }
         }
 
+        // Inject pre-turn KG memory context when relevant entities are found.
+        if (kgSession) {
+          const memCtx = buildMemoryContext(params.prompt, kgSession, { maxTokens: 400 });
+          if (memCtx.contextBlock) {
+            effectivePrompt = `${memCtx.contextBlock}\n\n${effectivePrompt}`;
+            log.debug(
+              `KG memory context injected: ${memCtx.objectCount} objects, ${memCtx.tokenCount} tokens`,
+            );
+          }
+        }
+
         log.debug(`embedded run prompt start: runId=${params.runId} sessionId=${params.sessionId}`);
         cacheTrace?.recordStage("prompt:before", {
           prompt: effectivePrompt,
@@ -1172,6 +1195,16 @@ export async function runEmbeddedAttempt(
             .catch((err) => {
               log.warn(`agent_end hook failed: ${err}`);
             });
+        }
+
+        // Fire-and-forget: extract and store new memory from this turn.
+        if (kgSession && !aborted && !promptError) {
+          const lastText = extractLastAssistantText(messagesSnapshot);
+          if (lastText) {
+            void extractAndStoreMemory(params.prompt, lastText, kgSession).catch((err) => {
+              log.warn(`KG post-turn extraction failed: ${String(err)}`);
+            });
+          }
         }
       } finally {
         clearTimeout(abortTimer);

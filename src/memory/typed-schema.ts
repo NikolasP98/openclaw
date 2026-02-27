@@ -10,8 +10,8 @@
  * @module
  */
 
-import { requireNodeSqlite } from "./sqlite.js";
 import { applySqlitePragmas } from "./sqlite-pragmas.js";
+import { requireNodeSqlite } from "./sqlite.js";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -25,12 +25,7 @@ export type ObjectType =
   | "interaction"
   | "skill";
 
-export type RelType =
-  | "related_to"
-  | "caused_by"
-  | "part_of"
-  | "precedes"
-  | "contradicts";
+export type RelType = "related_to" | "caused_by" | "part_of" | "precedes" | "contradicts";
 
 export type MemoryObject = {
   id: string;
@@ -144,7 +139,9 @@ function encodeData(data: Record<string, unknown>): string {
 }
 
 function decodeData(raw: unknown): Record<string, unknown> {
-  if (typeof raw !== "string") return {};
+  if (typeof raw !== "string") {
+    return {};
+  }
   try {
     const parsed = JSON.parse(raw);
     return parsed && typeof parsed === "object" && !Array.isArray(parsed)
@@ -188,26 +185,28 @@ export function createObject(params: {
   ttl?: number | null;
 }): string {
   const now = nowMs();
-  requireDb().prepare(
-    `INSERT INTO memory_objects (id, type, label, data, created_at, updated_at, ttl)
+  requireDb()
+    .prepare(
+      `INSERT INTO memory_objects (id, type, label, data, created_at, updated_at, ttl)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
-  ).run(
-    params.id,
-    params.type,
-    params.label,
-    encodeData(params.data ?? {}),
-    now,
-    now,
-    params.ttl ?? null,
-  );
+    )
+    .run(
+      params.id,
+      params.type,
+      params.label,
+      encodeData(params.data ?? {}),
+      now,
+      now,
+      params.ttl ?? null,
+    );
   return params.id;
 }
 
 /** Get a memory object by id. Returns null if not found. */
 export function getObject(id: string): MemoryObject | null {
-  const row = requireDb()
-    .prepare("SELECT * FROM memory_objects WHERE id = ?")
-    .get(id) as Record<string, unknown> | undefined;
+  const row = requireDb().prepare("SELECT * FROM memory_objects WHERE id = ?").get(id) as
+    | Record<string, unknown>
+    | undefined;
   return row ? rowToMemoryObject(row) : null;
 }
 
@@ -217,13 +216,15 @@ export function updateObject(
   updates: { label?: string; data?: Record<string, unknown>; ttl?: number | null },
 ): void {
   const obj = getObject(id);
-  if (!obj) return;
+  if (!obj) {
+    return;
+  }
   const newLabel = updates.label ?? obj.label;
   const newData = updates.data !== undefined ? updates.data : obj.data;
   const newTtl = "ttl" in updates ? (updates.ttl ?? null) : obj.ttl;
-  requireDb().prepare(
-    `UPDATE memory_objects SET label = ?, data = ?, ttl = ?, updated_at = ? WHERE id = ?`,
-  ).run(newLabel, encodeData(newData), newTtl, nowMs(), id);
+  requireDb()
+    .prepare(`UPDATE memory_objects SET label = ?, data = ?, ttl = ?, updated_at = ? WHERE id = ?`)
+    .run(newLabel, encodeData(newData), newTtl, nowMs(), id);
 }
 
 /** Delete a memory object (and cascade-delete its relationships). */
@@ -258,10 +259,12 @@ export function createRelationship(params: {
   weight?: number;
 }): void {
   const now = nowMs();
-  requireDb().prepare(
-    `INSERT OR REPLACE INTO memory_relationships (from_id, to_id, rel_type, weight, created_at)
+  requireDb()
+    .prepare(
+      `INSERT OR REPLACE INTO memory_relationships (from_id, to_id, rel_type, weight, created_at)
      VALUES (?, ?, ?, ?, ?)`,
-  ).run(params.fromId, params.toId, params.relType, params.weight ?? 1.0, now);
+    )
+    .run(params.fromId, params.toId, params.relType, params.weight ?? 1.0, now);
 }
 
 /** Get all objects related to the given id, optionally filtered by relationship type. */
@@ -314,10 +317,176 @@ export function searchObjects(query: string, type?: ObjectType): MemoryObject[] 
   db.exec("INSERT INTO memory_objects_fts(memory_objects_fts) VALUES('rebuild')");
   // Sanitize: remove FTS5 operator characters (quotes, wildcards, hyphens, dots)
   // Hyphens are FTS5 NOT operators; dots cause syntax errors.
-  const sanitized = query.replace(/['"*\-\.]/g, " ").trim();
-  if (!sanitized) return [];
+  const sanitized = query.replace(/['"*\-.]/g, " ").trim();
+  if (!sanitized) {
+    return [];
+  }
   // Use subquery to avoid FTS5 JOIN complications with content tables.
   // The FTS5 rowid corresponds to memory_objects.rowid via content_rowid='rowid'.
+  const rows: Record<string, unknown>[] = type
+    ? (db
+        .prepare(
+          `SELECT * FROM memory_objects
+           WHERE rowid IN (
+             SELECT rowid FROM memory_objects_fts WHERE memory_objects_fts MATCH ?
+           ) AND type = ?`,
+        )
+        .all(sanitized, type) as Record<string, unknown>[])
+    : (db
+        .prepare(
+          `SELECT * FROM memory_objects
+           WHERE rowid IN (
+             SELECT rowid FROM memory_objects_fts WHERE memory_objects_fts MATCH ?
+           )`,
+        )
+        .all(sanitized) as Record<string, unknown>[]);
+  return rows.map(rowToMemoryObject);
+}
+
+// ── Per-path registry ──────────────────────────────────────────────────────────
+
+const _registry = new Map<string, DatabaseSync>();
+
+/**
+ * Open (or return from cache) a DatabaseSync instance for the given path.
+ * The instance is initialised with WAL pragmas and the typed memory schema.
+ */
+export function getOrOpenDb(dbPath: string): DatabaseSync {
+  let registeredDb = _registry.get(dbPath);
+  if (!registeredDb) {
+    const { DatabaseSync } = requireNodeSqlite();
+    registeredDb = new DatabaseSync(dbPath);
+    applySqlitePragmas(registeredDb);
+    registeredDb.exec("PRAGMA foreign_keys = ON");
+    registeredDb.exec(INIT_SQL);
+    _registry.set(dbPath, registeredDb);
+  }
+  return registeredDb;
+}
+
+/** Close and remove a registered DB instance. */
+export function closeAndEvictDb(dbPath: string): void {
+  const registeredDb = _registry.get(dbPath);
+  if (registeredDb) {
+    try {
+      registeredDb.close();
+    } catch {
+      // ignore close errors
+    }
+    _registry.delete(dbPath);
+  }
+}
+
+/** For tests — clears the registry without closing any open handles. */
+export function resetDbRegistryForTest(): void {
+  _registry.clear();
+}
+
+// ── InDb CRUD variants (accept explicit db handle, used by KnowledgeGraphSession) ─
+
+export function createObjectInDb(
+  db: DatabaseSync,
+  params: {
+    id: string;
+    type: ObjectType;
+    label: string;
+    data?: Record<string, unknown>;
+    ttl?: number | null;
+  },
+): string {
+  const now = nowMs();
+  db.prepare(
+    `INSERT INTO memory_objects (id, type, label, data, created_at, updated_at, ttl)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
+    params.id,
+    params.type,
+    params.label,
+    encodeData(params.data ?? {}),
+    now,
+    now,
+    params.ttl ?? null,
+  );
+  return params.id;
+}
+
+export function getObjectInDb(db: DatabaseSync, id: string): MemoryObject | null {
+  const row = db.prepare("SELECT * FROM memory_objects WHERE id = ?").get(id) as
+    | Record<string, unknown>
+    | undefined;
+  return row ? rowToMemoryObject(row) : null;
+}
+
+export function updateObjectInDb(
+  db: DatabaseSync,
+  id: string,
+  updates: { label?: string; data?: Record<string, unknown>; ttl?: number | null },
+): void {
+  const obj = getObjectInDb(db, id);
+  if (!obj) {
+    return;
+  }
+  const newLabel = updates.label ?? obj.label;
+  const newData = updates.data !== undefined ? updates.data : obj.data;
+  const newTtl = "ttl" in updates ? (updates.ttl ?? null) : obj.ttl;
+  db.prepare(
+    `UPDATE memory_objects SET label = ?, data = ?, ttl = ?, updated_at = ? WHERE id = ?`,
+  ).run(newLabel, encodeData(newData), newTtl, nowMs(), id);
+}
+
+export function deleteObjectInDb(db: DatabaseSync, id: string): void {
+  db.prepare("DELETE FROM memory_objects WHERE id = ?").run(id);
+}
+
+export function listObjectsByTypeInDb(db: DatabaseSync, type: ObjectType): MemoryObject[] {
+  const rows = db
+    .prepare("SELECT * FROM memory_objects WHERE type = ? ORDER BY updated_at DESC")
+    .all(type) as Record<string, unknown>[];
+  return rows.map(rowToMemoryObject);
+}
+
+export function getRelatedInDb(db: DatabaseSync, id: string, relType?: RelType): MemoryObject[] {
+  const rows: Record<string, unknown>[] = relType
+    ? (db
+        .prepare(
+          `SELECT o.* FROM memory_objects o
+           JOIN memory_relationships r ON o.id = r.to_id
+           WHERE r.from_id = ? AND r.rel_type = ?
+           ORDER BY r.weight DESC`,
+        )
+        .all(id, relType) as Record<string, unknown>[])
+    : (db
+        .prepare(
+          `SELECT o.* FROM memory_objects o
+           JOIN memory_relationships r ON o.id = r.to_id
+           WHERE r.from_id = ?
+           ORDER BY r.weight DESC`,
+        )
+        .all(id) as Record<string, unknown>[]);
+  return rows.map(rowToMemoryObject);
+}
+
+export function createRelationshipInDb(
+  db: DatabaseSync,
+  params: { fromId: string; toId: string; relType: RelType; weight?: number },
+): void {
+  const now = nowMs();
+  db.prepare(
+    `INSERT OR REPLACE INTO memory_relationships (from_id, to_id, rel_type, weight, created_at)
+     VALUES (?, ?, ?, ?, ?)`,
+  ).run(params.fromId, params.toId, params.relType, params.weight ?? 1.0, now);
+}
+
+export function searchObjectsInDb(
+  db: DatabaseSync,
+  query: string,
+  type?: ObjectType,
+): MemoryObject[] {
+  db.exec("INSERT INTO memory_objects_fts(memory_objects_fts) VALUES('rebuild')");
+  const sanitized = query.replace(/['"*\-.]/g, " ").trim();
+  if (!sanitized) {
+    return [];
+  }
   const rows: Record<string, unknown>[] = type
     ? (db
         .prepare(

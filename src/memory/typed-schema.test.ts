@@ -1,17 +1,20 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  closeAndEvictDb,
   closeTypedMemoryDb,
   createObject,
   createRelationship,
   deleteObject,
   deleteRelationship,
   getObject,
+  getOrOpenDb,
   getRelated,
   getRelationshipsFrom,
   getTypedMemoryDb,
   listObjectsByType,
   openTypedMemoryDb,
   pruneExpiredObjects,
+  resetDbRegistryForTest,
   resetTypedMemoryDbForTest,
   searchObjects,
   updateObject,
@@ -20,6 +23,40 @@ import {
 afterEach(() => {
   closeTypedMemoryDb();
   resetTypedMemoryDbForTest();
+  resetDbRegistryForTest();
+});
+
+describe("registry (getOrOpenDb / closeAndEvictDb / resetDbRegistryForTest)", () => {
+  it("getOrOpenDb returns a working DB instance", () => {
+    const db = getOrOpenDb(":memory:");
+    expect(db).toBeTruthy();
+    const rows = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
+    expect(rows.length).toBeGreaterThan(0);
+  });
+
+  it("getOrOpenDb returns the same instance on second call for same path", () => {
+    const db1 = getOrOpenDb(":memory:");
+    const db2 = getOrOpenDb(":memory:");
+    expect(db1).toBe(db2);
+  });
+
+  it("closeAndEvictDb removes the instance from the registry", () => {
+    getOrOpenDb(":memory:");
+    closeAndEvictDb(":memory:");
+    // After eviction, opening again should succeed and return a fresh working instance
+    const db2 = getOrOpenDb(":memory:");
+    expect(db2).toBeTruthy();
+    const rows = db2.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
+    expect(rows.length).toBeGreaterThan(0);
+  });
+
+  it("resetDbRegistryForTest clears all registered instances", () => {
+    getOrOpenDb(":memory:");
+    resetDbRegistryForTest();
+    // After reset, a new instance is created
+    const db = getOrOpenDb(":memory:");
+    expect(db).toBeTruthy();
+  });
 });
 
 describe("openTypedMemoryDb", () => {
@@ -40,9 +77,7 @@ describe("openTypedMemoryDb", () => {
     openTypedMemoryDb(":memory:");
     const db = getTypedMemoryDb();
     const rows = db!
-      .prepare(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='memory_relationships'",
-      )
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='memory_relationships'")
       .all();
     expect(rows).toHaveLength(1);
   });
@@ -153,7 +188,7 @@ describe("listObjectsByType", () => {
     createObject({ id: "f1", type: "fact", label: "C" });
     const entities = listObjectsByType("entity");
     expect(entities).toHaveLength(2);
-    expect(entities.map((e) => e.id).sort()).toEqual(["e1", "e2"]);
+    expect(entities.map((e) => e.id).toSorted()).toEqual(["e1", "e2"]);
   });
 
   it("returns empty array when no objects of that type exist", () => {
@@ -202,7 +237,7 @@ describe("createRelationship / getRelated", () => {
 
     const related = getRelated("e1", "part_of");
     expect(related).toHaveLength(1);
-    expect(related[0]!.id).toBe("e2");
+    expect(related[0].id).toBe("e2");
   });
 
   it("returns all related objects when relType is omitted", () => {
@@ -266,7 +301,7 @@ describe("searchObjects (FTS5)", () => {
     createObject({ id: "f1", type: "fact", label: "database host" });
 
     const results = searchObjects("server");
-    expect(results.map((r) => r.id).sort()).toEqual(["e1", "e2"]);
+    expect(results.map((r) => r.id).toSorted()).toEqual(["e1", "e2"]);
   });
 
   it("filters by type when provided", () => {
@@ -276,7 +311,7 @@ describe("searchObjects (FTS5)", () => {
 
     const results = searchObjects("prod", "entity");
     expect(results).toHaveLength(1);
-    expect(results[0]!.id).toBe("e1");
+    expect(results[0].id).toBe("e1");
   });
 
   it("returns empty array for empty query", () => {
