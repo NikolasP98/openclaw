@@ -1,5 +1,6 @@
 import type { OpenClawConfig } from "../config/config.js";
 import { isTruthyEnvValue } from "../infra/env.js";
+import { createKnowledgeGraphTools, KnowledgeGraphSession } from "../memory/knowledge-graph.js";
 import { resolvePluginTools } from "../plugins/tools.js";
 import type { GatewayMessageChannel } from "../shared/message-channel.js";
 import { resolveSessionAgentId } from "./agent-scope.js";
@@ -108,6 +109,13 @@ export function createOpenClawTools(options?: {
     sessionKey: options?.agentSessionKey,
     config: options?.config,
   });
+  let kgSession: KnowledgeGraphSession | undefined;
+  try {
+    kgSession = KnowledgeGraphSession.forAgent(agentId);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn(`KG DB open failed for agent ${agentId}: ${String(err)}`);
+  }
   const gogOAuthEnabled =
     options?.config?.hooks?.gogOAuth?.enabled !== false &&
     !isTruthyEnvValue(process.env.OPENCLAW_SKIP_GOG_OAUTH);
@@ -197,6 +205,7 @@ export function createOpenClawTools(options?: {
     ...(imageTool ? [imageTool] : []),
     createArchitectPipelineTool({ workspaceDir }),
     createVentureStudioTool({ workspaceDir }),
+    ...createKnowledgeGraphTools(kgSession),
   ];
 
   const pluginTools = resolvePluginTools({
