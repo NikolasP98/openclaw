@@ -51,15 +51,16 @@ export function renderHealthTable(snapshots: AgentHealthSnapshot[]): string {
   }
 
   const lines: string[] = [
-    "| Agent | Status | Requests | Error% | Avg Latency | P95 Latency | Tokens (in/out) |",
-    "|-------|--------|----------|--------|-------------|-------------|-----------------|",
+    "| Agent | Status | Score | Requests | Error% | Avg Latency | P95 Latency | Tokens (in/out) |",
+    "|-------|--------|-------|----------|--------|-------------|-------------|-----------------|",
   ];
 
   for (const s of snapshots) {
     const status = `${STATUS_EMOJI[s.status]} ${s.status}`;
     const tokens = `${formatTokens(s.totalInputTokens)}/${formatTokens(s.totalOutputTokens)}`;
+    const score = s.compositeScore?.score ?? "-";
     lines.push(
-      `| ${s.agentId} | ${status} | ${s.totalRequests} | ${s.errorRate}% | ${formatDuration(s.avgLatencyMs)} | ${formatDuration(s.p95LatencyMs)} | ${tokens} |`,
+      `| ${s.agentId} | ${status} | ${score} | ${s.totalRequests} | ${s.errorRate}% | ${formatDuration(s.avgLatencyMs)} | ${formatDuration(s.p95LatencyMs)} | ${tokens} |`,
     );
   }
 
@@ -77,7 +78,8 @@ export function renderHealthSummary(snapshots: AgentHealthSnapshot[]): string {
   return snapshots
     .map((s) => {
       const status = STATUS_EMOJI[s.status];
-      return `${status} ${s.agentId}: ${s.totalRequests} reqs, ${s.errorRate}% errors, ${formatDuration(s.avgLatencyMs)} avg, uptime ${formatDuration(s.uptimeMs)}`;
+      const score = s.compositeScore?.score ?? "-";
+      return `${status} ${s.agentId}: score ${score}, ${s.totalRequests} reqs, ${s.errorRate}% errors, ${formatDuration(s.avgLatencyMs)} avg, uptime ${formatDuration(s.uptimeMs)}`;
     })
     .join("\n");
 }

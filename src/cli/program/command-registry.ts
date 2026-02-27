@@ -195,6 +195,16 @@ const coreEntries: CoreCliEntry[] = [
         description: "List stored conversation sessions",
         hasSubcommands: false,
       },
+      {
+        name: "undo",
+        description: "Undo recent tool-call actions",
+        hasSubcommands: false,
+      },
+      {
+        name: "roi",
+        description: "Calculate ROI for AI agent automation",
+        hasSubcommands: false,
+      },
     ],
     register: async ({ program }) => {
       const mod = await import("./register.status-health-sessions.js");

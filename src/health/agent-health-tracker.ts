@@ -9,6 +9,19 @@
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
+export type CompositeHealthScore = {
+  /** Weighted composite score (0-100). */
+  score: number;
+  /** Completion rate component (0-100). */
+  completionRate: number;
+  /** Speed score component (0-100). */
+  speedScore: number;
+  /** Error penalty component (0-100, higher = fewer errors). */
+  errorPenalty: number;
+  /** Cost efficiency component (0-100). */
+  costEfficiency: number;
+};
+
 export type AgentHealthSnapshot = {
   agentId: string;
   status: "healthy" | "degraded" | "down";
@@ -32,6 +45,22 @@ export type AgentHealthSnapshot = {
   lastErrorAt?: number;
   /** Agent uptime in ms since tracking started. */
   uptimeMs: number;
+  /** Weighted composite health score. */
+  compositeScore: CompositeHealthScore;
+};
+
+export type CompositeScoreWeights = {
+  completionRate?: number;
+  speedScore?: number;
+  errorPenalty?: number;
+  costEfficiency?: number;
+};
+
+export type CompositeScoreOptions = {
+  /** Baseline cost per request in cents for cost efficiency scoring. */
+  baselineCentsPerRequest?: number;
+  /** Actual cost per request in cents (if known). */
+  costPerRequestCents?: number;
 };
 
 export type AgentHealthConfig = {
@@ -41,6 +70,8 @@ export type AgentHealthConfig = {
   downErrorRate?: number;
   /** Max latency samples to keep for percentile calculation (default: 1000). */
   maxLatencySamples?: number;
+  /** Weights for composite health score (must sum to 1.0). */
+  compositeWeights?: CompositeScoreWeights;
 };
 
 // ── Internal State ───────────────────────────────────────────────────────────
@@ -62,15 +93,28 @@ const DEFAULT_DEGRADED_ERROR_RATE = 10;
 const DEFAULT_DOWN_ERROR_RATE = 50;
 const DEFAULT_MAX_LATENCY_SAMPLES = 1000;
 
+const DEFAULT_COMPOSITE_WEIGHTS: Required<CompositeScoreWeights> = {
+  completionRate: 0.4,
+  speedScore: 0.3,
+  errorPenalty: 0.2,
+  costEfficiency: 0.1,
+};
+
 export class AgentHealthTracker {
   private agents = new Map<string, AgentMetrics>();
-  private config: Required<AgentHealthConfig>;
+  private config: Required<Omit<AgentHealthConfig, "compositeWeights">> & {
+    compositeWeights: Required<CompositeScoreWeights>;
+  };
 
   constructor(config?: AgentHealthConfig) {
     this.config = {
       degradedErrorRate: config?.degradedErrorRate ?? DEFAULT_DEGRADED_ERROR_RATE,
       downErrorRate: config?.downErrorRate ?? DEFAULT_DOWN_ERROR_RATE,
       maxLatencySamples: config?.maxLatencySamples ?? DEFAULT_MAX_LATENCY_SAMPLES,
+      compositeWeights: {
+        ...DEFAULT_COMPOSITE_WEIGHTS,
+        ...config?.compositeWeights,
+      },
     };
   }
 
@@ -104,6 +148,73 @@ export class AgentHealthTracker {
   }
 
   /**
+   * Compute a weighted composite health score for an agent.
+   */
+  computeCompositeScore(agentId: string, options?: CompositeScoreOptions): CompositeHealthScore {
+    const metrics = this.getOrCreate(agentId);
+    const w = this.config.compositeWeights;
+
+    // completionRate: (totalRequests - totalErrors) / totalRequests * 100
+    const completionRate =
+      metrics.totalRequests > 0
+        ? Math.min(
+            100,
+            ((metrics.totalRequests - metrics.totalErrors) / metrics.totalRequests) * 100,
+          )
+        : 100;
+
+    // speedScore: latency-based scoring
+    const avgMs = this.computeAvgLatency(metrics);
+    let speedScore: number;
+    if (avgMs === 0 || metrics.latencySamples.length === 0) {
+      speedScore = 100;
+    } else if (avgMs < 500) {
+      speedScore = 100;
+    } else if (avgMs < 2000) {
+      speedScore = 80;
+    } else if (avgMs < 5000) {
+      speedScore = 60;
+    } else if (avgMs < 10000) {
+      speedScore = 40;
+    } else {
+      speedScore = 20;
+    }
+
+    // errorPenalty: 100 - errorRate (higher is better)
+    const errorRate =
+      metrics.totalRequests > 0 ? (metrics.totalErrors / metrics.totalRequests) * 100 : 0;
+    const errorPenalty = Math.max(0, 100 - errorRate);
+
+    // costEfficiency: default 100 if no pricing data
+    let costEfficiency = 100;
+    if (
+      options?.costPerRequestCents != null &&
+      options?.baselineCentsPerRequest != null &&
+      options.baselineCentsPerRequest > 0
+    ) {
+      costEfficiency = Math.max(
+        0,
+        100 - Math.min(100, (options.costPerRequestCents / options.baselineCentsPerRequest) * 100),
+      );
+    }
+
+    const score = Math.round(
+      completionRate * w.completionRate +
+        speedScore * w.speedScore +
+        errorPenalty * w.errorPenalty +
+        costEfficiency * w.costEfficiency,
+    );
+
+    return {
+      score: Math.min(100, Math.max(0, score)),
+      completionRate: Math.round(completionRate * 100) / 100,
+      speedScore,
+      errorPenalty: Math.round(errorPenalty * 100) / 100,
+      costEfficiency: Math.round(costEfficiency * 100) / 100,
+    };
+  }
+
+  /**
    * Get a health snapshot for an agent.
    */
   getSnapshot(agentId: string): AgentHealthSnapshot {
@@ -131,6 +242,7 @@ export class AgentHealthTracker {
       lastSuccessAt: metrics.lastSuccessAt,
       lastErrorAt: metrics.lastErrorAt,
       uptimeMs: Date.now() - metrics.startedAt,
+      compositeScore: this.computeCompositeScore(agentId),
     };
   }
 
