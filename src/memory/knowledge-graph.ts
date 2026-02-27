@@ -51,7 +51,7 @@ function isDbReady(): boolean {
 }
 
 function textResult(text: string) {
-  return { content: [{ type: "text" as const, text }] };
+  return { content: [{ type: "text" as const, text }], details: undefined };
 }
 
 // ── Core query functions ───────────────────────────────────────────────────────
