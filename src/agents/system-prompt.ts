@@ -87,7 +87,7 @@ function buildMemorySection(params: {
     "- Always read MEMORY.md before writing, so you can edit to update without losing existing content.",
     "- Keep MEMORY.md concise and organized — summarize, don't dump raw conversation.",
     "- Proactively save memory without being asked.",
-    "- USER.md stores user preferences and profile. Update it when the user shares personal details.",
+    "- USER.md stores user preferences and profile. Always read it before writing. Update it when the user shares personal details.",
     "- SOUL.md defines your personality. Do not overwrite it unless the user explicitly asks.",
   );
   lines.push("");
