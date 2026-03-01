@@ -1,0 +1,24 @@
+[Unit]
+Description=Minion Gateway
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart="/usr/bin/node" "/usr/lib/node_modules/@nikolasp98/minion/dist/index.js" gateway --port 18789
+ExecStartPost=/bin/bash -c '/home/minion/.minion/minion-compliance-check.sh >> /home/minion/.minion/logs/compliance.log 2>&1 || true'
+Restart=always
+RestartSec=5
+KillMode=process
+Environment=HOME=/home/minion
+Environment=TMPDIR=/tmp
+Environment="PATH=/home/minion/.local/bin:/home/minion/.npm-global/bin:/home/minion/bin:/home/minion/.volta/bin:/home/minion/.asdf/shims:/home/minion/.bun/bin:/home/minion/.nvm/current/bin:/home/minion/.fnm/current/bin:/home/minion/.local/share/pnpm:/usr/local/bin:/usr/bin:/bin"
+Environment=MINION_STATE_DIR=/home/minion/.minion
+Environment=MINION_GATEWAY_PORT=18789
+Environment=MINION_GATEWAY_TOKEN=502c5a92f4999c7e95457a16c5791e1ffbad84132eafb29acc816271472166d2
+Environment="OPENCLAW_SYSTEMD_UNIT=minion-gateway.service"
+Environment=MINION_SERVICE_MARKER=minion
+Environment=MINION_SERVICE_KIND=gateway
+Environment=MINION_SERVICE_VERSION=2026.2.24-2-dev.20260225022516
+
+[Install]
+WantedBy=default.target
