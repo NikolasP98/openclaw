@@ -134,16 +134,13 @@ export function applyAgentConfig(
   },
 ): OpenClawConfig {
   const agentId = normalizeAgentId(params.agentId);
-  const name = params.name?.trim();
   const list = listAgentEntries(cfg);
   const index = findAgentEntryIndex(list, agentId);
   const base = index >= 0 ? list[index] : { id: agentId };
   const nextEntry: AgentEntry = {
     ...base,
-    ...(name ? { name } : {}),
     ...(params.workspace ? { workspace: params.workspace } : {}),
     ...(params.agentDir ? { agentDir: params.agentDir } : {}),
-    ...(params.model ? { model: params.model } : {}),
   };
   const nextList = [...list];
   if (index >= 0) {

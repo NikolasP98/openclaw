@@ -227,6 +227,38 @@ AUTHEOF
 
     log_success "Configuration files deployed successfully"
 
+    # --- Create per-agent config for initial agent ---
+    local agent_name="${AGENT_NAME:-minion}"
+    local per_agent_config_dir="${config_dir}/agents/${agent_name}"
+    local per_agent_config="${per_agent_config_dir}/minion.json"
+    if [ "${EXEC_MODE:-local}" = "remote" ]; then
+        run_cmd --as root "
+            mkdir -p '${per_agent_config_dir}' &&
+            chmod 700 '${per_agent_config_dir}' &&
+            chown ${exec_user}:${exec_user} '${per_agent_config_dir}'
+        "
+        if ! run_cmd "test -f '${per_agent_config}'" 2>/dev/null; then
+            run_cmd --as root "
+                printf '{\\n  \"id\": \"%s\",\\n  \"name\": \"%s\"\\n}\\n' '${agent_name}' '${agent_name}' > '${per_agent_config}' &&
+                chmod 600 '${per_agent_config}' &&
+                chown ${exec_user}:${exec_user} '${per_agent_config}'
+            "
+            log_success "Created per-agent config for ${agent_name}"
+        else
+            log_info "Per-agent config already exists for ${agent_name}"
+        fi
+    else
+        mkdir -p "${per_agent_config_dir}"
+        chmod 700 "${per_agent_config_dir}"
+        if [ ! -f "${per_agent_config}" ]; then
+            printf '{\n  "id": "%s",\n  "name": "%s"\n}\n' "${agent_name}" "${agent_name}" > "${per_agent_config}"
+            chmod 600 "${per_agent_config}"
+            log_success "Created per-agent config for ${agent_name}"
+        else
+            log_info "Per-agent config already exists for ${agent_name}"
+        fi
+    fi
+
     # --- Generate GOG CLI file-keyring credentials (headless file keyring) ---
     setup_gog_keyring_credentials "$config_dir"
 

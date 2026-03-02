@@ -11,6 +11,7 @@ import { checkAgentCompliance } from "../../agents/compliance.js";
 import { writeConfigFile } from "../../config/config.js";
 import { logConfigUpdated } from "../../config/logging.js";
 import { resolveAgentConfigPath, resolveStateDir } from "../../config/paths.js";
+import { KnowledgeGraphSession } from "../../memory/knowledge-graph.js";
 import { DEFAULT_AGENT_ID, normalizeAgentId } from "../../routing/session-key.js";
 import type { RuntimeEnv } from "../../runtime.js";
 import { defaultRuntime } from "../../runtime.js";
@@ -41,12 +42,20 @@ type AgentsAddOptions = {
   json?: boolean;
 };
 
-async function writePerAgentConfig(agentId: string, name: string): Promise<void> {
+async function writePerAgentConfig(
+  agentId: string,
+  name: string,
+  opts?: { model?: string },
+): Promise<void> {
   try {
     const stateDir = resolveStateDir();
     const configPath = resolveAgentConfigPath(stateDir, agentId);
     await fs.mkdir(path.dirname(configPath), { recursive: true, mode: 0o700 });
-    const content = JSON.stringify({ id: agentId, name }, null, 2) + "\n";
+    const data: Record<string, unknown> = { id: agentId, name };
+    if (opts?.model) {
+      data.model = opts.model;
+    }
+    const content = JSON.stringify(data, null, 2) + "\n";
     // Write only if the file doesn't already exist (don't overwrite customizations).
     await fs.writeFile(configPath, content, { encoding: "utf-8", mode: 0o600, flag: "wx" });
   } catch (err) {
@@ -153,7 +162,12 @@ export async function agentsAddCommand(
       skipBootstrap: Boolean(bindingResult.config.agents?.defaults?.skipBootstrap),
       agentId,
     });
-    await writePerAgentConfig(agentId, nameInput);
+    await writePerAgentConfig(agentId, nameInput, { model });
+    try {
+      KnowledgeGraphSession.forAgent(agentId);
+    } catch (err) {
+      runtime.log(`[warn] KG initialization failed for ${agentId}: ${String(err)}`);
+    }
 
     const compliance = await checkAgentCompliance(bindingResult.config, agentId);
 
@@ -377,7 +391,12 @@ export async function agentsAddCommand(
       skipBootstrap: Boolean(nextConfig.agents?.defaults?.skipBootstrap),
       agentId,
     });
-    await writePerAgentConfig(agentId, agentName);
+    await writePerAgentConfig(agentId, agentName, { model: opts.model?.trim() });
+    try {
+      KnowledgeGraphSession.forAgent(agentId);
+    } catch (err) {
+      runtime.log(`[warn] KG initialization failed for ${agentId}: ${String(err)}`);
+    }
 
     const compliance = await checkAgentCompliance(nextConfig, agentId);
 
