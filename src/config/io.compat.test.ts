@@ -39,13 +39,13 @@ describe("config io paths", () => {
     });
   });
 
-  it("defaults to ~/.minion/minion.json when config is missing", async () => {
+  it("defaults to ~/.minion/gateway.json when config is missing", async () => {
     await withTempHome(async (home) => {
       const io = createConfigIO({
         env: {} as NodeJS.ProcessEnv,
         homedir: () => home,
       });
-      expect(io.configPath).toBe(path.join(home, ".minion", "minion.json"));
+      expect(io.configPath).toBe(path.join(home, ".minion", "gateway.json"));
     });
   });
 
@@ -55,7 +55,7 @@ describe("config io paths", () => {
         env: { MINION_HOME: path.join(home, "svc-home") } as NodeJS.ProcessEnv,
         homedir: () => path.join(home, "ignored-home"),
       });
-      expect(io.configPath).toBe(path.join(home, "svc-home", ".minion", "minion.json"));
+      expect(io.configPath).toBe(path.join(home, "svc-home", ".minion", "gateway.json"));
     });
   });
 

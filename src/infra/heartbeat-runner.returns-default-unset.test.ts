@@ -181,18 +181,19 @@ describe("resolveHeartbeatPrompt", () => {
 });
 
 describe("isHeartbeatEnabledForAgent", () => {
-  it("enables only explicit heartbeat agents when configured", () => {
+  it("enables all listed agents regardless of explicit heartbeat config", () => {
     const cfg: OpenClawConfig = {
       agents: {
         defaults: { heartbeat: { every: "30m" } },
         list: [{ id: "main" }, { id: "ops", heartbeat: { every: "1h" } }],
       },
     };
-    expect(isHeartbeatEnabledForAgent(cfg, "main")).toBe(false);
+    // Both agents are listed → both are heartbeat candidates
+    expect(isHeartbeatEnabledForAgent(cfg, "main")).toBe(true);
     expect(isHeartbeatEnabledForAgent(cfg, "ops")).toBe(true);
   });
 
-  it("falls back to default agent when no explicit heartbeat entries", () => {
+  it("enables all listed agents even when none have explicit heartbeat config", () => {
     const cfg: OpenClawConfig = {
       agents: {
         defaults: { heartbeat: { every: "30m" } },
@@ -200,7 +201,16 @@ describe("isHeartbeatEnabledForAgent", () => {
       },
     };
     expect(isHeartbeatEnabledForAgent(cfg, "main")).toBe(true);
-    expect(isHeartbeatEnabledForAgent(cfg, "ops")).toBe(false);
+    expect(isHeartbeatEnabledForAgent(cfg, "ops")).toBe(true);
+  });
+
+  it("falls back to default agent when agents list is empty", () => {
+    const cfg: OpenClawConfig = {
+      agents: { defaults: { heartbeat: { every: "30m" } } },
+    };
+    // No agents list → only default agent is eligible
+    expect(isHeartbeatEnabledForAgent(cfg)).toBe(true);
+    expect(isHeartbeatEnabledForAgent(cfg, "nonexistent")).toBe(false);
   });
 });
 
@@ -441,14 +451,18 @@ describe("resolveHeartbeatSenderContext", () => {
 });
 
 describe("runHeartbeatOnce", () => {
-  it("skips when agent heartbeat is not enabled", async () => {
+  it("skips when agent opts out via every: '0'", async () => {
     const cfg: OpenClawConfig = {
       agents: {
         defaults: { heartbeat: { every: "30m" } },
-        list: [{ id: "main" }, { id: "ops", heartbeat: { every: "1h" } }],
+        list: [
+          { id: "main", heartbeat: { every: "0" } },
+          { id: "ops", heartbeat: { every: "1h" } },
+        ],
       },
     };
 
+    // main explicitly disables heartbeat via every: "0"
     const res = await runHeartbeatOnce({ cfg, agentId: "main" });
     expect(res.status).toBe("skipped");
     if (res.status === "skipped") {

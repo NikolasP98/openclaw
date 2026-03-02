@@ -206,6 +206,8 @@ export type AgentDefaultsConfig = {
   heartbeat?: {
     /** Heartbeat interval (duration string, default unit: minutes; default: 30m). */
     every?: string;
+    /** Log level for heartbeat run outcomes. Default: "warn" (only failures logged). */
+    logLevel?: "silent" | "error" | "warn" | "info" | "debug";
     /** Optional active-hours window (local time); heartbeats run only inside this window. */
     activeHours?: {
       /** Start time (24h, HH:MM). Inclusive. */

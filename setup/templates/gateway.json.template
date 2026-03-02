@@ -1,0 +1,17 @@
+{
+  "agents": {
+    "defaults": {
+      "heartbeat": {
+        "every": "2h",
+        "model": "openrouter/free",
+        "target": "last",
+        "logLevel": "warn",
+        "activeHours": {
+          "start": "05:00",
+          "end": "21:00",
+          "timezone": "user"
+        }
+      }
+    }
+  }
+}

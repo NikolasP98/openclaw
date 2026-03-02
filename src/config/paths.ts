@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import type { OpenClawConfig } from "./types.js";
 import { expandHomePrefix, resolveRequiredHomeDir } from "../infra/home-dir.js";
+import type { OpenClawConfig } from "./types.js";
 
 /**
  * Nix mode detection: When OPENCLAW_NIX_MODE=1, the gateway is running under Nix.
@@ -20,8 +20,9 @@ export const isNixMode = resolveIsNixMode();
 // Support historical (and occasionally misspelled) legacy state dirs.
 const LEGACY_STATE_DIRNAMES = [".openclaw", ".clawdbot", ".moldbot", ".moltbot"] as const;
 const NEW_STATE_DIRNAME = ".minion";
-const CONFIG_FILENAME = "minion.json";
+const CONFIG_FILENAME = "gateway.json";
 const LEGACY_CONFIG_FILENAMES = [
+  "minion.json",
   "openclaw.json",
   "clawdbot.json",
   "moldbot.json",
@@ -118,7 +119,7 @@ export const STATE_DIR = resolveStateDir();
 /**
  * Config file path (JSON5).
  * Can be overridden via OPENCLAW_CONFIG_PATH.
- * Default: ~/.minion/minion.json (or $OPENCLAW_STATE_DIR/minion.json)
+ * Default: ~/.minion/gateway.json (or $OPENCLAW_STATE_DIR/gateway.json)
  */
 export function resolveCanonicalConfigPath(
   env: NodeJS.ProcessEnv = process.env,
@@ -229,6 +230,14 @@ export function resolveDefaultConfigCandidates(
     candidates.push(...LEGACY_CONFIG_FILENAMES.map((name) => path.join(dir, name)));
   }
   return candidates;
+}
+
+/**
+ * Path to per-agent config override file.
+ * Default: {stateDir}/agents/{agentId}/minion.json
+ */
+export function resolveAgentConfigPath(stateDir: string, agentId: string): string {
+  return path.join(stateDir, "agents", agentId, "minion.json");
 }
 
 export const DEFAULT_GATEWAY_PORT = 18789;
