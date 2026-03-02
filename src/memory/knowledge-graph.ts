@@ -170,7 +170,7 @@ export function getMemoryObject(id: string): MemoryObject | null {
 
 /**
  * Per-agent knowledge graph session.
- * Each agent gets its own isolated SQLite DB at {stateDir}/memory/{agentId}.sqlite.
+ * Each agent gets its own isolated SQLite DB at {stateDir}/agents/{agentId}/KG/kg.sqlite.
  */
 export class KnowledgeGraphSession {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -184,9 +184,9 @@ export class KnowledgeGraphSession {
   /** Open a session for a named agent, using the configured state directory. */
   static forAgent(agentId: string): KnowledgeGraphSession {
     const stateDir = resolveStateDir(process.env, os.homedir.bind(os));
-    const memoryDir = path.join(stateDir, "memory");
-    mkdirSync(memoryDir, { recursive: true });
-    const dbPath = path.join(memoryDir, `${agentId}.sqlite`);
+    const kgDir = path.join(stateDir, "agents", agentId, "KG");
+    mkdirSync(kgDir, { recursive: true });
+    const dbPath = path.join(kgDir, "kg.sqlite");
     return KnowledgeGraphSession.open(dbPath);
   }
 
