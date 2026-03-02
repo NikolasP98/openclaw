@@ -11,6 +11,7 @@ import { deviceHandlers } from "./server-methods/devices.js";
 import { execApprovalsHandlers } from "./server-methods/exec-approvals.js";
 import { healthHandlers } from "./server-methods/health.js";
 import { logsHandlers } from "./server-methods/logs.js";
+import { marketplaceHandlers } from "./server-methods/marketplace.js";
 import { memoryHandlers } from "./server-methods/memory.js";
 import { meshHandlers } from "./server-methods/mesh.js";
 import { modelsHandlers } from "./server-methods/models.js";
@@ -105,6 +106,7 @@ const WRITE_METHODS = new Set([
   "mesh.plan.auto",
   "mesh.run",
   "mesh.retry",
+  "agent.install",
 ]);
 
 function authorizeGatewayMethod(method: string, client: GatewayRequestOptions["client"]) {
@@ -210,6 +212,7 @@ export const coreGatewayHandlers: GatewayRequestHandlers = {
   ...browserHandlers,
   ...reliabilityHandlers,
   ...memoryHandlers,
+  ...marketplaceHandlers,
 };
 
 export async function handleGatewayRequest(
