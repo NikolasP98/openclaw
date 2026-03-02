@@ -7,6 +7,7 @@ import {
 } from "../../agents/agent-scope.js";
 import { ensureAuthProfileStore } from "../../agents/auth-profiles.js";
 import { resolveAuthStorePath } from "../../agents/auth-profiles/paths.js";
+import { checkAgentCompliance } from "../../agents/compliance.js";
 import { writeConfigFile } from "../../config/config.js";
 import { logConfigUpdated } from "../../config/logging.js";
 import { DEFAULT_AGENT_ID, normalizeAgentId } from "../../routing/session-key.js";
@@ -137,6 +138,8 @@ export async function agentsAddCommand(
       agentId,
     });
 
+    const compliance = await checkAgentCompliance(bindingResult.config, agentId);
+
     const payload = {
       agentId,
       name: nameInput,
@@ -149,6 +152,10 @@ export async function agentsAddCommand(
         conflicts: bindingResult.conflicts.map(
           (conflict) => `${describeBinding(conflict.binding)} (agent=${conflict.existingAgentId})`,
         ),
+      },
+      compliance: {
+        passed: compliance.passed,
+        issues: compliance.issues,
       },
     };
     if (opts.json) {
@@ -170,6 +177,13 @@ export async function agentsAddCommand(
             ),
           ].join("\n"),
         );
+      }
+      for (const issue of compliance.issues) {
+        const prefix = issue.level === "error" ? "[compliance error]" : "[compliance warn]";
+        runtime.log(`${prefix} ${issue.message}`);
+      }
+      if (compliance.issues.length === 0) {
+        runtime.log("[compliance] all checks passed");
       }
     }
     return;
@@ -347,14 +361,24 @@ export async function agentsAddCommand(
       agentId,
     });
 
+    const compliance = await checkAgentCompliance(nextConfig, agentId);
+
     const payload = {
       agentId,
       name: agentName,
       workspace: workspaceDir,
       agentDir,
+      compliance: {
+        passed: compliance.passed,
+        issues: compliance.issues,
+      },
     };
     if (opts.json) {
       runtime.log(JSON.stringify(payload, null, 2));
+    }
+    if (compliance.issues.length > 0) {
+      const lines = compliance.issues.map((i) => `${i.level === "error" ? "✗" : "!"} ${i.message}`);
+      await prompter.note(lines.join("\n"), "Compliance");
     }
     await prompter.outro(`Agent "${agentId}" ready.`);
   } catch (err) {
