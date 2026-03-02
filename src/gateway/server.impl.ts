@@ -664,6 +664,7 @@ export async function startGatewayServer(
     ? null
     : await startGatewayTailscaleExposure({
         tailscaleMode,
+        enableFunnel: tailscaleConfig.enableFunnel,
         resetOnExit: tailscaleConfig.resetOnExit,
         port,
         controlUiBasePath,

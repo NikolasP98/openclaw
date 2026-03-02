@@ -467,6 +467,7 @@ export const MinionSchema = z
           .object({
             mode: z.union([z.literal("off"), z.literal("serve"), z.literal("funnel")]).optional(),
             resetOnExit: z.boolean().optional(),
+            enableFunnel: z.boolean().optional(),
           })
           .strict()
           .optional(),

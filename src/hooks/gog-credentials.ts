@@ -466,21 +466,29 @@ export async function syncToGogKeyring(
       return { success: false, error: "gog CLI not installed" };
     }
 
-    // Verify gog version supports `auth tokens` (plural, requires >= v0.11.0)
-    const versionCheck = await runCommandWithTimeout(["gog", "--version"], { timeoutMs: 3_000 });
-    if (versionCheck.code === 0) {
-      const match = versionCheck.stdout.match(/v(\d+)\.(\d+)\.(\d+)/);
-      if (match) {
-        const [, major, minor] = match.map(Number);
-        if (major === 0 && minor < 11) {
-          const msg = `gog CLI v${major}.${minor} is too old for 'auth tokens import' (requires >= v0.11.0)`;
-          log.warn(`${msg}. Skipping keyring sync.`);
-          return { success: false, error: msg };
+    const result = await importTokensToGogKeyring(credentials);
+    if (!result.success && result.error) {
+      // Detect version-too-old errors from gog itself (e.g. "unknown command", "no such command").
+      // We avoid a pre-flight version check since transient anomalies caused false positives.
+      const isVersionError = /unknown (command|flag|subcommand)|no such command|unrecognized/i.test(
+        result.error,
+      );
+      if (isVersionError) {
+        const versionCheck = await runCommandWithTimeout(["gog", "--version"], {
+          timeoutMs: 3_000,
+        });
+        const match = versionCheck.stdout.match(/v(\d+)\.(\d+)\.(\d+)/);
+        if (match) {
+          const [, major, minor] = match.map(Number);
+          if (major === 0 && minor < 11) {
+            const msg = `gog CLI v${major}.${minor} is too old for 'auth tokens import' (requires >= v0.11.0)`;
+            log.warn(`${msg}. Skipping keyring sync.`);
+            return { success: false, error: msg };
+          }
         }
       }
     }
-
-    return await importTokensToGogKeyring(credentials);
+    return result;
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.warn("[gog-credentials] Failed to sync tokens to gog CLI keyring:", error);

@@ -139,6 +139,14 @@ export type GatewayTailscaleConfig = {
   mode?: GatewayTailscaleMode;
   /** Reset serve/funnel configuration on shutdown. */
   resetOnExit?: boolean;
+  /**
+   * Enable Tailscale Funnel (public internet access) for the serve endpoint.
+   * When true, sets AllowFunnel=true via the Tailscale local API after serve
+   * is configured. Useful when mode=serve but OAuth callbacks (added by hooks)
+   * need to be reachable from outside the tailnet.
+   * Only meaningful when mode=serve.
+   */
+  enableFunnel?: boolean;
 };
 
 export type GatewayRemoteConfig = {

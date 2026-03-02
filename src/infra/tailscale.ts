@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import * as http from "node:http";
 import { formatCliCommand } from "../cli/command-format.js";
 import { promptYesNo } from "../cli/prompt.js";
 import { danger, info, logVerbose, shouldLogVerbose, warn } from "../globals.js";
@@ -419,6 +420,110 @@ export async function disableTailscaleFunnel(exec: typeof runExec = runExec) {
     maxBuffer: 200_000,
     timeoutMs: 15_000,
   });
+}
+
+const TAILSCALE_LOCAL_SOCKET = "/run/tailscale/tailscaled.sock";
+
+/**
+ * Read the current Tailscale serve config via the local API.
+ * Returns null if the socket is unavailable or the config is empty.
+ */
+async function readTailscaleServeConfig(): Promise<Record<string, unknown> | null> {
+  return new Promise((resolve) => {
+    const req = http.request(
+      {
+        socketPath: TAILSCALE_LOCAL_SOCKET,
+        hostname: "local-tailscaled.sock",
+        path: "/localapi/v0/serve-config",
+        method: "GET",
+        timeout: 5_000,
+      },
+      (res) => {
+        let body = "";
+        res.on("data", (chunk: Buffer) => {
+          body += chunk.toString();
+        });
+        res.on("end", () => {
+          try {
+            const parsed = JSON.parse(body) as Record<string, unknown>;
+            resolve(Object.keys(parsed).length > 0 ? parsed : null);
+          } catch {
+            resolve(null);
+          }
+        });
+      },
+    );
+    req.on("error", () => resolve(null));
+    req.on("timeout", () => {
+      req.destroy();
+      resolve(null);
+    });
+    req.end();
+  });
+}
+
+/**
+ * Write an updated Tailscale serve config via the local API.
+ */
+async function writeTailscaleServeConfig(cfg: Record<string, unknown>): Promise<boolean> {
+  return new Promise((resolve) => {
+    const body = JSON.stringify(cfg);
+    const req = http.request(
+      {
+        socketPath: TAILSCALE_LOCAL_SOCKET,
+        hostname: "local-tailscaled.sock",
+        path: "/localapi/v0/serve-config",
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(body),
+        },
+        timeout: 10_000,
+      },
+      (res) => {
+        res.resume(); // drain
+        res.on("end", () => resolve(res.statusCode !== undefined && res.statusCode < 300));
+      },
+    );
+    req.on("error", () => resolve(false));
+    req.on("timeout", () => {
+      req.destroy();
+      resolve(false);
+    });
+    req.write(body);
+    req.end();
+  });
+}
+
+/**
+ * Enable Tailscale Funnel for the current serve virtual host by setting
+ * AllowFunnel=true via the local API. Called after `enableTailscaleServe`
+ * to make the serve endpoint publicly accessible (not just tailnet-only).
+ *
+ * `tailscale serve --bg --yes {port}` strips AllowFunnel on every run, so
+ * this must be called after each `enableTailscaleServe` call.
+ */
+export async function enableTailscaleServeFunnel(): Promise<void> {
+  const cfg = await readTailscaleServeConfig();
+  if (!cfg) {
+    warn("tailscale serve config unavailable; skipping AllowFunnel setup");
+    return;
+  }
+  const web = cfg["Web"] as Record<string, unknown> | undefined;
+  const hostKey = web ? Object.keys(web)[0] : undefined;
+  if (!hostKey) {
+    warn("tailscale serve: no Web virtual host found; skipping AllowFunnel setup");
+    return;
+  }
+  const allowFunnel = (cfg["AllowFunnel"] ?? {}) as Record<string, unknown>;
+  if (allowFunnel[hostKey] === true) {
+    return; // already set
+  }
+  cfg["AllowFunnel"] = { ...allowFunnel, [hostKey]: true };
+  const ok = await writeTailscaleServeConfig(cfg);
+  if (!ok) {
+    warn("tailscale serve: failed to set AllowFunnel via local API");
+  }
 }
 
 function getString(value: unknown): string | undefined {
