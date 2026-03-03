@@ -262,6 +262,7 @@ function detectMessageLanguage(text: string): string {
   let cyrillicCount = 0;
   let arabicCount = 0;
   let latinCount = 0;
+  let jpOnlyCount = 0; // Hiragana + Katakana only (subset of cjkCount, for ja vs zh disambiguation)
   let total = 0;
 
   for (const char of text) {
@@ -269,7 +270,7 @@ function detectMessageLanguage(text: string): string {
     if (code < 0x20) continue; // skip control chars
     total++;
     if (code >= 0x4E00 && code <= 0x9FFF) cjkCount++; // CJK Unified
-    else if (code >= 0x3040 && code <= 0x30FF) cjkCount++; // Hiragana + Katakana → Japanese
+    else if (code >= 0x3040 && code <= 0x30FF) { cjkCount++; jpOnlyCount++; } // Hiragana + Katakana
     else if (code >= 0xAC00 && code <= 0xD7AF) hangulCount++; // Hangul
     else if (code >= 0x0400 && code <= 0x04FF) cyrillicCount++; // Cyrillic
     else if (code >= 0x0600 && code <= 0x06FF) arabicCount++; // Arabic
@@ -279,12 +280,8 @@ function detectMessageLanguage(text: string): string {
   if (total === 0) return "en";
   const threshold = total * 0.15;
 
-  // Japanese: has Hiragana/Katakana mixed with CJK
-  const jpChars = [...text].filter(c => {
-    const cp = c.codePointAt(0)!;
-    return (cp >= 0x3040 && cp <= 0x30FF);
-  }).length;
-  if (jpChars > threshold) return "ja";
+  // Japanese: has Hiragana/Katakana (distinct from pure CJK which signals Chinese)
+  if (jpOnlyCount > threshold) return "ja";
   if (hangulCount > threshold) return "ko";
   if (cjkCount > threshold) return "zh";
   if (cyrillicCount > threshold) return "ru";
@@ -626,6 +623,8 @@ export type SessionPin = {
   model: string;
   complexity: MessageComplexity;
   pinnedAt: number;
+  /** Full routing result — preserved so callers can apply all routing properties (timeout, context cap, etc.). */
+  routingResult: SmartRoutingResult;
 };
 
 /**
@@ -651,6 +650,7 @@ export function pinSession(sessionKey: string, result: SmartRoutingResult): void
     model: result.model,
     complexity: result.complexity,
     pinnedAt: Date.now(),
+    routingResult: result,
   });
 }
 

@@ -114,6 +114,66 @@ describe("model-selection", () => {
       expect(index.byAlias.get("smart")?.ref).toEqual({ provider: "openai", model: "gpt-4o" });
       expect(index.byKey.get(modelKey("anthropic", "claude-3-5-sonnet"))).toEqual(["fast"]);
     });
+
+    // ── Built-in shorthand aliases (Sprint Y.2) ────────────────────────────
+
+    it("includes built-in shorthand aliases without any user config", () => {
+      const index = buildModelAliasIndex({
+        cfg: {} as MinionConfig,
+        defaultProvider: "anthropic",
+      });
+
+      // Anthropic shorthands
+      expect(index.byAlias.get("claude")?.ref.provider).toBe("anthropic");
+      expect(index.byAlias.get("opus")?.ref.provider).toBe("anthropic");
+      expect(index.byAlias.get("haiku")?.ref.provider).toBe("anthropic");
+      // OpenAI shorthands
+      expect(index.byAlias.get("gpt4")?.ref.provider).toBe("openai");
+      expect(index.byAlias.get("mini")?.ref.provider).toBe("openai");
+      // Google shorthands
+      expect(index.byAlias.get("gemini")?.ref.provider).toBe("google");
+      expect(index.byAlias.get("flash")?.ref.provider).toBe("google");
+      // DeepSeek shorthands
+      expect(index.byAlias.get("deepseek")?.ref.provider).toBe("deepseek");
+      expect(index.byAlias.get("r1")?.ref.provider).toBe("deepseek");
+    });
+
+    it("user-configured aliases override built-in shorthands", () => {
+      const cfg: Partial<MinionConfig> = {
+        agents: {
+          defaults: {
+            models: {
+              // Override the built-in "claude" alias to point to a different model
+              "anthropic/claude-haiku-3.5": { alias: "claude" },
+            },
+          },
+        },
+      };
+
+      const index = buildModelAliasIndex({
+        cfg: cfg as MinionConfig,
+        defaultProvider: "anthropic",
+      });
+
+      // User's alias takes precedence
+      expect(index.byAlias.get("claude")?.ref.model).toBe("claude-haiku-3.5");
+    });
+
+    it("built-in aliases resolve via resolveModelRefFromString", () => {
+      const index = buildModelAliasIndex({
+        cfg: {} as MinionConfig,
+        defaultProvider: "anthropic",
+      });
+
+      const resolved = resolveModelRefFromString({
+        raw: "claude",
+        defaultProvider: "anthropic",
+        aliasIndex: index,
+      });
+
+      expect(resolved?.ref.provider).toBe("anthropic");
+      expect(resolved?.alias).toBe("claude");
+    });
   });
 
   describe("resolveModelRefFromString", () => {
