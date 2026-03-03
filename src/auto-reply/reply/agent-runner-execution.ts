@@ -3,6 +3,7 @@ import fs from "node:fs";
 import { runCliAgent } from "../../agents/cli-runner.js";
 import { getCliSessionId } from "../../agents/cli-session.js";
 import { runWithModelFallback } from "../../agents/model-fallback.js";
+import { pinSession } from "./smart-routing.js";
 import { isCliProvider } from "../../agents/model-selection.js";
 import {
   isCompactionFailureError,
@@ -391,6 +392,22 @@ export async function runAgentTurnWithFallback(params: {
       runResult = fallbackResult.result;
       fallbackProvider = fallbackResult.provider;
       fallbackModel = fallbackResult.model;
+
+      // S.3: If fallback routing used a different model than originally planned, update
+      // the session pin so subsequent messages go directly to the fallback model rather
+      // than retrying the primary (which just failed) on each turn.
+      if (
+        params.sessionKey &&
+        (fallbackResult.provider !== params.followupRun.run.provider ||
+          fallbackResult.model !== params.followupRun.run.model)
+      ) {
+        pinSession(params.sessionKey, {
+          provider: fallbackResult.provider,
+          model: fallbackResult.model,
+          complexity: "complex", // Fallback pinned at highest tier to avoid downgrade
+          disableTools: false,
+        });
+      }
 
       // Some embedded runs surface context overflow as an error payload instead of throwing.
       // Treat those as a session-level failure and auto-recover by starting a fresh session.

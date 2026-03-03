@@ -72,6 +72,7 @@ describe("agent-runner-utils", () => {
       model: run.model,
       agentDir: run.agentDir,
       fallbacksOverride: ["fallback-model"],
+      hasTools: true,
     });
   });
 

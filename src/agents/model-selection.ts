@@ -22,6 +22,38 @@ const ANTHROPIC_MODEL_ALIASES: Record<string, string> = {
   "sonnet-4.6": "claude-sonnet-4-6",
   "sonnet-4.5": "claude-sonnet-4-5",
 };
+
+/**
+ * Built-in shorthand model aliases (Sprint Y.2 / ClawRouter v0.10.0 pattern).
+ *
+ * Maps human-friendly names to canonical provider/model pairs, so users can
+ * type `/model claude` instead of `/model anthropic/claude-sonnet-4-6`.
+ *
+ * User-configured aliases (cfg.agents.defaults.models[x].alias) take precedence
+ * over these built-ins when the same shorthand is used.
+ *
+ * Points to the most capable generally-available model per shorthand.
+ */
+const BUILTIN_SHORTHAND_ALIASES: Array<{ alias: string; provider: string; model: string }> = [
+  // Anthropic
+  { alias: "claude", provider: "anthropic", model: "claude-sonnet-4-6" },
+  { alias: "sonnet", provider: "anthropic", model: "claude-sonnet-4-6" },
+  { alias: "opus", provider: "anthropic", model: "claude-opus-4-6" },
+  { alias: "haiku", provider: "anthropic", model: "claude-haiku-3.5" },
+  // OpenAI
+  { alias: "gpt4", provider: "openai", model: "gpt-4o" },
+  { alias: "mini", provider: "openai", model: "gpt-4o-mini" },
+  { alias: "o1", provider: "openai", model: "o1" },
+  { alias: "o3", provider: "openai", model: "o3" },
+  // Google
+  { alias: "gemini", provider: "google", model: "gemini-2.5-pro" },
+  { alias: "flash", provider: "google", model: "gemini-2.0-flash" },
+  // DeepSeek
+  { alias: "deepseek", provider: "deepseek", model: "deepseek-chat" },
+  { alias: "r1", provider: "deepseek", model: "deepseek-r1" },
+  // xAI
+  { alias: "grok", provider: "xai", model: "grok-3" },
+];
 const OPENAI_CODEX_OAUTH_MODEL_PREFIXES = ["gpt-5.3-codex"] as const;
 
 function normalizeAliasKey(value: string): string {
@@ -196,6 +228,25 @@ export function buildModelAliasIndex(params: {
   const byAlias = new Map<string, { alias: string; ref: ModelRef }>();
   const byKey = new Map<string, string[]>();
 
+  const addAlias = (alias: string, ref: ModelRef) => {
+    const aliasKey = normalizeAliasKey(alias);
+    byAlias.set(aliasKey, { alias, ref });
+    const key = modelKey(ref.provider, ref.model);
+    const existing = byKey.get(key) ?? [];
+    if (!existing.includes(alias)) {
+      existing.push(alias);
+    }
+    byKey.set(key, existing);
+  };
+
+  // Seed with built-in shorthand aliases (lowest precedence).
+  // User-configured aliases added below will override these.
+  for (const { alias, provider, model } of BUILTIN_SHORTHAND_ALIASES) {
+    addAlias(alias, { provider, model });
+  }
+
+  // User-configured aliases (from cfg.agents.defaults.models[key].alias).
+  // These take precedence over built-ins when the same shorthand is used.
   const rawModels = params.cfg.agents?.defaults?.models ?? {};
   for (const [keyRaw, entryRaw] of Object.entries(rawModels)) {
     const parsed = parseModelRef(String(keyRaw ?? ""), params.defaultProvider);
@@ -206,12 +257,7 @@ export function buildModelAliasIndex(params: {
     if (!alias) {
       continue;
     }
-    const aliasKey = normalizeAliasKey(alias);
-    byAlias.set(aliasKey, { alias, ref: parsed });
-    const key = modelKey(parsed.provider, parsed.model);
-    const existing = byKey.get(key) ?? [];
-    existing.push(alias);
-    byKey.set(key, existing);
+    addAlias(alias, parsed);
   }
 
   return { byAlias, byKey };

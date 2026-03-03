@@ -147,6 +147,10 @@ export function resolveModelFallbackOptions(run: FollowupRun["run"]) {
       run.config,
       resolveAgentIdFromSessionKey(run.sessionKey),
     ),
+    // Minion agents always have tools (bash, cron, file ops, etc.).
+    // This enables the tool-calling capability filter in resolveFallbackCandidates
+    // to exclude models known to not support tool schemas (e.g. Minimax).
+    hasTools: true,
   };
 }
 

@@ -450,11 +450,20 @@ export function normalizeCronJobInput(
     }
     if ("schedule" in next && isRecord(next.schedule) && next.schedule.kind === "cron") {
       const schedule = next.schedule as UnknownRecord;
+      const expr = typeof schedule.expr === "string" ? schedule.expr.trim() : "";
+      if (expr) {
+        const fields = expr.split(/\s+/);
+        if (fields.length !== 5) {
+          throw new Error(
+            `Invalid cron expression "${expr}": expected 5 fields (min hour dom month dow), got ${fields.length}. ` +
+              `Examples: "30 9 * * 1-5" (weekdays 9:30 AM), "0 * * * *" (every hour), "*/5 * * * *" (every 5 min).`,
+          );
+        }
+      }
       const explicit = normalizeCronStaggerMs(schedule.staggerMs);
       if (explicit !== undefined) {
         schedule.staggerMs = explicit;
       } else {
-        const expr = typeof schedule.expr === "string" ? schedule.expr : "";
         const defaultStaggerMs = resolveDefaultCronStaggerMs(expr);
         if (defaultStaggerMs !== undefined) {
           schedule.staggerMs = defaultStaggerMs;

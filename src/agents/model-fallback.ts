@@ -1,5 +1,5 @@
 import type { OpenClawConfig } from "../config/config.js";
-import { modelFitsContext } from "../providers/model-catalog.js";
+import { modelFitsContext, modelSupportsToolCalling } from "../providers/model-catalog.js";
 import {
   ensureAuthProfileStore,
   getSoonestCooldownExpiry,
@@ -183,6 +183,12 @@ function resolveFallbackCandidates(params: {
   fallbacksOverride?: string[];
   /** Estimated context tokens for the current conversation — filters out models with insufficient context windows. */
   estimatedContextTokens?: number;
+  /**
+   * Whether the current request includes tool schemas.
+   * When true, filters out candidates known to not support tool calling.
+   * Fail-open: if all candidates are filtered out, the full list is returned.
+   */
+  hasTools?: boolean;
 }): ModelCandidate[] {
   const primary = params.cfg
     ? resolveConfiguredModelRef({
@@ -249,6 +255,16 @@ function resolveFallbackCandidates(params: {
     }
   }
 
+  // Filter by tool-calling capability when the request includes tool schemas.
+  // Removes models known to silently break tool calls (e.g. Minimax).
+  // Fail-open: if all candidates are filtered out, the full list is returned.
+  if (params.hasTools) {
+    const toolCapable = candidates.filter((c) => modelSupportsToolCalling(c.model));
+    if (toolCapable.length > 0) {
+      return toolCapable;
+    }
+  }
+
   return candidates;
 }
 
@@ -305,6 +321,12 @@ export async function runWithModelFallback<T>(params: {
   fallbacksOverride?: string[];
   /** Estimated context tokens — used to filter out models with insufficient context windows. */
   estimatedContextTokens?: number;
+  /**
+   * Whether the current request includes tool schemas.
+   * When true, fallback candidates known to not support tool calling are removed.
+   * Fail-open: if filtering would remove all candidates, the full list is kept.
+   */
+  hasTools?: boolean;
   run: (provider: string, model: string) => Promise<T>;
   onError?: ModelFallbackErrorHandler;
 }): Promise<ModelFallbackRunResult<T>> {
@@ -314,6 +336,7 @@ export async function runWithModelFallback<T>(params: {
     model: params.model,
     fallbacksOverride: params.fallbacksOverride,
     estimatedContextTokens: params.estimatedContextTokens,
+    hasTools: params.hasTools,
   });
   const authStore = params.cfg
     ? ensureAuthProfileStore(params.agentDir, { allowKeychainPrompt: false })

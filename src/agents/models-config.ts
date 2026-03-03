@@ -139,7 +139,15 @@ export async function ensureMinionModelsJson(
   }
 
   await fs.mkdir(agentDir, { recursive: true, mode: 0o700 });
-  await fs.writeFile(targetPath, next, { mode: 0o600 });
+  // Atomic write: temp-file-then-rename prevents partial reads on crash.
+  const tmpPath = `${targetPath}.${process.pid}.tmp`;
+  try {
+    await fs.writeFile(tmpPath, next, { mode: 0o600 });
+    await fs.rename(tmpPath, targetPath);
+  } catch (err) {
+    await fs.unlink(tmpPath).catch(() => {});
+    throw err;
+  }
   return { agentDir, wrote: true };
 }
 
