@@ -72,3 +72,23 @@ export function emitReliabilityEvent(input: ReliabilityEventInput): void {
 export function getReliabilityUptimeStartMs(): number {
   return startedAtMs;
 }
+
+export type SkillExecutionStatus = "ok" | "auth_error" | "timeout" | "error";
+
+/**
+ * Track a skill (plugin) tool execution and forward to the hub metrics push
+ * client if one is active. Best-effort — never throws.
+ */
+export function trackSkillExecution(stat: {
+  skillName: string;
+  status: SkillExecutionStatus;
+  durationMs?: number;
+  errorMessage?: string;
+  occurredAt: number;
+}): void {
+  try {
+    getHubMetricsPushClient()?.pushSkillStat(stat);
+  } catch {
+    // Best effort — never fail the tool execution path
+  }
+}

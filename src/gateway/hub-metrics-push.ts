@@ -124,17 +124,17 @@ export function startHubMetricsPush(rawConfig: unknown): HubMetricsPushHandle | 
       // Auth store unavailable — omit
     }
 
+    // Build sessions snapshot (used for both heartbeat counts and batch payload)
+    const sessions = buildSessionsBatch();
+
     // Build heartbeat
     const heartbeat = {
       uptimeMs: Math.round(process.uptime() * 1000),
-      activeSessions: 0, // Placeholder — wired up when integrated into server.impl.ts
-      activeAgents: 0,
+      activeSessions: sessions.length,
+      activeAgents: new Set(sessions.map((s) => s.agentId)).size,
       memoryRssMb: Math.round((process.memoryUsage().rss / 1024 / 1024) * 100) / 100,
       capturedAt: Date.now(),
     };
-
-    // Build sessions snapshot
-    const sessions = buildSessionsBatch();
 
     const batch: Record<string, unknown> = { heartbeat };
 

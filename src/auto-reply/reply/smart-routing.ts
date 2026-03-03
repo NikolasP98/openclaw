@@ -267,7 +267,7 @@ function detectMessageLanguage(text: string): string {
 
   for (const char of text) {
     const code = char.codePointAt(0)!;
-    if (code < 0x20) continue; // skip control chars
+    if (code < 0x20) {continue;} // skip control chars
     total++;
     if (code >= 0x4E00 && code <= 0x9FFF) cjkCount++; // CJK Unified
     else if (code >= 0x3040 && code <= 0x30FF) { cjkCount++; jpOnlyCount++; } // Hiragana + Katakana
@@ -277,7 +277,7 @@ function detectMessageLanguage(text: string): string {
     else if (code >= 0x0041 && code <= 0x024F) latinCount++; // Basic+Extended Latin
   }
 
-  if (total === 0) return "en";
+  if (total === 0) {return "en";}
   const threshold = total * 0.15;
 
   // Japanese: has Hiragana/Katakana (distinct from pure CJK which signals Chinese)
@@ -291,9 +291,9 @@ function detectMessageLanguage(text: string): string {
   if (latinCount > threshold) {
     const lower = text.toLowerCase();
     // Quick heuristic: check for common function words
-    if (/\b(der|die|das|ist|und|nicht|ich|ein)\b/.test(lower)) return "de";
-    if (/\b(el|la|los|las|es|está|por|con|del)\b/.test(lower)) return "es";
-    if (/\b(o|os|as|é|está|por|com|dos|das)\b/.test(lower)) return "pt";
+    if (/\b(der|die|das|ist|und|nicht|ich|ein)\b/.test(lower)) {return "de";}
+    if (/\b(el|la|los|las|es|está|por|con|del)\b/.test(lower)) {return "es";}
+    if (/\b(o|os|as|é|está|por|com|dos|das)\b/.test(lower)) {return "pt";}
   }
 
   return "en";
@@ -308,9 +308,9 @@ function classifyWordMultilingual(
   lang: string,
 ): "complex" | "moderate" | undefined {
   const keywords = MULTILINGUAL_KEYWORDS[lang];
-  if (!keywords) return undefined;
-  if (keywords.complex.has(word)) return "complex";
-  if (keywords.moderate.has(word)) return "moderate";
+  if (!keywords) {return undefined;}
+  if (keywords.complex.has(word)) {return "complex";}
+  if (keywords.moderate.has(word)) {return "moderate";}
   return undefined;
 }
 
@@ -371,10 +371,10 @@ export function classifyMessage(
     let multilingualResult: "complex" | "moderate" | undefined;
     for (const word of words) {
       const result = classifyWordMultilingual(word, lang);
-      if (result === "complex") return "complex";
-      if (result === "moderate") multilingualResult = "moderate";
+      if (result === "complex") {return "complex";}
+      if (result === "moderate") {multilingualResult = "moderate";}
     }
-    if (multilingualResult) return multilingualResult;
+    if (multilingualResult) {return multilingualResult;}
   }
 
   // 5. Slash commands → complex (they invoke specific functionality)
