@@ -77,6 +77,22 @@ export function validateHostEnv(env: Record<string, string>): void {
     }
   }
 }
+/**
+ * Strips ANSI/VT100 escape sequences from shell output before passing to the LLM.
+ * Prevents prompt injection via color/cursor control codes and reduces token bloat.
+ *
+ * Covers:
+ * - CSI sequences: ESC [ <params> <letter>  (colors, cursor movement, erase, etc.)
+ * - OSC sequences: ESC ] <text> (BEL | ESC\)  (hyperlinks, window titles)
+ * - Two-byte ESC sequences: ESC <@-_letter>
+ */
+const ANSI_ESCAPE_RE =
+  /\x1B(?:\[[0-9;]*[A-Za-z]|\][^\x1B\x07]*(?:\x07|\x1B\\)|[@-_][0-9]*[A-Za-z]?)/g;
+
+export function stripAnsi(str: string): string {
+  return str.replace(ANSI_ESCAPE_RE, "");
+}
+
 export const DEFAULT_MAX_OUTPUT = clampWithDefault(
   readEnvInt("PI_BASH_MAX_OUTPUT_CHARS"),
   200_000,
@@ -351,7 +367,7 @@ export async function runExecProcess(opts: {
   };
 
   const handleStdout = (data: string) => {
-    const str = sanitizeBinaryOutput(data.toString());
+    const str = stripAnsi(sanitizeBinaryOutput(data.toString()));
     for (const chunk of chunkString(str)) {
       appendOutput(session, "stdout", chunk);
       emitUpdate();
@@ -359,7 +375,7 @@ export async function runExecProcess(opts: {
   };
 
   const handleStderr = (data: string) => {
-    const str = sanitizeBinaryOutput(data.toString());
+    const str = stripAnsi(sanitizeBinaryOutput(data.toString()));
     for (const chunk of chunkString(str)) {
       appendOutput(session, "stderr", chunk);
       emitUpdate();
