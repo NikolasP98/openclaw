@@ -8,6 +8,7 @@ import type {
   SandboxPruneSettings,
 } from "./types.sandbox.js";
 import type { AgentToolsConfig, MemorySearchConfig } from "./types.tools.js";
+import type { TtsConfig } from "./types.tts.js";
 
 export type AgentModelConfig =
   | string
@@ -69,6 +70,10 @@ export type AgentConfig = {
     prune?: SandboxPruneSettings;
   };
   tools?: AgentToolsConfig;
+  /** Optional per-agent message overrides (e.g. TTS provider/voice). */
+  messages?: {
+    tts?: TtsConfig;
+  };
   /** Optional agent capabilities metadata for delegation and discovery. */
   capabilities?: {
     /** Role type of this agent (orchestrator delegates, specialist executes). */

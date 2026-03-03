@@ -10,6 +10,7 @@ import {
   logSessionStateChange,
 } from "../../logging/diagnostic.js";
 import { getGlobalHookRunner } from "../../plugins/hook-runner-global.js";
+import { normalizeAgentId } from "../../routing/session-key.js";
 import { maybeApplyTtsToPayload, normalizeTtsAutoMode, resolveTtsConfig } from "../../tts/tts.js";
 import { getReplyFromConfig } from "../reply.js";
 import type { FinalizedMsgContext } from "../templating.js";
@@ -18,6 +19,25 @@ import { formatAbortReplyText, tryFastAbortFromMessage } from "./abort.js";
 import { shouldSkipDuplicateInbound } from "./inbound-dedupe.js";
 import type { ReplyDispatcher, ReplyDispatchKind } from "./reply-dispatcher.js";
 import { isRoutableChannel, routeReply } from "./route-reply.js";
+
+/**
+ * Returns a cfg with per-agent TTS settings merged in (agent overrides global).
+ * Used so different agents can have different TTS providers/voices.
+ */
+function resolveAgentEffectiveTtsCfg(cfg: OpenClawConfig, agentId: string): OpenClawConfig {
+  const normalizedId = normalizeAgentId(agentId);
+  const agentEntry = cfg.agents?.list?.find(
+    (e) => e && typeof e === "object" && normalizeAgentId(e.id) === normalizedId,
+  );
+  const agentTts = agentEntry?.messages?.tts;
+  if (!agentTts) {
+    return cfg;
+  }
+  return {
+    ...cfg,
+    messages: { ...cfg.messages, tts: { ...cfg.messages?.tts, ...agentTts } },
+  };
+}
 
 const AUDIO_PLACEHOLDER_RE = /^<media:audio>(\s*\([^)]*\))?$/i;
 const AUDIO_HEADER_RE = /^\[Audio\b/i;
@@ -93,6 +113,10 @@ export async function dispatchReplyFromConfig(params: {
   const chatId = ctx.To ?? ctx.From;
   const messageId = ctx.MessageSid ?? ctx.MessageSidFirst ?? ctx.MessageSidLast;
   const sessionKey = ctx.SessionKey;
+  const sessionAgentId = sessionKey
+    ? resolveSessionAgentId({ sessionKey, config: cfg })
+    : undefined;
+  const effectiveCfg = sessionAgentId ? resolveAgentEffectiveTtsCfg(cfg, sessionAgentId) : cfg;
   const startTime = diagnosticsEnabled ? Date.now() : 0;
   const canTrackSession = diagnosticsEnabled && Boolean(sessionKey);
 
@@ -345,7 +369,7 @@ export async function dispatchReplyFromConfig(params: {
           const run = async () => {
             const ttsPayload = await maybeApplyTtsToPayload({
               payload,
-              cfg,
+              cfg: effectiveCfg,
               channel: ttsChannel,
               kind: "tool",
               inboundAudio,
@@ -375,7 +399,7 @@ export async function dispatchReplyFromConfig(params: {
             }
             const ttsPayload = await maybeApplyTtsToPayload({
               payload,
-              cfg,
+              cfg: effectiveCfg,
               channel: ttsChannel,
               kind: "block",
               inboundAudio,
@@ -400,7 +424,7 @@ export async function dispatchReplyFromConfig(params: {
     for (const reply of replies) {
       const ttsReply = await maybeApplyTtsToPayload({
         payload: reply,
-        cfg,
+        cfg: effectiveCfg,
         channel: ttsChannel,
         kind: "final",
         inboundAudio,
@@ -431,7 +455,7 @@ export async function dispatchReplyFromConfig(params: {
       }
     }
 
-    const ttsMode = resolveTtsConfig(cfg).mode ?? "final";
+    const ttsMode = resolveTtsConfig(effectiveCfg).mode ?? "final";
     // Generate TTS-only reply after block streaming completes (when there's no final reply).
     // This handles the case where block streaming succeeds and drops final payloads,
     // but we still want TTS audio to be generated from the accumulated block content.
@@ -444,7 +468,7 @@ export async function dispatchReplyFromConfig(params: {
       try {
         const ttsSyntheticReply = await maybeApplyTtsToPayload({
           payload: { text: accumulatedBlockText },
-          cfg,
+          cfg: effectiveCfg,
           channel: ttsChannel,
           kind: "final",
           inboundAudio,

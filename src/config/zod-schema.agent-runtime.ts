@@ -7,6 +7,7 @@ import {
   IdentitySchema,
   ToolsLinksSchema,
   ToolsMediaSchema,
+  TtsConfigSchema,
 } from "./zod-schema.core.js";
 import { sensitive } from "./zod-schema.sensitive.js";
 
@@ -617,6 +618,12 @@ export const AgentEntrySchema = z
       .optional(),
     sandbox: AgentSandboxSchema,
     tools: AgentToolsSchema,
+    messages: z
+      .object({
+        tts: TtsConfigSchema.optional(),
+      })
+      .strict()
+      .optional(),
     capabilities: z
       .object({
         role: z.union([z.literal("orchestrator"), z.literal("specialist")]).optional(),
