@@ -8,7 +8,7 @@ import {
 } from "../config/sessions.js";
 import { resolveRequiredHomeDir } from "../infra/home-dir.js";
 import { hasInterSessionUserProvenance } from "../sessions/input-provenance.js";
-import { extractToolCallNames, hasToolCall } from "../utils/transcript-tools.js";
+import { extractToolCallNames, hasToolCall } from "../shared/transcript-tools.js";
 import { stripEnvelope } from "./chat-sanitize.js";
 import type { SessionPreviewItem } from "./session-utils.types.js";
 

@@ -6,7 +6,7 @@ import { normalizeAccountId } from "../../routing/session-key.js";
 import {
   INTERNAL_MESSAGE_CHANNEL,
   listDeliverableMessageChannels,
-} from "../../utils/message-channel.js";
+} from "../../shared/message-channel.js";
 import { resolveChunkMode, resolveTextChunkLimit, type TextChunkProvider } from "../chunk.js";
 
 const DEFAULT_BLOCK_STREAM_MIN = 800;

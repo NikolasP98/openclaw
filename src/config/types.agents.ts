@@ -8,6 +8,7 @@ import type {
   SandboxPruneSettings,
 } from "./types.sandbox.js";
 import type { AgentToolsConfig, MemorySearchConfig } from "./types.tools.js";
+import type { TtsConfig } from "./types.tts.js";
 
 export type AgentModelConfig =
   | string
@@ -22,6 +23,12 @@ export type AgentConfig = {
   id: string;
   default?: boolean;
   name?: string;
+  /**
+   * Per-agent owner peer IDs. Owners can modify workspace root files and manage
+   * agent owners. Supports same formats as global admins (E164, telegram:, discord:,
+   * channel-scoped, or identity link names).
+   */
+  owners?: string[];
   workspace?: string;
   agentDir?: string;
   model?: AgentModelConfig;
@@ -63,6 +70,10 @@ export type AgentConfig = {
     prune?: SandboxPruneSettings;
   };
   tools?: AgentToolsConfig;
+  /** Optional per-agent message overrides (e.g. TTS provider/voice). */
+  messages?: {
+    tts?: TtsConfig;
+  };
   /** Optional agent capabilities metadata for delegation and discovery. */
   capabilities?: {
     /** Role type of this agent (orchestrator delegates, specialist executes). */

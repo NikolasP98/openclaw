@@ -1,0 +1,37 @@
+{
+  "name": "@openclaw/wati",
+  "version": "2026.2.23",
+  "private": true,
+  "description": "OpenClaw WATI WhatsApp Business channel plugin",
+  "type": "module",
+  "devDependencies": {
+    "@nikolasp98/minion": "workspace:*"
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.1.26"
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "channel": {
+      "id": "wati",
+      "label": "WATI WhatsApp",
+      "selectionLabel": "WATI (WhatsApp Business API)",
+      "detailLabel": "WATI WhatsApp Business",
+      "docsPath": "/channels/wati",
+      "docsLabel": "wati",
+      "blurb": "WhatsApp Business API via WATI — webhook-based, popular in LATAM & SEA.",
+      "aliases": [
+        "wati-whatsapp",
+        "whatsapp-business"
+      ],
+      "order": 65
+    },
+    "install": {
+      "npmSpec": "@openclaw/wati",
+      "localPath": "extensions/wati",
+      "defaultChoice": "npm"
+    }
+  }
+}

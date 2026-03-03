@@ -3,10 +3,9 @@ import { confirm, isCancel } from "@clack/prompts";
 import {
   checkShellCompletionStatus,
   ensureCompletionCacheExists,
-} from "../../commands/doctor-completion.js";
-import { doctorCommand } from "../../commands/doctor.js";
+} from "../../cli/commands/doctor-completion.js";
+import { doctorCommand } from "../../cli/commands/doctor.js";
 import { readConfigFileSnapshot, writeConfigFile } from "../../config/config.js";
-import { resolveGatewayService } from "../../daemon/service.js";
 import {
   channelToNpmTag,
   DEFAULT_GIT_CHANNEL,
@@ -24,8 +23,9 @@ import {
   resolveGlobalPackageRoot,
 } from "../../infra/update-global.js";
 import { runGatewayUpdate, type UpdateRunResult } from "../../infra/update-runner.js";
+import { resolveGatewayService } from "../../platform/daemon/service.js";
+import { runCommandWithTimeout } from "../../platform/process/exec.js";
 import { syncPluginsForUpdateChannel, updateNpmInstalledPlugins } from "../../plugins/update.js";
-import { runCommandWithTimeout } from "../../process/exec.js";
 import { defaultRuntime } from "../../runtime.js";
 import { stylePromptMessage } from "../../terminal/prompt-style.js";
 import { theme } from "../../terminal/theme.js";
@@ -40,6 +40,7 @@ import {
   DEFAULT_PACKAGE_NAME,
   ensureGitCheckout,
   normalizeTag,
+  parseTimeoutMsOrExit,
   readPackageName,
   readPackageVersion,
   resolveGitInstallDir,
@@ -468,12 +469,9 @@ async function maybeRestartService(params: {
 export async function updateCommand(opts: UpdateCommandOptions): Promise<void> {
   suppressDeprecations();
 
-  const timeoutMs = opts.timeout ? Number.parseInt(opts.timeout, 10) * 1000 : undefined;
+  const timeoutMs = parseTimeoutMsOrExit(opts.timeout);
   const shouldRestart = opts.restart !== false;
-
-  if (timeoutMs !== undefined && (Number.isNaN(timeoutMs) || timeoutMs <= 0)) {
-    defaultRuntime.error("--timeout must be a positive integer (seconds)");
-    defaultRuntime.exit(1);
+  if (timeoutMs === null) {
     return;
   }
 

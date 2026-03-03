@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { resolveSessionAgentId } from "../agents/agent-scope.js";
 import { normalizeChannelId } from "../channels/plugins/index.js";
+import { agentCommand } from "../cli/commands/agent.js";
 import { createOutboundSendDeps } from "../cli/outbound-send-deps.js";
-import { agentCommand } from "../commands/agent.js";
 import { loadConfig } from "../config/config.js";
 import { updateSessionStore } from "../config/sessions.js";
 import { requestHeartbeatNow } from "../infra/heartbeat-wake.js";
@@ -25,8 +25,11 @@ import { formatForLog } from "./ws-log.js";
 const MAX_EXEC_EVENT_OUTPUT_CHARS = 180;
 const VOICE_TRANSCRIPT_DEDUPE_WINDOW_MS = 1500;
 const MAX_RECENT_VOICE_TRANSCRIPTS = 200;
+const AGENT_REQUEST_DEDUPE_WINDOW_MS = 2000;
+const MAX_RECENT_AGENT_REQUESTS = 200;
 
 const recentVoiceTranscripts = new Map<string, { fingerprint: string; ts: number }>();
+const recentAgentRequests = new Map<string, { fingerprint: string; ts: number }>();
 
 function normalizeNonEmptyString(value: unknown): string | null {
   if (typeof value !== "string") {
@@ -104,6 +107,57 @@ function shouldDropDuplicateVoiceTranscript(params: {
         break;
       }
       recentVoiceTranscripts.delete(oldestKey);
+    }
+  }
+
+  return false;
+}
+
+function resolveAgentRequestFingerprint(
+  key: string | null | undefined,
+  sessionKey: string,
+  message: string,
+): string {
+  if (key) {
+    return `key:${key}`;
+  }
+  return `session:${sessionKey}|msg:${message.slice(0, 200)}`;
+}
+
+function shouldDropDuplicateAgentRequest(params: {
+  sessionKey: string;
+  fingerprint: string;
+  now: number;
+}): boolean {
+  const previous = recentAgentRequests.get(params.sessionKey);
+  if (
+    previous &&
+    previous.fingerprint === params.fingerprint &&
+    params.now - previous.ts <= AGENT_REQUEST_DEDUPE_WINDOW_MS
+  ) {
+    return true;
+  }
+  recentAgentRequests.set(params.sessionKey, {
+    fingerprint: params.fingerprint,
+    ts: params.now,
+  });
+
+  if (recentAgentRequests.size > MAX_RECENT_AGENT_REQUESTS) {
+    const cutoff = params.now - AGENT_REQUEST_DEDUPE_WINDOW_MS * 2;
+    for (const [key, value] of recentAgentRequests) {
+      if (value.ts < cutoff) {
+        recentAgentRequests.delete(key);
+      }
+      if (recentAgentRequests.size <= MAX_RECENT_AGENT_REQUESTS) {
+        break;
+      }
+    }
+    while (recentAgentRequests.size > MAX_RECENT_AGENT_REQUESTS) {
+      const oldestKey = recentAgentRequests.keys().next().value;
+      if (oldestKey === undefined) {
+        break;
+      }
+      recentAgentRequests.delete(oldestKey);
     }
   }
 
@@ -367,6 +421,22 @@ export const handleNodeEvent = async (ctx: NodeEventContext, nodeId: string, evt
       const { storePath, entry, canonicalKey } = loadSessionEntry(sessionKey);
       const now = Date.now();
       const sessionId = entry?.sessionId ?? randomUUID();
+
+      const agentReqFingerprint = resolveAgentRequestFingerprint(
+        link?.key ?? null,
+        canonicalKey,
+        message,
+      );
+      if (
+        shouldDropDuplicateAgentRequest({
+          sessionKey: canonicalKey,
+          fingerprint: agentReqFingerprint,
+          now,
+        })
+      ) {
+        return;
+      }
+
       await touchSessionStore({ cfg, sessionKey, storePath, canonicalKey, entry, sessionId, now });
 
       if (deliverRequested && (!channel || !to)) {

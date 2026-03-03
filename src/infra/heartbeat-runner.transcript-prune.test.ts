@@ -7,7 +7,7 @@ import type { OpenClawConfig } from "../config/config.js";
 import { resolveMainSessionKey } from "../config/sessions.js";
 import { setActivePluginRegistry } from "../plugins/runtime.js";
 import { createPluginRuntime } from "../plugins/runtime/index.js";
-import { createTestRegistry } from "../test-utils/channel-plugins.js";
+import { createTestRegistry } from "../test-support/channel-plugins.js";
 import { runHeartbeatOnce } from "./heartbeat-runner.js";
 import { seedSessionStore, withTempHeartbeatSandbox } from "./heartbeat-runner.test-utils.js";
 

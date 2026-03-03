@@ -1,4 +1,4 @@
-import type { HealthSummary } from "../commands/health.js";
+import type { HealthSummary } from "../cli/commands/health.js";
 import { abortChatRunById, type ChatAbortControllerEntry } from "./chat-abort.js";
 import type { ChatRunEntry } from "./server-chat.js";
 import {

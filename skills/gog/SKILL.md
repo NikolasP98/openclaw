@@ -7,7 +7,6 @@ metadata:
     "minion":
       {
         "emoji": "🎮",
-        "requires": { "bins": ["gog"] },
         "install":
           [
             {
@@ -28,25 +27,39 @@ Use `gog` for Gmail/Calendar/Drive/Contacts/Sheets/Docs. Requires OAuth setup.
 
 ## Authentication
 
-Minion provides **non-blocking OAuth authentication** via agent tools. When you need to access Google services, the agent will:
+> **CRITICAL: NEVER construct Google OAuth URLs manually.**
+> Always use the `gog_auth_start` tool to initiate OAuth. Do not fabricate `accounts.google.com/o/oauth2/...` URLs — the tool handles client IDs, ports, callback paths, and state tokens automatically. Manually constructed URLs will fail with "deleted_client" or "invalid_request" errors.
 
-1. Use `gog_auth_start` to initiate OAuth (provides a clickable link)
-2. Remain responsive while you authorize in your browser
+Minion provides **non-blocking OAuth authentication** via agent tools. When you need to access Google services:
+
+1. Use `gog_auth_start` to initiate OAuth (provides a clickable link with correct client ID, port, and callback path)
+2. Remain responsive while the user authorizes in their browser
 3. Receive automatic notification when authentication completes
+4. While an OAuth flow is in progress, focus on completing it (check status, guide the user) unless the user explicitly cancels
 
 **Tools available:**
 
-- `gog_auth_start` - Start OAuth flow (non-blocking)
-- `gog_auth_status` - Check authentication status
-- `gog_auth_revoke` - Revoke credentials
+- `gog_auth_start` — Start OAuth flow (non-blocking). This is the **primary** authentication method.
+- `gog_auth_status` — Check authentication status
+- `gog_auth_revoke` — Revoke credentials
+- `gog_exec` — **Preferred way to run gog commands.** Auto-injects session credentials (account, keyring env). No need to manually set `GOG_ACCOUNT` or `--account` flags.
 
-**Traditional manual setup** (still supported):
+**Usage pattern:** Authenticate with `gog_auth_start`, then use `gog_exec` for all commands:
+
+```
+gog_exec(command: "gmail search 'newer_than:7d' --max 10")
+gog_exec(command: "calendar events primary --from 2026-02-20T00:00:00Z --to 2026-02-27T00:00:00Z")
+```
+
+**Note:** The `gog` CLI binary must be installed on the server for `gog_exec` to work. The auth tools (`gog_auth_start/status/revoke`) work independently of the CLI.
+
+**Traditional manual setup** (requires `gog` CLI to be installed):
 
 - `gog auth credentials /path/to/client_secret.json`
 - `gog auth add you@gmail.com --services gmail,calendar,drive,contacts,docs,sheets`
 - `gog auth list`
 
-Note: Session credentials are isolated per chat session. Each user/session maintains separate OAuth credentials stored in `~/.minion/agents/{agentId}/gog-credentials/`.
+Session credentials are isolated per chat session. Each user/session maintains separate OAuth credentials stored in `~/.minion/agents/{agentId}/gog-credentials/`.
 
 Common commands
 
@@ -64,7 +77,12 @@ Common commands
 - Calendar create with color: `gog calendar create <calendarId> --summary "Title" --from <iso> --to <iso> --event-color 7`
 - Calendar update event: `gog calendar update <calendarId> <eventId> --summary "New Title" --event-color 4`
 - Calendar show colors: `gog calendar colors`
+- Drive list root: `gog drive ls --max 20`
+- Drive list folder: `gog drive ls --parent FOLDER_ID --max 50`
 - Drive search: `gog drive search "query" --max 10`
+- Drive create folder: `gog drive mkdir "Folder Name" --parent PARENT_FOLDER_ID`
+- Drive upload file: `gog drive upload /path/to/file --parent FOLDER_ID`
+- Drive copy file: `gog drive copy FILE_ID "new name" --parent FOLDER_ID`
 - Contacts: `gog contacts list --max 20`
 - Sheets get: `gog sheets get <sheetId> "Tab!A1:D10" --json`
 - Sheets update: `gog sheets update <sheetId> "Tab!A1:B2" --values-json '[["A","B"],["1","2"]]' --input USER_ENTERED`
@@ -124,7 +142,7 @@ Email Formatting
 
 Notes
 
-- Set `GOG_ACCOUNT=you@gmail.com` to avoid repeating `--account`.
+- When using `gog_exec`, `--account` is auto-injected. For raw CLI usage, set `GOG_ACCOUNT=you@gmail.com` to avoid repeating `--account`.
 - For scripting, prefer `--json` plus `--no-input`.
 - Sheets values can be passed via `--values-json` (recommended) or as inline rows.
 - Docs supports export/cat/copy. In-place edits require a Docs API client (not in gog).
@@ -133,22 +151,33 @@ Notes
 
 ## OAuth Configuration
 
-The OAuth callback server runs automatically with the gateway and listens on `localhost:51234` by default. Configure via `config.yaml`:
+The OAuth callback server runs automatically with the gateway and listens on `localhost:51234` by default. Configure in `minion.json`:
 
-```yaml
-hooks:
-  gogOAuth:
-    enabled: true # default
-    port: 51234 # default
-    bind: "127.0.0.1" # default (localhost only for security)
-    timeoutMinutes: 5 # default
+```json
+{
+  "hooks": {
+    "gogOAuth": {
+      "enabled": true,
+      "port": 51234,
+      "bind": "127.0.0.1",
+      "timeoutMinutes": 5,
+      "googleClientCredentialsFile": "/path/to/client_secret.json"
+    }
+  }
+}
 ```
 
-**Environment variables:**
+**Client credentials** (checked in order):
 
-- `GOOGLE_CLIENT_ID` - OAuth client ID (required)
-- `GOOGLE_CLIENT_SECRET` - OAuth client secret (required)
-- `MINION_SKIP_GOG_OAUTH=1` - Disable OAuth server
+1. `hooks.gogOAuth.googleClientCredentialsFile` in `minion.json` — path to downloaded Google client_secret JSON (preferred)
+2. `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` env vars — fallback
+3. `~/.config/gogcli/credentials.json` — gog CLI's own credentials file
+
+**Other environment variables:**
+
+- `OPENCLAW_SKIP_GOG_OAUTH=1` - Disable OAuth server
+- `GOG_KEYRING_BACKEND=file` - Use file-based keyring (required on headless servers)
+- `GOG_KEYRING_PASSWORD=<password>` - Password for file-based keyring
 
 **Security:**
 

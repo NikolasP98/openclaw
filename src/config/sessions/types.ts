@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import type { Skill } from "@mariozechner/pi-coding-agent";
 import type { ChatType } from "../../channels/chat-type.js";
 import type { ChannelId } from "../../channels/plugins/types.js";
-import type { DeliveryContext } from "../../utils/delivery-context.js";
+import type { DeliveryContext } from "../../shared/delivery-context.js";
 import type { TtsAutoMode } from "../types.tts.js";
 
 export type SessionScope = "per-sender" | "global";
@@ -101,6 +101,8 @@ export type SessionEntry = {
   lastThreadId?: string | number;
   skillsSnapshot?: SessionSkillSnapshot;
   systemPromptReport?: SessionSystemPromptReport;
+  /** Timestamp (ms) when the last inbound user message was received (persisted before agent loop). */
+  lastInboundAt?: number;
   /** Path to Google OAuth credentials file for this session */
   gogCredentialsFile?: string;
   /** Associated Google account email */

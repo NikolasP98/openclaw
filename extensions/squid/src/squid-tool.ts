@@ -4,7 +4,7 @@ import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { OpenClawPluginApi } from "../../../src/plugins/types.js";
 
-type LobsterEnvelope =
+type SquidEnvelope =
   | {
       ok: true;
       status: "ok" | "needs_approval" | "cancelled";
@@ -21,41 +21,41 @@ type LobsterEnvelope =
       error: { type?: string; message: string };
     };
 
-function resolveExecutablePath(lobsterPathRaw: string | undefined) {
-  const lobsterPath = lobsterPathRaw?.trim() || "lobster";
+function resolveExecutablePath(squidPathRaw: string | undefined) {
+  const squidPath = squidPathRaw?.trim() || "squid";
 
   // SECURITY:
   // Never allow arbitrary executables (e.g. /bin/bash). If the caller overrides
-  // the path, it must still be the lobster binary (by name) and be absolute.
-  if (lobsterPath !== "lobster") {
-    if (!path.isAbsolute(lobsterPath)) {
-      throw new Error("lobsterPath must be an absolute path (or omit to use PATH)");
+  // the path, it must still be the squid binary (by name) and be absolute.
+  if (squidPath !== "squid") {
+    if (!path.isAbsolute(squidPath)) {
+      throw new Error("squidPath must be an absolute path (or omit to use PATH)");
     }
-    const base = path.basename(lobsterPath).toLowerCase();
+    const base = path.basename(squidPath).toLowerCase();
     const allowed =
-      process.platform === "win32" ? ["lobster.exe", "lobster.cmd", "lobster.bat"] : ["lobster"];
+      process.platform === "win32" ? ["squid.exe", "squid.cmd", "squid.bat"] : ["squid"];
     if (!allowed.includes(base)) {
-      throw new Error("lobsterPath must point to the lobster executable");
+      throw new Error("squidPath must point to the squid executable");
     }
     let stat: fs.Stats;
     try {
-      stat = fs.statSync(lobsterPath);
+      stat = fs.statSync(squidPath);
     } catch {
-      throw new Error("lobsterPath must exist");
+      throw new Error("squidPath must exist");
     }
     if (!stat.isFile()) {
-      throw new Error("lobsterPath must point to a file");
+      throw new Error("squidPath must point to a file");
     }
     if (process.platform !== "win32") {
       try {
-        fs.accessSync(lobsterPath, fs.constants.X_OK);
+        fs.accessSync(squidPath, fs.constants.X_OK);
       } catch {
-        throw new Error("lobsterPath must be executable");
+        throw new Error("squidPath must be executable");
       }
     }
   }
 
-  return lobsterPath;
+  return squidPath;
 }
 
 function normalizeForCwdSandbox(p: string): string {
@@ -90,13 +90,13 @@ function isWindowsSpawnErrorThatCanUseShell(err: unknown) {
   }
   const code = (err as { code?: unknown }).code;
 
-  // On Windows, spawning scripts discovered on PATH (e.g. lobster.cmd) can fail
+  // On Windows, spawning scripts discovered on PATH (e.g. squid.cmd) can fail
   // with EINVAL, and PATH discovery itself can fail with ENOENT when the binary
   // is only available via PATHEXT/script wrappers.
   return code === "EINVAL" || code === "ENOENT";
 }
 
-async function runLobsterSubprocessOnce(
+async function runSquidSubprocessOnce(
   params: {
     execPath: string;
     argv: string[];
@@ -110,7 +110,7 @@ async function runLobsterSubprocessOnce(
   const timeoutMs = Math.max(200, params.timeoutMs);
   const maxStdoutBytes = Math.max(1024, params.maxStdoutBytes);
 
-  const env = { ...process.env, LOBSTER_MODE: "tool" } as Record<string, string | undefined>;
+  const env = { ...process.env, SQUID_MODE: "tool" } as Record<string, string | undefined>;
   const nodeOptions = env.NODE_OPTIONS ?? "";
   if (nodeOptions.includes("--inspect")) {
     delete env.NODE_OPTIONS;
@@ -139,7 +139,7 @@ async function runLobsterSubprocessOnce(
         try {
           child.kill("SIGKILL");
         } finally {
-          reject(new Error("lobster output exceeded maxStdoutBytes"));
+          reject(new Error("squid output exceeded maxStdoutBytes"));
         }
         return;
       }
@@ -154,7 +154,7 @@ async function runLobsterSubprocessOnce(
       try {
         child.kill("SIGKILL");
       } finally {
-        reject(new Error("lobster subprocess timed out"));
+        reject(new Error("squid subprocess timed out"));
       }
     }, timeoutMs);
 
@@ -166,7 +166,7 @@ async function runLobsterSubprocessOnce(
     child.once("exit", (code) => {
       clearTimeout(timer);
       if (code !== 0) {
-        reject(new Error(`lobster failed (${code ?? "?"}): ${stderr.trim() || stdout.trim()}`));
+        reject(new Error(`squid failed (${code ?? "?"}): ${stderr.trim() || stdout.trim()}`));
         return;
       }
       resolve({ stdout });
@@ -174,7 +174,7 @@ async function runLobsterSubprocessOnce(
   });
 }
 
-async function runLobsterSubprocess(params: {
+async function runSquidSubprocess(params: {
   execPath: string;
   argv: string[];
   cwd: string;
@@ -182,16 +182,16 @@ async function runLobsterSubprocess(params: {
   maxStdoutBytes: number;
 }) {
   try {
-    return await runLobsterSubprocessOnce(params, false);
+    return await runSquidSubprocessOnce(params, false);
   } catch (err) {
     if (process.platform === "win32" && isWindowsSpawnErrorThatCanUseShell(err)) {
-      return await runLobsterSubprocessOnce(params, true);
+      return await runSquidSubprocessOnce(params, true);
     }
     throw err;
   }
 }
 
-function parseEnvelope(stdout: string): LobsterEnvelope {
+function parseEnvelope(stdout: string): SquidEnvelope {
   const trimmed = stdout.trim();
 
   const tryParse = (input: string) => {
@@ -214,27 +214,27 @@ function parseEnvelope(stdout: string): LobsterEnvelope {
   }
 
   if (parsed === undefined) {
-    throw new Error("lobster returned invalid JSON");
+    throw new Error("squid returned invalid JSON");
   }
 
   if (!parsed || typeof parsed !== "object") {
-    throw new Error("lobster returned invalid JSON envelope");
+    throw new Error("squid returned invalid JSON envelope");
   }
 
   const ok = (parsed as { ok?: unknown }).ok;
   if (ok === true || ok === false) {
-    return parsed as LobsterEnvelope;
+    return parsed as SquidEnvelope;
   }
 
-  throw new Error("lobster returned invalid JSON envelope");
+  throw new Error("squid returned invalid JSON envelope");
 }
 
-export function createLobsterTool(api: OpenClawPluginApi) {
+export function createSquidTool(api: OpenClawPluginApi) {
   return {
-    name: "lobster",
-    label: "Lobster Workflow",
+    name: "squid",
+    label: "Squid Workflow",
     description:
-      "Run Lobster pipelines as a local-first workflow runtime (typed JSON envelope + resumable approvals).",
+      "Run Squid pipelines as a local-first workflow runtime (typed JSON envelope + resumable approvals).",
     parameters: Type.Object({
       // NOTE: Prefer string enums in tool schemas; some providers reject unions/anyOf.
       action: Type.Unsafe<"run" | "resume">({ type: "string", enum: ["run", "resume"] }),
@@ -243,8 +243,8 @@ export function createLobsterTool(api: OpenClawPluginApi) {
       token: Type.Optional(Type.String()),
       approve: Type.Optional(Type.Boolean()),
       // SECURITY: Do not allow the agent to choose an executable path.
-      // Host can configure the lobster binary via plugin config.
-      lobsterPath: Type.Optional(
+      // Host can configure the squid binary via plugin config.
+      squidPath: Type.Optional(
         Type.String({ description: "(deprecated) Use plugin config instead." }),
       ),
       cwd: Type.Optional(
@@ -265,14 +265,12 @@ export function createLobsterTool(api: OpenClawPluginApi) {
       // SECURITY: never allow tool callers (agent/user) to select executables.
       // If a host needs to override the binary, it must do so via plugin config.
       // We still validate the parameter shape to prevent reintroducing an RCE footgun.
-      if (typeof params.lobsterPath === "string" && params.lobsterPath.trim()) {
-        resolveExecutablePath(params.lobsterPath);
+      if (typeof params.squidPath === "string" && params.squidPath.trim()) {
+        resolveExecutablePath(params.squidPath);
       }
 
       const execPath = resolveExecutablePath(
-        typeof api.pluginConfig?.lobsterPath === "string"
-          ? api.pluginConfig.lobsterPath
-          : undefined,
+        typeof api.pluginConfig?.squidPath === "string" ? api.pluginConfig.squidPath : undefined,
       );
       const cwd = resolveCwd(params.cwd);
       const timeoutMs = typeof params.timeoutMs === "number" ? params.timeoutMs : 20_000;
@@ -307,10 +305,10 @@ export function createLobsterTool(api: OpenClawPluginApi) {
       })();
 
       if (api.runtime?.version && api.logger?.debug) {
-        api.logger.debug(`lobster plugin runtime=${api.runtime.version}`);
+        api.logger.debug(`squid plugin runtime=${api.runtime.version}`);
       }
 
-      const { stdout } = await runLobsterSubprocess({
+      const { stdout } = await runSquidSubprocess({
         execPath,
         argv,
         cwd,

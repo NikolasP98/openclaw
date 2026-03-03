@@ -7,7 +7,7 @@ import {
   resolvePairingPaths,
   writeJsonAtomic,
 } from "./pairing-files.js";
-import { generatePairingToken, verifyPairingToken } from "./pairing-token.js";
+import { generatePairingToken, hashToken, verifyPairingToken } from "./pairing-token.js";
 
 export type DevicePairingPendingRequest = {
   requestId: string;
@@ -177,21 +177,29 @@ function cloneDeviceTokens(device: PairedDevice): Record<string, DeviceAuthToken
   return device.tokens ? { ...device.tokens } : {};
 }
 
+/**
+ * Build a new device auth token, storing the SHA-256 hash at rest.
+ * Returns both the hashed entry (for persistence) and the plaintext (for one-time client delivery).
+ */
 function buildDeviceAuthToken(params: {
   role: string;
   scopes: string[];
   existing?: DeviceAuthToken;
   now: number;
   rotatedAtMs?: number;
-}): DeviceAuthToken {
+}): { entry: DeviceAuthToken; plaintext: string } {
+  const plaintext = newToken();
   return {
-    token: newToken(),
-    role: params.role,
-    scopes: params.scopes,
-    createdAtMs: params.existing?.createdAtMs ?? params.now,
-    rotatedAtMs: params.rotatedAtMs,
-    revokedAtMs: undefined,
-    lastUsedAtMs: params.existing?.lastUsedAtMs,
+    entry: {
+      token: hashToken(plaintext),
+      role: params.role,
+      scopes: params.scopes,
+      createdAtMs: params.existing?.createdAtMs ?? params.now,
+      rotatedAtMs: params.rotatedAtMs,
+      revokedAtMs: undefined,
+      lastUsedAtMs: params.existing?.lastUsedAtMs,
+    },
+    plaintext,
   };
 }
 
@@ -256,7 +264,12 @@ export async function requestDevicePairing(
 export async function approveDevicePairing(
   requestId: string,
   baseDir?: string,
-): Promise<{ requestId: string; device: PairedDevice } | null> {
+): Promise<{
+  requestId: string;
+  device: PairedDevice;
+  /** Plaintext tokens for one-time delivery to client (keyed by role). */
+  plaintextTokens?: Record<string, string>;
+} | null> {
   return await withLock(async () => {
     const state = await loadState(baseDir);
     const pending = state.pendingById[requestId];
@@ -268,20 +281,21 @@ export async function approveDevicePairing(
     const roles = mergeRoles(existing?.roles, existing?.role, pending.roles, pending.role);
     const scopes = mergeScopes(existing?.scopes, pending.scopes);
     const tokens = existing?.tokens ? { ...existing.tokens } : {};
+    const plaintextTokens: Record<string, string> = {};
     const roleForToken = normalizeRole(pending.role);
     if (roleForToken) {
       const nextScopes = normalizeDeviceAuthScopes(pending.scopes);
       const existingToken = tokens[roleForToken];
       const now = Date.now();
-      tokens[roleForToken] = {
-        token: newToken(),
+      const { entry, plaintext } = buildDeviceAuthToken({
         role: roleForToken,
         scopes: nextScopes,
-        createdAtMs: existingToken?.createdAtMs ?? now,
+        existing: existingToken,
+        now,
         rotatedAtMs: existingToken ? now : undefined,
-        revokedAtMs: undefined,
-        lastUsedAtMs: existingToken?.lastUsedAtMs,
-      };
+      });
+      tokens[roleForToken] = entry;
+      plaintextTokens[roleForToken] = plaintext;
     }
     const device: PairedDevice = {
       deviceId: pending.deviceId,
@@ -301,7 +315,11 @@ export async function approveDevicePairing(
     delete state.pendingById[requestId];
     state.pairedByDeviceId[device.deviceId] = device;
     await persistState(state, baseDir);
-    return { requestId, device };
+    return {
+      requestId,
+      device,
+      plaintextTokens: Object.keys(plaintextTokens).length > 0 ? plaintextTokens : undefined,
+    };
   });
 }
 
@@ -447,18 +465,18 @@ export async function ensureDeviceToken(params: {
       }
     }
     const now = Date.now();
-    const next = buildDeviceAuthToken({
+    const { entry } = buildDeviceAuthToken({
       role,
       scopes: requestedScopes,
       existing,
       now,
       rotatedAtMs: existing ? now : undefined,
     });
-    tokens[role] = next;
+    tokens[role] = entry;
     device.tokens = tokens;
     state.pairedByDeviceId[device.deviceId] = device;
     await persistState(state, params.baseDir);
-    return next;
+    return entry;
   });
 }
 
@@ -506,21 +524,21 @@ export async function rotateDeviceToken(params: {
       params.scopes ?? existing?.scopes ?? device.scopes,
     );
     const now = Date.now();
-    const next = buildDeviceAuthToken({
+    const { entry } = buildDeviceAuthToken({
       role,
       scopes: requestedScopes,
       existing,
       now,
       rotatedAtMs: now,
     });
-    tokens[role] = next;
+    tokens[role] = entry;
     device.tokens = tokens;
     if (params.scopes !== undefined) {
       device.scopes = requestedScopes;
     }
     state.pairedByDeviceId[device.deviceId] = device;
     await persistState(state, params.baseDir);
-    return next;
+    return entry;
   });
 }
 

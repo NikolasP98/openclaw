@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import "./test-helpers/fast-coding-tools.js";
+import "./test-support/fast-coding-tools.js";
 import type { OpenClawConfig } from "../config/config.js";
 import { createOpenClawCodingTools } from "./pi-tools.js";
 import type { SandboxDockerConfig } from "./sandbox.js";

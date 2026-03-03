@@ -3,7 +3,7 @@ import { formatThinkingLevels, normalizeThinkLevel } from "../auto-reply/thinkin
 import { loadConfig } from "../config/config.js";
 import { callGateway } from "../gateway/call.js";
 import { normalizeAgentId, parseAgentSessionKey } from "../routing/session-key.js";
-import { normalizeDeliveryContext } from "../utils/delivery-context.js";
+import { normalizeDeliveryContext } from "../shared/delivery-context.js";
 import { resolveAgentConfig } from "./agent-scope.js";
 import { AGENT_LANE_SUBAGENT } from "./lanes.js";
 import { resolveSubagentSpawnModelSelection } from "./model-selection.js";
@@ -41,7 +41,7 @@ export type SpawnSubagentContext = {
 };
 
 export const SUBAGENT_SPAWN_ACCEPTED_NOTE =
-  "auto-announces on completion, do not poll/sleep. The response will be sent back as an agent message.";
+  "auto-announces on completion, do not poll/sleep. The response will be sent back as an user message.";
 
 export type SpawnSubagentResult = {
   status: "accepted" | "forbidden" | "error";

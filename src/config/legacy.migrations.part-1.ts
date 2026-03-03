@@ -39,6 +39,16 @@ function migrateBindings(
   }
 }
 
+function ensureDefaultGroupEntry(section: Record<string, unknown>): {
+  groups: Record<string, unknown>;
+  entry: Record<string, unknown>;
+} {
+  const groups: Record<string, unknown> = isRecord(section.groups) ? section.groups : {};
+  const defaultKey = "*";
+  const entry: Record<string, unknown> = isRecord(groups[defaultKey]) ? groups[defaultKey] : {};
+  return { groups, entry };
+}
+
 export const LEGACY_CONFIG_MIGRATIONS_PART_1: LegacyConfigMigration[] = [
   {
     id: "bindings.match.provider->bindings.match.channel",
@@ -237,7 +247,8 @@ export const LEGACY_CONFIG_MIGRATIONS_PART_1: LegacyConfigMigration[] = [
   },
   {
     id: "routing.groupChat.requireMention->groups.*.requireMention",
-    describe: "Move routing.groupChat.requireMention to channels.whatsapp/telegram/imessage groups",
+    describe:
+      "Move routing.groupChat.requireMention to channels.whatsapp/channels/impl/telegram/imessage groups",
     apply: (raw, changes) => {
       const routing = raw.routing;
       if (!routing || typeof routing !== "object") {
@@ -268,15 +279,8 @@ export const LEGACY_CONFIG_MIGRATIONS_PART_1: LegacyConfigMigration[] = [
           channels[key] && typeof channels[key] === "object"
             ? (channels[key] as Record<string, unknown>)
             : {};
-        const groups =
-          section.groups && typeof section.groups === "object"
-            ? (section.groups as Record<string, unknown>)
-            : {};
+        const { groups, entry } = ensureDefaultGroupEntry(section);
         const defaultKey = "*";
-        const entry =
-          groups[defaultKey] && typeof groups[defaultKey] === "object"
-            ? (groups[defaultKey] as Record<string, unknown>)
-            : {};
         if (entry.requireMention === undefined) {
           entry.requireMention = requireMention;
           groups[defaultKey] = entry;
@@ -354,16 +358,8 @@ export const LEGACY_CONFIG_MIGRATIONS_PART_1: LegacyConfigMigration[] = [
         return;
       }
 
-      const groups =
-        (telegram as Record<string, unknown>).groups &&
-        typeof (telegram as Record<string, unknown>).groups === "object"
-          ? ((telegram as Record<string, unknown>).groups as Record<string, unknown>)
-          : {};
+      const { groups, entry } = ensureDefaultGroupEntry(telegram as Record<string, unknown>);
       const defaultKey = "*";
-      const entry =
-        groups[defaultKey] && typeof groups[defaultKey] === "object"
-          ? (groups[defaultKey] as Record<string, unknown>)
-          : {};
 
       if (entry.requireMention === undefined) {
         entry.requireMention = requireMention;

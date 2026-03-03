@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { resolveOAuthDir } from "../config/paths.js";
-import { captureEnv } from "../test-utils/env.js";
+import { captureEnv } from "../test-support/env.js";
 import {
   addChannelAllowFromStoreEntry,
   approveChannelPairingCode,
@@ -39,7 +39,7 @@ async function withTempStateDir<T>(fn: (stateDir: string) => Promise<T>) {
 }
 
 describe("pairing store", () => {
-  it("reuses pending code and reports created=false", async () => {
+  it("refreshes code on re-request and reports created=false", async () => {
     await withTempStateDir(async () => {
       const first = await upsertChannelPairingRequest({
         channel: "discord",
@@ -51,11 +51,14 @@ describe("pairing store", () => {
       });
       expect(first.created).toBe(true);
       expect(second.created).toBe(false);
-      expect(second.code).toBe(first.code);
+      // Both return valid plaintext codes (stored value is hashed, can't recover original).
+      expect(first.code).toMatch(/^[A-Z2-9]{8}$/);
+      expect(second.code).toMatch(/^[A-Z2-9]{8}$/);
 
       const list = await listChannelPairingRequests("discord");
       expect(list).toHaveLength(1);
-      expect(list[0]?.code).toBe(first.code);
+      // Stored code is a SHA-256 hash, not the plaintext code.
+      expect(list[0]?.code).toMatch(/^[0-9a-f]{64}$/);
     });
   });
 

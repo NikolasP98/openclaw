@@ -1,12 +1,14 @@
 import type { AgentToolResult } from "@mariozechner/pi-agent-core";
-import type { OpenClawConfig } from "../../config/config.js";
-import { createTelegramActionGate } from "../../telegram/accounts.js";
-import type { TelegramButtonStyle, TelegramInlineButtons } from "../../telegram/button-types.js";
+import { createTelegramActionGate } from "../../channels/impl/telegram/accounts.js";
+import type {
+  TelegramButtonStyle,
+  TelegramInlineButtons,
+} from "../../channels/impl/telegram/button-types.js";
 import {
   resolveTelegramInlineButtonsScope,
   resolveTelegramTargetChatType,
-} from "../../telegram/inline-buttons.js";
-import { resolveTelegramReactionLevel } from "../../telegram/reaction-level.js";
+} from "../../channels/impl/telegram/inline-buttons.js";
+import { resolveTelegramReactionLevel } from "../../channels/impl/telegram/reaction-level.js";
 import {
   createForumTopicTelegram,
   deleteMessageTelegram,
@@ -14,9 +16,10 @@ import {
   reactMessageTelegram,
   sendMessageTelegram,
   sendStickerTelegram,
-} from "../../telegram/send.js";
-import { getCacheStats, searchStickers } from "../../telegram/sticker-cache.js";
-import { resolveTelegramToken } from "../../telegram/token.js";
+} from "../../channels/impl/telegram/send.js";
+import { getCacheStats, searchStickers } from "../../channels/impl/telegram/sticker-cache.js";
+import { resolveTelegramToken } from "../../channels/impl/telegram/token.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import {
   jsonResult,
   readNumberParam,

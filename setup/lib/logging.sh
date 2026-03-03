@@ -71,6 +71,7 @@ log() {
             [ "$CURRENT_LOG_LEVEL" -le "$LOG_LEVEL_INFO" ] && echo -e "${GREEN}[SUCCESS]${NC} $message" >&2
             ;;
     esac
+    return 0
 }
 
 # Convenience functions

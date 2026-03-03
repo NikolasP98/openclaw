@@ -1,6 +1,6 @@
 import type { Dispatcher } from "undici";
 import { logWarn } from "../../logger.js";
-import { bindAbortRelay } from "../../utils/fetch-timeout.js";
+import { bindAbortRelay } from "../../shared/fetch-timeout.js";
 import {
   closeDispatcher,
   createPinnedDispatcher,

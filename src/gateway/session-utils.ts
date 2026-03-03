@@ -27,7 +27,7 @@ import {
   parseAgentSessionKey,
 } from "../routing/session-key.js";
 import { isCronRunSessionKey } from "../sessions/session-key-utils.js";
-import { normalizeSessionDeliveryFields } from "../utils/delivery-context.js";
+import { normalizeSessionDeliveryFields } from "../shared/delivery-context.js";
 import { readSessionTitleFieldsFromTranscript } from "./session-utils.fs.js";
 import type {
   GatewayAgentRow,

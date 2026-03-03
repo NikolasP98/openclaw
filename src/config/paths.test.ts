@@ -54,7 +54,7 @@ describe("state + config path candidates", () => {
     expect(resolveStateDir(env)).toBe(path.join(resolvedHome, ".minion"));
 
     const candidates = resolveDefaultConfigCandidates(env);
-    expect(candidates[0]).toBe(path.join(resolvedHome, ".minion", "minion.json"));
+    expect(candidates[0]).toBe(path.join(resolvedHome, ".minion", "gateway.json"));
   });
 
   it("prefers MINION_HOME over HOME for default state/config locations", () => {
@@ -67,7 +67,7 @@ describe("state + config path candidates", () => {
     expect(resolveStateDir(env)).toBe(path.join(resolvedHome, ".minion"));
 
     const candidates = resolveDefaultConfigCandidates(env);
-    expect(candidates[0]).toBe(path.join(resolvedHome, ".minion", "minion.json"));
+    expect(candidates[0]).toBe(path.join(resolvedHome, ".minion", "gateway.json"));
   });
 
   it("orders default config candidates in a stable order", () => {
@@ -75,7 +75,14 @@ describe("state + config path candidates", () => {
     const resolvedHome = path.resolve(home);
     const candidates = resolveDefaultConfigCandidates({} as NodeJS.ProcessEnv, () => home);
     const dirs = [".minion", ".openclaw", ".clawdbot", ".moldbot", ".moltbot"];
-    const files = ["minion.json", "openclaw.json", "clawdbot.json", "moldbot.json", "moltbot.json"];
+    const files = [
+      "gateway.json",
+      "minion.json",
+      "openclaw.json",
+      "clawdbot.json",
+      "moldbot.json",
+      "moltbot.json",
+    ];
     const expected = dirs.flatMap((dir) => files.map((file) => path.join(resolvedHome, dir, file)));
     expect(candidates).toEqual(expected);
   });
@@ -118,7 +125,7 @@ describe("state + config path candidates", () => {
       const overrideDir = path.join(root, "override");
       const env = { MINION_STATE_DIR: overrideDir } as NodeJS.ProcessEnv;
       const resolved = resolveConfigPath(env, overrideDir, () => root);
-      expect(resolved).toBe(path.join(overrideDir, "minion.json"));
+      expect(resolved).toBe(path.join(overrideDir, "gateway.json"));
     } finally {
       await fs.rm(root, { recursive: true, force: true });
     }

@@ -191,11 +191,16 @@ export function resolveBrowserConfig(
     controlPort,
   );
   const cdpProtocol = cdpInfo.parsed.protocol === "https:" ? "https" : "http";
+  // When running headless (server/CI), prefer the "minion" (Playwright) profile over
+  // "chrome" (extension relay) — the extension relay requires a desktop Chrome with the
+  // Minion extension connected, which is never available on headless environments.
   const defaultProfile =
     defaultProfileFromConfig ??
-    (profiles[DEFAULT_BROWSER_DEFAULT_PROFILE_NAME]
-      ? DEFAULT_BROWSER_DEFAULT_PROFILE_NAME
-      : DEFAULT_MINION_BROWSER_PROFILE_NAME);
+    (headless
+      ? DEFAULT_MINION_BROWSER_PROFILE_NAME
+      : profiles[DEFAULT_BROWSER_DEFAULT_PROFILE_NAME]
+        ? DEFAULT_BROWSER_DEFAULT_PROFILE_NAME
+        : DEFAULT_MINION_BROWSER_PROFILE_NAME);
 
   const extraArgs = Array.isArray(cfg?.extraArgs)
     ? cfg.extraArgs.filter((a): a is string => typeof a === "string" && a.trim().length > 0)

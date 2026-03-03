@@ -32,7 +32,7 @@ vi.mock("../../routing/session-key.js", () => ({
   normalizeMainKey: vi.fn().mockReturnValue("main"),
 }));
 
-vi.mock("../../utils/provider-utils.js", () => ({
+vi.mock("../../shared/provider-utils.js", () => ({
   isReasoningTagProvider: vi.fn().mockReturnValue(false),
 }));
 

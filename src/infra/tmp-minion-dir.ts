@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { resolveStateDir } from "../config/paths.js";
 
 export const POSIX_MINION_TMP_DIR = "/tmp/minion";
 
@@ -26,6 +27,23 @@ function isNodeErrorWithCode(err: unknown, code: string): err is MaybeNodeError 
     "code" in err &&
     (err as MaybeNodeError).code === code
   );
+}
+
+/**
+ * Resolve the preferred directory for persistent log files.
+ * Prefers {stateDir}/logs/ (survives reboots, same dir as config).
+ * Falls back to resolvePreferredMinionTmpDir() if state dir is not writable.
+ */
+export function resolvePreferredLogDir(): string {
+  try {
+    const stateDir = resolveStateDir(process.env);
+    const logDir = path.join(stateDir, "logs");
+    fs.mkdirSync(logDir, { recursive: true, mode: 0o700 });
+    fs.accessSync(logDir, fs.constants.W_OK);
+    return logDir;
+  } catch {
+    return resolvePreferredMinionTmpDir();
+  }
 }
 
 export function resolvePreferredMinionTmpDir(

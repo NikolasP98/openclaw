@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { makeTempWorkspace, writeWorkspaceFile } from "../test-helpers/workspace.js";
+import { makeTempWorkspace, writeWorkspaceFile } from "../test-support/workspace.js";
 import {
   DEFAULT_AGENTS_FILENAME,
   DEFAULT_BOOTSTRAP_FILENAME,
@@ -22,7 +22,7 @@ describe("resolveDefaultAgentWorkspaceDir", () => {
       HOME: "/home/other",
     } as NodeJS.ProcessEnv);
 
-    expect(dir).toBe(path.join(path.resolve("/srv/minion-home"), ".minion", "workspace"));
+    expect(dir).toBe(path.join(path.resolve("/srv/minion-home"), ".minion", "workspaces"));
   });
 });
 

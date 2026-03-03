@@ -32,6 +32,7 @@ import type {
   SkillsInstallParamsSchema,
   SkillsStatusParamsSchema,
   SkillsUpdateParamsSchema,
+  AgentsSkillsSetParamsSchema,
 } from "./agents-models-skills.js";
 import type {
   ChannelsLogoutParamsSchema,
@@ -217,6 +218,7 @@ export type SkillsBinsParams = Static<typeof SkillsBinsParamsSchema>;
 export type SkillsBinsResult = Static<typeof SkillsBinsResultSchema>;
 export type SkillsInstallParams = Static<typeof SkillsInstallParamsSchema>;
 export type SkillsUpdateParams = Static<typeof SkillsUpdateParamsSchema>;
+export type AgentsSkillsSetParams = Static<typeof AgentsSkillsSetParamsSchema>;
 export type CronJob = Static<typeof CronJobSchema>;
 export type CronListParams = Static<typeof CronListParamsSchema>;
 export type CronStatusParams = Static<typeof CronStatusParamsSchema>;

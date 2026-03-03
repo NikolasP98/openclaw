@@ -148,6 +148,19 @@ const coreEntries: CoreCliEntry[] = [
   {
     commands: [
       {
+        name: "import-chatgpt",
+        description: "Import ChatGPT conversation history into the knowledge graph",
+        hasSubcommands: false,
+      },
+    ],
+    register: async ({ program }) => {
+      const mod = await import("../import-chatgpt.js");
+      mod.registerImportChatGptCli(program);
+    },
+  },
+  {
+    commands: [
+      {
         name: "agent",
         description: "Run one agent turn via the Gateway",
         hasSubcommands: false,
@@ -180,6 +193,16 @@ const coreEntries: CoreCliEntry[] = [
       {
         name: "sessions",
         description: "List stored conversation sessions",
+        hasSubcommands: false,
+      },
+      {
+        name: "undo",
+        description: "Undo recent tool-call actions",
+        hasSubcommands: false,
+      },
+      {
+        name: "roi",
+        description: "Calculate ROI for AI agent automation",
         hasSubcommands: false,
       },
     ],
@@ -237,6 +260,17 @@ function removeCommand(program: Command, command: Command) {
   }
 }
 
+function removeEntryCommands(program: Command, entry: CoreCliEntry) {
+  // Some registrars install multiple top-level commands (e.g. status/health/sessions).
+  // Remove placeholders/old registrations for all names in the entry before re-registering.
+  for (const cmd of entry.commands) {
+    const existing = program.commands.find((c) => c.name() === cmd.name);
+    if (existing) {
+      removeCommand(program, existing);
+    }
+  }
+}
+
 function registerLazyCoreCommand(
   program: Command,
   ctx: ProgramContext,
@@ -247,14 +281,7 @@ function registerLazyCoreCommand(
   placeholder.allowUnknownOption(true);
   placeholder.allowExcessArguments(true);
   placeholder.action(async (...actionArgs) => {
-    // Some registrars install multiple top-level commands (e.g. status/health/sessions).
-    // Remove placeholders/old registrations for all names in the entry before re-registering.
-    for (const cmd of entry.commands) {
-      const existing = program.commands.find((c) => c.name() === cmd.name);
-      if (existing) {
-        removeCommand(program, existing);
-      }
-    }
+    removeEntryCommands(program, entry);
     await entry.register({ program, ctx, argv: process.argv });
     await reparseProgramFromActionArgs(program, actionArgs);
   });
@@ -273,14 +300,7 @@ export async function registerCoreCliByName(
     return false;
   }
 
-  // Some registrars install multiple top-level commands (e.g. status/health/sessions).
-  // Remove placeholders/old registrations for all names in the entry before re-registering.
-  for (const cmd of entry.commands) {
-    const existing = program.commands.find((c) => c.name() === cmd.name);
-    if (existing) {
-      removeCommand(program, existing);
-    }
-  }
+  removeEntryCommands(program, entry);
   await entry.register({ program, ctx, argv });
   return true;
 }

@@ -1,4 +1,4 @@
-import type { MinionConfig, PluginRuntime } from "minion/plugin-sdk";
+import type { MinionConfig, OpenClawConfig, PluginRuntime } from "minion/plugin-sdk";
 import { describe, expect, it, vi } from "vitest";
 import { linePlugin } from "./channel.js";
 import { setLineRuntime } from "./runtime.js";

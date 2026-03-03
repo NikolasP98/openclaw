@@ -14,11 +14,12 @@ import {
   resolveSessionFilePathOptions,
   type SessionEntry,
   updateSessionStore,
+  updateSessionStoreEntry,
 } from "../../config/sessions.js";
 import { logVerbose } from "../../globals.js";
-import { clearCommandLane, getQueueSize } from "../../process/command-queue.js";
+import { clearCommandLane, getQueueSize } from "../../platform/process/command-queue.js";
 import { normalizeMainKey } from "../../routing/session-key.js";
-import { isReasoningTagProvider } from "../../utils/provider-utils.js";
+import { isReasoningTagProvider } from "../../shared/provider-utils.js";
 import { hasControlCommand } from "../command-detection.js";
 import { buildInboundMediaNote } from "../media-note.js";
 import type { MsgContext, TemplateContext } from "../templating.js";
@@ -44,6 +45,7 @@ import { resolveQueueSettings } from "./queue.js";
 import { routeReply } from "./route-reply.js";
 import { BARE_SESSION_RESET_PROMPT } from "./session-reset-prompt.js";
 import { ensureSkillSnapshot, prependSystemEvents } from "./session-updates.js";
+import { FAST_CHAT_SYSTEM_PROMPT, readMemorySnapshot } from "./smart-routing.js";
 import { resolveTypingMode } from "./typing-mode.js";
 import type { TypingController } from "./typing.js";
 import { appendUntrustedContext } from "./untrusted-context.js";
@@ -104,6 +106,10 @@ type RunPreparedReplyParams = {
   storePath?: string;
   workspaceDir: string;
   abortedLastRun: boolean;
+  /** True when smart routing overrode the model selection. */
+  smartRouted?: boolean;
+  /** True when smart routing wants tools disabled (fast tier). */
+  smartRouteDisableTools?: boolean;
 };
 
 export async function runPreparedReply(
@@ -147,6 +153,7 @@ export async function runPreparedReply(
     workspaceDir,
     sessionStore,
   } = params;
+  const { smartRouted, smartRouteDisableTools } = params;
   let {
     sessionEntry,
     resolvedThinkLevel,
@@ -187,7 +194,17 @@ export async function runPreparedReply(
   const inboundMetaPrompt = buildInboundMetaSystemPrompt(
     isNewSession ? sessionCtx : { ...sessionCtx, ThreadStarterBody: undefined },
   );
-  const extraSystemPrompt = [inboundMetaPrompt, groupChatContext, groupIntro, groupSystemPrompt]
+  const smartRoutingPrompt = smartRouted && smartRouteDisableTools ? FAST_CHAT_SYSTEM_PROMPT : "";
+  const memorySnapshot =
+    smartRouted && smartRouteDisableTools ? await readMemorySnapshot(workspaceDir) : undefined;
+  const extraSystemPrompt = [
+    inboundMetaPrompt,
+    groupChatContext,
+    groupIntro,
+    groupSystemPrompt,
+    memorySnapshot,
+    smartRoutingPrompt,
+  ]
     .filter(Boolean)
     .join("\n\n");
   const baseBody = sessionCtx.BodyStripped ?? sessionCtx.Body ?? "";
@@ -409,6 +426,7 @@ export async function runPreparedReply(
       senderUsername: sessionCtx.SenderUsername?.trim() || undefined,
       senderE164: sessionCtx.SenderE164?.trim() || undefined,
       senderIsOwner: command.senderIsOwner,
+      senderPermissionLevel: command.permissionLevel,
       sessionFile,
       workspaceDir,
       config: cfg,
@@ -434,6 +452,19 @@ export async function runPreparedReply(
       ...(isReasoningTagProvider(provider) ? { enforceFinalTag: true } : {}),
     },
   };
+
+  // A.12: Persist user message metadata to session store before entering the
+  // agent loop so the inbound message survives agent crashes.
+  if (storePath && sessionKey && sessionEntry) {
+    await updateSessionStoreEntry({
+      storePath,
+      sessionKey,
+      update: async () => ({
+        updatedAt: Date.now(),
+        lastInboundAt: Date.now(),
+      }),
+    });
+  }
 
   return runReplyAgent({
     commandBody: prefixedCommandBody,

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { withEnvAsync } from "../test-utils/env.js";
+import { withEnvAsync } from "../test-support/env.js";
 
 async function withPresenceModule<T>(
   env: Record<string, string | undefined>,

@@ -1,14 +1,21 @@
 import type { OpenClawConfig } from "../config/config.js";
+import { isTruthyEnvValue } from "../infra/env.js";
+import { createKnowledgeGraphTools, KnowledgeGraphSession } from "../memory/knowledge-graph.js";
 import { resolvePluginTools } from "../plugins/tools.js";
-import type { GatewayMessageChannel } from "../utils/message-channel.js";
+import type { GatewayMessageChannel } from "../shared/message-channel.js";
 import { resolveSessionAgentId } from "./agent-scope.js";
 import type { SandboxFsBridge } from "./sandbox/fs-bridge.js";
 import { createAgentsListTool } from "./tools/agents-list-tool.js";
+import { createArchitectPipelineTool } from "./tools/architect-pipeline-tool.js";
 import { createBrowserTool } from "./tools/browser-tool.js";
 import { createCanvasTool } from "./tools/canvas-tool.js";
 import type { AnyAgentTool } from "./tools/common.js";
 import { createCronTool } from "./tools/cron-tool.js";
 import { createGatewayTool } from "./tools/gateway-tool.js";
+import { createGogAuthRevokeTool } from "./tools/gog-auth-revoke-tool.js";
+import { createGogAuthStartTool } from "./tools/gog-auth-start-tool.js";
+import { createGogAuthStatusTool } from "./tools/gog-auth-status-tool.js";
+import { createGogExecTool } from "./tools/gog-exec-tool.js";
 import { createImageTool } from "./tools/image-tool.js";
 import { createMessageTool } from "./tools/message-tool.js";
 import { createNodesTool } from "./tools/nodes-tool.js";
@@ -19,6 +26,7 @@ import { createSessionsSendTool } from "./tools/sessions-send-tool.js";
 import { createSessionsSpawnTool } from "./tools/sessions-spawn-tool.js";
 import { createSubagentsTool } from "./tools/subagents-tool.js";
 import { createTtsTool } from "./tools/tts-tool.js";
+import { createVentureStudioTool } from "./tools/venture-studio-tool.js";
 import { createWebFetchTool, createWebSearchTool } from "./tools/web-tools.js";
 import { resolveWorkspaceRoot } from "./workspace-dir.js";
 
@@ -97,6 +105,21 @@ export function createOpenClawTools(options?: {
         sandboxRoot: options?.sandboxRoot,
         requireExplicitTarget: options?.requireExplicitMessageTarget,
       });
+  const agentId = resolveSessionAgentId({
+    sessionKey: options?.agentSessionKey,
+    config: options?.config,
+  });
+  let kgSession: KnowledgeGraphSession | undefined;
+  try {
+    kgSession = KnowledgeGraphSession.forAgent(agentId);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn(`KG DB open failed for agent ${agentId}: ${String(err)}`);
+  }
+  const gogOAuthEnabled =
+    options?.config?.hooks?.gogOAuth?.enabled !== false &&
+    !isTruthyEnvValue(process.env.OPENCLAW_SKIP_GOG_OAUTH);
+
   const tools: AnyAgentTool[] = [
     createBrowserTool({
       sandboxBridgeUrl: options?.sandboxBrowserBridgeUrl,
@@ -155,9 +178,34 @@ export function createOpenClawTools(options?: {
       agentSessionKey: options?.agentSessionKey,
       config: options?.config,
     }),
+    ...(gogOAuthEnabled
+      ? [
+          createGogAuthStartTool({
+            agentId,
+            agentDir: options?.agentDir,
+            sessionKey: options?.agentSessionKey,
+          }),
+          createGogAuthStatusTool({
+            agentId,
+            sessionKey: options?.agentSessionKey,
+          }),
+          createGogAuthRevokeTool({
+            agentId,
+            agentDir: options?.agentDir,
+            sessionKey: options?.agentSessionKey,
+          }),
+          createGogExecTool({
+            agentId,
+            sessionKey: options?.agentSessionKey,
+          }),
+        ]
+      : []),
     ...(webSearchTool ? [webSearchTool] : []),
     ...(webFetchTool ? [webFetchTool] : []),
     ...(imageTool ? [imageTool] : []),
+    createArchitectPipelineTool({ workspaceDir }),
+    createVentureStudioTool({ workspaceDir }),
+    ...createKnowledgeGraphTools(kgSession),
   ];
 
   const pluginTools = resolvePluginTools({
@@ -165,10 +213,7 @@ export function createOpenClawTools(options?: {
       config: options?.config,
       workspaceDir,
       agentDir: options?.agentDir,
-      agentId: resolveSessionAgentId({
-        sessionKey: options?.agentSessionKey,
-        config: options?.config,
-      }),
+      agentId,
       sessionKey: options?.agentSessionKey,
       messageChannel: options?.agentChannel,
       agentAccountId: options?.agentAccountId,

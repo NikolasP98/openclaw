@@ -36,7 +36,12 @@ import { ConfigIncludeError, resolveConfigIncludes } from "./includes.js";
 import { findLegacyConfigIssues } from "./legacy.js";
 import { applyMergePatch } from "./merge-patch.js";
 import { normalizeConfigPaths } from "./normalize-paths.js";
-import { resolveConfigPath, resolveDefaultConfigCandidates, resolveStateDir } from "./paths.js";
+import {
+  resolveAgentConfigPath,
+  resolveConfigPath,
+  resolveDefaultConfigCandidates,
+  resolveStateDir,
+} from "./paths.js";
 import { applyConfigOverrides } from "./runtime-overrides.js";
 import type { OpenClawConfig, ConfigFileSnapshot, LegacyConfigIssue } from "./types.js";
 import {
@@ -545,6 +550,9 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
       }
       const raw = deps.fs.readFileSync(configPath, "utf-8");
       const parsed = deps.json5.parse(raw);
+
+      const stateDir = resolveStateDir(deps.env, deps.homedir);
+
       const { resolvedConfigRaw: resolvedConfig } = resolveConfigForRead(
         resolveConfigIncludesForRead(parsed, configPath, deps),
         deps.env,
@@ -621,6 +629,33 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
           logger: deps.logger,
           timeoutMs: cfg.env?.shellEnv?.timeoutMs ?? resolveShellEnvFallbackTimeoutMs(deps.env),
         });
+      }
+
+      // Per-agent config override: .minion/agents/{id}/minion.json (highest priority for agent fields).
+      if (cfg.agents?.list) {
+        for (let i = 0; i < cfg.agents.list.length; i++) {
+          const agent = cfg.agents.list[i];
+          if (!agent?.id) {
+            continue;
+          }
+          const perAgentPath = resolveAgentConfigPath(stateDir, agent.id);
+          if (!deps.fs.existsSync(perAgentPath)) {
+            continue;
+          }
+          try {
+            const perAgentRaw = deps.fs.readFileSync(perAgentPath, "utf-8");
+            const perAgentParsed = deps.json5.parse(perAgentRaw);
+            if (
+              perAgentParsed &&
+              typeof perAgentParsed === "object" &&
+              !Array.isArray(perAgentParsed)
+            ) {
+              cfg.agents.list[i] = { ...agent, ...(perAgentParsed as object) };
+            }
+          } catch {
+            // best-effort: per-agent config errors never block startup
+          }
+        }
       }
 
       return applyConfigOverrides(cfg);

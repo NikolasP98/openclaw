@@ -1,6 +1,6 @@
 import JSON5 from "json5";
 import { LEGACY_MANIFEST_KEYS, MANIFEST_KEY } from "../compat/legacy-names.js";
-import { parseBooleanValue } from "../utils/boolean.js";
+import { parseBooleanValue } from "../shared/boolean.js";
 
 export function normalizeStringList(input: unknown): string[] {
   if (!input) {

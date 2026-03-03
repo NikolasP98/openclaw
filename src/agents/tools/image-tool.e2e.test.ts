@@ -4,9 +4,9 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { OpenClawConfig } from "../../config/config.js";
 import type { ModelDefinitionConfig } from "../../config/types.models.js";
-import { withFetchPreconnect } from "../../test-utils/fetch-mock.js";
+import { withFetchPreconnect } from "../../test-support/fetch-mock.js";
 import { createOpenClawCodingTools } from "../pi-tools.js";
-import { createHostSandboxFsBridge } from "../test-helpers/host-sandbox-fs-bridge.js";
+import { createHostSandboxFsBridge } from "../test-support/host-sandbox-fs-bridge.js";
 import { __testing, createImageTool, resolveImageModelConfigForTool } from "./image-tool.js";
 
 async function writeAuthProfiles(agentDir: string, profiles: unknown) {

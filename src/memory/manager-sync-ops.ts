@@ -12,6 +12,7 @@ import { createSubsystemLogger } from "../logging/subsystem.js";
 import { onSessionTranscriptUpdate } from "../sessions/transcript-events.js";
 import { resolveUserPath } from "../utils.js";
 import { DEFAULT_GEMINI_EMBEDDING_MODEL } from "./embeddings-gemini.js";
+import { applySqlitePragmas } from "./sqlite-pragmas.js";
 import { DEFAULT_OPENAI_EMBEDDING_MODEL } from "./embeddings-openai.js";
 import { DEFAULT_VOYAGE_EMBEDDING_MODEL } from "./embeddings-voyage.js";
 import {
@@ -249,7 +250,9 @@ export abstract class MemoryManagerSyncOps {
     const dir = path.dirname(dbPath);
     ensureDir(dir);
     const { DatabaseSync } = requireNodeSqlite();
-    return new DatabaseSync(dbPath, { allowExtension: this.settings.store.vector.enabled });
+    const db = new DatabaseSync(dbPath, { allowExtension: this.settings.store.vector.enabled });
+    applySqlitePragmas(db);
+    return db;
   }
 
   private seedEmbeddingCache(sourceDb: DatabaseSync): void {

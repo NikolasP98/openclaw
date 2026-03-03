@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { OpenClawConfig } from "../config/config.js";
 import { resolveBrewExecutable } from "../infra/brew.js";
-import { runCommandWithTimeout, type CommandOptions } from "../process/exec.js";
+import { runCommandWithTimeout, type CommandOptions } from "../platform/process/exec.js";
 import { scanDirectoryWithSummary } from "../security/skill-scanner.js";
 import { resolveUserPath } from "../utils.js";
 import { installDownloadSpec } from "./skills-install-download.js";

@@ -10,6 +10,7 @@ import {
   rotateDeviceToken,
   verifyDeviceToken,
 } from "./device-pairing.js";
+import { isHashedToken } from "./pairing-token.js";
 
 async function setupPairedOperatorDevice(baseDir: string, scopes: string[]) {
   const request = await requestDevicePairing(
@@ -21,7 +22,8 @@ async function setupPairedOperatorDevice(baseDir: string, scopes: string[]) {
     },
     baseDir,
   );
-  await approveDevicePairing(request.request.requestId, baseDir);
+  const approval = await approveDevicePairing(request.request.requestId, baseDir);
+  return { approval };
 }
 
 function requireToken(token: string | undefined): string {
@@ -33,14 +35,15 @@ function requireToken(token: string | undefined): string {
 }
 
 describe("device pairing tokens", () => {
-  test("generates base64url device tokens with 256-bit entropy output length", async () => {
+  test("stores SHA-256 hashed tokens at rest (not plaintext)", async () => {
     const baseDir = await mkdtemp(join(tmpdir(), "minion-device-pairing-"));
     await setupPairedOperatorDevice(baseDir, ["operator.admin"]);
 
     const paired = await getPairedDevice("device-1", baseDir);
-    const token = requireToken(paired?.tokens?.operator?.token);
-    expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/);
-    expect(Buffer.from(token, "base64url")).toHaveLength(32);
+    const storedToken = requireToken(paired?.tokens?.operator?.token);
+    // Token at rest should be SHA-256 hash, not plaintext
+    expect(isHashedToken(storedToken)).toBe(true);
+    expect(storedToken).toMatch(/^sha256:[0-9a-f]{64}$/);
   });
 
   test("preserves existing token scopes when rotating without scopes", async () => {
@@ -66,15 +69,16 @@ describe("device pairing tokens", () => {
     expect(paired?.tokens?.operator?.scopes).toEqual(["operator.read"]);
   });
 
-  test("verifies token and rejects mismatches", async () => {
+  test("verifies token using plaintext and rejects mismatches", async () => {
     const baseDir = await mkdtemp(join(tmpdir(), "minion-device-pairing-"));
-    await setupPairedOperatorDevice(baseDir, ["operator.read"]);
-    const paired = await getPairedDevice("device-1", baseDir);
-    const token = requireToken(paired?.tokens?.operator?.token);
+    const { approval } = await setupPairedOperatorDevice(baseDir, ["operator.read"]);
+    // Use the plaintext token returned from approval (not the stored hash)
+    const plaintextToken = approval?.plaintextTokens?.operator;
+    expect(plaintextToken).toBeTruthy();
 
     const ok = await verifyDeviceToken({
       deviceId: "device-1",
-      token,
+      token: plaintextToken!,
       role: "operator",
       scopes: ["operator.read"],
       baseDir,
@@ -83,7 +87,7 @@ describe("device pairing tokens", () => {
 
     const mismatch = await verifyDeviceToken({
       deviceId: "device-1",
-      token: "x".repeat(token.length),
+      token: "wrong-token-value",
       role: "operator",
       scopes: ["operator.read"],
       baseDir,
@@ -94,11 +98,11 @@ describe("device pairing tokens", () => {
 
   test("treats multibyte same-length token input as mismatch without throwing", async () => {
     const baseDir = await mkdtemp(join(tmpdir(), "minion-device-pairing-"));
-    await setupPairedOperatorDevice(baseDir, ["operator.read"]);
-    const paired = await getPairedDevice("device-1", baseDir);
-    const token = requireToken(paired?.tokens?.operator?.token);
-    const multibyteToken = "é".repeat(token.length);
-    expect(Buffer.from(multibyteToken).length).not.toBe(Buffer.from(token).length);
+    const { approval } = await setupPairedOperatorDevice(baseDir, ["operator.read"]);
+    const plaintextToken = approval?.plaintextTokens?.operator;
+    expect(plaintextToken).toBeTruthy();
+    const multibyteToken = "é".repeat(plaintextToken!.length);
+    expect(Buffer.from(multibyteToken).length).not.toBe(Buffer.from(plaintextToken!).length);
 
     await expect(
       verifyDeviceToken({

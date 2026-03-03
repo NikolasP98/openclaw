@@ -39,7 +39,7 @@ vi.mock("../../config/sessions.js", async () => {
   };
 });
 
-vi.mock("../../commands/agent.js", () => ({
+vi.mock("../../cli/commands/agent.js", () => ({
   agentCommand: mocks.agentCommand,
 }));
 
@@ -67,9 +67,9 @@ vi.mock("../../sessions/send-policy.js", () => ({
   resolveSendPolicy: () => "allow",
 }));
 
-vi.mock("../../utils/delivery-context.js", async () => {
-  const actual = await vi.importActual<typeof import("../../utils/delivery-context.js")>(
-    "../../utils/delivery-context.js",
+vi.mock("../../shared/delivery-context.js", async () => {
+  const actual = await vi.importActual<typeof import("../../shared/delivery-context.js")>(
+    "../../shared/delivery-context.js",
   );
   return {
     ...actual,

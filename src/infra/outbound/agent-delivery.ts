@@ -2,14 +2,14 @@ import type { ChannelOutboundTargetMode } from "../../channels/plugins/types.js"
 import { DEFAULT_CHAT_CHANNEL } from "../../channels/registry.js";
 import type { OpenClawConfig } from "../../config/config.js";
 import type { SessionEntry } from "../../config/sessions.js";
-import { normalizeAccountId } from "../../utils/account-id.js";
+import { normalizeAccountId } from "../../shared/account-id.js";
 import {
   INTERNAL_MESSAGE_CHANNEL,
   isDeliverableMessageChannel,
   isGatewayMessageChannel,
   normalizeMessageChannel,
   type GatewayMessageChannel,
-} from "../../utils/message-channel.js";
+} from "../../shared/message-channel.js";
 import type { OutboundTargetResolution } from "./targets.js";
 import {
   resolveOutboundTarget,

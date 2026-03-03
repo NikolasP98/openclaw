@@ -81,7 +81,7 @@ vi.mock("../infra/bonjour-discovery.js", () => ({
   discoverGatewayBeacons: (opts: unknown) => discoverGatewayBeacons(opts),
 }));
 
-vi.mock("../commands/gateway-status.js", () => ({
+vi.mock("../cli/commands/gateway-status.js", () => ({
   gatewayStatusCommand: (opts: unknown) => gatewayStatusCommand(opts),
 }));
 

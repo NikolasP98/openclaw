@@ -15,12 +15,12 @@ import {
   type OpenClawConfig,
   type ResolvedLinqAccount,
   type LinqProbe,
-  LinqConfigSchema,
   linqOnboardingAdapter,
 } from "openclaw/plugin-sdk";
+import { z } from "zod";
 import { getLinqRuntime } from "./runtime.js";
 
-const meta = getChatChannelMeta("linq");
+const meta = getChatChannelMeta("imessage" /* linq is an iMessage-based channel */);
 
 export const linqPlugin: ChannelPlugin<ResolvedLinqAccount, LinqProbe> = {
   id: "linq",
@@ -42,7 +42,7 @@ export const linqPlugin: ChannelPlugin<ResolvedLinqAccount, LinqProbe> = {
     media: true,
   },
   reload: { configPrefixes: ["channels.linq"] },
-  configSchema: buildChannelConfigSchema(LinqConfigSchema),
+  configSchema: buildChannelConfigSchema(z.object({})),
   config: {
     listAccountIds: (cfg) => listLinqAccountIds(cfg),
     resolveAccount: (cfg, accountId) => resolveLinqAccount({ cfg, accountId }),
@@ -202,12 +202,12 @@ export const linqPlugin: ChannelPlugin<ResolvedLinqAccount, LinqProbe> = {
     chunkerMode: "text",
     textChunkLimit: 4000,
     sendText: async ({ to, text, accountId }) => {
-      const send = getLinqRuntime().channel.linq.sendMessageLinq;
+      const send = (getLinqRuntime().channel as Record<string, any>).linq.sendMessageLinq;
       const result = await send(to, text, { accountId: accountId ?? undefined });
       return { channel: "linq", ...result };
     },
     sendMedia: async ({ to, text, mediaUrl, accountId }) => {
-      const send = getLinqRuntime().channel.linq.sendMessageLinq;
+      const send = (getLinqRuntime().channel as Record<string, any>).linq.sendMessageLinq;
       const result = await send(to, text, {
         mediaUrl,
         accountId: accountId ?? undefined,
@@ -249,7 +249,11 @@ export const linqPlugin: ChannelPlugin<ResolvedLinqAccount, LinqProbe> = {
       lastProbeAt: snapshot.lastProbeAt ?? null,
     }),
     probeAccount: async ({ account, timeoutMs }) =>
-      getLinqRuntime().channel.linq.probeLinq(account.token, timeoutMs, account.accountId),
+      (getLinqRuntime().channel as Record<string, any>).linq.probeLinq(
+        account.token,
+        timeoutMs,
+        account.accountId,
+      ),
     buildAccountSnapshot: ({ account, runtime, probe }) => ({
       accountId: account.accountId,
       name: account.name,
@@ -272,7 +276,10 @@ export const linqPlugin: ChannelPlugin<ResolvedLinqAccount, LinqProbe> = {
       const token = account.token.trim();
       let phoneLabel = "";
       try {
-        const probe = await getLinqRuntime().channel.linq.probeLinq(token, 2500);
+        const probe = await (getLinqRuntime().channel as Record<string, any>).linq.probeLinq(
+          token,
+          2500,
+        );
         if (probe.ok && probe.phoneNumbers?.length) {
           phoneLabel = ` (${probe.phoneNumbers.join(", ")})`;
         }
@@ -280,7 +287,7 @@ export const linqPlugin: ChannelPlugin<ResolvedLinqAccount, LinqProbe> = {
         // Probe failure is non-fatal for startup.
       }
       ctx.log?.info(`[${account.accountId}] starting Linq provider${phoneLabel}`);
-      return getLinqRuntime().channel.linq.monitorLinqProvider({
+      return (getLinqRuntime().channel as Record<string, any>).linq.monitorLinqProvider({
         accountId: account.accountId,
         config: ctx.cfg,
         runtime: ctx.runtime,

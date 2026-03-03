@@ -12,19 +12,19 @@ const runtime = {
   exit: vi.fn(),
 };
 
-vi.mock("../../commands/doctor.js", () => ({
+vi.mock("../../cli/commands/doctor.js", () => ({
   doctorCommand,
 }));
 
-vi.mock("../../commands/dashboard.js", () => ({
+vi.mock("../../cli/commands/dashboard.js", () => ({
   dashboardCommand,
 }));
 
-vi.mock("../../commands/reset.js", () => ({
+vi.mock("../../cli/commands/reset.js", () => ({
   resetCommand,
 }));
 
-vi.mock("../../commands/uninstall.js", () => ({
+vi.mock("../../cli/commands/uninstall.js", () => ({
   uninstallCommand,
 }));
 

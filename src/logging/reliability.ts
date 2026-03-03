@@ -1,3 +1,4 @@
+import { getHubMetricsPushClient } from "../gateway/hub-metrics-push.js";
 import type {
   ReliabilityEvent,
   ReliabilityEventInput,
@@ -47,6 +48,16 @@ export function emitReliabilityEvent(input: ReliabilityEventInput): void {
     channel: `reliability:${event.category}`,
     updateType: event.event,
   });
+
+  // Forward to hub metrics push client if active.
+  try {
+    const pushClient = getHubMetricsPushClient();
+    if (pushClient) {
+      pushClient.pushEvent(event);
+    }
+  } catch {
+    // Best effort — never fail the reliability emit path
+  }
 
   if (event.severity === "critical" || event.severity === "high") {
     log.warn(`[${event.category}] ${event.event}: ${event.message}`);

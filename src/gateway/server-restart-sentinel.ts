@@ -12,7 +12,7 @@ import {
   summarizeRestartSentinel,
 } from "../infra/restart-sentinel.js";
 import { enqueueSystemEvent } from "../infra/system-events.js";
-import { deliveryContextFromSession, mergeDeliveryContext } from "../utils/delivery-context.js";
+import { deliveryContextFromSession, mergeDeliveryContext } from "../shared/delivery-context.js";
 import { loadSessionEntry } from "./session-utils.js";
 
 export async function scheduleRestartSentinelWake(_params: { deps: CliDeps }) {

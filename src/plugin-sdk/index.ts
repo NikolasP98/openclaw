@@ -81,6 +81,16 @@ export { emptyPluginConfigSchema } from "../plugins/config-schema.js";
 export type { MinionConfig } from "../config/config.js";
 /** @deprecated Use MinionConfig instead */
 export type { MinionConfig as MinionbotConfig } from "../config/config.js";
+/** @deprecated Use MinionConfig */
+export type { OpenClawConfig } from "../config/config.js";
+/** @deprecated Use MinionConfig */
+export type { MinionConfig as ClawdbotConfig } from "../config/config.js";
+/** @deprecated Use MinionPluginApi */
+export type { MinionPluginApi as OpenClawPluginApi } from "../plugins/types.js";
+/** @deprecated Use MinionPluginService */
+export type { MinionPluginService as OpenClawPluginService } from "../plugins/types.js";
+/** @deprecated Use MinionPluginServiceContext */
+export type { MinionPluginServiceContext as OpenClawPluginServiceContext } from "../plugins/types.js";
 
 export type { FileLockHandle, FileLockOptions } from "./file-lock.js";
 export { acquireFileLock, withFileLock } from "./file-lock.js";
@@ -327,8 +337,8 @@ export {
   resolveDefaultDiscordAccountId,
   resolveDiscordAccount,
   type ResolvedDiscordAccount,
-} from "../discord/accounts.js";
-export { collectDiscordAuditChannelIds } from "../discord/audit.js";
+} from "../channels/impl/discord/accounts.js";
+export { collectDiscordAuditChannelIds } from "../channels/impl/discord/audit.js";
 export { discordOnboardingAdapter } from "../channels/plugins/onboarding/discord.js";
 export {
   looksLikeDiscordTargetId,
@@ -343,7 +353,7 @@ export {
   resolveDefaultIMessageAccountId,
   resolveIMessageAccount,
   type ResolvedIMessageAccount,
-} from "../imessage/accounts.js";
+} from "../channels/impl/imessage/accounts.js";
 export { imessageOnboardingAdapter } from "../channels/plugins/onboarding/imessage.js";
 export {
   looksLikeIMessageTargetId,
@@ -354,7 +364,7 @@ export {
   parseChatTargetPrefixesOrThrow,
   resolveServicePrefixedAllowTarget,
   resolveServicePrefixedTarget,
-} from "../imessage/target-parsing-helpers.js";
+} from "../channels/impl/imessage/target-parsing-helpers.js";
 
 // Channel: Slack
 export {
@@ -364,14 +374,17 @@ export {
   resolveSlackAccount,
   resolveSlackReplyToMode,
   type ResolvedSlackAccount,
-} from "../slack/accounts.js";
-export { extractSlackToolSend, listSlackMessageActions } from "../slack/message-actions.js";
+} from "../channels/impl/slack/accounts.js";
+export {
+  extractSlackToolSend,
+  listSlackMessageActions,
+} from "../channels/impl/slack/message-actions.js";
 export { slackOnboardingAdapter } from "../channels/plugins/onboarding/slack.js";
 export {
   looksLikeSlackTargetId,
   normalizeSlackMessagingTarget,
 } from "../channels/plugins/normalize/slack.js";
-export { buildSlackThreadingToolContext } from "../slack/threading-tool-context.js";
+export { buildSlackThreadingToolContext } from "../channels/impl/slack/threading-tool-context.js";
 
 // Channel: Telegram
 export {
@@ -379,7 +392,7 @@ export {
   resolveDefaultTelegramAccountId,
   resolveTelegramAccount,
   type ResolvedTelegramAccount,
-} from "../telegram/accounts.js";
+} from "../channels/impl/telegram/accounts.js";
 export { telegramOnboardingAdapter } from "../channels/plugins/onboarding/telegram.js";
 export {
   looksLikeTelegramTargetId,
@@ -389,8 +402,8 @@ export { collectTelegramStatusIssues } from "../channels/plugins/status-issues/t
 export {
   parseTelegramReplyToMessageId,
   parseTelegramThreadId,
-} from "../telegram/outbound-params.js";
-export { type TelegramProbe } from "../telegram/probe.js";
+} from "../channels/impl/telegram/outbound-params.js";
+export { type TelegramProbe } from "../channels/impl/telegram/probe.js";
 
 // Channel: Signal
 export {
@@ -398,7 +411,7 @@ export {
   resolveDefaultSignalAccountId,
   resolveSignalAccount,
   type ResolvedSignalAccount,
-} from "../signal/accounts.js";
+} from "../channels/impl/signal/accounts.js";
 export { signalOnboardingAdapter } from "../channels/plugins/onboarding/signal.js";
 export {
   looksLikeSignalTargetId,
@@ -412,8 +425,11 @@ export {
   resolveWhatsAppAccount,
   type ResolvedWhatsAppAccount,
 } from "../web/accounts.js";
-export { isWhatsAppGroupJid, normalizeWhatsAppTarget } from "../whatsapp/normalize.js";
-export { resolveWhatsAppOutboundTarget } from "../whatsapp/resolve-outbound-target.js";
+export {
+  isWhatsAppGroupJid,
+  normalizeWhatsAppTarget,
+} from "../channels/impl/whatsapp/normalize.js";
+export { resolveWhatsAppOutboundTarget } from "../channels/impl/whatsapp/resolve-outbound-target.js";
 export { whatsappOnboardingAdapter } from "../channels/plugins/onboarding/whatsapp.js";
 export { resolveWhatsAppHeartbeatRecipients } from "../channels/plugins/whatsapp-heartbeat.js";
 export {
@@ -431,14 +447,14 @@ export {
   normalizeAccountId as normalizeLineAccountId,
   resolveDefaultLineAccountId,
   resolveLineAccount,
-} from "../line/accounts.js";
-export { LineConfigSchema } from "../line/config-schema.js";
+} from "../channels/impl/line/accounts.js";
+export { LineConfigSchema } from "../channels/impl/line/config-schema.js";
 export type {
   LineConfig,
   LineAccountConfig,
   ResolvedLineAccount,
   LineChannelData,
-} from "../line/types.js";
+} from "../channels/impl/line/types.js";
 export {
   createInfoCard,
   createListCard,
@@ -447,13 +463,23 @@ export {
   createReceiptCard,
   type CardAction,
   type ListItem,
-} from "../line/flex-templates.js";
+} from "../channels/impl/line/flex-templates.js";
 export {
   processLineMessage,
   hasMarkdownToConvert,
   stripMarkdown,
-} from "../line/markdown-to-line.js";
-export type { ProcessedLineMessage } from "../line/markdown-to-line.js";
+} from "../channels/impl/line/markdown-to-line.js";
+export type { ProcessedLineMessage } from "../channels/impl/line/markdown-to-line.js";
+
+// Channel: Linq
+export {
+  listLinqAccountIds,
+  resolveDefaultLinqAccountId,
+  resolveLinqAccount,
+  type ResolvedLinqAccount,
+} from "../linq/accounts.js";
+export type { LinqProbe } from "../linq/types.js";
+export { linqOnboardingAdapter } from "../channels/plugins/onboarding/linq.js";
 
 // Media utilities
 export { loadWebMedia, type WebMediaResult } from "../web/media.js";

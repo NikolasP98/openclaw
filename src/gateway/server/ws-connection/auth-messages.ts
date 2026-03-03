@@ -1,4 +1,4 @@
-import { isGatewayCliClient, isWebchatClient } from "../../../utils/message-channel.js";
+import { isGatewayCliClient, isWebchatClient } from "../../../shared/message-channel.js";
 import type { ResolvedGatewayAuth } from "../../auth.js";
 import { GATEWAY_CLIENT_IDS } from "../../protocol/client-info.js";
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { withFetchPreconnect } from "../test-utils/fetch-mock.js";
+import { withFetchPreconnect } from "../test-support/fetch-mock.js";
 import {
   CHUTES_TOKEN_ENDPOINT,
   CHUTES_USERINFO_ENDPOINT,

@@ -2,8 +2,8 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { captureEnv } from "../test-utils/env.js";
-import "./test-helpers/fast-core-tools.js";
+import { captureEnv } from "../test-support/env.js";
+import "./test-support/fast-core-tools.js";
 import { createOpenClawTools } from "./openclaw-tools.js";
 
 vi.mock("./tools/gateway.js", () => ({

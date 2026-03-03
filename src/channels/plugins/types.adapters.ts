@@ -84,6 +84,7 @@ export type ChannelOutboundContext = {
   identity?: OutboundIdentity;
   deps?: OutboundSendDeps;
   silent?: boolean;
+  linkPreview?: boolean;
 };
 
 export type ChannelOutboundPayloadContext = ChannelOutboundContext & {

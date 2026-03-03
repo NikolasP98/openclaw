@@ -18,9 +18,13 @@ vi.mock("./trash.js", () => ({
   movePathToTrash: vi.fn(async (targetPath: string) => targetPath),
 }));
 
-vi.mock("./chrome.js", () => ({
-  resolveMinionUserDataDir: vi.fn(() => "/tmp/minion-test/minion/user-data"),
-}));
+vi.mock("./chrome.js", () => {
+  const fn = vi.fn(() => "/tmp/minion-test/minion/user-data");
+  return {
+    resolveOpenClawUserDataDir: fn,
+    resolveMinionUserDataDir: fn,
+  };
+});
 
 import { loadConfig, writeConfigFile } from "../config/config.js";
 import { resolveMinionUserDataDir } from "./chrome.js";

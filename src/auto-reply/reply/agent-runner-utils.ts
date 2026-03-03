@@ -5,8 +5,8 @@ import type { ChannelId, ChannelThreadingToolContext } from "../../channels/plug
 import { normalizeAnyChannelId, normalizeChannelId } from "../../channels/registry.js";
 import type { OpenClawConfig } from "../../config/config.js";
 import { resolveAgentIdFromSessionKey } from "../../config/sessions.js";
-import { isReasoningTagProvider } from "../../utils/provider-utils.js";
-import { estimateUsageCost, formatTokenCount, formatUsd } from "../../utils/usage-format.js";
+import { isReasoningTagProvider } from "../../shared/provider-utils.js";
+import { estimateUsageCost, formatTokenCount, formatUsd } from "../../shared/usage-format.js";
 import type { TemplateContext } from "../templating.js";
 import type { ReplyPayload } from "../types.js";
 import type { FollowupRun } from "./queue.js";

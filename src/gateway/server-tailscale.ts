@@ -3,11 +3,13 @@ import {
   disableTailscaleServe,
   enableTailscaleFunnel,
   enableTailscaleServe,
+  enableTailscaleServeFunnel,
   getTailnetHostname,
 } from "../infra/tailscale.js";
 
 export async function startGatewayTailscaleExposure(params: {
   tailscaleMode: "off" | "serve" | "funnel";
+  enableFunnel?: boolean;
   resetOnExit?: boolean;
   port: number;
   controlUiBasePath?: string;
@@ -20,14 +22,18 @@ export async function startGatewayTailscaleExposure(params: {
   try {
     if (params.tailscaleMode === "serve") {
       await enableTailscaleServe(params.port);
+      if (params.enableFunnel) {
+        await enableTailscaleServeFunnel();
+      }
     } else {
       await enableTailscaleFunnel(params.port);
     }
     const host = await getTailnetHostname().catch(() => null);
     if (host) {
       const uiPath = params.controlUiBasePath ? `${params.controlUiBasePath}/` : "/";
+      const funnelNote = params.enableFunnel ? " (funnel on)" : "";
       params.logTailscale.info(
-        `${params.tailscaleMode} enabled: https://${host}${uiPath} (WS via wss://${host})`,
+        `${params.tailscaleMode} enabled${funnelNote}: https://${host}${uiPath} (WS via wss://${host})`,
       );
     } else {
       params.logTailscale.info(`${params.tailscaleMode} enabled`);

@@ -150,6 +150,23 @@ describe("browser config", () => {
     expect(resolved.defaultProfile).toBe("minion");
   });
 
+  it("defaults to minion profile when headless is true", () => {
+    const resolved = resolveBrowserConfig({ headless: true });
+    expect(resolved.defaultProfile).toBe("minion");
+    // chrome profile still exists, just not the default
+    expect(resolveProfile(resolved, "chrome")).not.toBeNull();
+  });
+
+  it("defaults to chrome profile when headless is false", () => {
+    const resolved = resolveBrowserConfig({ headless: false });
+    expect(resolved.defaultProfile).toBe("chrome");
+  });
+
+  it("respects explicit defaultProfile even when headless", () => {
+    const resolved = resolveBrowserConfig({ headless: true, defaultProfile: "chrome" });
+    expect(resolved.defaultProfile).toBe("chrome");
+  });
+
   it("defaults extraArgs to empty array when not provided", () => {
     const resolved = resolveBrowserConfig(undefined);
     expect(resolved.extraArgs).toEqual([]);

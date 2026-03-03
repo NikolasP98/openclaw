@@ -137,6 +137,14 @@ verify_deployment() {
     fi
     echo -e "${GREEN}║${NC} Gateway Port: $gateway_port"
     echo -e "${GREEN}║${NC} Status: Running"
+    if [ "${TAILSCALE_FUNNEL_ENABLED:-false}" = "true" ]; then
+        local ts_fqdn=""
+        ts_fqdn=$(tailscale status --json 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); me=d.get('Self',{}); print(me.get('DNSName','').rstrip('.'))" 2>/dev/null || echo "")
+        if [ -n "$ts_fqdn" ]; then
+            echo -e "${GREEN}║${NC} Public URL: https://${ts_fqdn}"
+            echo -e "${GREEN}║${NC} OAuth:      https://${ts_fqdn}/oauth-callback"
+        fi
+    fi
     echo -e "${GREEN}╠═══════════════════════════════════════════════════════════════╣${NC}"
     echo -e "${GREEN}║ Next Steps:${NC}"
     local step=1

@@ -6,7 +6,7 @@ import type { OpenClawConfig } from "../config/config.js";
 import { createOpenClawCodingTools } from "./pi-tools.js";
 import type { SandboxContext } from "./sandbox.js";
 import type { SandboxFsBridge, SandboxResolvedPath } from "./sandbox/fs-bridge.js";
-import { createSandboxFsBridgeFromResolver } from "./test-helpers/host-sandbox-fs-bridge.js";
+import { createSandboxFsBridgeFromResolver } from "./test-support/host-sandbox-fs-bridge.js";
 
 vi.mock("../infra/shell-env.js", async (importOriginal) => {
   const mod = await importOriginal<typeof import("../infra/shell-env.js")>();

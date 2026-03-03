@@ -3,8 +3,6 @@
  */
 
 import { Type } from "@sinclair/typebox";
-import type { PendingOAuthFlow, OAuthStartResult } from "../../hooks/gog-oauth-types.js";
-import type { AnyAgentTool } from "./common.js";
 import { updateSessionStore, resolveDefaultSessionStorePath } from "../../config/sessions.js";
 import { getGoogleClientId } from "../../hooks/gog-credentials.js";
 import {
@@ -13,7 +11,9 @@ import {
   getServerPort,
   getRedirectUri,
 } from "../../hooks/gog-oauth-server.js";
+import type { PendingOAuthFlow, OAuthStartResult } from "../../hooks/gog-oauth-types.js";
 import { getScopesForServices } from "../../hooks/gog-oauth-types.js";
+import type { AnyAgentTool } from "./common.js";
 import { jsonResult, readStringParam } from "./common.js";
 
 const GogAuthStartSchema = Type.Object({
@@ -92,7 +92,10 @@ export function createGogAuthStartTool(opts?: {
       } catch {
         return jsonResult({
           error:
-            "Google OAuth client ID not configured. Set GOOGLE_CLIENT_ID env var or place credentials in ~/.config/gogcli/credentials.json",
+            "Google OAuth client ID not configured. Options (checked in order):\n" +
+            "  1. Set hooks.gogOAuth.googleClientCredentialsFile in minion.json (path to downloaded Google client_secret JSON)\n" +
+            "  2. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables\n" +
+            "  3. Place gog CLI credentials in ~/.config/gogcli/credentials.json",
         });
       }
 

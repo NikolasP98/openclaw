@@ -7,7 +7,7 @@ import { SESSION_LABEL_MAX_LENGTH } from "../../sessions/session-label.js";
 import {
   type GatewayMessageChannel,
   INTERNAL_MESSAGE_CHANNEL,
-} from "../../utils/message-channel.js";
+} from "../../shared/message-channel.js";
 import { AGENT_LANE_NESTED } from "../lanes.js";
 import type { AnyAgentTool } from "./common.js";
 import { jsonResult, readStringParam } from "./common.js";
@@ -43,7 +43,7 @@ export function createSessionsSendTool(opts?: {
     description:
       "Send a message into another session. Use sessionKey or label to identify the target.",
     parameters: SessionsSendToolSchema,
-    execute: async (_toolCallId, args) => {
+    execute: async (toolCallId, args) => {
       const params = args as Record<string, unknown>;
       const message = readStringParam(params, "message", { required: true });
       const cfg = loadConfig();
@@ -196,7 +196,10 @@ export function createSessionsSendTool(opts?: {
           : 30;
       const timeoutMs = timeoutSeconds * 1000;
       const announceTimeoutMs = timeoutSeconds === 0 ? 30_000 : timeoutMs;
-      const idempotencyKey = crypto.randomUUID();
+      // Use the tool call ID as the idempotency key so retries of the same tool call
+      // don't trigger a second agent run. Fall back to a random UUID only if absent.
+      const idempotencyKey =
+        toolCallId && toolCallId.trim() ? toolCallId.trim() : crypto.randomUUID();
       let runId: string = idempotencyKey;
       const visibilityGuard = await createSessionVisibilityGuard({
         action: "send",

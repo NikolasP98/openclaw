@@ -2,7 +2,7 @@ import type { Command } from "commander";
 import {
   CONFIGURE_WIZARD_SECTIONS,
   configureCommandFromSectionsArg,
-} from "../../commands/configure.js";
+} from "../../cli/commands/configure.js";
 import { defaultRuntime } from "../../runtime.js";
 import { formatDocsLink } from "../../terminal/links.js";
 import { theme } from "../../terminal/theme.js";

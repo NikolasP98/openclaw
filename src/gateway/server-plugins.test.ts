@@ -7,6 +7,7 @@ const loadMinionPlugins = vi.hoisted(() => vi.fn());
 
 vi.mock("../plugins/loader.js", () => ({
   loadMinionPlugins,
+  loadOpenClawPlugins: loadMinionPlugins,
 }));
 
 const createRegistry = (diagnostics: PluginDiagnostic[]): PluginRegistry => ({

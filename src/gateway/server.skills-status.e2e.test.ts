@@ -1,6 +1,6 @@
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { captureEnv } from "../test-utils/env.js";
+import { captureEnv } from "../test-support/env.js";
 import { connectOk, installGatewayTestHooks, rpcReq } from "./test-helpers.js";
 import { withServer } from "./test-with-server.js";
 

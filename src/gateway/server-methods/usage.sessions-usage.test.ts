@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { captureEnv } from "../../test-utils/env.js";
+import { captureEnv } from "../../test-support/env.js";
 
 vi.mock("../../config/config.js", () => {
   return {

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createTestRegistry } from "../../test-utils/channel-plugins.js";
+import { createTestRegistry } from "../../test-support/channel-plugins.js";
 import { extractAssistantText, sanitizeTextContent } from "./sessions-helpers.js";
 
 const callGatewayMock = vi.fn();

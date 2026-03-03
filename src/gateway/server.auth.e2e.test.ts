@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import { WebSocket } from "ws";
-import { withEnvAsync } from "../test-utils/env.js";
-import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../utils/message-channel.js";
+import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../shared/message-channel.js";
+import { withEnvAsync } from "../test-support/env.js";
 import { buildDeviceAuthPayload } from "./device-auth.js";
 import { PROTOCOL_VERSION } from "./protocol/index.js";
 import { getHandshakeTimeoutMs } from "./server-constants.js";
@@ -612,6 +612,36 @@ describe("gateway server auth/connect", () => {
       });
       expect(res.ok).toBe(false);
       expect(res.error?.message ?? "").toContain("secure context");
+      ws.close();
+    });
+  });
+
+  describe("explicit none auth", () => {
+    let server: Awaited<ReturnType<typeof startGatewayServer>>;
+    let port: number;
+    let prevToken: string | undefined;
+
+    beforeAll(async () => {
+      prevToken = process.env.OPENCLAW_GATEWAY_TOKEN;
+      delete process.env.OPENCLAW_GATEWAY_TOKEN;
+      testState.gatewayAuth = { mode: "none" };
+      port = await getFreePort();
+      server = await startGatewayServer(port);
+    });
+
+    afterAll(async () => {
+      await server.close();
+      if (prevToken === undefined) {
+        delete process.env.OPENCLAW_GATEWAY_TOKEN;
+      } else {
+        process.env.OPENCLAW_GATEWAY_TOKEN = prevToken;
+      }
+    });
+
+    test("allows loopback connect without shared secret when mode is none", async () => {
+      const ws = await openWs(port);
+      const res = await connectReq(ws, { skipDefaultAuth: true });
+      expect(res.ok).toBe(true);
       ws.close();
     });
   });

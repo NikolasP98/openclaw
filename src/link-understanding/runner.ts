@@ -9,7 +9,7 @@ import {
   normalizeMediaUnderstandingChatType,
   resolveMediaUnderstandingScope,
 } from "../media-understanding/scope.js";
-import { runExec } from "../process/exec.js";
+import { runExec } from "../platform/process/exec.js";
 import { DEFAULT_LINK_TIMEOUT_SECONDS } from "./defaults.js";
 import { extractLinksFromMessage } from "./detect.js";
 

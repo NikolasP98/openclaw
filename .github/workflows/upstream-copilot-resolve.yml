@@ -1,0 +1,88 @@
+name: Upstream Copilot Resolve
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number with conflicts to resolve"
+        required: true
+        type: number
+      commit_sha:
+        description: "Upstream commit SHA to retry cherry-pick"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fetch PR branch
+        run: |
+          gh pr checkout ${{ inputs.pr_number }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure upstream remote
+        run: |
+          git remote add upstream "${{ vars.UPSTREAM_REPO_URL }}" 2>/dev/null || true
+          git fetch upstream main --no-tags
+
+      - name: Attempt cherry-pick with conflict markers
+        id: attempt
+        run: |
+          SHA="${{ inputs.commit_sha }}"
+
+          if git cherry-pick "$SHA" 2>/dev/null; then
+            echo "result=clean" >> "$GITHUB_OUTPUT"
+          else
+            # Find conflicted files
+            CONFLICTS=$(git diff --name-only --diff-filter=U)
+            echo "result=conflict" >> "$GITHUB_OUTPUT"
+            echo "files<<EOF" >> "$GITHUB_OUTPUT"
+            echo "$CONFLICTS" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+
+            # Leave conflict markers in place for manual resolution
+            git cherry-pick --abort 2>/dev/null || true
+          fi
+
+      - name: Comment resolution status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const result = '${{ steps.attempt.outputs.result }}';
+            const files = `${{ steps.attempt.outputs.files }}`.trim();
+
+            let body;
+            if (result === 'clean') {
+              body = `Cherry-pick of \`${{ inputs.commit_sha }}\` applied cleanly. Pushed to PR branch.`;
+            } else {
+              body = [
+                `Cherry-pick of \`${{ inputs.commit_sha }}\` has conflicts in:`,
+                '```',
+                files,
+                '```',
+                '',
+                'Manual resolution required. Check out the PR branch and resolve conflicts locally.',
+              ].join('\n');
+            }
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ inputs.pr_number }},
+              body,
+            });
+
+      - name: Push if clean
+        if: steps.attempt.outputs.result == 'clean'
+        run: git push

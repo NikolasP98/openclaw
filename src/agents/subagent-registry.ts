@@ -2,7 +2,7 @@ import { loadConfig } from "../config/config.js";
 import { callGateway } from "../gateway/call.js";
 import { onAgentEvent } from "../infra/agent-events.js";
 import { defaultRuntime } from "../runtime.js";
-import { type DeliveryContext, normalizeDeliveryContext } from "../utils/delivery-context.js";
+import { type DeliveryContext, normalizeDeliveryContext } from "../shared/delivery-context.js";
 import { resetAnnounceQueuesForTests } from "./subagent-announce-queue.js";
 import { runSubagentAnnounceFlow, type SubagentRunOutcome } from "./subagent-announce.js";
 import {

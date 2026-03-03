@@ -12,7 +12,13 @@
       "bridge_port": 18790,
       "tenant": "faces",
       "region": "us-east",
-      "local_build": true
+      "local_build": true,
+      "tailscale_funnel": {
+        "required": true,
+        "note": "Funnel must be enabled for external OAuth callbacks. Setup: tailscale funnel --bg --set-path / http://127.0.0.1:18789 && tailscale funnel --bg --set-path /oauth-callback http://localhost:51234/oauth-callback",
+        "paths": ["/", "/oauth-callback"],
+        "caution": "Adding a 'tailscale serve' route removes Funnel from the entire endpoint. Always use 'tailscale funnel' for all paths on this server."
+      }
     },
     {
       "id": "prd-tenant-bernibites",

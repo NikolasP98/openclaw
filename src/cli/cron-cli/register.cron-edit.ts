@@ -1,6 +1,6 @@
 import type { Command } from "commander";
-import type { CronJob } from "../../cron/types.js";
 import { danger } from "../../globals.js";
+import type { CronJob } from "../../platform/cron/types.js";
 import { sanitizeAgentId } from "../../routing/session-key.js";
 import { defaultRuntime } from "../../runtime.js";
 import { addGatewayClientOptions, callGatewayFromCli } from "../gateway-rpc.js";

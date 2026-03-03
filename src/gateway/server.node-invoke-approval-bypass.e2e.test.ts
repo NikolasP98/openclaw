@@ -6,8 +6,8 @@ import {
   publicKeyRawBase64UrlFromPem,
   signDevicePayload,
 } from "../infra/device-identity.js";
+import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../shared/message-channel.js";
 import { sleep } from "../utils.js";
-import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../utils/message-channel.js";
 import { GatewayClient } from "./client.js";
 import { buildDeviceAuthPayload } from "./device-auth.js";
 import {
@@ -18,6 +18,13 @@ import {
 } from "./test-helpers.js";
 
 installGatewayTestHooks({ scope: "suite" });
+
+async function expectNoForwardedInvoke(hasInvoke: () => boolean): Promise<void> {
+  // Yield a couple of macrotasks so any accidental async forwarding would fire.
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  expect(hasInvoke()).toBe(false);
+}
 
 async function getConnectedNodeId(ws: WebSocket): Promise<string> {
   const nodes = await rpcReq<{ nodes?: Array<{ nodeId: string; connected?: boolean }> }>(
@@ -171,8 +178,7 @@ describe("node.invoke approval bypass", () => {
     expect(res.ok).toBe(false);
     expect(res.error?.message ?? "").toContain("rawCommand does not match command");
 
-    await sleep(50);
-    expect(sawInvoke).toBe(false);
+    await expectNoForwardedInvoke(() => sawInvoke);
 
     ws.close();
     node.stop();
@@ -201,8 +207,7 @@ describe("node.invoke approval bypass", () => {
     expect(res.error?.message ?? "").toContain("params.runId");
 
     // Ensure the node didn't receive the invoke (gateway should fail early).
-    await sleep(50);
-    expect(sawInvoke).toBe(false);
+    await expectNoForwardedInvoke(() => sawInvoke);
 
     ws.close();
     node.stop();
@@ -225,8 +230,7 @@ describe("node.invoke approval bypass", () => {
     expect(res.ok).toBe(false);
     expect(res.error?.message ?? "").toContain("exec.approvals.node");
 
-    await sleep(50);
-    expect(sawInvoke).toBe(false);
+    await expectNoForwardedInvoke(() => sawInvoke);
 
     ws.close();
     node.stop();
@@ -305,8 +309,7 @@ describe("node.invoke approval bypass", () => {
     });
     expect(invoke.ok).toBe(false);
     expect(invoke.error?.message ?? "").toContain("not valid for this device");
-    await sleep(50);
-    expect(sawInvoke).toBe(false);
+    await expectNoForwardedInvoke(() => sawInvoke);
 
     ws.close();
     wsOtherDevice.close();

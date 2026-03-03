@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { bindAbortRelay } from "../utils/fetch-timeout.js";
+import { bindAbortRelay } from "../shared/fetch-timeout.js";
 
 /**
  * Regression test for #7174: Memory leak from closure-wrapped controller.abort().

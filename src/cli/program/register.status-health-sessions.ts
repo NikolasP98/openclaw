@@ -1,7 +1,9 @@
 import type { Command } from "commander";
-import { healthCommand } from "../../commands/health.js";
-import { sessionsCommand } from "../../commands/sessions.js";
-import { statusCommand } from "../../commands/status.js";
+import { healthCommand } from "../../cli/commands/health.js";
+import { roiCommand } from "../../cli/commands/roi.js";
+import { sessionsCommand } from "../../cli/commands/sessions.js";
+import { statusCommand } from "../../cli/commands/status.js";
+import { undoCommand } from "../../cli/commands/undo.js";
 import { setVerbose } from "../../globals.js";
 import { defaultRuntime } from "../../runtime.js";
 import { formatDocsLink } from "../../terminal/links.js";
@@ -142,5 +144,76 @@ export function registerStatusHealthSessionsCommands(program: Command) {
         },
         defaultRuntime,
       );
+    });
+
+  program
+    .command("undo")
+    .description("Undo recent tool-call actions (file writes, deletes, etc.)")
+    .option("--list", "Show undo history without undoing anything", false)
+    .option("--all", "Undo all available actions", false)
+    .option("--id <actionId>", "Undo a specific action by ID")
+    .option("--json", "Output as JSON", false)
+    .addHelpText(
+      "after",
+      () =>
+        `\n${theme.heading("Examples:")}\n${formatHelpExamples([
+          ["minion undo", "Undo the last action."],
+          ["minion undo --list", "Show undo history."],
+          ["minion undo --all", "Undo all available actions."],
+          ["minion undo --id abc123", "Undo a specific action by ID."],
+        ])}`,
+    )
+    .action(async (opts) => {
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await undoCommand(
+          {
+            list: Boolean(opts.list),
+            all: Boolean(opts.all),
+            id: opts.id as string | undefined,
+            json: Boolean(opts.json),
+          },
+          defaultRuntime,
+        );
+      });
+    });
+
+  program
+    .command("roi")
+    .description("Calculate ROI for AI agent automation")
+    .requiredOption("--hours <n>", "Hours of human work automated per month")
+    .option("--occupation <id>", "BLS occupation ID for wage lookup (default: software_developer)")
+    .option("--rate <dollars>", "Custom hourly rate override (skips BLS lookup)")
+    .option("--api-cost <dollars>", "Monthly AI API cost in USD (default: 0)")
+    .option("--infra-cost <dollars>", "Monthly infrastructure cost in USD (default: 0)")
+    .option("--list-occupations", "List available occupation IDs with titles and wages", false)
+    .option("--json", "Output as JSON", false)
+    .addHelpText(
+      "after",
+      () =>
+        `\n${theme.heading("Examples:")}\n${formatHelpExamples([
+          ["minion roi --hours 40 --api-cost 200", "ROI for 40h/month automation."],
+          ["minion roi --hours 20 --rate 75 --api-cost 100", "Custom hourly rate."],
+          ["minion roi --list-occupations", "Show available occupation IDs."],
+          [
+            "minion roi --hours 40 --occupation customer_support --api-cost 50",
+            "ROI for support automation.",
+          ],
+        ])}`,
+    )
+    .action(async (opts) => {
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await roiCommand(
+          {
+            hours: opts.hours as string | undefined,
+            occupation: opts.occupation as string | undefined,
+            rate: opts.rate as string | undefined,
+            apiCost: opts.apiCost as string | undefined,
+            infraCost: opts.infraCost as string | undefined,
+            listOccupations: Boolean(opts.listOccupations),
+            json: Boolean(opts.json),
+          },
+          defaultRuntime,
+        );
+      });
     });
 }

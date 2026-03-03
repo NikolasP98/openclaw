@@ -1,4 +1,5 @@
 import type { OpenClawConfig } from "../config/config.js";
+import { modelFitsContext } from "../providers/model-catalog.js";
 import {
   ensureAuthProfileStore,
   getSoonestCooldownExpiry,
@@ -96,6 +97,26 @@ type ModelFallbackRunResult<T> = {
   attempts: FallbackAttempt[];
 };
 
+function throwFallbackFailureSummary(params: {
+  attempts: FallbackAttempt[];
+  candidates: ModelCandidate[];
+  lastError: unknown;
+  label: string;
+  formatAttempt: (attempt: FallbackAttempt) => string;
+}): never {
+  if (params.attempts.length <= 1 && params.lastError) {
+    throw params.lastError;
+  }
+  const summary =
+    params.attempts.length > 0 ? params.attempts.map(params.formatAttempt).join(" | ") : "unknown";
+  throw new Error(
+    `All ${params.label} failed (${params.attempts.length || params.candidates.length}): ${summary}`,
+    {
+      cause: params.lastError instanceof Error ? params.lastError : undefined,
+    },
+  );
+}
+
 function resolveImageFallbackCandidates(params: {
   cfg: OpenClawConfig | undefined;
   defaultProvider: string;
@@ -160,6 +181,8 @@ function resolveFallbackCandidates(params: {
   model: string;
   /** Optional explicit fallbacks list; when provided (even empty), replaces agents.defaults.model.fallbacks. */
   fallbacksOverride?: string[];
+  /** Estimated context tokens for the current conversation — filters out models with insufficient context windows. */
+  estimatedContextTokens?: number;
 }): ModelCandidate[] {
   const primary = params.cfg
     ? resolveConfiguredModelRef({
@@ -213,6 +236,17 @@ function resolveFallbackCandidates(params: {
 
   if (params.fallbacksOverride === undefined && primary?.provider && primary.model) {
     addCandidate({ provider: primary.provider, model: primary.model }, false);
+  }
+
+  // Filter by context window when estimated context tokens are provided.
+  if (params.estimatedContextTokens && params.estimatedContextTokens > 0) {
+    const filtered = candidates.filter((c) =>
+      modelFitsContext(c.model, params.estimatedContextTokens!),
+    );
+    // Only apply filter if it leaves at least one candidate (fail-open).
+    if (filtered.length > 0) {
+      return filtered;
+    }
   }
 
   return candidates;
@@ -269,6 +303,8 @@ export async function runWithModelFallback<T>(params: {
   agentDir?: string;
   /** Optional explicit fallbacks list; when provided (even empty), replaces agents.defaults.model.fallbacks. */
   fallbacksOverride?: string[];
+  /** Estimated context tokens — used to filter out models with insufficient context windows. */
+  estimatedContextTokens?: number;
   run: (provider: string, model: string) => Promise<T>;
   onError?: ModelFallbackErrorHandler;
 }): Promise<ModelFallbackRunResult<T>> {
@@ -277,6 +313,7 @@ export async function runWithModelFallback<T>(params: {
     provider: params.provider,
     model: params.model,
     fallbacksOverride: params.fallbacksOverride,
+    estimatedContextTokens: params.estimatedContextTokens,
   });
   const authStore = params.cfg
     ? ensureAuthProfileStore(params.agentDir, { allowKeychainPrompt: false })
@@ -376,22 +413,15 @@ export async function runWithModelFallback<T>(params: {
     }
   }
 
-  if (attempts.length <= 1 && lastError) {
-    throw lastError;
-  }
-  const summary =
-    attempts.length > 0
-      ? attempts
-          .map(
-            (attempt) =>
-              `${attempt.provider}/${attempt.model}: ${attempt.error}${
-                attempt.reason ? ` (${attempt.reason})` : ""
-              }`,
-          )
-          .join(" | ")
-      : "unknown";
-  throw new Error(`All models failed (${attempts.length || candidates.length}): ${summary}`, {
-    cause: lastError instanceof Error ? lastError : undefined,
+  throwFallbackFailureSummary({
+    attempts,
+    candidates,
+    lastError,
+    label: "models",
+    formatAttempt: (attempt) =>
+      `${attempt.provider}/${attempt.model}: ${attempt.error}${
+        attempt.reason ? ` (${attempt.reason})` : ""
+      }`,
   });
 }
 
@@ -445,16 +475,11 @@ export async function runWithImageModelFallback<T>(params: {
     }
   }
 
-  if (attempts.length <= 1 && lastError) {
-    throw lastError;
-  }
-  const summary =
-    attempts.length > 0
-      ? attempts
-          .map((attempt) => `${attempt.provider}/${attempt.model}: ${attempt.error}`)
-          .join(" | ")
-      : "unknown";
-  throw new Error(`All image models failed (${attempts.length || candidates.length}): ${summary}`, {
-    cause: lastError instanceof Error ? lastError : undefined,
+  throwFallbackFailureSummary({
+    attempts,
+    candidates,
+    lastError,
+    label: "image models",
+    formatAttempt: (attempt) => `${attempt.provider}/${attempt.model}: ${attempt.error}`,
   });
 }

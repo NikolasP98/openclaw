@@ -1,15 +1,15 @@
 import type { Command } from "commander";
-import { gatewayStatusCommand } from "../../commands/gateway-status.js";
-import { formatHealthChannelLines, type HealthSummary } from "../../commands/health.js";
+import { gatewayStatusCommand } from "../../cli/commands/gateway-status.js";
+import { formatHealthChannelLines, type HealthSummary } from "../../cli/commands/health.js";
 import { loadConfig } from "../../config/config.js";
 import { discoverGatewayBeacons } from "../../infra/bonjour-discovery.js";
 import type { CostUsageSummary } from "../../infra/session-cost-usage.js";
 import { resolveWideAreaDiscoveryDomain } from "../../infra/widearea-dns.js";
 import { defaultRuntime } from "../../runtime.js";
+import { formatTokenCount, formatUsd } from "../../shared/usage-format.js";
 import { styleHealthChannelLine } from "../../terminal/health-style.js";
 import { formatDocsLink } from "../../terminal/links.js";
 import { colorize, isRich, theme } from "../../terminal/theme.js";
-import { formatTokenCount, formatUsd } from "../../utils/usage-format.js";
 import { runCommandWithRuntime } from "../cli-utils.js";
 import { inheritOptionFromParent } from "../command-options.js";
 import { addGatewayServiceCommands } from "../daemon-cli.js";

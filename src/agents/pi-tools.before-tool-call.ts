@@ -1,8 +1,12 @@
+import type { MinionConfig } from "../config/config.js";
 import type { ToolLoopDetectionConfig } from "../config/types.tools.js";
 import type { SessionState } from "../logging/diagnostic-session-state.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { getGlobalHookRunner } from "../plugins/hook-runner-global.js";
+import { checkCommandAutonomy } from "../security/autonomy-enforcement.js";
 import { isPlainObject } from "../utils.js";
+import type { ApprovalContext } from "./approval-gate.js";
+import { applyApprovalGate } from "./approval-gate.js";
 import { normalizeToolName } from "./tool-policy.js";
 import type { AnyAgentTool } from "./tools/common.js";
 
@@ -10,6 +14,10 @@ export type HookContext = {
   agentId?: string;
   sessionKey?: string;
   loopDetection?: ToolLoopDetectionConfig;
+  /** Config for autonomy enforcement checks on exec/shell tools. */
+  config?: MinionConfig;
+  /** Optional context for the human-in-the-loop approval gate (Sprint E.1). */
+  approvalContext?: ApprovalContext;
 };
 
 type HookOutcome = { blocked: true; reason: string } | { blocked: false; params: unknown };
@@ -130,6 +138,33 @@ export async function runBeforeToolCallHook(args: {
     }
 
     recordToolCall(sessionState, toolName, params, args.toolCallId, args.ctx.loopDetection);
+  }
+
+  // ── Autonomy enforcement ────────────────────────────────────────────────
+  // Check exec/shell tools against the configured autonomy mode (full/supervised/readonly).
+  const autonomyResult = checkCommandAutonomy({
+    toolName,
+    toolParams: params,
+    config: args.ctx?.config,
+  });
+  if (autonomyResult?.blocked) {
+    log.warn(`[autonomy] Blocked ${toolName}: ${autonomyResult.reason}`);
+    return { blocked: true, reason: autonomyResult.reason };
+  }
+
+  // ── Approval gate ───────────────────────────────────────────────────────
+  // Human-in-the-loop gate: confirm / admin-only modes per tool category.
+  const gateConfig = args.ctx?.config?.approvals?.gate;
+  if (gateConfig) {
+    const gateResult = await applyApprovalGate(
+      toolName,
+      gateConfig,
+      args.ctx?.approvalContext ?? {},
+    );
+    if (!gateResult.allowed) {
+      log.warn(`[approval-gate] Blocked ${toolName}: ${gateResult.reason}`);
+      return { blocked: true, reason: gateResult.reason };
+    }
   }
 
   const hookRunner = getGlobalHookRunner();

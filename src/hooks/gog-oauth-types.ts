@@ -4,6 +4,9 @@
 
 /**
  * Configuration for the OAuth callback server
+ * SYNC: Fields here must also be added to:
+ *  - HooksGogOAuthConfig in src/config/types.hooks.ts
+ *  - GogOAuthSchema in src/config/zod-schema.hooks.ts
  */
 export interface OAuthServerConfig {
   /** Port to bind the server to (default: 51234) */
@@ -18,6 +21,8 @@ export interface OAuthServerConfig {
   enabled?: boolean;
   /** Public redirect URI (e.g. Tailscale Funnel URL) for headless/remote OAuth flows */
   externalRedirectUri?: string;
+  /** Path to Google OAuth client credentials JSON file (from Google Cloud Console) */
+  googleClientCredentialsFile?: string;
 }
 
 /**
@@ -41,6 +46,14 @@ export interface PendingOAuthFlow {
   /** OAuth authorization URL sent to user */
   authUrl: string;
 }
+
+/**
+ * Discriminated result from getValidCredentials — lets callers distinguish
+ * "no credentials at all" from "credentials exist but refresh failed".
+ */
+export type CredentialResult =
+  | { credentials: GogCredentials; error?: undefined }
+  | { credentials: null; error: string; refreshFailed: boolean };
 
 /**
  * Stored Google credentials
@@ -129,6 +142,8 @@ export interface OAuthStatusResult {
   expiresAt?: number;
   /** Whether there's a pending auth flow */
   pending?: boolean;
+  /** Error detail when credentials exist but refresh failed */
+  error?: string;
 }
 
 /**

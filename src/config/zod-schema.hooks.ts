@@ -118,6 +118,20 @@ export const InternalHooksSchema = z
   .strict()
   .optional();
 
+/** SYNC: Fields here must match HooksGogOAuthConfig + OAuthServerConfig */
+export const GogOAuthSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    port: z.number().int().positive().optional(),
+    bind: z.string().optional(),
+    callbackPath: z.string().optional(),
+    timeoutMinutes: z.number().int().positive().optional(),
+    externalRedirectUri: z.string().optional(),
+    googleClientCredentialsFile: z.string().optional(),
+  })
+  .strict()
+  .optional();
+
 export const HooksGmailSchema = z
   .object({
     account: z.string().optional(),

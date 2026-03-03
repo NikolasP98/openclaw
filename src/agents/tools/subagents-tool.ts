@@ -17,13 +17,13 @@ import {
   parseAgentSessionKey,
   type ParsedAgentSessionKey,
 } from "../../routing/session-key.js";
+import { INTERNAL_MESSAGE_CHANNEL } from "../../shared/message-channel.js";
 import {
   formatDurationCompact,
   formatTokenUsageDisplay,
   resolveTotalTokens,
   truncateLine,
 } from "../../shared/subagents-format.js";
-import { INTERNAL_MESSAGE_CHANNEL } from "../../utils/message-channel.js";
 import { AGENT_LANE_SUBAGENT } from "../lanes.js";
 import { abortEmbeddedPiRun } from "../pi-embedded.js";
 import { optionalStringEnum } from "../schema/typebox.js";

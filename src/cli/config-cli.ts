@@ -295,7 +295,7 @@ export function registerConfigCli(program: Command) {
       [] as string[],
     )
     .action(async (opts) => {
-      const { configureCommandFromSectionsArg } = await import("../commands/configure.js");
+      const { configureCommandFromSectionsArg } = await import("../cli/commands/configure.js");
       await configureCommandFromSectionsArg(opts.section, defaultRuntime);
     });
 

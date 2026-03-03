@@ -1,12 +1,13 @@
 import type { OpenClawConfig } from "../config/config.js";
-import type { GatewayMessageChannel } from "../utils/message-channel.js";
-import type { SandboxFsBridge } from "./sandbox/fs-bridge.js";
-import type { AnyAgentTool } from "./tools/common.js";
+import { createKnowledgeGraphTools, KnowledgeGraphSession } from "../memory/knowledge-graph.js";
 import { resolvePluginTools } from "../plugins/tools.js";
+import type { GatewayMessageChannel } from "../shared/message-channel.js";
 import { resolveSessionAgentId } from "./agent-scope.js";
+import type { SandboxFsBridge } from "./sandbox/fs-bridge.js";
 import { createAgentsListTool } from "./tools/agents-list-tool.js";
 import { createBrowserTool } from "./tools/browser-tool.js";
 import { createCanvasTool } from "./tools/canvas-tool.js";
+import type { AnyAgentTool } from "./tools/common.js";
 import { createCronTool } from "./tools/cron-tool.js";
 import { createGatewayTool } from "./tools/gateway-tool.js";
 import { createImageTool } from "./tools/image-tool.js";
@@ -63,6 +64,18 @@ export function createOpenClawTools(options?: {
   disableMessageTool?: boolean;
 }): AnyAgentTool[] {
   const workspaceDir = resolveWorkspaceRoot(options?.workspaceDir);
+  const agentId = resolveSessionAgentId({
+    sessionKey: options?.agentSessionKey,
+    config: options?.config,
+  });
+  let kgSession: KnowledgeGraphSession | undefined;
+  try {
+    kgSession = KnowledgeGraphSession.forAgent(agentId);
+  } catch (err) {
+    // DB open failure — KG tools degrade gracefully (session = undefined = singleton fallback)
+    // eslint-disable-next-line no-console
+    console.warn(`KG DB open failed for agent ${agentId}: ${String(err)}`);
+  }
   const imageTool = options?.agentDir?.trim()
     ? createImageTool({
         config: options?.config,
@@ -158,6 +171,7 @@ export function createOpenClawTools(options?: {
     ...(webSearchTool ? [webSearchTool] : []),
     ...(webFetchTool ? [webFetchTool] : []),
     ...(imageTool ? [imageTool] : []),
+    ...createKnowledgeGraphTools(kgSession),
   ];
 
   const pluginTools = resolvePluginTools({
@@ -165,10 +179,7 @@ export function createOpenClawTools(options?: {
       config: options?.config,
       workspaceDir,
       agentDir: options?.agentDir,
-      agentId: resolveSessionAgentId({
-        sessionKey: options?.agentSessionKey,
-        config: options?.config,
-      }),
+      agentId,
       sessionKey: options?.agentSessionKey,
       messageChannel: options?.agentChannel,
       agentAccountId: options?.agentAccountId,

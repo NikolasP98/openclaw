@@ -41,7 +41,7 @@ describe("runGatewayUpdate", () => {
   beforeEach(async () => {
     tempDir = path.join(fixtureRoot, `case-${caseId++}`);
     await fs.mkdir(tempDir, { recursive: true });
-    await fs.writeFile(path.join(tempDir, "openclaw.mjs"), "export {};\n", "utf-8");
+    await fs.writeFile(path.join(tempDir, "minion.mjs"), "export {};\n", "utf-8");
   });
 
   afterEach(async () => {
@@ -56,7 +56,7 @@ describe("runGatewayUpdate", () => {
   }) {
     const calls: string[] = [];
     let uiBuildCount = 0;
-    const doctorKey = `${process.execPath} ${path.join(tempDir, "openclaw.mjs")} doctor --non-interactive --fix`;
+    const doctorKey = `${process.execPath} ${path.join(tempDir, "minion.mjs")} doctor --non-interactive --fix`;
 
     const runCommand = async (argv: string[]) => {
       const key = argv.join(" ");
@@ -108,7 +108,7 @@ describe("runGatewayUpdate", () => {
 
   async function setupGitCheckout(options?: { packageManager?: string }) {
     await fs.mkdir(path.join(tempDir, ".git"));
-    const pkg: Record<string, string> = { name: "openclaw", version: "1.0.0" };
+    const pkg: Record<string, string> = { name: "@nikolasp98/minion", version: "1.0.0" };
     if (options?.packageManager) {
       pkg.packageManager = options.packageManager;
     }
@@ -167,7 +167,7 @@ describe("runGatewayUpdate", () => {
     await fs.mkdir(pkgRoot, { recursive: true });
     await fs.writeFile(
       path.join(pkgRoot, "package.json"),
-      JSON.stringify({ name: "openclaw", version }),
+      JSON.stringify({ name: "minion", version }),
       "utf-8",
     );
   }
@@ -262,10 +262,9 @@ describe("runGatewayUpdate", () => {
       "pnpm install": { stdout: "" },
       "pnpm build": { stdout: "" },
       "pnpm ui:build": { stdout: "" },
-      [`${process.execPath} ${path.join(tempDir, "openclaw.mjs")} doctor --non-interactive --fix`]:
-        {
-          stdout: "",
-        },
+      [`${process.execPath} ${path.join(tempDir, "minion.mjs")} doctor --non-interactive --fix`]: {
+        stdout: "",
+      },
     });
 
     const result = await runWithRunner(runner, { channel: "beta" });
@@ -302,7 +301,7 @@ describe("runGatewayUpdate", () => {
     tag?: string;
   }): Promise<{ calls: string[]; result: Awaited<ReturnType<typeof runGatewayUpdate>> }> {
     const nodeModules = path.join(tempDir, "node_modules");
-    const pkgRoot = path.join(nodeModules, "openclaw");
+    const pkgRoot = path.join(nodeModules, "minion");
     await seedGlobalPackageRoot(pkgRoot);
 
     const { calls, runCommand } = createGlobalInstallHarness({
@@ -312,7 +311,7 @@ describe("runGatewayUpdate", () => {
       onInstall: async () => {
         await fs.writeFile(
           path.join(pkgRoot, "package.json"),
-          JSON.stringify({ name: "openclaw", version: "2.0.0" }),
+          JSON.stringify({ name: "minion", version: "2.0.0" }),
           "utf-8",
         );
       },
@@ -361,16 +360,16 @@ describe("runGatewayUpdate", () => {
   it.each([
     {
       title: "updates global npm installs when detected",
-      expectedInstallCommand: "npm i -g openclaw@latest",
+      expectedInstallCommand: "npm i -g minion@latest",
     },
     {
       title: "uses update channel for global npm installs when tag is omitted",
-      expectedInstallCommand: "npm i -g openclaw@beta",
+      expectedInstallCommand: "npm i -g minion@beta",
       channel: "beta" as const,
     },
     {
       title: "updates global npm installs with tag override",
-      expectedInstallCommand: "npm i -g openclaw@beta",
+      expectedInstallCommand: "npm i -g minion@beta",
       tag: "beta",
     },
   ])("$title", async ({ expectedInstallCommand, channel, tag }) => {
@@ -389,8 +388,8 @@ describe("runGatewayUpdate", () => {
 
   it("cleans stale npm rename dirs before global update", async () => {
     const nodeModules = path.join(tempDir, "node_modules");
-    const pkgRoot = path.join(nodeModules, "openclaw");
-    const staleDir = path.join(nodeModules, ".openclaw-stale");
+    const pkgRoot = path.join(nodeModules, "minion");
+    const staleDir = path.join(nodeModules, ".minion-stale");
     await fs.mkdir(staleDir, { recursive: true });
     await seedGlobalPackageRoot(pkgRoot);
 
@@ -406,7 +405,7 @@ describe("runGatewayUpdate", () => {
       if (key === "pnpm root -g") {
         return { stdout: "", stderr: "", code: 1 };
       }
-      if (key === "npm i -g openclaw@latest") {
+      if (key === "npm i -g minion@latest") {
         stalePresentAtInstall = await pathExists(staleDir);
         return { stdout: "ok", stderr: "", code: 0 };
       }
@@ -427,16 +426,16 @@ describe("runGatewayUpdate", () => {
 
     try {
       const bunGlobalRoot = path.join(bunInstall, "install", "global", "node_modules");
-      const pkgRoot = path.join(bunGlobalRoot, "openclaw");
+      const pkgRoot = path.join(bunGlobalRoot, "minion");
       await seedGlobalPackageRoot(pkgRoot);
 
       const { calls, runCommand } = createGlobalInstallHarness({
         pkgRoot,
-        installCommand: "bun add -g openclaw@latest",
+        installCommand: "bun add -g minion@latest",
         onInstall: async () => {
           await fs.writeFile(
             path.join(pkgRoot, "package.json"),
-            JSON.stringify({ name: "openclaw", version: "2.0.0" }),
+            JSON.stringify({ name: "minion", version: "2.0.0" }),
             "utf-8",
           );
         },
@@ -448,7 +447,7 @@ describe("runGatewayUpdate", () => {
       expect(result.mode).toBe("bun");
       expect(result.before?.version).toBe("1.0.0");
       expect(result.after?.version).toBe("2.0.0");
-      expect(calls.some((call) => call === "bun add -g openclaw@latest")).toBe(true);
+      expect(calls.some((call) => call === "bun add -g minion@latest")).toBe(true);
     } finally {
       if (oldBunInstall === undefined) {
         delete process.env.BUN_INSTALL;
@@ -470,13 +469,13 @@ describe("runGatewayUpdate", () => {
     cwdSpy.mockRestore();
 
     expect(result.status).toBe("error");
-    expect(result.reason).toBe("not-openclaw-root");
+    expect(result.reason).toBe("not-minion-root");
     expect(calls.some((call) => call.includes("status --porcelain"))).toBe(false);
   });
 
-  it("fails with a clear reason when openclaw.mjs is missing", async () => {
+  it("fails with a clear reason when minion.mjs is missing", async () => {
     await setupGitCheckout({ packageManager: "pnpm@8.0.0" });
-    await fs.rm(path.join(tempDir, "openclaw.mjs"), { force: true });
+    await fs.rm(path.join(tempDir, "minion.mjs"), { force: true });
 
     const stableTag = "v1.0.1-1";
     const { runner } = createRunner({
@@ -495,7 +494,7 @@ describe("runGatewayUpdate", () => {
 
     expect(result.status).toBe("error");
     expect(result.reason).toBe("doctor-entry-missing");
-    expect(result.steps.at(-1)?.name).toBe("openclaw doctor entry");
+    expect(result.steps.at(-1)?.name).toBe("minion doctor entry");
   });
 
   it("repairs UI assets when doctor run removes control-ui files", async () => {

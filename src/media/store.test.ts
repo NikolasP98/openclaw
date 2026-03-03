@@ -5,7 +5,7 @@ import JSZip from "jszip";
 import sharp from "sharp";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { isPathWithinBase } from "../../test/helpers/paths.js";
-import { captureEnv } from "../test-utils/env.js";
+import { captureEnv } from "../test-support/env.js";
 
 describe("media store", () => {
   let store: typeof import("./store.js");
@@ -23,7 +23,7 @@ describe("media store", () => {
     home = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-test-home-"));
     process.env.HOME = home;
     process.env.USERPROFILE = home;
-    process.env.OPENCLAW_STATE_DIR = path.join(home, ".openclaw");
+    process.env.OPENCLAW_STATE_DIR = path.join(home, ".minion");
     if (process.platform === "win32") {
       const match = home.match(/^([A-Za-z]:)(.*)$/);
       if (match) {
@@ -31,7 +31,7 @@ describe("media store", () => {
         process.env.HOMEPATH = match[2] || "\\";
       }
     }
-    await fs.mkdir(path.join(home, ".openclaw"), { recursive: true });
+    await fs.mkdir(path.join(home, ".minion"), { recursive: true });
     store = await import("./store.js");
   });
 
@@ -54,7 +54,7 @@ describe("media store", () => {
     await withTempStore(async (store, home) => {
       const dir = await store.ensureMediaDir();
       expect(isPathWithinBase(home, dir)).toBe(true);
-      expect(path.normalize(dir)).toContain(`${path.sep}.openclaw${path.sep}media`);
+      expect(path.normalize(dir)).toContain(`${path.sep}.minion${path.sep}media`);
       const stat = await fs.stat(dir);
       expect(stat.isDirectory()).toBe(true);
     });

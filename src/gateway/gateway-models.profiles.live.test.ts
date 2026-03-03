@@ -25,7 +25,7 @@ import { loadConfig } from "../config/config.js";
 import type { ModelsConfig, OpenClawConfig, ModelProviderConfig } from "../config/types.js";
 import { isTruthyEnvValue } from "../infra/env.js";
 import { DEFAULT_AGENT_ID } from "../routing/session-key.js";
-import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../utils/message-channel.js";
+import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../shared/message-channel.js";
 import { GatewayClient } from "./client.js";
 import { renderCatNoncePngBase64 } from "./live-image-probe.js";
 import { startGatewayServer } from "./server.js";

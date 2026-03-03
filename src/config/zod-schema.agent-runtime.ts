@@ -7,12 +7,14 @@ import {
   IdentitySchema,
   ToolsLinksSchema,
   ToolsMediaSchema,
+  TtsConfigSchema,
 } from "./zod-schema.core.js";
 import { sensitive } from "./zod-schema.sensitive.js";
 
 export const HeartbeatSchema = z
   .object({
     every: z.string().optional(),
+    logLevel: z.enum(["silent", "error", "warn", "info", "debug"]).optional(),
     activeHours: z
       .object({
         start: z.string().optional(),
@@ -232,6 +234,7 @@ export const ToolsWebSearchSchema = z
     maxResults: z.number().int().positive().optional(),
     timeoutSeconds: z.number().int().positive().optional(),
     cacheTtlMinutes: z.number().nonnegative().optional(),
+    browserFallback: z.boolean().optional(),
     perplexity: z
       .object({
         apiKey: z.string().optional().register(sensitive),
@@ -585,6 +588,7 @@ export const AgentEntrySchema = z
     id: z.string(),
     default: z.boolean().optional(),
     name: z.string().optional(),
+    owners: z.array(z.string()).optional(),
     workspace: z.string().optional(),
     agentDir: z.string().optional(),
     model: AgentModelSchema.optional(),
@@ -614,6 +618,12 @@ export const AgentEntrySchema = z
       .optional(),
     sandbox: AgentSandboxSchema,
     tools: AgentToolsSchema,
+    messages: z
+      .object({
+        tts: TtsConfigSchema.optional(),
+      })
+      .strict()
+      .optional(),
     capabilities: z
       .object({
         role: z.union([z.literal("orchestrator"), z.literal("specialist")]).optional(),

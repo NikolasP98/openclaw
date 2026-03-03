@@ -4,8 +4,8 @@ import { resolveCanvasHostUrl } from "../../infra/canvas-host-url.js";
 import { removeRemoteNodeInfo } from "../../infra/skills-remote.js";
 import { upsertPresence } from "../../infra/system-presence.js";
 import type { createSubsystemLogger } from "../../logging/subsystem.js";
+import { isWebchatClient } from "../../shared/message-channel.js";
 import { truncateUtf16Safe } from "../../utils.js";
-import { isWebchatClient } from "../../utils/message-channel.js";
 import type { AuthRateLimiter } from "../auth-rate-limit.js";
 import type { ResolvedGatewayAuth } from "../auth.js";
 import { isLoopbackAddress } from "../net.js";
@@ -235,7 +235,9 @@ export function attachGatewayWsConnectionHandler(params: {
         const nodeId = context.nodeRegistry.unregister(connId);
         if (nodeId) {
           removeRemoteNodeInfo(nodeId);
-          context.nodeUnsubscribeAll(nodeId);
+          // Pass connId so only subscriptions registered by this connection are
+          // removed, protecting subscriptions already claimed by a reconnect.
+          context.nodeUnsubscribeAll(nodeId, connId);
         }
       }
       logWs("out", "close", {

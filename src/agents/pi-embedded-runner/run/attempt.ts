@@ -5,22 +5,23 @@ import type { ImageContent } from "@mariozechner/pi-ai";
 import { streamSimple } from "@mariozechner/pi-ai";
 import { createAgentSession, SessionManager, SettingsManager } from "@mariozechner/pi-coding-agent";
 import { resolveHeartbeatPrompt } from "../../../auto-reply/heartbeat.js";
+import { resolveSignalReactionLevel } from "../../../channels/impl/signal/reaction-level.js";
+import { resolveTelegramInlineButtonsScope } from "../../../channels/impl/telegram/inline-buttons.js";
+import { resolveTelegramReactionLevel } from "../../../channels/impl/telegram/reaction-level.js";
 import { resolveChannelCapabilities } from "../../../config/channel-capabilities.js";
 import { getMachineDisplayName } from "../../../infra/machine-name.js";
 import { MAX_IMAGE_BYTES } from "../../../media/constants.js";
+import { KnowledgeGraphSession } from "../../../memory/knowledge-graph.js";
 import { getGlobalHookRunner } from "../../../plugins/hook-runner-global.js";
 import {
   isCronSessionKey,
   isSubagentSessionKey,
   normalizeAgentId,
 } from "../../../routing/session-key.js";
-import { resolveSignalReactionLevel } from "../../../signal/reaction-level.js";
-import { resolveTelegramInlineButtonsScope } from "../../../telegram/inline-buttons.js";
-import { resolveTelegramReactionLevel } from "../../../telegram/reaction-level.js";
+import { normalizeMessageChannel } from "../../../shared/message-channel.js";
+import { isReasoningTagProvider } from "../../../shared/provider-utils.js";
 import { buildTtsSystemPromptHint } from "../../../tts/tts.js";
 import { resolveUserPath } from "../../../utils.js";
-import { normalizeMessageChannel } from "../../../utils/message-channel.js";
-import { isReasoningTagProvider } from "../../../utils/provider-utils.js";
 import { resolveOpenClawAgentDir } from "../../agent-paths.js";
 import { resolveSessionAgentIds } from "../../agent-scope.js";
 import { createAnthropicPayloadLogger } from "../../anthropic-payload-log.js";
@@ -34,6 +35,11 @@ import { DEFAULT_CONTEXT_TOKENS } from "../../defaults.js";
 import { resolveOpenClawDocsPath } from "../../docs-path.js";
 import { isTimeoutError } from "../../failover-error.js";
 import { resolveImageSanitizationLimits } from "../../image-sanitization.js";
+import {
+  buildMemoryContext,
+  extractAndStoreMemory,
+  extractLastAssistantText,
+} from "../../memory-integration.js";
 import { resolveModelAuthMode } from "../../model-auth.js";
 import { resolveDefaultModelForAgent } from "../../model-selection.js";
 import { createOllamaStreamFn, OLLAMA_NATIVE_BASE_URL } from "../../ollama-stream.js";
@@ -62,8 +68,8 @@ import {
 } from "../../session-write-lock.js";
 import { detectRuntimeShell } from "../../shell-utils.js";
 import {
-  applySkillEnvOverrides,
-  applySkillEnvOverridesFromSnapshot,
+  resolveSkillEnvMap,
+  resolveSkillEnvMapFromSnapshot,
   loadWorkspaceSkillEntries,
   resolveSkillsPromptForRun,
 } from "../../skills.js";
@@ -245,19 +251,18 @@ export async function runEmbeddedAttempt(
     : resolvedWorkspace;
   await fs.mkdir(effectiveWorkspace, { recursive: true });
 
-  let restoreSkillEnv: (() => void) | undefined;
   process.chdir(effectiveWorkspace);
   try {
     const shouldLoadSkillEntries = !params.skillsSnapshot || !params.skillsSnapshot.resolvedSkills;
     const skillEntries = shouldLoadSkillEntries
       ? loadWorkspaceSkillEntries(effectiveWorkspace)
       : [];
-    restoreSkillEnv = params.skillsSnapshot
-      ? applySkillEnvOverridesFromSnapshot({
+    const skillEnvOverrides = params.skillsSnapshot
+      ? resolveSkillEnvMapFromSnapshot({
           snapshot: params.skillsSnapshot,
           config: params.config,
         })
-      : applySkillEnvOverrides({
+      : resolveSkillEnvMap({
           skills: skillEntries ?? [],
           config: params.config,
         });
@@ -326,6 +331,7 @@ export async function runEmbeddedAttempt(
           requireExplicitMessageTarget:
             params.requireExplicitMessageTarget ?? isSubagentSessionKey(params.sessionKey),
           disableMessageTool: params.disableMessageTool,
+          skillEnvOverrides,
         });
     const tools = sanitizeToolsForGoogle({ tools: toolsRaw, provider: params.provider });
     logToolSchemasForGoogle({ tools, provider: params.provider });
@@ -381,6 +387,12 @@ export async function runEmbeddedAttempt(
       sessionKey: params.sessionKey,
       config: params.config,
     });
+    let kgSession: KnowledgeGraphSession | undefined;
+    try {
+      kgSession = KnowledgeGraphSession.forAgent(sessionAgentId);
+    } catch (err) {
+      log.warn(`KG session open failed for ${sessionAgentId}: ${String(err)}`);
+    }
     const sandboxInfo = buildEmbeddedSandboxInfo(sandbox, params.bashElevated);
     const reasoningTagHint = isReasoningTagProvider(params.provider);
     // Resolve channel-specific message actions for system prompt
@@ -460,6 +472,7 @@ export async function runEmbeddedAttempt(
       userTimeFormat,
       contextFiles,
       memoryCitationsMode: params.config?.memory?.citations,
+      senderPermissionLevel: params.senderPermissionLevel,
     });
     const systemPromptReport = buildSystemPromptReport({
       source: "run",
@@ -933,6 +946,17 @@ export async function runEmbeddedAttempt(
           }
         }
 
+        // Inject pre-turn KG memory context when relevant entities are found.
+        if (kgSession) {
+          const memCtx = buildMemoryContext(params.prompt, kgSession, { maxTokens: 400 });
+          if (memCtx.contextBlock) {
+            effectivePrompt = `${memCtx.contextBlock}\n\n${effectivePrompt}`;
+            log.debug(
+              `KG memory context injected: ${memCtx.objectCount} objects, ${memCtx.tokenCount} tokens`,
+            );
+          }
+        }
+
         log.debug(`embedded run prompt start: runId=${params.runId} sessionId=${params.sessionId}`);
         cacheTrace?.recordStage("prompt:before", {
           prompt: effectivePrompt,
@@ -1172,6 +1196,16 @@ export async function runEmbeddedAttempt(
               log.warn(`agent_end hook failed: ${err}`);
             });
         }
+
+        // Fire-and-forget: extract and store new memory from this turn.
+        if (kgSession && !aborted && !promptError) {
+          const lastText = extractLastAssistantText(messagesSnapshot);
+          if (lastText) {
+            void extractAndStoreMemory(params.prompt, lastText, kgSession).catch((err) => {
+              log.warn(`KG post-turn extraction failed: ${String(err)}`);
+            });
+          }
+        }
       } finally {
         clearTimeout(abortTimer);
         if (abortWarnTimer) {
@@ -1276,7 +1310,6 @@ export async function runEmbeddedAttempt(
       await sessionLock.release();
     }
   } finally {
-    restoreSkillEnv?.();
     process.chdir(prevCwd);
   }
 }

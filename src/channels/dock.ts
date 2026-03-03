@@ -1,19 +1,19 @@
+import { resolveDiscordAccount } from "../channels/impl/discord/accounts.js";
+import { resolveIMessageAccount } from "../channels/impl/imessage/accounts.js";
+import { resolveSignalAccount } from "../channels/impl/signal/accounts.js";
+import { resolveSlackAccount, resolveSlackReplyToMode } from "../channels/impl/slack/accounts.js";
+import { buildSlackThreadingToolContext } from "../channels/impl/slack/threading-tool-context.js";
+import { resolveTelegramAccount } from "../channels/impl/telegram/accounts.js";
+import { normalizeWhatsAppTarget } from "../channels/impl/whatsapp/normalize.js";
 import type { OpenClawConfig } from "../config/config.js";
 import {
   resolveChannelGroupRequireMention,
   resolveChannelGroupToolsPolicy,
 } from "../config/group-policy.js";
-import { resolveDiscordAccount } from "../discord/accounts.js";
-import { resolveIMessageAccount } from "../imessage/accounts.js";
 import { requireActivePluginRegistry } from "../plugins/runtime.js";
 import { normalizeAccountId } from "../routing/session-key.js";
-import { resolveSignalAccount } from "../signal/accounts.js";
-import { resolveSlackAccount, resolveSlackReplyToMode } from "../slack/accounts.js";
-import { buildSlackThreadingToolContext } from "../slack/threading-tool-context.js";
-import { resolveTelegramAccount } from "../telegram/accounts.js";
 import { escapeRegExp, normalizeE164 } from "../utils.js";
 import { resolveWhatsAppAccount } from "../web/accounts.js";
-import { normalizeWhatsAppTarget } from "../whatsapp/normalize.js";
 import {
   resolveDiscordGroupRequireMention,
   resolveDiscordGroupToolPolicy,

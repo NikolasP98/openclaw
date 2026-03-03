@@ -7,7 +7,7 @@ import {
   restoreStateDirEnv,
   setStateDirEnv,
   snapshotStateDirEnv,
-} from "../test-helpers/state-dir-env.js";
+} from "../test-support/state-dir-env.js";
 import { createCanvasHostHandler } from "./server.js";
 
 describe("canvas host state dir defaults", () => {

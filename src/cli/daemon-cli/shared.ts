@@ -1,12 +1,12 @@
+import { pickPrimaryLanIPv4 } from "../../gateway/net.js";
+import { getResolvedLoggerSettings } from "../../logging.js";
 import {
   resolveGatewayLaunchAgentLabel,
   resolveGatewaySystemdServiceName,
   resolveGatewayWindowsTaskName,
-} from "../../daemon/constants.js";
-import { resolveGatewayLogPaths } from "../../daemon/launchd.js";
-import { formatRuntimeStatus } from "../../daemon/runtime-format.js";
-import { pickPrimaryLanIPv4 } from "../../gateway/net.js";
-import { getResolvedLoggerSettings } from "../../logging.js";
+} from "../../platform/daemon/constants.js";
+import { resolveGatewayLogPaths } from "../../platform/daemon/launchd.js";
+import { formatRuntimeStatus } from "../../platform/daemon/runtime-format.js";
 import { colorize, isRich, theme } from "../../terminal/theme.js";
 import { formatCliCommand } from "../command-format.js";
 import { parsePort } from "../shared/parse-port.js";
@@ -25,6 +25,17 @@ export function createCliStatusTextStyles() {
     warnText: (value: string) => colorize(rich, theme.warn, value),
     errorText: (value: string) => colorize(rich, theme.error, value),
   };
+}
+
+export function resolveRuntimeStatusColor(status: string | undefined): (value: string) => string {
+  const runtimeStatus = status ?? "unknown";
+  return runtimeStatus === "running"
+    ? theme.success
+    : runtimeStatus === "stopped"
+      ? theme.error
+      : runtimeStatus === "unknown"
+        ? theme.muted
+        : theme.warn;
 }
 
 export function parsePortFromArgs(programArguments: string[] | undefined): number | null {

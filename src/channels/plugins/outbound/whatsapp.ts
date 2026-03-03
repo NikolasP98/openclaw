@@ -1,7 +1,7 @@
 import { chunkText } from "../../../auto-reply/chunk.js";
+import { resolveWhatsAppOutboundTarget } from "../../../channels/impl/whatsapp/resolve-outbound-target.js";
 import { shouldLogVerbose } from "../../../globals.js";
 import { sendPollWhatsApp } from "../../../web/outbound.js";
-import { resolveWhatsAppOutboundTarget } from "../../../whatsapp/resolve-outbound-target.js";
 import type { ChannelOutboundAdapter } from "../types.js";
 
 export const whatsappOutbound: ChannelOutboundAdapter = {

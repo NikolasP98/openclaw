@@ -27,6 +27,10 @@ On Windows, we strongly recommend running Minion under [WSL2](https://learn.micr
 The **installer script** is the recommended way to install Minion. It handles Node detection, installation, and onboarding in one step.
 </Tip>
 
+<Warning>
+For VPS/cloud hosts, avoid third-party "1-click" marketplace images when possible. Prefer a clean base OS image (for example Ubuntu LTS), then install OpenClaw yourself with the installer script.
+</Warning>
+
 <AccordionGroup>
   <Accordion title="Installer script" icon="rocket" defaultOpen>
     Downloads the CLI, installs it globally via npm, and launches the onboarding wizard.

@@ -41,7 +41,7 @@ describe("legacy config detection", () => {
     expect(res.config?.channels?.whatsapp).toBeUndefined();
     expect(getLegacyRouting(res.config)?.allowFrom).toBeUndefined();
   });
-  it("migrates routing.groupChat.requireMention to channels whatsapp/telegram/imessage groups when whatsapp configured", async () => {
+  it("migrates routing.groupChat.requireMention to channels whatsapp/channels/impl/telegram/imessage groups when whatsapp configured", async () => {
     const res = migrateLegacyConfig({
       routing: { groupChat: { requireMention: false } },
       channels: { whatsapp: {} },

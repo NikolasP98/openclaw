@@ -5,7 +5,6 @@ import { isSilentReplyText, SILENT_REPLY_TOKEN } from "../../../auto-reply/token
 import { formatToolAggregate } from "../../../auto-reply/tool-meta.js";
 import type { OpenClawConfig } from "../../../config/config.js";
 import {
-  BILLING_ERROR_USER_MESSAGE,
   formatAssistantErrorText,
   formatRawAssistantErrorForUi,
   getApiErrorPayloadFingerprint,
@@ -49,8 +48,14 @@ function shouldShowToolErrorWarning(params: {
   hasUserFacingReply: boolean;
   suppressToolErrors: boolean;
   suppressToolErrorWarnings?: boolean;
+  verboseLevel?: VerboseLevel;
 }): boolean {
   if (params.suppressToolErrorWarnings) {
+    return false;
+  }
+  const normalizedToolName = params.lastToolError.toolName.trim().toLowerCase();
+  const verboseEnabled = params.verboseLevel === "on" || params.verboseLevel === "full";
+  if ((normalizedToolName === "exec" || normalizedToolName === "bash") && !verboseEnabled) {
     return false;
   }
   const isMutatingToolError =
@@ -72,6 +77,7 @@ export function buildEmbeddedRunPayloads(params: {
   config?: OpenClawConfig;
   sessionKey: string;
   provider?: string;
+  model?: string;
   verboseLevel?: VerboseLevel;
   reasoningLevel?: ReasoningLevel;
   toolResultFormat?: ToolResultFormat;
@@ -104,6 +110,7 @@ export function buildEmbeddedRunPayloads(params: {
         cfg: params.config,
         sessionKey: params.sessionKey,
         provider: params.provider,
+        model: params.model,
       })
     : undefined;
   const rawErrorMessage = lastAssistantErrored
@@ -121,9 +128,6 @@ export function buildEmbeddedRunPayloads(params: {
   const normalizedRawErrorText = rawErrorMessage
     ? normalizeTextForComparison(rawErrorMessage)
     : null;
-  const normalizedErrorText = errorText ? normalizeTextForComparison(errorText) : null;
-  const normalizedGenericBillingErrorText = normalizeTextForComparison(BILLING_ERROR_USER_MESSAGE);
-  const genericErrorText = "The AI service returned an error. Please try again.";
   if (errorText) {
     replyItems.push({ text: errorText, isError: true });
   }
@@ -164,7 +168,9 @@ export function buildEmbeddedRunPayloads(params: {
     replyItems.push({ text: reasoningText });
   }
 
-  const fallbackAnswerText = params.lastAssistant ? extractAssistantText(params.lastAssistant) : "";
+  // Don't extract fallback text from an errored last assistant — it may be partial/truncated content
+  const fallbackAnswerText =
+    params.lastAssistant && !lastAssistantErrored ? extractAssistantText(params.lastAssistant) : "";
   const shouldSuppressRawErrorText = (text: string) => {
     if (!lastAssistantErrored) {
       return false;
@@ -172,22 +178,6 @@ export function buildEmbeddedRunPayloads(params: {
     const trimmed = text.trim();
     if (!trimmed) {
       return false;
-    }
-    if (errorText) {
-      const normalized = normalizeTextForComparison(trimmed);
-      if (normalized && normalizedErrorText && normalized === normalizedErrorText) {
-        return true;
-      }
-      if (trimmed === genericErrorText) {
-        return true;
-      }
-      if (
-        normalized &&
-        normalizedGenericBillingErrorText &&
-        normalized === normalizedGenericBillingErrorText
-      ) {
-        return true;
-      }
     }
     if (rawErrorMessage && trimmed === rawErrorMessage) {
       return true;
@@ -253,6 +243,7 @@ export function buildEmbeddedRunPayloads(params: {
       hasUserFacingReply: hasUserFacingAssistantReply,
       suppressToolErrors: Boolean(params.config?.messages?.suppressToolErrors),
       suppressToolErrorWarnings: params.suppressToolErrorWarnings,
+      verboseLevel: params.verboseLevel,
     });
 
     // Always surface mutating tool failures so we do not silently confirm actions that did not happen.

@@ -10,8 +10,8 @@ import type { ExecToolDetails } from "./bash-tools.exec.js";
 import type { BashSandboxConfig } from "./bash-tools.shared.js";
 export { applyPathPrepend, normalizePathPrepend } from "../infra/path-prepend.js";
 import { logWarn } from "../logger.js";
-import type { ManagedRun } from "../process/supervisor/index.js";
-import { getProcessSupervisor } from "../process/supervisor/index.js";
+import type { ManagedRun } from "../platform/process/supervisor/index.js";
+import { getProcessSupervisor } from "../platform/process/supervisor/index.js";
 import {
   addSession,
   appendOutput,

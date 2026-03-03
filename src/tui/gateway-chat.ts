@@ -14,7 +14,7 @@ import {
   type SessionsPatchResult,
   type SessionsPatchParams,
 } from "../gateway/protocol/index.js";
-import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../utils/message-channel.js";
+import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../shared/message-channel.js";
 import { VERSION } from "../version.js";
 
 export type GatewayConnectionOptions = {

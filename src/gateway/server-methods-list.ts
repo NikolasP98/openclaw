@@ -44,6 +44,7 @@ const BASE_METHODS = [
   "skills.bins",
   "skills.install",
   "skills.update",
+  "agents.skills.set",
   "update.run",
   "voicewake.get",
   "voicewake.set",
@@ -98,6 +99,7 @@ const BASE_METHODS = [
   // Reliability KPI methods
   "reliability.events",
   "reliability.summary",
+  "memory.snapshot",
 ];
 
 export function listGatewayMethods(): string[] {

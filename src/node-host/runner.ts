@@ -4,7 +4,7 @@ import { GatewayClient } from "../gateway/client.js";
 import { loadOrCreateDeviceIdentity } from "../infra/device-identity.js";
 import { getMachineDisplayName } from "../infra/machine-name.js";
 import { ensureMinionCliOnPath } from "../infra/path-env.js";
-import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../utils/message-channel.js";
+import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../shared/message-channel.js";
 import { VERSION } from "../version.js";
 import { ensureNodeHostConfig, saveNodeHostConfig, type NodeHostGatewayConfig } from "./config.js";
 import {

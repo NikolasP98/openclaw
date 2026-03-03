@@ -801,6 +801,10 @@ export class QmdMemoryManager implements MemorySearchManager {
     this.db = new DatabaseSync(this.indexPath, { readOnly: true });
     // Keep QMD recall responsive when the updater holds a write lock.
     this.db.exec("PRAGMA busy_timeout = 1");
+    // Read-friendly PRAGMAs (mmap + cache). WAL/synchronous set by the writer.
+    this.db.exec("PRAGMA mmap_size = 8388608");
+    this.db.exec("PRAGMA cache_size = -2000");
+    this.db.exec("PRAGMA temp_store = MEMORY");
     return this.db;
   }
 

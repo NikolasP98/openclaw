@@ -3,10 +3,10 @@ import os from "node:os";
 import path from "node:path";
 import sharp from "sharp";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { sendVoiceMessageDiscord } from "../discord/send.js";
+import { sendVoiceMessageDiscord } from "../channels/impl/discord/send.js";
 import * as ssrf from "../infra/net/ssrf.js";
 import { optimizeImageToPng } from "../media/image-ops.js";
-import { captureEnv } from "../test-utils/env.js";
+import { captureEnv } from "../test-support/env.js";
 import { loadWebMedia, loadWebMediaRaw, optimizeImageToJpeg } from "./media.js";
 
 let fixtureRoot = "";

@@ -48,7 +48,10 @@ export function isAuthorizedBrowserRequest(
   }
 
   if (auth.password) {
-    const passwordHeader = firstHeaderValue(req.headers["x-minion-password"]).trim();
+    const passwordHeader = (
+      firstHeaderValue(req.headers["x-minion-password"]) ||
+      firstHeaderValue(req.headers["x-openclaw-password"])
+    ).trim();
     if (passwordHeader && safeEqualSecret(passwordHeader, auth.password)) {
       return true;
     }

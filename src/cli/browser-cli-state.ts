@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 import { danger } from "../globals.js";
 import { defaultRuntime } from "../runtime.js";
-import { parseBooleanValue } from "../utils/boolean.js";
+import { parseBooleanValue } from "../shared/boolean.js";
 import { runBrowserResizeWithOutput } from "./browser-cli-resize.js";
 import { callBrowserRequest, type BrowserParentOpts } from "./browser-cli-shared.js";
 import { registerBrowserCookiesAndStorageCommands } from "./browser-cli-state.cookies-storage.js";

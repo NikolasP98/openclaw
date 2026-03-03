@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { withFetchPreconnect } from "../test-utils/fetch-mock.js";
+import { withFetchPreconnect } from "../test-support/fetch-mock.js";
 import { fetchAntigravityUsage } from "./provider-usage.fetch.antigravity.js";
 
 const makeResponse = (status: number, body: unknown): Response => {

@@ -4,7 +4,7 @@ import path from "node:path";
 import { describe, expect, test, vi } from "vitest";
 import { WebSocket } from "ws";
 import { emitAgentEvent, registerAgentRunContext } from "../infra/agent-events.js";
-import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../utils/message-channel.js";
+import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../shared/message-channel.js";
 import {
   connectOk,
   getReplyFromConfig,

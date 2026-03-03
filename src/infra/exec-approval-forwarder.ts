@@ -7,7 +7,7 @@ import type {
 } from "../config/types.approvals.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { parseAgentSessionKey } from "../routing/session-key.js";
-import { isDeliverableMessageChannel, normalizeMessageChannel } from "../utils/message-channel.js";
+import { isDeliverableMessageChannel, normalizeMessageChannel } from "../shared/message-channel.js";
 import type {
   ExecApprovalDecision,
   ExecApprovalRequest,

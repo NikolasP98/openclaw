@@ -7,7 +7,7 @@ import { getShellEnvAppliedKeys } from "../infra/shell-env.js";
 import {
   normalizeOptionalSecretInput,
   normalizeSecretInput,
-} from "../utils/normalize-secret-input.js";
+} from "../shared/normalize-secret-input.js";
 import {
   type AuthProfileStore,
   ensureAuthProfileStore,

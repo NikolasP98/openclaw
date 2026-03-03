@@ -1,3 +1,4 @@
+import { formatRemainingShort } from "../../agents/auth-health.js";
 import {
   isProfileInCooldown,
   resolveAuthProfileDisplayLabel,
@@ -11,8 +12,8 @@ import {
 } from "../../agents/model-auth.js";
 import { findNormalizedProviderValue, normalizeProviderId } from "../../agents/model-selection.js";
 import type { OpenClawConfig } from "../../config/config.js";
+import { maskApiKey } from "../../shared/mask-api-key.js";
 import { shortenHomePath } from "../../utils.js";
-import { maskApiKey } from "../../utils/mask-api-key.js";
 
 export type ModelAuthDetailMode = "compact" | "verbose";
 
@@ -32,23 +33,8 @@ export const resolveAuthLabel = async (
   const lastGood = findNormalizedProviderValue(store.lastGood, providerKey);
   const nextProfileId = order[0];
   const now = Date.now();
-
-  const formatUntil = (timestampMs: number) => {
-    const remainingMs = Math.max(0, timestampMs - now);
-    const minutes = Math.round(remainingMs / 60_000);
-    if (minutes < 1) {
-      return "soon";
-    }
-    if (minutes < 60) {
-      return `${minutes}m`;
-    }
-    const hours = Math.round(minutes / 60);
-    if (hours < 48) {
-      return `${hours}h`;
-    }
-    const days = Math.round(hours / 24);
-    return `${days}d`;
-  };
+  const formatUntil = (timestampMs: number) =>
+    formatRemainingShort(timestampMs - now, { underMinuteLabel: "soon" });
 
   if (order.length > 0) {
     if (mode === "compact") {

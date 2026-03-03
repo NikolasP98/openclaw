@@ -23,6 +23,7 @@ import type { ModelsConfig } from "./types.models.js";
 import type { NodeHostConfig } from "./types.node-host.js";
 import type { PluginsConfig } from "./types.plugins.js";
 import type { SkillsConfig } from "./types.skills.js";
+import type { SecurityAutonomyConfig } from "./types.security.js";
 import type { ToolsConfig } from "./types.tools.js";
 
 export type MinionConfig = {
@@ -32,6 +33,12 @@ export type MinionConfig = {
     /** ISO timestamp when this config was last written. */
     lastTouchedAt?: string;
   };
+  /**
+   * Global admin peer IDs (all agents). Supports WhatsApp E164 (+15551234567),
+   * Telegram (telegram:@username or telegram:123456), Discord (user:123456789),
+   * channel-scoped (whatsapp:+15551234567), or identity link names from session.identityLinks.
+   */
+  admins?: string[];
   auth?: AuthConfig;
   env?: {
     /** Opt-in: import missing secrets from a login shell environment (exec `$SHELL -l -c 'env -0'`). */
@@ -97,6 +104,7 @@ export type MinionConfig = {
   talk?: TalkConfig;
   gateway?: GatewayConfig;
   memory?: MemoryConfig;
+  security?: SecurityAutonomyConfig;
 };
 
 export type ConfigValidationIssue = {

@@ -329,3 +329,41 @@ export function describeReplyContext(rawMessage: proto.IMessage | undefined): {
     senderE164,
   };
 }
+
+/**
+ * Returns the normalized quoted IMessage plus contextInfo fields needed for constructing
+ * a WAMessage key (required by Baileys' reupload mechanism for expired media URLs).
+ * Used by monitor.ts to decide whether to attempt a quoted-audio download.
+ */
+export function extractQuotedAudioContext(rawMessage: proto.IMessage | undefined):
+  | {
+      quotedMessage: proto.IMessage;
+      stanzaId?: string;
+      participant?: string;
+    }
+  | undefined {
+  const message = unwrapMessage(rawMessage);
+  if (!message) {
+    return undefined;
+  }
+  const contextInfo = extractContextInfo(message);
+  const quoted = normalizeMessageContent(contextInfo?.quotedMessage as proto.IMessage | undefined);
+  if (!quoted?.audioMessage) {
+    return undefined;
+  }
+  return {
+    quotedMessage: quoted,
+    stanzaId: contextInfo?.stanzaId ? String(contextInfo.stanzaId) : undefined,
+    participant: contextInfo?.participant ?? undefined,
+  };
+}
+
+/**
+ * Returns the normalized quoted IMessage if the raw message is a reply to an audio message,
+ * otherwise undefined. Thin wrapper around extractQuotedAudioContext for backward compatibility.
+ */
+export function extractQuotedAudioMessage(
+  rawMessage: proto.IMessage | undefined,
+): proto.IMessage | undefined {
+  return extractQuotedAudioContext(rawMessage)?.quotedMessage;
+}

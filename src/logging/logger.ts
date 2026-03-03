@@ -3,13 +3,13 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { Logger as TsLogger } from "tslog";
 import type { OpenClawConfig } from "../config/types.js";
-import type { ConsoleStyle } from "./console.js";
-import { resolvePreferredOpenClawTmpDir } from "../infra/tmp-openclaw-dir.js";
+import { resolvePreferredLogDir } from "../infra/tmp-openclaw-dir.js";
 import { readLoggingConfig } from "./config.js";
+import type { ConsoleStyle } from "./console.js";
 import { type LogLevel, levelToMinLevel, normalizeLogLevel } from "./levels.js";
 import { loggingState } from "./state.js";
 
-export const DEFAULT_LOG_DIR = resolvePreferredOpenClawTmpDir();
+export const DEFAULT_LOG_DIR = resolvePreferredLogDir();
 export const DEFAULT_LOG_FILE = path.join(DEFAULT_LOG_DIR, "minion.log");
 
 const LOG_PREFIX = "minion";
@@ -78,10 +78,7 @@ function settingsChanged(a: ResolvedSettings | null, b: ResolvedSettings) {
 }
 
 export function isFileLogLevelEnabled(level: LogLevel): boolean {
-  const settings = (loggingState.cachedSettings as ResolvedSettings | null) ?? resolveSettings();
-  if (!loggingState.cachedSettings) {
-    loggingState.cachedSettings = settings;
-  }
+  const settings = resolveSettings();
   if (settings.level === "silent") {
     return false;
   }

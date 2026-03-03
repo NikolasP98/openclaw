@@ -1,4 +1,5 @@
 import type { OpenClawConfig } from "../../config/config.js";
+import { resolvePermissionLevel } from "../../security/permission-level.js";
 import { resolveCommandAuthorization } from "../command-auth.js";
 import { normalizeCommandBody } from "../commands-registry.js";
 import type { MsgContext } from "../templating.js";
@@ -28,6 +29,13 @@ export function buildCommandContext(params: {
     isGroup ? stripMentions(rawBodyNormalized, ctx, cfg, agentId) : rawBodyNormalized,
   );
 
+  const permissionLevel = resolvePermissionLevel({
+    senderCandidates: auth.senderCandidates,
+    agentId,
+    cfg,
+    isAuthorizedSender: auth.isAuthorizedSender,
+  });
+
   return {
     surface,
     channel,
@@ -41,5 +49,6 @@ export function buildCommandContext(params: {
     commandBodyNormalized,
     from: auth.from,
     to: auth.to,
+    permissionLevel,
   };
 }

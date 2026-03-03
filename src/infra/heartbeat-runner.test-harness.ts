@@ -8,7 +8,7 @@ import { setWhatsAppRuntime } from "../../extensions/whatsapp/src/runtime.js";
 import type { ChannelPlugin } from "../channels/plugins/types.plugin.js";
 import { setActivePluginRegistry } from "../plugins/runtime.js";
 import { createPluginRuntime } from "../plugins/runtime/index.js";
-import { createTestRegistry } from "../test-utils/channel-plugins.js";
+import { createTestRegistry } from "../test-support/channel-plugins.js";
 
 const slackChannelPlugin = slackPlugin as unknown as ChannelPlugin;
 const telegramChannelPlugin = telegramPlugin as unknown as ChannelPlugin;

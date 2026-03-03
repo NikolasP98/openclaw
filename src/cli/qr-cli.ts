@@ -2,7 +2,7 @@ import type { Command } from "commander";
 import qrcode from "qrcode-terminal";
 import { loadConfig } from "../config/config.js";
 import { resolvePairingSetupFromConfig, encodePairingSetupCode } from "../pairing/setup-code.js";
-import { runCommandWithTimeout } from "../process/exec.js";
+import { runCommandWithTimeout } from "../platform/process/exec.js";
 import { defaultRuntime } from "../runtime.js";
 import { theme } from "../terminal/theme.js";
 

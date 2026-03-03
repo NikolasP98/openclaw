@@ -16,7 +16,7 @@ import { sanitizeChatSendMessageInput } from "./chat.js";
 import { createExecApprovalHandlers } from "./exec-approval.js";
 import { logsHandlers } from "./logs.js";
 
-vi.mock("../../commands/status.js", () => ({
+vi.mock("../../cli/commands/status.js", () => ({
   getStatusSummary: vi.fn().mockResolvedValue({ ok: true }),
 }));
 
@@ -463,13 +463,13 @@ describe("exec approval handlers", () => {
 
 describe("gateway healthHandlers.status scope handling", () => {
   beforeEach(async () => {
-    const status = await import("../../commands/status.js");
+    const status = await import("../../cli/commands/status.js");
     vi.mocked(status.getStatusSummary).mockClear();
   });
 
   async function runHealthStatus(scopes: string[]) {
     const respond = vi.fn();
-    const status = await import("../../commands/status.js");
+    const status = await import("../../cli/commands/status.js");
     const { healthHandlers } = await import("./health.js");
 
     await healthHandlers.status({

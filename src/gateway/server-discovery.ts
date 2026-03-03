@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { getTailnetHostname } from "../infra/tailscale.js";
-import { runExec } from "../process/exec.js";
+import { runExec } from "../platform/process/exec.js";
 
 export type ResolveBonjourCliPathOptions = {
   env?: NodeJS.ProcessEnv;

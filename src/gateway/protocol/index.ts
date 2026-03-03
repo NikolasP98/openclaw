@@ -195,6 +195,8 @@ import {
   SkillsStatusParamsSchema,
   type SkillsUpdateParams,
   SkillsUpdateParamsSchema,
+  type AgentsSkillsSetParams,
+  AgentsSkillsSetParamsSchema,
   type Snapshot,
   SnapshotSchema,
   type StateVersion,
@@ -227,6 +229,17 @@ import {
   WizardStatusResultSchema,
   type WizardStep,
   WizardStepSchema,
+  type MeshPlanParams,
+  MeshPlanParamsSchema,
+  type MeshPlanAutoParams,
+  MeshPlanAutoParamsSchema,
+  type MeshRunParams,
+  MeshRunParamsSchema,
+  type MeshStatusParams,
+  MeshStatusParamsSchema,
+  type MeshRetryParams,
+  MeshRetryParamsSchema,
+  type MeshWorkflowPlan,
 } from "./schema.js";
 
 const ajv = new (AjvPkg as unknown as new (opts?: object) => import("ajv").default)({
@@ -323,6 +336,9 @@ export const validateSkillsBinsParams = ajv.compile<SkillsBinsParams>(SkillsBins
 export const validateSkillsInstallParams =
   ajv.compile<SkillsInstallParams>(SkillsInstallParamsSchema);
 export const validateSkillsUpdateParams = ajv.compile<SkillsUpdateParams>(SkillsUpdateParamsSchema);
+export const validateAgentsSkillsSetParams = ajv.compile<AgentsSkillsSetParams>(
+  AgentsSkillsSetParamsSchema,
+);
 export const validateCronListParams = ajv.compile<CronListParams>(CronListParamsSchema);
 export const validateCronStatusParams = ajv.compile<CronStatusParams>(CronStatusParamsSchema);
 export const validateCronAddParams = ajv.compile<CronAddParams>(CronAddParamsSchema);
@@ -376,6 +392,11 @@ export const validateUpdateRunParams = ajv.compile<UpdateRunParams>(UpdateRunPar
 export const validateWebLoginStartParams =
   ajv.compile<WebLoginStartParams>(WebLoginStartParamsSchema);
 export const validateWebLoginWaitParams = ajv.compile<WebLoginWaitParams>(WebLoginWaitParamsSchema);
+export const validateMeshPlanParams = ajv.compile<MeshPlanParams>(MeshPlanParamsSchema);
+export const validateMeshPlanAutoParams = ajv.compile<MeshPlanAutoParams>(MeshPlanAutoParamsSchema);
+export const validateMeshRunParams = ajv.compile<MeshRunParams>(MeshRunParamsSchema);
+export const validateMeshStatusParams = ajv.compile<MeshStatusParams>(MeshStatusParamsSchema);
+export const validateMeshRetryParams = ajv.compile<MeshRetryParams>(MeshRetryParamsSchema);
 
 export function formatValidationErrors(errors: ErrorObject[] | null | undefined) {
   if (!errors?.length) {
@@ -509,6 +530,11 @@ export {
   PROTOCOL_VERSION,
   ErrorCodes,
   errorShape,
+  MeshPlanParamsSchema,
+  MeshPlanAutoParamsSchema,
+  MeshRunParamsSchema,
+  MeshStatusParamsSchema,
+  MeshRetryParamsSchema,
 };
 
 export type {
@@ -579,6 +605,7 @@ export type {
   SkillsBinsResult,
   SkillsInstallParams,
   SkillsUpdateParams,
+  AgentsSkillsSetParams,
   NodePairRejectParams,
   NodePairVerifyParams,
   NodeListParams,
@@ -611,4 +638,10 @@ export type {
   PollParams,
   UpdateRunParams,
   ChatInjectParams,
+  MeshPlanParams,
+  MeshPlanAutoParams,
+  MeshRunParams,
+  MeshStatusParams,
+  MeshRetryParams,
+  MeshWorkflowPlan,
 };

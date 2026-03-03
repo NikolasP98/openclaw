@@ -9,19 +9,19 @@ import {
 } from "@mariozechner/pi-coding-agent";
 import { resolveHeartbeatPrompt } from "../../auto-reply/heartbeat.js";
 import type { ReasoningLevel, ThinkLevel } from "../../auto-reply/thinking.js";
+import { resolveSignalReactionLevel } from "../../channels/impl/signal/reaction-level.js";
+import { resolveTelegramInlineButtonsScope } from "../../channels/impl/telegram/inline-buttons.js";
+import { resolveTelegramReactionLevel } from "../../channels/impl/telegram/reaction-level.js";
 import { resolveChannelCapabilities } from "../../config/channel-capabilities.js";
 import type { OpenClawConfig } from "../../config/config.js";
 import { getMachineDisplayName } from "../../infra/machine-name.js";
+import { type enqueueCommand, enqueueCommandInLane } from "../../platform/process/command-queue.js";
 import { getGlobalHookRunner } from "../../plugins/hook-runner-global.js";
-import { type enqueueCommand, enqueueCommandInLane } from "../../process/command-queue.js";
 import { isCronSessionKey, isSubagentSessionKey } from "../../routing/session-key.js";
-import { resolveSignalReactionLevel } from "../../signal/reaction-level.js";
-import { resolveTelegramInlineButtonsScope } from "../../telegram/inline-buttons.js";
-import { resolveTelegramReactionLevel } from "../../telegram/reaction-level.js";
+import { normalizeMessageChannel } from "../../shared/message-channel.js";
+import { isReasoningTagProvider } from "../../shared/provider-utils.js";
 import { buildTtsSystemPromptHint } from "../../tts/tts.js";
 import { resolveUserPath } from "../../utils.js";
-import { normalizeMessageChannel } from "../../utils/message-channel.js";
-import { isReasoningTagProvider } from "../../utils/provider-utils.js";
 import { resolveOpenClawAgentDir } from "../agent-paths.js";
 import { resolveSessionAgentIds } from "../agent-scope.js";
 import type { ExecElevatedDefaults } from "../bash-tools.js";
@@ -52,8 +52,8 @@ import {
 } from "../session-write-lock.js";
 import { detectRuntimeShell } from "../shell-utils.js";
 import {
-  applySkillEnvOverrides,
-  applySkillEnvOverridesFromSnapshot,
+  resolveSkillEnvMap,
+  resolveSkillEnvMapFromSnapshot,
   loadWorkspaceSkillEntries,
   resolveSkillsPromptForRun,
   type SkillSnapshot,
@@ -330,19 +330,18 @@ export async function compactEmbeddedPiSessionDirect(
     cwd: effectiveWorkspace,
   });
 
-  let restoreSkillEnv: (() => void) | undefined;
   process.chdir(effectiveWorkspace);
   try {
     const shouldLoadSkillEntries = !params.skillsSnapshot || !params.skillsSnapshot.resolvedSkills;
     const skillEntries = shouldLoadSkillEntries
       ? loadWorkspaceSkillEntries(effectiveWorkspace)
       : [];
-    restoreSkillEnv = params.skillsSnapshot
-      ? applySkillEnvOverridesFromSnapshot({
+    const skillEnvOverrides = params.skillsSnapshot
+      ? resolveSkillEnvMapFromSnapshot({
           snapshot: params.skillsSnapshot,
           config: params.config,
         })
-      : applySkillEnvOverrides({
+      : resolveSkillEnvMap({
           skills: skillEntries ?? [],
           config: params.config,
         });
@@ -383,6 +382,7 @@ export async function compactEmbeddedPiSessionDirect(
       modelId,
       modelContextWindowTokens: model.contextWindow,
       modelAuthMode: resolveModelAuthMode(model.provider, params.config),
+      skillEnvOverrides,
     });
     const tools = sanitizeToolsForGoogle({ tools: toolsRaw, provider });
     logToolSchemasForGoogle({ tools, provider });
@@ -717,7 +717,6 @@ export async function compactEmbeddedPiSessionDirect(
     const reason = describeUnknownError(err);
     return fail(reason);
   } finally {
-    restoreSkillEnv?.();
     process.chdir(prevCwd);
   }
 }

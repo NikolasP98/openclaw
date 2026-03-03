@@ -7,9 +7,58 @@ import fs from "fs/promises";
 import fsSync from "node:fs";
 import os from "os";
 import path from "path";
-import type { GogCredentials, TokenRefreshResponse } from "./gog-oauth-types.js";
-import { runCommandWithTimeout } from "../process/exec.js";
+import { createSubsystemLogger } from "../logging/subsystem.js";
+import { runCommandWithTimeout } from "../platform/process/exec.js";
 import { extractGogClientCredentials } from "./gmail-setup-utils.js";
+import type { CredentialResult, GogCredentials, TokenRefreshResponse } from "./gog-oauth-types.js";
+
+const log = createSubsystemLogger("gog-credentials");
+
+// ── Config-based Google client credentials ──────────────────────────
+
+/** Google OAuth client type — determines allowed redirect URIs */
+export type GoogleClientType = "installed" | "web" | "unknown";
+
+/** Parsed client credentials from the config-specified JSON file */
+let configClientCredentials: {
+  clientId: string;
+  clientSecret: string;
+  clientType: GoogleClientType;
+} | null = null;
+
+/**
+ * Set the path to the Google client credentials JSON file (from config).
+ * Called once during gateway startup if `hooks.gogOAuth.googleClientCredentialsFile` is set.
+ * The file format matches the Google Cloud Console download (supports "installed" and "web" types).
+ */
+export function setGoogleClientCredentialsFile(filePath: string): void {
+  try {
+    const raw = fsSync.readFileSync(filePath, "utf-8");
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+
+    // Support both "installed" and "web" application types
+    const installed = parsed.installed as Record<string, unknown> | undefined;
+    const web = parsed.web as Record<string, unknown> | undefined;
+    const source = installed ?? web ?? parsed;
+    const clientType: GoogleClientType = installed ? "installed" : web ? "web" : "unknown";
+
+    const clientId = source.client_id;
+    const clientSecret = source.client_secret;
+    if (
+      typeof clientId === "string" &&
+      typeof clientSecret === "string" &&
+      clientId &&
+      clientSecret
+    ) {
+      configClientCredentials = { clientId, clientSecret, clientType };
+      log.info(`Loaded Google client credentials from config: ${filePath} (type: ${clientType})`);
+    } else {
+      log.warn(`Config file ${filePath} exists but does not contain valid client_id/client_secret`);
+    }
+  } catch (err) {
+    log.warn(`Failed to read Google client credentials file: ${filePath}: ${String(err)}`);
+  }
+}
 
 /**
  * Get the credentials directory for an agent
@@ -128,8 +177,29 @@ export async function refreshAccessToken(credentials: GogCredentials): Promise<G
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Failed to refresh token: ${error}`);
+    const errorBody = await response.text();
+    let parsed: { error?: string; error_description?: string } = {};
+    try {
+      parsed = JSON.parse(errorBody);
+    } catch {
+      // not JSON
+    }
+
+    if (parsed.error === "invalid_grant") {
+      throw new Error(
+        `Google OAuth refresh failed: invalid_grant — ${parsed.error_description || "token expired or revoked"}.\n` +
+          "Common causes:\n" +
+          "  - OAuth consent screen is in 'Testing' mode (tokens expire after 7 days)\n" +
+          "  - User revoked access in Google Account settings\n" +
+          "  - Token was already used or replaced\n" +
+          "Fix: Re-authenticate with the gog-auth-start tool. If tokens keep expiring after 7 days,\n" +
+          "move your OAuth consent screen from Testing to Production in Google Cloud Console.",
+      );
+    }
+
+    throw new Error(
+      `Failed to refresh Google OAuth token (${response.status}): ${parsed.error_description || parsed.error || errorBody}`,
+    );
   }
 
   const tokenData: TokenRefreshResponse = await response.json();
@@ -156,31 +226,38 @@ export function isTokenExpired(credentials: GogCredentials): boolean {
 }
 
 /**
- * Get valid credentials, refreshing if necessary
+ * Get valid credentials, refreshing if necessary.
+ * Returns a discriminated CredentialResult so callers can distinguish
+ * "no credentials" from "refresh failed" and surface actionable errors.
  */
 export async function getValidCredentials(
   agentId: string,
   sessionKey: string,
   email?: string,
-): Promise<GogCredentials | null> {
+): Promise<CredentialResult> {
   const credentials = await loadSessionCredentials(agentId, sessionKey, email);
 
   if (!credentials) {
-    return null;
+    return {
+      credentials: null,
+      error: "No Google credentials found for this session",
+      refreshFailed: false,
+    };
   }
 
   // Refresh if expired
   if (isTokenExpired(credentials)) {
     try {
-      return await refreshAccessToken(credentials);
+      const refreshed = await refreshAccessToken(credentials);
+      return { credentials: refreshed };
     } catch (error) {
-      console.error("Failed to refresh token:", error);
-      // Return null so caller can prompt for re-authentication
-      return null;
+      const msg = error instanceof Error ? error.message : String(error);
+      log.warn(`Token refresh failed: ${msg}`);
+      return { credentials: null, error: msg, refreshFailed: true };
     }
   }
 
-  return credentials;
+  return { credentials };
 }
 
 /**
@@ -269,16 +346,25 @@ function getFileCredentials(): { clientId: string; clientSecret: string } | null
  * Priority: env var GOOGLE_CLIENT_ID > gog CLI credentials.json file
  */
 export function getGoogleClientId(): string {
+  // 1. Config file (hooks.gogOAuth.googleClientCredentialsFile)
+  if (configClientCredentials) {
+    return configClientCredentials.clientId;
+  }
+  // 2. Environment variable
   if (process.env.GOOGLE_CLIENT_ID) {
     return process.env.GOOGLE_CLIENT_ID;
   }
+  // 3. gog CLI credentials file (~/.config/gogcli/credentials.json)
   const fileCreds = getFileCredentials();
   if (fileCreds) {
     return fileCreds.clientId;
   }
   throw new Error(
-    "GOOGLE_CLIENT_ID not set and no gog CLI credentials.json found. " +
-      "Set the env var or place credentials in ~/.config/gogcli/credentials.json",
+    "Google OAuth client ID not found. Checked (in order):\n" +
+      "  1. hooks.gogOAuth.googleClientCredentialsFile in minion.json\n" +
+      "  2. GOOGLE_CLIENT_ID environment variable\n" +
+      "  3. ~/.config/gogcli/credentials.json\n" +
+      "Set one of these to your Google Cloud Console OAuth client credentials.",
   );
 }
 
@@ -287,64 +373,125 @@ export function getGoogleClientId(): string {
  * Priority: env var GOOGLE_CLIENT_SECRET > gog CLI credentials.json file
  */
 export function getGoogleClientSecret(): string {
+  // 1. Config file (hooks.gogOAuth.googleClientCredentialsFile)
+  if (configClientCredentials) {
+    return configClientCredentials.clientSecret;
+  }
+  // 2. Environment variable
   if (process.env.GOOGLE_CLIENT_SECRET) {
     return process.env.GOOGLE_CLIENT_SECRET;
   }
+  // 3. gog CLI credentials file (~/.config/gogcli/credentials.json)
   const fileCreds = getFileCredentials();
   if (fileCreds) {
     return fileCreds.clientSecret;
   }
   throw new Error(
-    "GOOGLE_CLIENT_SECRET not set and no gog CLI credentials.json found. " +
-      "Set the env var or place credentials in ~/.config/gogcli/credentials.json",
+    "Google OAuth client secret not found. Checked (in order):\n" +
+      "  1. hooks.gogOAuth.googleClientCredentialsFile in minion.json\n" +
+      "  2. GOOGLE_CLIENT_SECRET environment variable\n" +
+      "  3. ~/.config/gogcli/credentials.json\n" +
+      "Set one of these to your Google Cloud Console OAuth client credentials.",
   );
 }
 
 /**
- * Sync OAuth tokens to gog CLI keyring so `gog gmail ...` commands work.
- * Best-effort: logs errors but never throws.
+ * Get the detected Google OAuth client type from the credentials file.
+ * Returns "unknown" if no credentials file was loaded or type couldn't be determined.
  */
-export async function syncToGogKeyring(credentials: GogCredentials): Promise<void> {
+export function getGoogleClientType(): GoogleClientType {
+  return configClientCredentials?.clientType ?? "unknown";
+}
+
+/**
+ * Import OAuth tokens into the gog CLI keyring.
+ * Core sync logic — writes a temp token file, runs `gog auth tokens import`, cleans up.
+ * Caller is responsible for ensuring gog is installed and available.
+ *
+ * @param credentials - The OAuth credentials to import
+ * @param env - Optional environment override (e.g. with GOG_KEYRING_BACKEND/PASSWORD).
+ *              Defaults to process.env if not provided.
+ * @returns Result indicating success or failure with error detail
+ */
+export async function importTokensToGogKeyring(
+  credentials: GogCredentials,
+  env?: NodeJS.ProcessEnv,
+): Promise<{ success: boolean; error?: string }> {
+  const tmpDir = os.tmpdir();
+  const tmpFile = path.join(tmpDir, `gog-token-import-${Date.now()}.json`);
+  const tokenData = {
+    email: credentials.email,
+    access_token: credentials.accessToken,
+    refresh_token: credentials.refreshToken,
+    token_type: "Bearer",
+    expiry: new Date(credentials.expiresAt).toISOString(),
+  };
+
+  fsSync.writeFileSync(tmpFile, JSON.stringify(tokenData, null, 2), { mode: 0o600 });
+
+  try {
+    const result = await runCommandWithTimeout(
+      ["gog", "auth", "tokens", "import", tmpFile, "--account", credentials.email],
+      { timeoutMs: 10_000, env },
+    );
+    if (result.code === 0) {
+      log.info(`Synced tokens to gog CLI keyring for ${credentials.email}`);
+      return { success: true };
+    } else {
+      const detail = result.stderr || result.stdout;
+      log.warn(`gog auth tokens import failed (code=${result.code}): ${detail}`);
+      return { success: false, error: `exit code ${result.code}: ${detail}` };
+    }
+  } finally {
+    try {
+      fsSync.unlinkSync(tmpFile);
+    } catch {
+      // ignore cleanup errors
+    }
+  }
+}
+
+/**
+ * Sync OAuth tokens to gog CLI keyring so `gog gmail ...` commands work.
+ * Best-effort: logs errors but never throws. Returns result so callers can
+ * surface warnings to the user.
+ */
+export async function syncToGogKeyring(
+  credentials: GogCredentials,
+): Promise<{ success: boolean; error?: string }> {
   try {
     // Check if gog binary is available
     const gogCheck = await runCommandWithTimeout(["which", "gog"], { timeoutMs: 2_000 });
     if (gogCheck.code !== 0) {
-      return; // gog CLI not installed, skip silently
+      return { success: false, error: "gog CLI not installed" };
     }
 
-    // Write a temporary token file in gog CLI's expected snake_case format
-    const tmpDir = os.tmpdir();
-    const tmpFile = path.join(tmpDir, `gog-token-import-${Date.now()}.json`);
-    const tokenData = {
-      access_token: credentials.accessToken,
-      refresh_token: credentials.refreshToken,
-      token_type: "Bearer",
-      expiry: new Date(credentials.expiresAt).toISOString(),
-    };
-
-    fsSync.writeFileSync(tmpFile, JSON.stringify(tokenData, null, 2), { mode: 0o600 });
-
-    try {
-      const result = await runCommandWithTimeout(
-        ["gog", "auth", "token", "import", tmpFile, "--account", credentials.email],
-        { timeoutMs: 10_000 },
+    const result = await importTokensToGogKeyring(credentials);
+    if (!result.success && result.error) {
+      // Detect version-too-old errors from gog itself (e.g. "unknown command", "no such command").
+      // We avoid a pre-flight version check since transient anomalies caused false positives.
+      const isVersionError = /unknown (command|flag|subcommand)|no such command|unrecognized/i.test(
+        result.error,
       );
-      if (result.code === 0) {
-        console.log(`[gog-credentials] Synced tokens to gog CLI keyring for ${credentials.email}`);
-      } else {
-        console.warn(
-          `[gog-credentials] gog auth token import failed (code=${result.code}): ${result.stderr || result.stdout}`,
-        );
-      }
-    } finally {
-      // Clean up temp file
-      try {
-        fsSync.unlinkSync(tmpFile);
-      } catch {
-        // ignore cleanup errors
+      if (isVersionError) {
+        const versionCheck = await runCommandWithTimeout(["gog", "--version"], {
+          timeoutMs: 3_000,
+        });
+        const match = versionCheck.stdout.match(/v(\d+)\.(\d+)\.(\d+)/);
+        if (match) {
+          const [, major, minor] = match.map(Number);
+          if (major === 0 && minor < 11) {
+            const msg = `gog CLI v${major}.${minor} is too old for 'auth tokens import' (requires >= v0.11.0)`;
+            log.warn(`${msg}. Skipping keyring sync.`);
+            return { success: false, error: msg };
+          }
+        }
       }
     }
+    return result;
   } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
     console.warn("[gog-credentials] Failed to sync tokens to gog CLI keyring:", error);
+    return { success: false, error: msg };
   }
 }

@@ -12,7 +12,7 @@ import {
 import { extractArchive as extractArchiveSafe } from "../infra/archive.js";
 import { fetchWithSsrFGuard } from "../infra/net/fetch-guard.js";
 import { isWithinDir } from "../infra/path-safety.js";
-import { runCommandWithTimeout } from "../process/exec.js";
+import { runCommandWithTimeout } from "../platform/process/exec.js";
 import { ensureDir, resolveUserPath } from "../utils.js";
 import { formatInstallFailureMessage } from "./skills-install-output.js";
 import type { SkillInstallResult } from "./skills-install.js";

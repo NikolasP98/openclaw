@@ -1,6 +1,5 @@
 import type { AgentToolResult } from "@mariozechner/pi-agent-core";
-import type { DiscordActionConfig } from "../../config/config.js";
-import { readDiscordComponentSpec } from "../../discord/components.js";
+import { readDiscordComponentSpec } from "../../channels/impl/discord/components.js";
 import {
   createThreadDiscord,
   deleteMessageDiscord,
@@ -22,9 +21,13 @@ import {
   sendStickerDiscord,
   sendVoiceMessageDiscord,
   unpinMessageDiscord,
-} from "../../discord/send.js";
-import type { DiscordSendComponents, DiscordSendEmbeds } from "../../discord/send.shared.js";
-import { resolveDiscordChannelId } from "../../discord/targets.js";
+} from "../../channels/impl/discord/send.js";
+import type {
+  DiscordSendComponents,
+  DiscordSendEmbeds,
+} from "../../channels/impl/discord/send.shared.js";
+import { resolveDiscordChannelId } from "../../channels/impl/discord/targets.js";
+import type { DiscordActionConfig } from "../../config/config.js";
 import { withNormalizedTimestamp } from "../date-time.js";
 import { assertMediaNotDataUrl } from "../sandbox-paths.js";
 import {

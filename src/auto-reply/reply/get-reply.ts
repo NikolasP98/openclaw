@@ -22,6 +22,7 @@ import { runPreparedReply } from "./get-reply-run.js";
 import { finalizeInboundContext } from "./inbound-context.js";
 import { applyResetModelOverride } from "./session-reset-model.js";
 import { initSessionState } from "./session.js";
+import { routeMessage } from "./smart-routing.js";
 import { stageSandboxMedia } from "./stage-sandbox-media.js";
 import { createTypingController } from "./typing.js";
 
@@ -105,7 +106,7 @@ export async function getReplyFromConfig(
   });
   const workspaceDir = workspace.dir;
   const agentDir = resolveAgentDir(cfg, agentId);
-  const timeoutMs = resolveAgentTimeoutMs({ cfg, overrideSeconds: opts?.timeoutOverrideSeconds });
+  let timeoutMs = resolveAgentTimeoutMs({ cfg, overrideSeconds: opts?.timeoutOverrideSeconds });
   const configuredTypingSeconds =
     agentCfg?.typingIntervalSeconds ?? sessionCfg?.typingIntervalSeconds;
   const typingIntervalSeconds =
@@ -241,6 +242,33 @@ export async function getReplyFromConfig(
   provider = resolvedProvider;
   model = resolvedModel;
 
+  // ── Smart routing: classify message and potentially override model ──────
+  const promptText =
+    sessionState.sessionCtx.CommandBody ??
+    sessionState.sessionCtx.RawBody ??
+    sessionState.sessionCtx.BodyStripped ??
+    "";
+  const smartRoute = routeMessage({
+    message: promptText,
+    routing: agentCfg?.routing,
+    orchestrator: agentCfg?.orchestrator,
+  });
+  let smartRouted = false;
+  if (smartRoute?.provider && smartRoute?.model) {
+    provider = smartRoute.provider;
+    model = smartRoute.model;
+    smartRouted = true;
+  }
+  if (smartRoute?.contextTokensCap) {
+    contextTokens = Math.min(contextTokens, smartRoute.contextTokensCap);
+  }
+  // B.3: Override timeout when smart routing specifies a tier-specific timeout.
+  if (smartRoute?.timeoutMs) {
+    timeoutMs = smartRoute.timeoutMs;
+  }
+  const smartRouteDisableTools = smartRoute?.disableTools ?? false;
+  // ── End smart routing ───────────────────────────────────────────────────
+
   const inlineActionResult = await handleInlineActions({
     ctx,
     sessionCtx,
@@ -337,5 +365,7 @@ export async function getReplyFromConfig(
     storePath,
     workspaceDir,
     abortedLastRun,
+    smartRouted,
+    smartRouteDisableTools,
   });
 }

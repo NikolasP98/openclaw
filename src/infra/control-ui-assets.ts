@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { runCommandWithTimeout } from "../process/exec.js";
+import { runCommandWithTimeout } from "../platform/process/exec.js";
 import { defaultRuntime, type RuntimeEnv } from "../runtime.js";
 import { resolveOpenClawPackageRoot, resolveOpenClawPackageRootSync } from "./openclaw-root.js";
 

@@ -2,10 +2,10 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { OnboardOptions } from "../commands/onboard-types.js";
+import type { OnboardOptions } from "../cli/commands/onboard-types.js";
 import type { RuntimeEnv } from "../runtime.js";
-import type { WizardPrompter } from "./prompts.js";
 import { finalizeOnboardingWizard } from "./onboarding.finalize.js";
+import type { WizardPrompter } from "./prompts.js";
 
 const mocks = vi.hoisted(() => ({
   detectBrowserOpenSupport: vi.fn(async () => ({ ok: true })),
@@ -16,8 +16,8 @@ const mocks = vi.hoisted(() => ({
   runTui: vi.fn(async () => {}),
 }));
 
-vi.mock("../commands/onboard-helpers.js", async (importActual) => {
-  const actual = await importActual<typeof import("../commands/onboard-helpers.js")>();
+vi.mock("../cli/commands/onboard-helpers.js", async (importActual) => {
+  const actual = await importActual<typeof import("../cli/commands/onboard-helpers.js")>();
   return {
     ...actual,
     detectBrowserOpenSupport: mocks.detectBrowserOpenSupport,
@@ -84,7 +84,9 @@ describe("finalizeOnboardingWizard", () => {
     mocks.runTui.mockClear();
   });
 
-  it("opens loopback webchat URL with canonical main session key when bind=lan", async () => {
+  // URL format: "http://127.0.0.1:{port}/#token=..." (no /chat path, no session query param
+  // since the webchat now resolves the main session automatically on load).
+  it("opens loopback webchat URL when bind=loopback", async () => {
     vi.spyOn(process, "platform", "get").mockReturnValue("darwin");
     const workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-onboarding-finalize-"));
 
@@ -105,7 +107,7 @@ describe("finalizeOnboardingWizard", () => {
       workspaceDir,
       settings: {
         port: 18789,
-        bind: "lan",
+        bind: "loopback",
         authMode: "token",
         gatewayToken: "test token",
         tailscaleMode: "off",
@@ -115,9 +117,7 @@ describe("finalizeOnboardingWizard", () => {
       runtime,
     });
 
-    expect(mocks.openUrl).toHaveBeenCalledWith(
-      "http://127.0.0.1:18789/chat?session=agent%3Amain%3Amain#token=test%20token",
-    );
+    expect(mocks.openUrl).toHaveBeenCalledWith("http://127.0.0.1:18789/#token=test%20token");
 
     await fs.rm(workspaceDir, { recursive: true, force: true });
   });

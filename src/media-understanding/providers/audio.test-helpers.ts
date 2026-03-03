@@ -1,7 +1,7 @@
 import type { MockInstance } from "vitest";
 import { afterEach, beforeEach, vi } from "vitest";
 import * as ssrf from "../../infra/net/ssrf.js";
-import { withFetchPreconnect } from "../../test-utils/fetch-mock.js";
+import { withFetchPreconnect } from "../../test-support/fetch-mock.js";
 
 export function resolveRequestUrl(input: RequestInfo | URL): string {
   if (typeof input === "string") {

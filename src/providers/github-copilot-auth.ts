@@ -1,7 +1,7 @@
 import { intro, note, outro, spinner } from "@clack/prompts";
 import { ensureAuthProfileStore, upsertAuthProfile } from "../agents/auth-profiles.js";
-import { updateConfig } from "../commands/models/shared.js";
-import { applyAuthProfileConfig } from "../commands/onboard-auth.js";
+import { updateConfig } from "../cli/commands/models/shared.js";
+import { applyAuthProfileConfig } from "../cli/commands/onboard-auth.js";
 import { logConfigUpdated } from "../config/logging.js";
 import type { RuntimeEnv } from "../runtime.js";
 import { stylePromptTitle } from "../terminal/prompt-style.js";

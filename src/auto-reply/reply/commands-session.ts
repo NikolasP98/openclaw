@@ -5,32 +5,19 @@ import { logVerbose } from "../../globals.js";
 import { createInternalHookEvent, triggerInternalHook } from "../../hooks/internal-hooks.js";
 import { scheduleGatewaySigusr1Restart, triggerMinionRestart } from "../../infra/restart.js";
 import { loadCostUsageSummary, loadSessionCostSummary } from "../../infra/session-cost-usage.js";
-import { formatTokenCount, formatUsd } from "../../utils/usage-format.js";
+import { formatTokenCount, formatUsd } from "../../shared/usage-format.js";
 import { parseActivationCommand } from "../group-activation.js";
 import { parseSendPolicyCommand } from "../send-policy.js";
 import { normalizeUsageDisplay, resolveResponseUsageMode } from "../thinking.js";
 import {
   formatAbortReplyText,
   isAbortTrigger,
+  resolveSessionEntryForKey,
   setAbortMemory,
   stopSubagentsForRequester,
 } from "./abort.js";
 import type { CommandHandler } from "./commands-types.js";
 import { clearSessionQueues } from "./queue.js";
-
-function resolveSessionEntryForKey(
-  store: Record<string, SessionEntry> | undefined,
-  sessionKey: string | undefined,
-) {
-  if (!store || !sessionKey) {
-    return {};
-  }
-  const direct = store[sessionKey];
-  if (direct) {
-    return { entry: direct, key: sessionKey };
-  }
-  return {};
-}
 
 function resolveAbortTarget(params: {
   ctx: { CommandTargetSessionKey?: string | null };

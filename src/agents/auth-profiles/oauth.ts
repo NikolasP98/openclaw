@@ -6,6 +6,7 @@ import {
 } from "@mariozechner/pi-ai";
 import type { OpenClawConfig } from "../../config/config.js";
 import { withFileLock } from "../../infra/file-lock.js";
+import { emitReliabilityEvent } from "../../logging/reliability.js";
 import { refreshQwenPortalCredentials } from "../../providers/qwen-portal-oauth.js";
 import { refreshChutesTokens } from "../chutes-oauth.js";
 import { AUTH_STORE_LOCK_OPTIONS, log } from "./constants.js";
@@ -19,6 +20,9 @@ const OAUTH_PROVIDER_IDS = new Set<string>(getOAuthProviders().map((provider) =>
 
 const isOAuthProvider = (provider: string): provider is OAuthProvider =>
   OAUTH_PROVIDER_IDS.has(provider);
+
+/** Returns true if the provider is supported by the pi-ai OAuth refresh mechanism. */
+export const isKnownOAuthProvider = (provider: string): boolean => OAUTH_PROVIDER_IDS.has(provider);
 
 const resolveOAuthProvider = (provider: string): OAuthProvider | null =>
   isOAuthProvider(provider) ? provider : null;
@@ -91,7 +95,7 @@ type ResolveApiKeyForProfileParams = {
   agentDir?: string;
 };
 
-async function refreshOAuthTokenWithLock(params: {
+export async function refreshOAuthTokenWithLock(params: {
   profileId: string;
   agentDir?: string;
 }): Promise<{ apiKey: string; newCredentials: OAuthCredentials } | null> {
@@ -251,6 +255,50 @@ export async function resolveApiKeyForProfile(
       email: cred.email,
     });
   } catch (error) {
+    const errMessage = error instanceof Error ? error.message : String(error);
+    const isAuthError =
+      errMessage.includes("401") ||
+      errMessage.includes("403") ||
+      errMessage.includes("invalid_grant") ||
+      errMessage.includes("Token has been revoked") ||
+      errMessage.includes("unauthorized");
+
+    // Emit reliability event for failed refresh
+    emitReliabilityEvent({
+      category: "auth",
+      severity: isAuthError && errMessage.includes("invalid_grant") ? "critical" : "high",
+      event: isAuthError ? "credential.refresh.auth_error" : "credential.refresh.failed",
+      message: `OAuth refresh failed for ${cred.provider} "${profileId}": ${errMessage}`,
+      metadata: { profileId, provider: cred.provider, isAuthError },
+    });
+
+    // Retry: if recognizably an auth error, attempt a single forced refresh
+    if (isAuthError) {
+      try {
+        log.info("retrying refresh after auth error", { profileId, provider: cred.provider });
+        const retryResult = await refreshOAuthTokenWithLock({
+          profileId,
+          agentDir: params.agentDir,
+        });
+        if (retryResult) {
+          emitReliabilityEvent({
+            category: "auth",
+            severity: "low",
+            event: "credential.refresh.retry_ok",
+            message: `Retry refresh succeeded for ${cred.provider} "${profileId}"`,
+            metadata: { profileId, provider: cred.provider },
+          });
+          return buildApiKeyProfileResult({
+            apiKey: retryResult.apiKey,
+            provider: cred.provider,
+            email: cred.email,
+          });
+        }
+      } catch {
+        // Retry also failed — fall through to existing fallback chain
+      }
+    }
+
     const refreshedStore = ensureAuthProfileStore(params.agentDir);
     const refreshed = refreshedStore.profiles[profileId];
     if (refreshed?.type === "oauth" && Date.now() < refreshed.expires) {

@@ -11,6 +11,7 @@ type EnvSnapshot = {
   homePath: string | undefined;
   minionHome: string | undefined;
   stateDir: string | undefined;
+  openclawStateDir: string | undefined;
 };
 
 function snapshotEnv(): EnvSnapshot {
@@ -21,6 +22,7 @@ function snapshotEnv(): EnvSnapshot {
     homePath: process.env.HOMEPATH,
     minionHome: process.env.MINION_HOME,
     stateDir: process.env.MINION_STATE_DIR,
+    openclawStateDir: process.env.OPENCLAW_STATE_DIR,
   };
 }
 
@@ -38,6 +40,7 @@ function restoreEnv(snapshot: EnvSnapshot) {
   restoreKey("HOMEPATH", snapshot.homePath);
   restoreKey("MINION_HOME", snapshot.minionHome);
   restoreKey("MINION_STATE_DIR", snapshot.stateDir);
+  restoreKey("OPENCLAW_STATE_DIR", snapshot.openclawStateDir);
 }
 
 function snapshotExtraEnv(keys: string[]): Record<string, string | undefined> {
@@ -64,6 +67,8 @@ function setTempHome(base: string) {
   // Ensure tests using HOME isolation aren't affected by leaked MINION_HOME.
   delete process.env.MINION_HOME;
   process.env.MINION_STATE_DIR = path.join(base, ".minion");
+  // Also set OPENCLAW_STATE_DIR for tests that still reference the legacy env var.
+  process.env.OPENCLAW_STATE_DIR = path.join(base, ".minion");
 
   if (process.platform !== "win32") {
     return;

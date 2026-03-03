@@ -115,20 +115,20 @@ describe("mergeExecApprovalsSocketDefaults", () => {
 describe("resolve exec approvals defaults", () => {
   it("expands home-prefixed default file and socket paths", () => {
     const dir = makeTempDir();
-    const prevOpenClawHome = process.env.OPENCLAW_HOME;
+    const prevOpenClawHome = process.env.MINION_HOME;
     try {
-      process.env.OPENCLAW_HOME = dir;
+      process.env.MINION_HOME = dir;
       expect(path.normalize(resolveExecApprovalsPath())).toBe(
-        path.normalize(path.join(dir, ".openclaw", "exec-approvals.json")),
+        path.normalize(path.join(dir, ".minion", "exec-approvals.json")),
       );
       expect(path.normalize(resolveExecApprovalsSocketPath())).toBe(
-        path.normalize(path.join(dir, ".openclaw", "exec-approvals.sock")),
+        path.normalize(path.join(dir, ".minion", "exec-approvals.sock")),
       );
     } finally {
       if (prevOpenClawHome === undefined) {
-        delete process.env.OPENCLAW_HOME;
+        delete process.env.MINION_HOME;
       } else {
-        process.env.OPENCLAW_HOME = prevOpenClawHome;
+        process.env.MINION_HOME = prevOpenClawHome;
       }
     }
   });
@@ -623,11 +623,11 @@ describe("exec approvals policy helpers", () => {
 describe("exec approvals wildcard agent", () => {
   it("merges wildcard allowlist entries with agent entries", () => {
     const dir = makeTempDir();
-    const prevOpenClawHome = process.env.OPENCLAW_HOME;
+    const prevOpenClawHome = process.env.MINION_HOME;
 
     try {
-      process.env.OPENCLAW_HOME = dir;
-      const approvalsPath = path.join(dir, ".openclaw", "exec-approvals.json");
+      process.env.MINION_HOME = dir;
+      const approvalsPath = path.join(dir, ".minion", "exec-approvals.json");
       fs.mkdirSync(path.dirname(approvalsPath), { recursive: true });
       fs.writeFileSync(
         approvalsPath,
@@ -651,9 +651,9 @@ describe("exec approvals wildcard agent", () => {
       ]);
     } finally {
       if (prevOpenClawHome === undefined) {
-        delete process.env.OPENCLAW_HOME;
+        delete process.env.MINION_HOME;
       } else {
-        process.env.OPENCLAW_HOME = prevOpenClawHome;
+        process.env.MINION_HOME = prevOpenClawHome;
       }
     }
   });

@@ -11,8 +11,8 @@ import {
   getActiveTaskCount,
   resetAllLanes,
   waitForActiveTasks,
-} from "../../process/command-queue.js";
-import { createRestartIterationHook } from "../../process/restart-recovery.js";
+} from "../../platform/process/command-queue.js";
+import { createRestartIterationHook } from "../../platform/process/restart-recovery.js";
 import type { defaultRuntime } from "../../runtime.js";
 
 const gatewayLog = createSubsystemLogger("gateway");

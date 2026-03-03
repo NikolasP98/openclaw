@@ -9,9 +9,9 @@ import * as skillScanner from "../security/skill-scanner.js";
 import {
   expectSingleNpmInstallIgnoreScriptsCall,
   expectSingleNpmPackIgnoreScriptsCall,
-} from "../test-utils/exec-assertions.js";
+} from "../test-support/exec-assertions.js";
 
-vi.mock("../process/exec.js", () => ({
+vi.mock("../platform/process/exec.js", () => ({
   runCommandWithTimeout: vi.fn(),
 }));
 
@@ -433,7 +433,7 @@ describe("installPluginFromDir", () => {
     );
     fs.writeFileSync(path.join(pluginDir, "dist", "index.js"), "export {};", "utf-8");
 
-    const { runCommandWithTimeout } = await import("../process/exec.js");
+    const { runCommandWithTimeout } = await import("../platform/process/exec.js");
     const run = vi.mocked(runCommandWithTimeout);
     run.mockResolvedValue({
       code: 0,
@@ -480,7 +480,7 @@ describe("installPluginFromNpmSpec", () => {
     const extensionsDir = path.join(stateDir, "extensions");
     fs.mkdirSync(extensionsDir, { recursive: true });
 
-    const { runCommandWithTimeout } = await import("../process/exec.js");
+    const { runCommandWithTimeout } = await import("../platform/process/exec.js");
     const run = vi.mocked(runCommandWithTimeout);
 
     let packTmpDir = "";

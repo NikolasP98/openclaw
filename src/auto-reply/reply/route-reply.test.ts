@@ -9,8 +9,11 @@ import type { ChannelOutboundAdapter, ChannelPlugin } from "../../channels/plugi
 import type { OpenClawConfig } from "../../config/config.js";
 import type { PluginRegistry } from "../../plugins/registry.js";
 import { setActivePluginRegistry } from "../../plugins/runtime.js";
-import { createOutboundTestPlugin, createTestRegistry } from "../../test-utils/channel-plugins.js";
-import { createIMessageTestPlugin } from "../../test-utils/imessage-test-plugin.js";
+import {
+  createOutboundTestPlugin,
+  createTestRegistry,
+} from "../../test-support/channel-plugins.js";
+import { createIMessageTestPlugin } from "../../test-support/imessage-test-plugin.js";
 import { SILENT_REPLY_TOKEN } from "../tokens.js";
 
 const mocks = vi.hoisted(() => ({
@@ -27,19 +30,19 @@ const mocks = vi.hoisted(() => ({
   deliverOutboundPayloads: vi.fn(),
 }));
 
-vi.mock("../../discord/send.js", () => ({
+vi.mock("../../channels/impl/discord/send.js", () => ({
   sendMessageDiscord: mocks.sendMessageDiscord,
 }));
-vi.mock("../../imessage/send.js", () => ({
+vi.mock("../../channels/impl/imessage/send.js", () => ({
   sendMessageIMessage: mocks.sendMessageIMessage,
 }));
-vi.mock("../../signal/send.js", () => ({
+vi.mock("../../channels/impl/signal/send.js", () => ({
   sendMessageSignal: mocks.sendMessageSignal,
 }));
-vi.mock("../../slack/send.js", () => ({
+vi.mock("../../channels/impl/slack/send.js", () => ({
   sendMessageSlack: mocks.sendMessageSlack,
 }));
-vi.mock("../../telegram/send.js", () => ({
+vi.mock("../../channels/impl/telegram/send.js", () => ({
   sendMessageTelegram: mocks.sendMessageTelegram,
 }));
 vi.mock("../../web/outbound.js", () => ({

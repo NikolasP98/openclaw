@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { captureFullEnv } from "../test-utils/env.js";
+import { captureFullEnv } from "../test-support/env.js";
 
 const spawnMock = vi.hoisted(() => vi.fn());
 

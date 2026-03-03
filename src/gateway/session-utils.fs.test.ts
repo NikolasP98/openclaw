@@ -469,13 +469,13 @@ describe("readSessionMessages", () => {
     const marker = out[1] as {
       role: string;
       content?: Array<{ text?: string }>;
-      __openclaw?: { kind?: string; id?: string };
+      __minion?: { kind?: string; id?: string };
       timestamp?: number;
     };
     expect(marker.role).toBe("system");
     expect(marker.content?.[0]?.text).toBe("Compaction");
-    expect(marker.__openclaw?.kind).toBe("compaction");
-    expect(marker.__openclaw?.id).toBe("comp-1");
+    expect(marker.__minion?.kind).toBe("compaction");
+    expect(marker.__minion?.id).toBe("comp-1");
     expect(typeof marker.timestamp).toBe("number");
   });
 
@@ -614,13 +614,13 @@ describe("resolveSessionTranscriptCandidates", () => {
   });
 
   test("fallback candidate uses OPENCLAW_HOME instead of os.homedir()", () => {
-    vi.stubEnv("OPENCLAW_HOME", "/srv/openclaw-home");
+    vi.stubEnv("MINION_HOME", "/srv/openclaw-home");
     vi.stubEnv("HOME", "/home/other");
 
     const candidates = resolveSessionTranscriptCandidates("sess-1", undefined);
     const fallback = candidates[candidates.length - 1];
     expect(fallback).toBe(
-      path.join(path.resolve("/srv/openclaw-home"), ".openclaw", "sessions", "sess-1.jsonl"),
+      path.join(path.resolve("/srv/openclaw-home"), ".minion", "sessions", "sess-1.jsonl"),
     );
   });
 });
@@ -676,7 +676,7 @@ describe("archiveSessionTranscripts", () => {
   });
 
   beforeAll(() => {
-    vi.stubEnv("OPENCLAW_HOME", tmpDir);
+    vi.stubEnv("MINION_HOME", tmpDir);
   });
 
   afterAll(() => {

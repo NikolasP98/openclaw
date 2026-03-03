@@ -24,7 +24,7 @@ import { defaultRuntime } from "../../runtime.js";
 import {
   isMarkdownCapableMessageChannel,
   resolveMessageChannel,
-} from "../../utils/message-channel.js";
+} from "../../shared/message-channel.js";
 import { stripHeartbeatToken } from "../heartbeat.js";
 import type { TemplateContext } from "../templating.js";
 import type { VerboseLevel } from "../thinking.js";

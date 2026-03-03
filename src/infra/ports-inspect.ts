@@ -1,5 +1,5 @@
 import net from "node:net";
-import { runCommandWithTimeout } from "../process/exec.js";
+import { runCommandWithTimeout } from "../platform/process/exec.js";
 import { isErrno } from "./errors.js";
 import { buildPortHints } from "./ports-format.js";
 import { resolveLsofCommand } from "./ports-lsof.js";

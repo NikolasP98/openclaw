@@ -48,6 +48,10 @@ async function createDockerSetupSandbox(): Promise<DockerSetupSandbox> {
 
   await copyFile(join(repoRoot, "docker-setup.sh"), scriptPath);
   await chmod(scriptPath, 0o755);
+  // Copy the shared env library that docker-setup.sh sources.
+  const libDir = join(rootDir, "scripts", "lib");
+  await mkdir(libDir, { recursive: true });
+  await copyFile(join(repoRoot, "scripts", "lib", "minion-env.sh"), join(libDir, "minion-env.sh"));
   await writeFile(dockerfilePath, "FROM scratch\n");
   await writeFile(
     composePath,

@@ -17,8 +17,8 @@ import { GATEWAY_CLIENT_IDS, GATEWAY_CLIENT_MODES } from "../../gateway/protocol
 import { getToolResult, runMessageAction } from "../../infra/outbound/message-action-runner.js";
 import { normalizeTargetForProvider } from "../../infra/outbound/target-normalization.js";
 import { normalizeAccountId } from "../../routing/session-key.js";
+import { normalizeMessageChannel } from "../../shared/message-channel.js";
 import { stripReasoningTagsFromText } from "../../shared/text/reasoning-tags.js";
-import { normalizeMessageChannel } from "../../utils/message-channel.js";
 import { resolveSessionAgentId } from "../agent-scope.js";
 import { listChannelSupportedActions } from "../channel-tools.js";
 import { channelTargetSchema, channelTargetsSchema, stringEnum } from "../schema/typebox.js";

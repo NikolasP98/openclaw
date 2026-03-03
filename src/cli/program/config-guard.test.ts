@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const loadAndMaybeMigrateDoctorConfigMock = vi.hoisted(() => vi.fn());
 const readConfigFileSnapshotMock = vi.hoisted(() => vi.fn());
 
-vi.mock("../../commands/doctor-config-flow.js", () => ({
+vi.mock("../../cli/commands/doctor-config-flow.js", () => ({
   loadAndMaybeMigrateDoctorConfig: loadAndMaybeMigrateDoctorConfigMock,
 }));
 

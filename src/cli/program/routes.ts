@@ -17,7 +17,7 @@ const routeHealth: RouteSpec = {
     if (timeoutMs === null) {
       return false;
     }
-    const { healthCommand } = await import("../../commands/health.js");
+    const { healthCommand } = await import("../../cli/commands/health.js");
     await healthCommand({ json, timeoutMs, verbose }, defaultRuntime);
     return true;
   },
@@ -36,7 +36,7 @@ const routeStatus: RouteSpec = {
     if (timeoutMs === null) {
       return false;
     }
-    const { statusCommand } = await import("../../commands/status.js");
+    const { statusCommand } = await import("../../cli/commands/status.js");
     await statusCommand({ json, deep, all, usage, timeoutMs, verbose }, defaultRuntime);
     return true;
   },
@@ -54,7 +54,7 @@ const routeSessions: RouteSpec = {
     if (active === null) {
       return false;
     }
-    const { sessionsCommand } = await import("../../commands/sessions.js");
+    const { sessionsCommand } = await import("../../cli/commands/sessions.js");
     await sessionsCommand({ json, store, active }, defaultRuntime);
     return true;
   },
@@ -65,7 +65,7 @@ const routeAgentsList: RouteSpec = {
   run: async (argv) => {
     const json = hasFlag(argv, "--json");
     const bindings = hasFlag(argv, "--bindings");
-    const { agentsListCommand } = await import("../../commands/agents.js");
+    const { agentsListCommand } = await import("../../cli/commands/agents.js");
     await agentsListCommand({ json, bindings }, defaultRuntime);
     return true;
   },
@@ -171,7 +171,7 @@ const routeModelsList: RouteSpec = {
     const local = hasFlag(argv, "--local");
     const json = hasFlag(argv, "--json");
     const plain = hasFlag(argv, "--plain");
-    const { modelsListCommand } = await import("../../commands/models.js");
+    const { modelsListCommand } = await import("../../cli/commands/models.js");
     await modelsListCommand({ all, local, provider, json, plain }, defaultRuntime);
     return true;
   },
@@ -214,7 +214,7 @@ const routeModelsStatus: RouteSpec = {
     const plain = hasFlag(argv, "--plain");
     const check = hasFlag(argv, "--check");
     const probe = hasFlag(argv, "--probe");
-    const { modelsStatusCommand } = await import("../../commands/models.js");
+    const { modelsStatusCommand } = await import("../../cli/commands/models.js");
     await modelsStatusCommand(
       {
         json,

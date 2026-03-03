@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
-import type { MockFn } from "../test-utils/vitest-mock-fn.js";
+import type { MockFn } from "../test-support/vitest-mock-fn.js";
 import { getFreePort } from "./test-port.js";
 
 export { getFreePort } from "./test-port.js";
@@ -178,7 +178,7 @@ export function getLaunchCalls() {
 vi.mock("./chrome.js", () => ({
   isChromeCdpReady: vi.fn(async () => state.reachable),
   isChromeReachable: vi.fn(async () => state.reachable),
-  launchMinionChrome: vi.fn(async (_resolved: unknown, profile: { cdpPort: number }) => {
+  launchOpenClawChrome: vi.fn(async (_resolved: unknown, profile: { cdpPort: number }) => {
     launchCalls.push({ port: profile.cdpPort });
     state.reachable = true;
     return {
@@ -191,7 +191,7 @@ vi.mock("./chrome.js", () => ({
     };
   }),
   resolveMinionUserDataDir: vi.fn(() => chromeUserDataDir.dir),
-  stopMinionChrome: vi.fn(async () => {
+  stopOpenClawChrome: vi.fn(async () => {
     state.reachable = false;
   }),
 }));

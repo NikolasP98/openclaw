@@ -3,7 +3,12 @@ import { ToolsSchema } from "./zod-schema.agent-runtime.js";
 import { AgentsSchema, AudioSchema, BindingsSchema, BroadcastSchema } from "./zod-schema.agents.js";
 import { ApprovalsSchema } from "./zod-schema.approvals.js";
 import { HexColorSchema, ModelsConfigSchema } from "./zod-schema.core.js";
-import { HookMappingSchema, HooksGmailSchema, InternalHooksSchema } from "./zod-schema.hooks.js";
+import {
+  GogOAuthSchema,
+  HookMappingSchema,
+  HooksGmailSchema,
+  InternalHooksSchema,
+} from "./zod-schema.hooks.js";
 import { InstallRecordShape } from "./zod-schema.installs.js";
 import { ChannelsSchema } from "./zod-schema.providers.js";
 import { sensitive } from "./zod-schema.sensitive.js";
@@ -105,6 +110,7 @@ const HttpUrlSchema = z
 export const MinionSchema = z
   .object({
     $schema: z.string().optional(),
+    admins: z.array(z.string()).optional(),
     meta: z
       .object({
         lastTouchedVersion: z.string().optional(),
@@ -325,6 +331,7 @@ export const MinionSchema = z
         mappings: z.array(HookMappingSchema).optional(),
         gmail: HooksGmailSchema,
         internal: InternalHooksSchema,
+        gogOAuth: GogOAuthSchema,
       })
       .strict()
       .optional(),
@@ -410,7 +417,12 @@ export const MinionSchema = z
         auth: z
           .object({
             mode: z
-              .union([z.literal("token"), z.literal("password"), z.literal("trusted-proxy")])
+              .union([
+                z.literal("none"),
+                z.literal("token"),
+                z.literal("password"),
+                z.literal("trusted-proxy"),
+              ])
               .optional(),
             token: z.string().optional().register(sensitive),
             password: z.string().optional().register(sensitive),
@@ -444,10 +456,18 @@ export const MinionSchema = z
           .strict()
           .optional(),
         channelHealthCheckMinutes: z.number().int().min(0).optional(),
+        messageLedger: z
+          .object({
+            enabled: z.boolean().optional(),
+            dbPath: z.string().optional(),
+          })
+          .strict()
+          .optional(),
         tailscale: z
           .object({
             mode: z.union([z.literal("off"), z.literal("serve"), z.literal("funnel")]).optional(),
             resetOnExit: z.boolean().optional(),
+            enableFunnel: z.boolean().optional(),
           })
           .strict()
           .optional(),
@@ -554,6 +574,16 @@ export const MinionSchema = z
               .optional(),
             allowCommands: z.array(z.string()).optional(),
             denyCommands: z.array(z.string()).optional(),
+          })
+          .strict()
+          .optional(),
+        hubMetrics: z
+          .object({
+            enabled: z.boolean().optional(),
+            hubUrl: z.string().optional(),
+            apiKey: z.string().optional().register(sensitive),
+            serverId: z.string().optional(),
+            pushIntervalMs: z.number().int().positive().optional(),
           })
           .strict()
           .optional(),

@@ -11,8 +11,17 @@ const ciWorkers = isWindows ? 2 : 3;
 
 export default defineConfig({
   resolve: {
-    // Keep this ordered: the base `openclaw/plugin-sdk` alias is a prefix match.
+    // Keep this ordered: more specific subpath aliases must come before base aliases.
     alias: [
+      {
+        find: "minion/plugin-sdk/account-id",
+        replacement: path.join(repoRoot, "src", "plugin-sdk", "account-id.ts"),
+      },
+      {
+        find: "minion/plugin-sdk",
+        replacement: path.join(repoRoot, "src", "plugin-sdk", "index.ts"),
+      },
+      // Legacy openclaw aliases kept for any remaining imports.
       {
         find: "openclaw/plugin-sdk/account-id",
         replacement: path.join(repoRoot, "src", "plugin-sdk", "account-id.ts"),
@@ -80,8 +89,8 @@ export default defineConfig({
         "src/extensionAPI.ts",
         "src/logging.ts",
         "src/cli/**",
-        "src/commands/**",
-        "src/daemon/**",
+        "src/cli/commands/**",
+        "src/platform/daemon/**",
         "src/hooks/**",
         "src/macos/**",
 
@@ -127,22 +136,19 @@ export default defineConfig({
 
         // Process bridges are hard to unit-test in isolation.
         "src/gateway/call.ts",
-        "src/process/tau-rpc.ts",
-        "src/process/exec.ts",
+        "src/platform/process/tau-rpc.ts",
+        "src/platform/process/exec.ts",
         // Interactive UIs/flows are intentionally validated via manual/e2e runs.
         "src/tui/**",
         "src/wizard/**",
         // Channel surfaces are largely integration-tested (or manually validated).
-        "src/discord/**",
-        "src/imessage/**",
-        "src/signal/**",
-        "src/slack/**",
+        "src/channels/impl/discord/**",
+        "src/channels/impl/imessage/**",
+        "src/channels/impl/signal/**",
+        "src/channels/impl/slack/**",
         "src/browser/**",
         "src/channels/web/**",
-        "src/telegram/index.ts",
-        "src/telegram/proxy.ts",
-        "src/telegram/webhook-set.ts",
-        "src/telegram/**",
+        "src/channels/impl/telegram/**",
         "src/webchat/**",
         "src/gateway/server.ts",
         "src/gateway/client.ts",

@@ -1,9 +1,12 @@
+import { resolveDiscordAccount } from "../../channels/impl/discord/accounts.js";
+import { resolveSlackAccount } from "../../channels/impl/slack/accounts.js";
+import { resolveTelegramAccount } from "../../channels/impl/telegram/accounts.js";
+import {
+  isWhatsAppGroupJid,
+  normalizeWhatsAppTarget,
+} from "../../channels/impl/whatsapp/normalize.js";
 import type { OpenClawConfig } from "../../config/types.js";
-import { resolveDiscordAccount } from "../../discord/accounts.js";
-import { resolveSlackAccount } from "../../slack/accounts.js";
-import { resolveTelegramAccount } from "../../telegram/accounts.js";
 import { resolveWhatsAppAccount } from "../../web/accounts.js";
-import { isWhatsAppGroupJid, normalizeWhatsAppTarget } from "../../whatsapp/normalize.js";
 import { normalizeSlackMessagingTarget } from "./normalize/slack.js";
 import type { ChannelDirectoryEntry } from "./types.js";
 

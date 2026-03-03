@@ -5,7 +5,7 @@ import {
   listDeliverableMessageChannels,
   type DeliverableMessageChannel,
   normalizeMessageChannel,
-} from "../../utils/message-channel.js";
+} from "../../shared/message-channel.js";
 
 export type MessageChannelId = DeliverableMessageChannel;
 

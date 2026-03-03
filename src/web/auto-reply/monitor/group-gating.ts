@@ -17,6 +17,8 @@ export type GroupHistoryEntry = {
   timestamp?: number;
   id?: string;
   senderJid?: string;
+  mediaPath?: string;
+  mediaType?: string;
 };
 
 function isOwnerSender(baseMentionConfig: MentionConfig, msg: WebInboundMsg) {
@@ -48,6 +50,8 @@ function recordPendingGroupHistoryEntry(params: {
       timestamp: params.msg.timestamp,
       id: params.msg.id,
       senderJid: params.msg.senderJid,
+      mediaPath: params.msg.mediaPath ?? undefined,
+      mediaType: params.msg.mediaType ?? undefined,
     },
   });
 }

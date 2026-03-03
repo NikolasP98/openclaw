@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MinionConfig } from "../config/config.js";
-import "./test-helpers/fast-coding-tools.js";
+import "./test-support/fast-coding-tools.js";
 import { createMinionCodingTools } from "./pi-tools.js";
 
 const defaultTools = createMinionCodingTools();

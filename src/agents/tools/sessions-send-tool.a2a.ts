@@ -1,8 +1,7 @@
-import crypto from "node:crypto";
 import { callGateway } from "../../gateway/call.js";
 import { formatErrorMessage } from "../../infra/errors.js";
 import { createSubsystemLogger } from "../../logging/subsystem.js";
-import type { GatewayMessageChannel } from "../../utils/message-channel.js";
+import type { GatewayMessageChannel } from "../../shared/message-channel.js";
 import { AGENT_LANE_NESTED } from "../lanes.js";
 import { readLatestAssistantReply, runAgentStep } from "./agent-step.js";
 import { resolveAnnounceTarget } from "./sessions-announce-target.js";
@@ -127,7 +126,8 @@ export async function runSessionsSendA2AFlow(params: {
             message: announceReply.trim(),
             channel: announceTarget.channel,
             accountId: announceTarget.accountId,
-            idempotencyKey: crypto.randomUUID(),
+            // Derive a stable idempotency key from the run so announce retries are deduped.
+            idempotencyKey: `a2a-announce:${runContextId}`,
           },
           timeoutMs: 10_000,
         });

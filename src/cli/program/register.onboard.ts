@@ -1,15 +1,15 @@
 import type { Command } from "commander";
-import { formatAuthChoiceChoicesForCli } from "../../commands/auth-choice-options.js";
-import type { GatewayDaemonRuntime } from "../../commands/daemon-runtime.js";
-import { ONBOARD_PROVIDER_AUTH_FLAGS } from "../../commands/onboard-provider-auth-flags.js";
+import { formatAuthChoiceChoicesForCli } from "../../cli/commands/auth-choice-options.js";
+import type { GatewayDaemonRuntime } from "../../cli/commands/daemon-runtime.js";
+import { ONBOARD_PROVIDER_AUTH_FLAGS } from "../../cli/commands/onboard-provider-auth-flags.js";
 import type {
   AuthChoice,
   GatewayAuthChoice,
   GatewayBind,
   NodeManagerChoice,
   TailscaleMode,
-} from "../../commands/onboard-types.js";
-import { onboardCommand } from "../../commands/onboard.js";
+} from "../../cli/commands/onboard-types.js";
+import { onboardCommand } from "../../cli/commands/onboard.js";
 import { defaultRuntime } from "../../runtime.js";
 import { formatDocsLink } from "../../terminal/links.js";
 import { theme } from "../../terminal/theme.js";

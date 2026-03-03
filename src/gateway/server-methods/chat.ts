@@ -10,7 +10,7 @@ import type { MsgContext } from "../../auto-reply/templating.js";
 import { createReplyPrefixOptions } from "../../channels/reply-prefix.js";
 import { resolveSessionFilePath } from "../../config/sessions.js";
 import { resolveSendPolicy } from "../../sessions/send-policy.js";
-import { INTERNAL_MESSAGE_CHANNEL } from "../../utils/message-channel.js";
+import { INTERNAL_MESSAGE_CHANNEL } from "../../shared/message-channel.js";
 import {
   abortChatRunById,
   abortChatRunsForSessionKey,
@@ -898,7 +898,6 @@ export const chatHandlers: GatewayRequestHandlers = {
           runId: clientRunId,
           abortSignal: abortController.signal,
           images: parsedImages.length > 0 ? parsedImages : undefined,
-          disableBlockStreaming: true,
           onAgentRunStart: (runId) => {
             agentRunStarted = true;
             const connId = typeof client?.connId === "string" ? client.connId : undefined;

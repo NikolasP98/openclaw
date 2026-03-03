@@ -26,6 +26,7 @@ import {
 } from "../infra/shell-env.js";
 import { logInfo } from "../logger.js";
 import { parseAgentSessionKey, resolveAgentIdFromSessionKey } from "../routing/session-key.js";
+import type { PermissionLevel } from "../security/permission-level.js";
 import { markBackgrounded, tail } from "./bash-process-registry.js";
 import {
   DEFAULT_APPROVAL_REQUEST_TIMEOUT_MS,
@@ -83,6 +84,10 @@ export type ExecToolDefaults = {
   notifyOnExit?: boolean;
   notifyOnExitEmptySuccess?: boolean;
   cwd?: string;
+  /** Session-scoped env overrides (e.g. skill auth tokens). Merged between base env and params.env. */
+  envOverrides?: Record<string, string>;
+  /** Resolved permission tier for the current sender (threaded from RunEmbeddedPiAgentParams). */
+  senderPermissionLevel?: PermissionLevel;
 };
 
 export type { BashSandboxConfig } from "./bash-tools.shared.js";
@@ -383,9 +388,22 @@ export function createExecTool(
         containerWorkdir = resolved.containerWorkdir;
       } else {
         workdir = resolveWorkdir(rawWorkdir, warnings);
+        // A.13: Validate working_dir stays inside workspace root (non-sandbox path).
+        if (params.workdir && defaults?.cwd) {
+          const { isRealPathInside } = await import("../security/scan-paths.js");
+          if (!isRealPathInside(defaults.cwd, workdir)) {
+            throw new Error(
+              `working_dir escapes workspace: "${params.workdir}" resolves outside "${defaults.cwd}"`,
+            );
+          }
+        }
       }
 
       const baseEnv = coerceEnv(process.env);
+      // Layer session-scoped env overrides (e.g. skill auth tokens) between base and params.
+      const withOverrides = defaults?.envOverrides
+        ? { ...baseEnv, ...defaults.envOverrides }
+        : baseEnv;
 
       // Logic: Sandbox gets raw env. Host (gateway/node) must pass validation.
       // We validate BEFORE merging to prevent any dangerous vars from entering the stream.
@@ -393,7 +411,7 @@ export function createExecTool(
         validateHostEnv(params.env);
       }
 
-      const mergedEnv = params.env ? { ...baseEnv, ...params.env } : baseEnv;
+      const mergedEnv = params.env ? { ...withOverrides, ...params.env } : withOverrides;
 
       const env = sandbox
         ? buildSandboxEnv({

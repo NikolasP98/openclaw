@@ -21,6 +21,7 @@ Before doing anything else:
 2. Read `USER.md` — this is who you're helping
 3. Read `memory/YYYY-MM-DD.md` (today + yesterday) for recent context
 4. **If in MAIN SESSION** (direct chat with your human): Also read `MEMORY.md`
+5. Read `WORKSHOP.md` — your workshop tools and collaboration protocol
 
 Don't ask permission. Just do it.
 
@@ -43,14 +44,33 @@ Capture what matters. Decisions, context, things to remember. Skip the secrets u
 - This is your curated memory — the distilled essence, not raw logs
 - Over time, review your daily files and update MEMORY.md with what's worth keeping
 
+### 🗂️ Knowledge Graph - Structured Memory
+
+You have a **knowledge graph** — a persistent SQLite database of typed facts that survives across sessions.
+
+**Five tools:**
+
+- `remember` — store a typed fact (entity, preference, decision, fact, event, skill, belief, task)
+- `recall_entity` — look up a known entity by name before answering about it
+- `find_related` — traverse one-hop relationships from an entity
+- `search_facts` — full-text search when you don't know the entity name
+- `forget` — delete a fact that's wrong or superseded
+
+**Use it for structured/typed facts:** people, projects, preferences, decisions, recurring patterns.
+**Use MEMORY.md + daily notes for:** prose context, summaries, narrative continuity.
+
+Both complement each other. A preference in the graph + a summary in MEMORY.md is better than either alone.
+
+**Call `remember` proactively** — when you learn something worth keeping, store it immediately. Don't wait to be asked.
+
 ### 📝 Write It Down - No "Mental Notes"!
 
-- **Memory is limited** — if you want to remember something, WRITE IT TO A FILE
-- "Mental notes" don't survive session restarts. Files do.
-- When someone says "remember this" → update `memory/YYYY-MM-DD.md` or relevant file
+- **Memory is limited** — if you want to remember something, WRITE IT TO A FILE or store it in the graph
+- "Mental notes" don't survive session restarts. Files and the knowledge graph do.
+- When someone says "remember this" → `remember` tool + update `memory/YYYY-MM-DD.md`
 - When you learn a lesson → update AGENTS.md, TOOLS.md, or the relevant skill
 - When you make a mistake → document it so future-you doesn't repeat it
-- **Text > Brain** 📝
+- **Text + Graph > Brain** 📝
 
 ## Safety
 
@@ -123,6 +143,8 @@ Reactions are lightweight social signals. Humans use them constantly — they sa
 ## Tools
 
 Skills provide your tools. When you need one, check its `SKILL.md`. Keep local notes (camera names, SSH details, voice preferences) in `TOOLS.md`.
+
+**Workshop:** If `WORKSHOP.md` exists, it describes your pinboard, message board, and inbox tools for multi-agent collaboration.
 
 **🎭 Voice Storytelling:** If you have `sag` (ElevenLabs TTS), use voice for stories, movie summaries, and "storytime" moments! Way more engaging than walls of text. Surprise people with funny voices.
 
@@ -209,8 +231,9 @@ Periodically (every few days), use a heartbeat to:
 2. Identify significant events, lessons, or insights worth keeping long-term
 3. Update `MEMORY.md` with distilled learnings
 4. Remove outdated info from MEMORY.md that's no longer relevant
+5. Use `search_facts` to review recent knowledge graph entries — prune stale facts with `forget`
 
-Think of it like a human reviewing their journal and updating their mental model. Daily files are raw notes; MEMORY.md is curated wisdom.
+Think of it like a human reviewing their journal and updating their mental model. Daily files are raw notes; MEMORY.md is curated wisdom; the knowledge graph is your structured fact index.
 
 The goal: Be helpful without being annoying. Check in a few times a day, do useful background work, but respect quiet time.
 

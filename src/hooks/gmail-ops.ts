@@ -9,7 +9,7 @@ import {
   validateConfigObjectWithPlugins,
   writeConfigFile,
 } from "../config/config.js";
-import { runCommandWithTimeout } from "../process/exec.js";
+import { runCommandWithTimeout } from "../platform/process/exec.js";
 import { defaultRuntime } from "../runtime.js";
 import { displayPath } from "../utils.js";
 import {

@@ -1,5 +1,5 @@
 import fs from "node:fs/promises";
-import { runCommandWithTimeout } from "../process/exec.js";
+import { runCommandWithTimeout } from "../platform/process/exec.js";
 import { fileExists } from "./archive.js";
 
 export async function installPackageDir(params: {

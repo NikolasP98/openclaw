@@ -87,11 +87,11 @@ const ensureControlUiAssetsBuilt = vi.hoisted(() => vi.fn(async () => ({ ok: tru
 const runTui = vi.hoisted(() => vi.fn(async (_options: unknown) => {}));
 const setupOnboardingShellCompletion = vi.hoisted(() => vi.fn(async () => {}));
 
-vi.mock("../commands/onboard-channels.js", () => ({
+vi.mock("../cli/commands/onboard-channels.js", () => ({
   setupChannels,
 }));
 
-vi.mock("../commands/onboard-skills.js", () => ({
+vi.mock("../cli/commands/onboard-skills.js", () => ({
   setupSkills,
 }));
 
@@ -99,30 +99,30 @@ vi.mock("../agents/auth-profiles.js", () => ({
   ensureAuthProfileStore,
 }));
 
-vi.mock("../commands/auth-choice-prompt.js", () => ({
+vi.mock("../cli/commands/auth-choice-prompt.js", () => ({
   promptAuthChoiceGrouped,
 }));
 
-vi.mock("../commands/auth-choice.js", () => ({
+vi.mock("../cli/commands/auth-choice.js", () => ({
   applyAuthChoice,
   resolvePreferredProviderForAuthChoice,
   warnIfModelConfigLooksOff,
 }));
 
-vi.mock("../commands/model-picker.js", () => ({
+vi.mock("../cli/commands/model-picker.js", () => ({
   applyPrimaryModel,
   promptDefaultModel,
 }));
 
-vi.mock("../commands/onboard-custom.js", () => ({
+vi.mock("../cli/commands/onboard-custom.js", () => ({
   promptCustomApiConfig,
 }));
 
-vi.mock("../commands/health.js", () => ({
+vi.mock("../cli/commands/health.js", () => ({
   healthCommand,
 }));
 
-vi.mock("../commands/onboard-hooks.js", () => ({
+vi.mock("../cli/commands/onboard-hooks.js", () => ({
   setupInternalHooks,
 }));
 
@@ -133,7 +133,7 @@ vi.mock("../config/config.js", () => ({
   writeConfigFile,
 }));
 
-vi.mock("../commands/onboard-helpers.js", () => ({
+vi.mock("../cli/commands/onboard-helpers.js", () => ({
   DEFAULT_WORKSPACE: "/tmp/openclaw-workspace",
   applyWizardMetadata: (cfg: unknown) => cfg,
   summarizeExistingConfig: () => "summary",
@@ -158,7 +158,7 @@ vi.mock("../commands/onboard-helpers.js", () => ({
   })),
 }));
 
-vi.mock("../commands/systemd-linger.js", () => ({
+vi.mock("../cli/commands/systemd-linger.js", () => ({
   ensureSystemdUserLingerInteractive,
 }));
 

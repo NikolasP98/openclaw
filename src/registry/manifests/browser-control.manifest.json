@@ -1,0 +1,13 @@
+{
+  "id": "browser-control",
+  "name": "Browser Control",
+  "description": "Control a headless Chromium browser for web automation and screenshot capture",
+  "version": "1.0.0",
+  "tools": ["browser"],
+  "requires": [],
+  "handler": "../../agents/tools/browser-tool.js",
+  "testCoverage": 70,
+  "meta": {
+    "tags": ["browser", "automation", "screenshot"]
+  }
+}

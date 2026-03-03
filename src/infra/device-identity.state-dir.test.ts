@@ -6,7 +6,7 @@ import {
   restoreStateDirEnv,
   setStateDirEnv,
   snapshotStateDirEnv,
-} from "../test-helpers/state-dir-env.js";
+} from "../test-support/state-dir-env.js";
 import { loadOrCreateDeviceIdentity } from "./device-identity.js";
 
 describe("device identity state dir defaults", () => {

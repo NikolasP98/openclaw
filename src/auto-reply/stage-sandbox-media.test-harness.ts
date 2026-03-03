@@ -7,7 +7,17 @@ export async function withSandboxMediaTempHome<T>(
   prefix: string,
   fn: (home: string) => Promise<T>,
 ): Promise<T> {
-  return withTempHomeBase(async (home) => await fn(home), { prefix });
+  return withTempHomeBase(async (home) => await fn(home), {
+    prefix,
+    // The test creates media files at home/.openclaw/media/... (legacy path).
+    // Both env vars are set to the same value: MINION_STATE_DIR for post-rename code
+    // and OPENCLAW_STATE_DIR for legacy code paths, so getMediaDir() resolves correctly
+    // regardless of which variable the implementation currently reads.
+    env: {
+      MINION_STATE_DIR: (home: string) => join(home, ".openclaw"),
+      OPENCLAW_STATE_DIR: (home: string) => join(home, ".openclaw"),
+    },
+  });
 }
 
 export function createSandboxMediaContexts(mediaPath: string): {

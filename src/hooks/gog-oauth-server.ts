@@ -6,18 +6,16 @@
 import crypto from "crypto";
 import http from "http";
 import { URL } from "url";
-import type {
-  OAuthServerConfig,
-  PendingOAuthFlow,
-  OAuthCallbackParams,
-  TokenExchangeResponse,
-  GogCredentials,
-} from "./gog-oauth-types.js";
 import { updateSessionStore, resolveDefaultSessionStorePath } from "../config/sessions.js";
+import { upsertSharedEnvVar } from "../infra/env-file.js";
+import { logAcceptedEnvOption } from "../infra/env.js";
+import { runCommandWithTimeout } from "../platform/process/exec.js";
 import {
   saveSessionCredentials,
   getGoogleClientId,
   getGoogleClientSecret,
+  getGoogleClientType,
+  setGoogleClientCredentialsFile,
   syncToGogKeyring,
 } from "./gog-credentials.js";
 import {
@@ -25,11 +23,20 @@ import {
   notifyAuthError,
   notifyAuthTimeout,
 } from "./gog-oauth-notifications.js";
+import type {
+  OAuthServerConfig,
+  PendingOAuthFlow,
+  OAuthCallbackParams,
+  TokenExchangeResponse,
+  GogCredentials,
+} from "./gog-oauth-types.js";
 
 /**
  * Default OAuth server configuration
  */
-const DEFAULT_CONFIG: Required<Omit<OAuthServerConfig, "externalRedirectUri">> = {
+const DEFAULT_CONFIG: Required<
+  Omit<OAuthServerConfig, "externalRedirectUri" | "googleClientCredentialsFile">
+> = {
   enabled: true,
   port: 51234,
   bind: "127.0.0.1",
@@ -53,9 +60,27 @@ let configuredExternalRedirectUri: string | undefined;
 
 /**
  * Get the redirect URI for OAuth flows.
- * Priority: env var > config > localhost fallback.
+ * Desktop ("installed") clients only support localhost redirects — Google rejects
+ * external URIs with redirect_uri_mismatch. When a Desktop client is detected,
+ * we always return the localhost URI regardless of env/config settings.
+ * For "web" or "unknown" clients: env var > config > localhost fallback.
  */
 export function getRedirectUri(): string {
+  const localhostUri = `http://localhost:${actualPort ?? DEFAULT_CONFIG.port}${DEFAULT_CONFIG.callbackPath}`;
+  const clientType = getGoogleClientType();
+
+  if (clientType === "installed") {
+    const envUri = process.env.MINION_GOG_OAUTH_REDIRECT_URI;
+    const externalUri = envUri || configuredExternalRedirectUri;
+    if (externalUri) {
+      console.warn(
+        `[gog-oauth] Desktop client detected — ignoring external redirect URI "${externalUri}" ` +
+          `(installed clients only support localhost redirects). Using: ${localhostUri}`,
+      );
+    }
+    return localhostUri;
+  }
+
   const envUri = process.env.MINION_GOG_OAUTH_REDIRECT_URI;
   if (envUri) {
     return envUri;
@@ -63,7 +88,7 @@ export function getRedirectUri(): string {
   if (configuredExternalRedirectUri) {
     return configuredExternalRedirectUri;
   }
-  return `http://localhost:${actualPort ?? DEFAULT_CONFIG.port}${DEFAULT_CONFIG.callbackPath}`;
+  return localhostUri;
 }
 
 /**
@@ -224,8 +249,8 @@ async function handleCallback(
     // Save credentials
     const credPath = await saveSessionCredentials(credentials);
 
-    // Best-effort sync to gog CLI keyring
-    await syncToGogKeyring(credentials);
+    // Best-effort sync to gog CLI keyring — capture result for notification
+    const syncResult = await syncToGogKeyring(credentials);
 
     // Update session entry
     const storePath = resolveDefaultSessionStorePath(flow.agentId);
@@ -239,8 +264,14 @@ async function handleCallback(
       }
     });
 
-    // Notify user of success
-    await notifyAuthSuccess(flow.sessionKey, flow.agentId, flow.email, flow.services);
+    // Notify user of success (include keyring sync warning if applicable)
+    await notifyAuthSuccess(
+      flow.sessionKey,
+      flow.agentId,
+      flow.email,
+      flow.services,
+      syncResult.success ? undefined : syncResult.error,
+    );
 
     return {
       status: 200,
@@ -268,7 +299,7 @@ async function handleCallback(
 async function handleRequest(
   req: http.IncomingMessage,
   res: http.ServerResponse,
-  config: Required<Omit<OAuthServerConfig, "externalRedirectUri">>,
+  config: Required<Omit<OAuthServerConfig, "externalRedirectUri" | "googleClientCredentialsFile">>,
   agentDir: string,
 ): Promise<void> {
   const url = new URL(req.url || "/", `http://${req.headers.host}`);
@@ -350,7 +381,7 @@ async function handleRequest(
 function tryStartServer(
   port: number,
   bind: string,
-  config: Required<Omit<OAuthServerConfig, "externalRedirectUri">>,
+  config: Required<Omit<OAuthServerConfig, "externalRedirectUri" | "googleClientCredentialsFile">>,
   agentDir: string,
 ): Promise<http.Server> {
   return new Promise((resolve, reject) => {
@@ -377,6 +408,59 @@ function tryStartServer(
 }
 
 /**
+ * Register Google OAuth client credentials with the gog CLI keyring (best-effort).
+ * Runs `gog auth credentials <file>` so subsequent `gog auth tokens import` calls succeed.
+ * Skips silently if gog is not installed.
+ */
+async function registerGogClientCredentials(credFile: string): Promise<void> {
+  try {
+    const gogCheck = await runCommandWithTimeout(["which", "gog"], { timeoutMs: 2_000 });
+    if (gogCheck.code !== 0) {
+      return; // gog not installed — skip silently
+    }
+    const result = await runCommandWithTimeout(["gog", "auth", "credentials", credFile], {
+      timeoutMs: 10_000,
+    });
+    if (result.code === 0) {
+      console.log("[gog-oauth] Registered Google client credentials with gog CLI");
+    } else {
+      console.warn(
+        `[gog-oauth] gog auth credentials failed (code=${result.code}): ${result.stderr || result.stdout}`,
+      );
+    }
+  } catch (err) {
+    console.warn(`[gog-oauth] Failed to register gog client credentials: ${String(err)}`);
+  }
+}
+
+/**
+ * Ensure GOG_KEYRING_BACKEND and GOG_KEYRING_PASSWORD are set in process.env
+ * and persisted to ~/.minion/.env. Called once at gateway startup.
+ * Self-healing: generates a secure random password on first run, then reuses it.
+ * No-ops if variables are already present (from systemd Environment= or .env).
+ */
+function ensureGogKeyringEnv(): void {
+  let dirty = false;
+
+  if (!process.env.GOG_KEYRING_BACKEND) {
+    process.env.GOG_KEYRING_BACKEND = "file";
+    upsertSharedEnvVar({ key: "GOG_KEYRING_BACKEND", value: "file" });
+    dirty = true;
+  }
+
+  if (!process.env.GOG_KEYRING_PASSWORD) {
+    const password = crypto.randomBytes(32).toString("hex");
+    process.env.GOG_KEYRING_PASSWORD = password;
+    upsertSharedEnvVar({ key: "GOG_KEYRING_PASSWORD", value: password });
+    dirty = true;
+  }
+
+  if (dirty) {
+    console.log("[gog-oauth] Initialized GOG keyring credentials and persisted to .env");
+  }
+}
+
+/**
  * Start the OAuth callback server with port fallback
  */
 export async function startGogOAuthServer(
@@ -386,14 +470,33 @@ export async function startGogOAuthServer(
   port: number;
   stop: () => Promise<void>;
 }> {
-  const { externalRedirectUri, ...rest } = config;
-  const fullConfig: Required<Omit<OAuthServerConfig, "externalRedirectUri">> = {
+  ensureGogKeyringEnv();
+
+  const { externalRedirectUri, googleClientCredentialsFile, ...rest } = config;
+  const fullConfig: Required<
+    Omit<OAuthServerConfig, "externalRedirectUri" | "googleClientCredentialsFile">
+  > = {
     ...DEFAULT_CONFIG,
     ...rest,
   };
 
   // Store external redirect URI from config (env var takes priority in getRedirectUri)
   configuredExternalRedirectUri = externalRedirectUri;
+
+  // Load Google client credentials: env var overrides config file
+  const envCredFile = process.env.MINION_GOOGLE_CLIENT_CREDENTIALS_FILE;
+  const credFile = envCredFile || googleClientCredentialsFile;
+  if (envCredFile) {
+    logAcceptedEnvOption({
+      key: "MINION_GOOGLE_CLIENT_CREDENTIALS_FILE",
+      description: "Google OAuth client credentials file",
+    });
+  }
+  if (credFile) {
+    setGoogleClientCredentialsFile(credFile);
+    // Register credentials with gog CLI so `gog auth tokens import` works (best-effort)
+    void registerGogClientCredentials(credFile);
+  }
 
   if (!fullConfig.enabled) {
     throw new Error("OAuth server is disabled in configuration");

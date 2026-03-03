@@ -52,7 +52,7 @@ export async function startBrowserControlServiceFromConfig(): Promise<BrowserSer
   });
 
   logService.info(
-    `Browser control service ready (profiles=${Object.keys(resolved.profiles).length})`,
+    `Browser control service ready (profiles=${Object.keys(resolved.profiles).length}, default=${resolved.defaultProfile})`,
   );
   return state;
 }

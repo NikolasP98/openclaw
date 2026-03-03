@@ -1,4 +1,3 @@
-import type { GatewayRequestHandlers, GatewayRequestOptions } from "./server-methods/types.js";
 import { ErrorCodes, errorShape } from "./protocol/index.js";
 import { agentHandlers } from "./server-methods/agent.js";
 import { agentsHandlers } from "./server-methods/agents.js";
@@ -12,6 +11,8 @@ import { deviceHandlers } from "./server-methods/devices.js";
 import { execApprovalsHandlers } from "./server-methods/exec-approvals.js";
 import { healthHandlers } from "./server-methods/health.js";
 import { logsHandlers } from "./server-methods/logs.js";
+import { marketplaceHandlers } from "./server-methods/marketplace.js";
+import { memoryHandlers } from "./server-methods/memory.js";
 import { meshHandlers } from "./server-methods/mesh.js";
 import { modelsHandlers } from "./server-methods/models.js";
 import { nodeHandlers } from "./server-methods/nodes.js";
@@ -23,6 +24,7 @@ import { specialistsHandlers } from "./server-methods/specialists.js";
 import { systemHandlers } from "./server-methods/system.js";
 import { talkHandlers } from "./server-methods/talk.js";
 import { ttsHandlers } from "./server-methods/tts.js";
+import type { GatewayRequestHandlers, GatewayRequestOptions } from "./server-methods/types.js";
 import { updateHandlers } from "./server-methods/update.js";
 import { usageHandlers } from "./server-methods/usage.js";
 import { voicewakeHandlers } from "./server-methods/voicewake.js";
@@ -84,6 +86,7 @@ const READ_METHODS = new Set([
   "talk.config",
   "mesh.plan",
   "mesh.status",
+  "memory.snapshot",
 ]);
 const WRITE_METHODS = new Set([
   "send",
@@ -103,6 +106,7 @@ const WRITE_METHODS = new Set([
   "mesh.plan.auto",
   "mesh.run",
   "mesh.retry",
+  "agent.install",
 ]);
 
 function authorizeGatewayMethod(method: string, client: GatewayRequestOptions["client"]) {
@@ -163,6 +167,7 @@ function authorizeGatewayMethod(method: string, client: GatewayRequestOptions["c
     method === "agents.delete" ||
     method === "skills.install" ||
     method === "skills.update" ||
+    method === "agents.skills.set" ||
     method === "cron.add" ||
     method === "cron.update" ||
     method === "cron.remove" ||
@@ -206,6 +211,8 @@ export const coreGatewayHandlers: GatewayRequestHandlers = {
   ...specialistsHandlers,
   ...browserHandlers,
   ...reliabilityHandlers,
+  ...memoryHandlers,
+  ...marketplaceHandlers,
 };
 
 export async function handleGatewayRequest(

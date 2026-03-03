@@ -76,7 +76,7 @@ export type GatewayControlUiConfig = {
   dangerouslyDisableDeviceAuth?: boolean;
 };
 
-export type GatewayAuthMode = "token" | "password" | "trusted-proxy";
+export type GatewayAuthMode = "none" | "token" | "password" | "trusted-proxy";
 
 /**
  * Configuration for trusted reverse proxy authentication.
@@ -104,7 +104,7 @@ export type GatewayTrustedProxyConfig = {
 };
 
 export type GatewayAuthConfig = {
-  /** Authentication mode for Gateway connections. Defaults to token when set. */
+  /** Authentication mode for Gateway connections. Defaults to token when unset. */
   mode?: GatewayAuthMode;
   /** Shared token for token mode (stored locally for CLI auth). */
   token?: string;
@@ -139,6 +139,14 @@ export type GatewayTailscaleConfig = {
   mode?: GatewayTailscaleMode;
   /** Reset serve/funnel configuration on shutdown. */
   resetOnExit?: boolean;
+  /**
+   * Enable Tailscale Funnel (public internet access) for the serve endpoint.
+   * When true, sets AllowFunnel=true via the Tailscale local API after serve
+   * is configured. Useful when mode=serve but OAuth callbacks (added by hooks)
+   * need to be reachable from outside the tailnet.
+   * Only meaningful when mode=serve.
+   */
+  enableFunnel?: boolean;
 };
 
 export type GatewayRemoteConfig = {
@@ -276,6 +284,19 @@ export type GatewayToolsConfig = {
   allow?: string[];
 };
 
+export type HubMetricsConfig = {
+  /** Enable/disable metrics push to hub. Default: false. */
+  enabled?: boolean;
+  /** Hub URL (e.g. "https://minion-hub.vercel.app"). */
+  hubUrl?: string;
+  /** Server token for authentication (from hub server registration). */
+  apiKey?: string;
+  /** Hub-assigned server ID. */
+  serverId?: string;
+  /** Push interval in milliseconds. Default: 60000 (1 minute). */
+  pushIntervalMs?: number;
+};
+
 export type GatewayConfig = {
   /** Single multiplexed port for Gateway WS + HTTP (default: 18789). */
   port?: number;
@@ -323,4 +344,6 @@ export type GatewayConfig = {
     enabled?: boolean;
     dbPath?: string;
   };
+  /** Hub metrics push configuration. */
+  hubMetrics?: HubMetricsConfig;
 };

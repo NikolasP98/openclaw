@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { OpenClawConfig, ConfigFileSnapshot } from "../config/types.openclaw.js";
 import type { UpdateRunResult } from "../infra/update-runner.js";
-import { captureEnv } from "../test-utils/env.js";
+import { captureEnv } from "../test-support/env.js";
 
 const confirm = vi.fn();
 const select = vi.fn();
@@ -64,7 +64,7 @@ vi.mock("node:child_process", async () => {
   };
 });
 
-vi.mock("../process/exec.js", () => ({
+vi.mock("../platform/process/exec.js", () => ({
   runCommandWithTimeout: vi.fn(),
 }));
 
@@ -78,7 +78,7 @@ vi.mock("./update-cli/shared.js", async (importOriginal) => {
   };
 });
 
-vi.mock("../daemon/service.js", () => ({
+vi.mock("../platform/daemon/service.js", () => ({
   resolveGatewayService: vi.fn(() => ({
     isLoaded: (...args: unknown[]) => serviceLoaded(...args),
   })),
@@ -90,7 +90,7 @@ vi.mock("./update-cli/restart-helper.js", () => ({
 }));
 
 // Mock doctor (heavy module; should not run in unit tests)
-vi.mock("../commands/doctor.js", () => ({
+vi.mock("../cli/commands/doctor.js", () => ({
   doctorCommand: vi.fn(),
 }));
 // Mock the daemon-cli module
@@ -112,9 +112,9 @@ const { resolveOpenClawPackageRoot } = await import("../infra/openclaw-root.js")
 const { readConfigFileSnapshot, writeConfigFile } = await import("../config/config.js");
 const { checkUpdateStatus, fetchNpmTagVersion, resolveNpmChannelTag } =
   await import("../infra/update-check.js");
-const { runCommandWithTimeout } = await import("../process/exec.js");
+const { runCommandWithTimeout } = await import("../platform/process/exec.js");
 const { runDaemonRestart } = await import("./daemon-cli.js");
-const { doctorCommand } = await import("../commands/doctor.js");
+const { doctorCommand } = await import("../cli/commands/doctor.js");
 const { defaultRuntime } = await import("../runtime.js");
 const { updateCommand, registerUpdateCli, updateStatusCommand, updateWizardCommand } =
   await import("./update-cli.js");
@@ -320,7 +320,7 @@ describe("update-cli", () => {
     await updateStatusCommand({ json: false });
 
     const logs = vi.mocked(defaultRuntime.log).mock.calls.map((call) => call[0]);
-    expect(logs.join("\n")).toContain("OpenClaw update status");
+    expect(logs.join("\n")).toContain("Minion update status");
   });
 
   it("updateStatusCommand emits JSON", async () => {
@@ -557,6 +557,16 @@ describe("update-cli", () => {
     expect(defaultRuntime.exit).toHaveBeenCalledWith(1);
   });
 
+  it("updateStatusCommand validates timeout option", async () => {
+    vi.mocked(defaultRuntime.error).mockClear();
+    vi.mocked(defaultRuntime.exit).mockClear();
+
+    await updateStatusCommand({ timeout: "invalid" });
+
+    expect(defaultRuntime.error).toHaveBeenCalledWith(expect.stringContaining("timeout"));
+    expect(defaultRuntime.exit).toHaveBeenCalledWith(1);
+  });
+
   it("persists update channel when --channel is set", async () => {
     const mockResult: UpdateRunResult = {
       status: "ok",
@@ -608,6 +618,17 @@ describe("update-cli", () => {
     expect(defaultRuntime.error).toHaveBeenCalledWith(
       expect.stringContaining("Update wizard requires a TTY"),
     );
+    expect(defaultRuntime.exit).toHaveBeenCalledWith(1);
+  });
+
+  it("updateWizardCommand validates timeout option", async () => {
+    setTty(true);
+    vi.mocked(defaultRuntime.error).mockClear();
+    vi.mocked(defaultRuntime.exit).mockClear();
+
+    await updateWizardCommand({ timeout: "invalid" });
+
+    expect(defaultRuntime.error).toHaveBeenCalledWith(expect.stringContaining("timeout"));
     expect(defaultRuntime.exit).toHaveBeenCalledWith(1);
   });
 

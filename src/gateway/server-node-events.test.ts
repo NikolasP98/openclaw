@@ -30,7 +30,7 @@ vi.mock("../infra/system-events.js", () => ({
 vi.mock("../infra/heartbeat-wake.js", () => ({
   requestHeartbeatNow: vi.fn(),
 }));
-vi.mock("../commands/agent.js", () => ({
+vi.mock("../cli/commands/agent.js", () => ({
   agentCommand: vi.fn(),
 }));
 vi.mock("../config/config.js", () => ({
@@ -49,9 +49,9 @@ vi.mock("./session-utils.js", () => ({
   })),
 }));
 
+import { agentCommand } from "../cli/commands/agent.js";
+import type { HealthSummary } from "../cli/commands/health.js";
 import type { CliDeps } from "../cli/deps.js";
-import { agentCommand } from "../commands/agent.js";
-import type { HealthSummary } from "../commands/health.js";
 import { updateSessionStore } from "../config/sessions.js";
 import { requestHeartbeatNow } from "../infra/heartbeat-wake.js";
 import { enqueueSystemEvent } from "../infra/system-events.js";

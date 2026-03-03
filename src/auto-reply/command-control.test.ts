@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { OpenClawConfig } from "../config/config.js";
 import { setActivePluginRegistry } from "../plugins/runtime.js";
-import { createOutboundTestPlugin, createTestRegistry } from "../test-utils/channel-plugins.js";
+import { createOutboundTestPlugin, createTestRegistry } from "../test-support/channel-plugins.js";
 import { resolveCommandAuthorization } from "./command-auth.js";
 import { hasControlCommand, hasInlineCommandTokens } from "./command-detection.js";
 import { listChatCommands } from "./commands-registry.js";

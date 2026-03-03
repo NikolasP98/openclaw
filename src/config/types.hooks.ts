@@ -113,6 +113,11 @@ export type InternalHooksConfig = {
   installs?: Record<string, HookInstallRecord>;
 };
 
+/**
+ * SYNC: Fields here must also be added to:
+ *  - OAuthServerConfig in src/hooks/gog-oauth-types.ts
+ *  - GogOAuthSchema in src/config/zod-schema.hooks.ts (+ re-export in zod-schema.ts)
+ */
 export type HooksGogOAuthConfig = {
   /** Whether OAuth callback server is enabled (default: true) */
   enabled?: boolean;
@@ -126,6 +131,13 @@ export type HooksGogOAuthConfig = {
   timeoutMinutes?: number;
   /** Public redirect URI (e.g. Tailscale Funnel URL) for headless/remote OAuth flows */
   externalRedirectUri?: string;
+  /**
+   * Path to Google OAuth client credentials JSON file (downloaded from Google Cloud Console).
+   * Supports both "installed" and "web" application types.
+   * This is checked before GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET env vars
+   * and before ~/.config/gogcli/credentials.json.
+   */
+  googleClientCredentialsFile?: string;
 };
 
 export type HooksConfig = {

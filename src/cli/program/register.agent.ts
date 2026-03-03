@@ -1,12 +1,12 @@
 import type { Command } from "commander";
 import { DEFAULT_CHAT_CHANNEL } from "../../channels/registry.js";
-import { agentCliCommand } from "../../commands/agent-via-gateway.js";
+import { agentCliCommand } from "../../cli/commands/agent-via-gateway.js";
 import {
   agentsAddCommand,
   agentsDeleteCommand,
   agentsListCommand,
   agentsSetIdentityCommand,
-} from "../../commands/agents.js";
+} from "../../cli/commands/agents.js";
 import { setVerbose } from "../../globals.js";
 import { defaultRuntime } from "../../runtime.js";
 import { formatDocsLink } from "../../terminal/links.js";

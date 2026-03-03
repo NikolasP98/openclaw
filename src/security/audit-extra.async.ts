@@ -15,7 +15,7 @@ import type { SandboxToolPolicy } from "../agents/sandbox/types.js";
 import { loadWorkspaceSkillEntries } from "../agents/skills.js";
 import { resolveToolProfilePolicy } from "../agents/tool-policy.js";
 import { listAgentWorkspaceDirs } from "../agents/workspace-dirs.js";
-import { MANIFEST_KEY } from "../compat/legacy-names.js";
+import { LEGACY_MANIFEST_KEYS, MANIFEST_KEY } from "../compat/legacy-names.js";
 import { resolveNativeSkillsEnabled } from "../config/commands.js";
 import type { OpenClawConfig, ConfigFileSnapshot } from "../config/config.js";
 import { createConfigIO } from "../config/config.js";
@@ -72,10 +72,10 @@ async function readPluginManifestExtensions(pluginPath: string): Promise<string[
     return [];
   }
 
-  const parsed = JSON.parse(raw) as Partial<
-    Record<typeof MANIFEST_KEY, { extensions?: unknown }>
-  > | null;
-  const extensions = parsed?.[MANIFEST_KEY]?.extensions;
+  const parsed = JSON.parse(raw) as Partial<Record<string, { extensions?: unknown }>> | null;
+  const extensions =
+    parsed?.[MANIFEST_KEY]?.extensions ??
+    LEGACY_MANIFEST_KEYS.reduce<unknown>((acc, key) => acc ?? parsed?.[key]?.extensions, undefined);
   if (!Array.isArray(extensions)) {
     return [];
   }
@@ -94,6 +94,26 @@ function formatCodeSafetyDetails(findings: SkillScanFinding[], rootDir: string):
       return `  - [${finding.ruleId}] ${finding.message} (${normalizedPath}:${finding.line})`;
     })
     .join("\n");
+}
+
+async function listInstalledPluginDirs(params: {
+  stateDir: string;
+  onReadError?: (error: unknown) => void;
+}): Promise<{ extensionsDir: string; pluginDirs: string[] }> {
+  const extensionsDir = path.join(params.stateDir, "extensions");
+  const st = await safeStat(extensionsDir);
+  if (!st.ok || !st.isDir) {
+    return { extensionsDir, pluginDirs: [] };
+  }
+  const entries = await fs.readdir(extensionsDir, { withFileTypes: true }).catch((err) => {
+    params.onReadError?.(err);
+    return [];
+  });
+  const pluginDirs = entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .filter(Boolean);
+  return { extensionsDir, pluginDirs };
 }
 
 function resolveToolPolicies(params: {
@@ -204,17 +224,9 @@ export async function collectPluginsTrustFindings(params: {
   stateDir: string;
 }): Promise<SecurityAuditFinding[]> {
   const findings: SecurityAuditFinding[] = [];
-  const extensionsDir = path.join(params.stateDir, "extensions");
-  const st = await safeStat(extensionsDir);
-  if (!st.ok || !st.isDir) {
-    return findings;
-  }
-
-  const entries = await fs.readdir(extensionsDir, { withFileTypes: true }).catch(() => []);
-  const pluginDirs = entries
-    .filter((e) => e.isDirectory())
-    .map((e) => e.name)
-    .filter(Boolean);
+  const { extensionsDir, pluginDirs } = await listInstalledPluginDirs({
+    stateDir: params.stateDir,
+  });
   if (pluginDirs.length === 0) {
     return findings;
   }
@@ -619,24 +631,19 @@ export async function collectPluginsCodeSafetyFindings(params: {
   stateDir: string;
 }): Promise<SecurityAuditFinding[]> {
   const findings: SecurityAuditFinding[] = [];
-  const extensionsDir = path.join(params.stateDir, "extensions");
-  const st = await safeStat(extensionsDir);
-  if (!st.ok || !st.isDir) {
-    return findings;
-  }
-
-  const entries = await fs.readdir(extensionsDir, { withFileTypes: true }).catch((err) => {
-    findings.push({
-      checkId: "plugins.code_safety.scan_failed",
-      severity: "warn",
-      title: "Plugin extensions directory scan failed",
-      detail: `Static code scan could not list extensions directory: ${String(err)}`,
-      remediation:
-        "Check file permissions and plugin layout, then rerun `openclaw security audit --deep`.",
-    });
-    return [];
+  const { extensionsDir, pluginDirs } = await listInstalledPluginDirs({
+    stateDir: params.stateDir,
+    onReadError: (err) => {
+      findings.push({
+        checkId: "plugins.code_safety.scan_failed",
+        severity: "warn",
+        title: "Plugin extensions directory scan failed",
+        detail: `Static code scan could not list extensions directory: ${String(err)}`,
+        remediation:
+          "Check file permissions and plugin layout, then rerun `openclaw security audit --deep`.",
+      });
+    },
   });
-  const pluginDirs = entries.filter((e) => e.isDirectory()).map((e) => e.name);
 
   for (const pluginName of pluginDirs) {
     const pluginPath = path.join(extensionsDir, pluginName);

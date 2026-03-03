@@ -2,9 +2,9 @@
  * OAuth notification system for async auth flow updates
  */
 
-import type { FollowupRun } from "../auto-reply/reply/queue/types.js";
 import { resolveAgentDir, resolveAgentWorkspaceDir } from "../agents/agent-scope.js";
 import { enqueueFollowupRun } from "../auto-reply/reply/queue/enqueue.ts";
+import type { FollowupRun } from "../auto-reply/reply/queue/types.js";
 import { loadConfig } from "../config/config.js";
 import { loadSessionStore, resolveDefaultSessionStorePath } from "../config/sessions.js";
 
@@ -89,15 +89,21 @@ export async function notifyAuthSuccess(
   agentId: string,
   email: string,
   services: string[],
+  keyringSyncError?: string,
 ): Promise<void> {
   const servicesStr = services.length > 0 ? services.join(", ") : "Gmail";
+  let message = `✓ Google authentication complete for ${email}! You can now use ${servicesStr} features.`;
+
+  if (keyringSyncError) {
+    message += `\n⚠ Warning: keyring sync failed (${keyringSyncError}). gog_exec will retry sync automatically on each command.`;
+  }
 
   await enqueueOAuthNotification({
     type: "success",
     email,
     sessionKey,
     agentId,
-    message: `✓ Google authentication complete for ${email}! You can now use ${servicesStr} features.`,
+    message,
   });
 }
 

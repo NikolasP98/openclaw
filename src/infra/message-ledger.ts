@@ -1,3 +1,5 @@
+import { applySqlitePragmas } from "../memory/sqlite-pragmas.js";
+import { requireNodeSqlite } from "../memory/sqlite.js";
 import type { PluginHookMessageContext } from "../plugins/hooks.js";
 /**
  * Message Ledger — SQLite inbound/outbound message logging.
@@ -18,7 +20,6 @@ import type {
   PluginHookMessageInboundEvent,
   PluginHookMessageSentEvent,
 } from "../plugins/types.js";
-import { requireNodeSqlite } from "../memory/sqlite.js";
 
 type DatabaseSync = InstanceType<ReturnType<typeof requireNodeSqlite>["DatabaseSync"]>;
 
@@ -57,6 +58,7 @@ export function openMessageLedger(dbPath: string): void {
   }
   const { DatabaseSync } = requireNodeSqlite();
   db = new DatabaseSync(dbPath);
+  applySqlitePragmas(db);
   db.exec(INIT_SQL);
 }
 
@@ -113,8 +115,9 @@ export function recordOutboundMessage(
   try {
     const stmt = db.prepare(`
       INSERT INTO messages (
-        direction, channel, account_id, chat_id, content, success, error, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        direction, channel, account_id, chat_id, content, success, error,
+        session_key, agent_id, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     stmt.run(
       "outbound",
@@ -124,7 +127,50 @@ export function recordOutboundMessage(
       event.content ?? null,
       event.success ? 1 : 0,
       event.error ?? null,
+      ctx.sessionKey ?? null,
+      ctx.agentId ?? null,
       Date.now(),
+    );
+  } catch {
+    // fire-and-forget — never block the message pipeline
+  }
+}
+
+/**
+ * Update the most recent inbound row for a chat with the resolved session key
+ * and agent ID. Called from the `message_received` hook which fires post-routing.
+ *
+ * Note: message_inbound stores channel-native chat IDs (e.g. WhatsApp JID)
+ * while message_received uses normalised identifiers (e.g. E.164). We match
+ * on channel + account_id + recency instead of chat_id to avoid mismatches.
+ */
+export function updateInboundSessionInfo(ctx: PluginHookMessageContext): void {
+  if (!db || !ctx.sessionKey) {
+    return;
+  }
+  try {
+    const stmt = db.prepare(`
+      UPDATE messages
+      SET session_key = ?, agent_id = ?
+      WHERE id = (
+        SELECT id FROM messages
+        WHERE direction = 'inbound'
+          AND channel = ?
+          AND account_id = ?
+          AND session_key IS NULL
+          AND created_at > ?
+        ORDER BY id DESC
+        LIMIT 1
+      )
+    `);
+    // 30-second window — message_received fires shortly after message_inbound
+    const cutoff = Date.now() - 30_000;
+    stmt.run(
+      ctx.sessionKey,
+      ctx.agentId ?? null,
+      ctx.channelId ?? null,
+      ctx.accountId ?? null,
+      cutoff,
     );
   } catch {
     // fire-and-forget — never block the message pipeline
