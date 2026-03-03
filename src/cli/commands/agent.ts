@@ -538,6 +538,7 @@ export async function agentCommand(
         provider,
         model,
         agentDir,
+        hasTools: true, // CLI agent runs always have tools
         fallbacksOverride: effectiveFallbacksOverride,
         run: (providerOverride, modelOverride) => {
           const isFallbackRetry = fallbackAttemptIndex > 0;

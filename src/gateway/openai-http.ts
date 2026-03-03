@@ -126,12 +126,41 @@ function buildAgentPrompt(messagesUnknown: unknown): {
   };
 }
 
+function resolveFirstUserMessageContent(
+  messages: Array<{ role?: unknown; content?: unknown }> | undefined,
+): string | undefined {
+  if (!Array.isArray(messages)) {
+    return undefined;
+  }
+  const first = messages.find((m) => m.role === "user");
+  if (!first) {
+    return undefined;
+  }
+  if (typeof first.content === "string") {
+    return first.content;
+  }
+  if (Array.isArray(first.content)) {
+    // Extract text from content array (OpenAI vision format)
+    const text = first.content
+      .filter((c): c is { type: "text"; text: string } => c?.type === "text")
+      .map((c) => c.text)
+      .join(" ");
+    return text || undefined;
+  }
+  return undefined;
+}
+
 function resolveOpenAiSessionKey(params: {
   req: IncomingMessage;
   agentId: string;
   user?: string | undefined;
+  messages?: Array<{ role?: unknown; content?: unknown }> | undefined;
 }): string {
-  return resolveSessionKey({ ...params, prefix: "openai" });
+  return resolveSessionKey({
+    ...params,
+    prefix: "openai",
+    firstUserMessageContent: resolveFirstUserMessageContent(params.messages),
+  });
 }
 
 function coerceRequest(val: unknown): OpenAiChatCompletionRequest {
@@ -178,7 +207,7 @@ export async function handleOpenAiHttpRequest(
   const user = typeof payload.user === "string" ? payload.user : undefined;
 
   const agentId = resolveAgentIdForRequest({ req, model });
-  const sessionKey = resolveOpenAiSessionKey({ req, agentId, user });
+  const sessionKey = resolveOpenAiSessionKey({ req, agentId, user, messages: payload.messages });
   const prompt = buildAgentPrompt(payload.messages);
   if (!prompt.message) {
     sendJson(res, 400, {

@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { IncomingMessage } from "node:http";
 import { buildAgentMainSessionKey, normalizeAgentId } from "../routing/session-key.js";
 
@@ -60,11 +60,26 @@ export function resolveAgentIdForRequest(params: {
   return fromModel ?? "main";
 }
 
+/**
+ * Derive a stable 8-character session ID suffix from message content.
+ *
+ * Used as a fallback when no explicit session key or user field is provided.
+ * Produces the same ID for the same opening message, enabling consistent
+ * session pinning for OpenAI-compatible clients that don't send session headers.
+ *
+ * Sprint U.1 — ClawRouter v0.10.16 pattern (commit 9fb30af).
+ */
+export function deriveSessionIdFromContent(content: string): string {
+  return createHash("sha256").update(content).digest("hex").slice(0, 8);
+}
+
 export function resolveSessionKey(params: {
   req: IncomingMessage;
   agentId: string;
   user?: string | undefined;
   prefix: string;
+  /** Optional: first user message content for stable session ID derivation (Sprint U.1). */
+  firstUserMessageContent?: string | undefined;
 }): string {
   const explicit = getHeader(params.req, "x-minion-session-key")?.trim();
   if (explicit) {
@@ -72,6 +87,22 @@ export function resolveSessionKey(params: {
   }
 
   const user = params.user?.trim();
-  const mainKey = user ? `${params.prefix}-user:${user}` : `${params.prefix}:${randomUUID()}`;
-  return buildAgentMainSessionKey({ agentId: params.agentId, mainKey });
+  if (user) {
+    return buildAgentMainSessionKey({
+      agentId: params.agentId,
+      mainKey: `${params.prefix}-user:${user}`,
+    });
+  }
+
+  // U.1: Derive stable session ID from first user message content when available.
+  // Same opening message = same session key = consistent session pinning.
+  const firstContent = params.firstUserMessageContent?.trim();
+  const sessionSuffix = firstContent
+    ? deriveSessionIdFromContent(firstContent)
+    : randomUUID();
+
+  return buildAgentMainSessionKey({
+    agentId: params.agentId,
+    mainKey: `${params.prefix}:${sessionSuffix}`,
+  });
 }
