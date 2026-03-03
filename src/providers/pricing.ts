@@ -5,7 +5,8 @@
  * Used by the smart routing system to estimate cost and calculate savings
  * vs the default API model.
  *
- * Prices in USD per million tokens. Sources: official pricing pages (Feb 2026).
+ * Prices in USD per million tokens.
+ * Sources: official pricing pages (Mar 2026) + ClawRouter v0.10.0 audit.
  *
  * @module
  */
@@ -39,6 +40,7 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
   "gpt-4o-mini": { inputPerMillion: 0.15, outputPerMillion: 0.6 },
   "gpt-4-turbo": { inputPerMillion: 10.0, outputPerMillion: 30.0 },
   "gpt-4": { inputPerMillion: 30.0, outputPerMillion: 60.0 },
+  "gpt-5.2": { inputPerMillion: 10.0, outputPerMillion: 30.0 }, // ClawRouter v0.10.0
   o1: { inputPerMillion: 15.0, outputPerMillion: 60.0 },
   "o1-mini": { inputPerMillion: 3.0, outputPerMillion: 12.0 },
   o3: { inputPerMillion: 10.0, outputPerMillion: 40.0 },
@@ -46,7 +48,9 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
   "o4-mini": { inputPerMillion: 1.1, outputPerMillion: 4.4 },
 
   // Google
+  "gemini-3.1-pro": { inputPerMillion: 2.5, outputPerMillion: 15.0 }, // ClawRouter v0.10.0 (preview)
   "gemini-2.5-pro": { inputPerMillion: 1.25, outputPerMillion: 10.0 },
+  "gemini-2.5-flash-lite": { inputPerMillion: 0.05, outputPerMillion: 0.2 }, // ClawRouter v0.10.0 (ECO tier)
   "gemini-2.5-flash": { inputPerMillion: 0.15, outputPerMillion: 0.6 },
   "gemini-2.0-flash": { inputPerMillion: 0.1, outputPerMillion: 0.4 },
   "gemini-1.5-pro": { inputPerMillion: 1.25, outputPerMillion: 5.0 },
