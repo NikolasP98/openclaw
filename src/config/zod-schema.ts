@@ -577,6 +577,16 @@ export const MinionSchema = z
           })
           .strict()
           .optional(),
+        hubMetrics: z
+          .object({
+            enabled: z.boolean().optional(),
+            hubUrl: z.string().optional(),
+            apiKey: z.string().optional().register(sensitive),
+            serverId: z.string().optional(),
+            pushIntervalMs: z.number().int().positive().optional(),
+          })
+          .strict()
+          .optional(),
       })
       .strict()
       .optional(),
