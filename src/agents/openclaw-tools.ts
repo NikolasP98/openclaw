@@ -25,6 +25,7 @@ import { createSessionsListTool } from "./tools/sessions-list-tool.js";
 import { createSessionsSendTool } from "./tools/sessions-send-tool.js";
 import { createSessionsSpawnTool } from "./tools/sessions-spawn-tool.js";
 import { createSubagentsTool } from "./tools/subagents-tool.js";
+import { createSummarizeTool } from "./tools/summarize-tool.js";
 import { createTtsTool } from "./tools/tts-tool.js";
 import { createVentureStudioTool } from "./tools/venture-studio-tool.js";
 import { createWebFetchTool, createWebSearchTool } from "./tools/web-tools.js";
@@ -206,6 +207,7 @@ export function createOpenClawTools(options?: {
     createArchitectPipelineTool({ workspaceDir }),
     createVentureStudioTool({ workspaceDir }),
     ...createKnowledgeGraphTools(kgSession),
+    createSummarizeTool(),
   ];
 
   const pluginTools = resolvePluginTools({
