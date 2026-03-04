@@ -1,9 +1,12 @@
+import { resolve } from "node:path";
 import type { Command } from "commander";
 import { loadConfig, readConfigFileSnapshotForWrite, writeConfigFile } from "../config/config.js";
 import type { ReadConfigFileSnapshotForWriteResult } from "../config/io.js";
 import type { OpenClawConfig } from "../config/types.js";
 import { normalizeAgentId } from "../routing/session-key.js";
 import { addGatewayClientOptions, callGatewayFromCli, type GatewayRpcOpts } from "./gateway-rpc.js";
+import { installTool } from "./tools-cli.install.js";
+import { scaffoldTool, runCodegen } from "./tools-cli.scaffold.js";
 
 type ToolStatusEntry = {
   id: string;
@@ -291,5 +294,67 @@ export function registerToolsCli(program: Command) {
       console.log(
         `Profile set to ${profile}${opts.agent ? ` for agent ${opts.agent}` : " (global)"}`,
       );
+    });
+
+  // --- create ---
+  tools
+    .command("create")
+    .description("Scaffold a new tool (meta.ts + implementation)")
+    .argument("<name>", "Tool name in kebab-case (e.g. my-tool)")
+    .option(
+      "--group <name>",
+      "Group to add tool to (repeatable)",
+      (v: string, prev: string[]) => {
+        const g = v.startsWith("group:") ? v : `group:${v}`;
+        return [...prev, g];
+      },
+      [] as string[],
+    )
+    .action(async (name: string, opts) => {
+      const groups = opts.group.length > 0 ? opts.group : ["group:minion"];
+      const toolsDir = resolve(process.cwd(), "src/agents/tools");
+      try {
+        const { metaPath, implPath } = scaffoldTool({ name, groups, toolsDir });
+        console.log(`Created: ${metaPath}`);
+        console.log(`Created: ${implPath}`);
+        console.log("\nRunning codegen...");
+        await runCodegen(process.cwd());
+        console.log("\nNext steps:");
+        console.log("  1. Implement the tool in the generated .ts file");
+        console.log("  2. If the tool needs options from the context bag:");
+        console.log("     - Add contextKeys to the meta.ts file");
+        console.log("     - Add a case to buildToolOptions() in openclaw-tools.ts");
+        console.log("  3. If tool ordering matters, add to TOOL_ORDER in openclaw-tools.ts");
+      } catch (err) {
+        console.error(String(err));
+        process.exit(1);
+      }
+    });
+
+  // --- install ---
+  tools
+    .command("install")
+    .description("Install dependencies for a tool")
+    .argument("<tool-id>", "Tool identifier")
+    .action(async (toolId: string) => {
+      const parentOpts = tools.opts();
+      const data = await fetchToolsStatus(parentOpts);
+      const tool = data.tools.find((t) => t.id === toolId);
+      if (!tool) {
+        console.error(`Unknown tool: ${toolId}`);
+        process.exit(1);
+      }
+      if (!tool.install || tool.install.length === 0) {
+        console.log(`Tool ${toolId} has no install instructions.`);
+        if (tool.requires?.bins?.length) {
+          console.log(`Required binaries: ${tool.requires.bins.join(", ")}`);
+        }
+        return;
+      }
+      const result = await installTool(tool.install);
+      console.log(result.message);
+      if (!result.installed) {
+        process.exit(1);
+      }
     });
 }
