@@ -155,7 +155,11 @@ export function createGogAuthStartTool(opts?: {
         authUrl: authUrl.toString(),
         state,
         expiresIn: 300, // 5 minutes in seconds
-        instructions: `Please visit the link above to authorize access to your Google account. I'll notify you when authentication is complete (or if it times out after 5 minutes).`,
+        instructions:
+          `IMPORTANT: You MUST include the full authUrl in your response to the user as a clickable link. ` +
+          `Do NOT say "click the link" without actually pasting the URL. ` +
+          `The user will visit this link to authorize access to their Google account (${services.join(", ")}). ` +
+          `You'll be notified when authentication completes (or if it times out after 5 minutes).`,
       };
 
       return jsonResult(result);
