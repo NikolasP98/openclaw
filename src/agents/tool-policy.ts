@@ -21,8 +21,8 @@ const TOOL_NAME_ALIASES: Record<string, string> = {
 export const TOOL_GROUPS: Record<string, string[]> = {
   ...GENERATED_TOOL_GROUPS,
   // --- Manual overrides (tools not in the tool registry) ---
-  // Memory tools are provided by the plugin runtime, not the tool registry.
-  "group:memory": ["memory_search", "memory_get"],
+  // Memory tools from plugin runtime, merged with generated group:memory.
+  "group:memory": [...(GENERATED_TOOL_GROUPS["group:memory"] ?? []), "memory_search", "memory_get"],
   // Basic workspace/file tools (from pi-coding-agent, not the tool registry).
   "group:fs": ["read", "write", "edit", "apply_patch"],
   // Host/runtime execution tools (from pi-tools.ts, not the tool registry).

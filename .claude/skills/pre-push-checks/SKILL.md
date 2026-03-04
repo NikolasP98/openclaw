@@ -20,6 +20,10 @@ A pre-push git hook runs CI workflow validation tests before allowing pushes to 
 
 - **Git hook** (`git-hooks/pre-push`): Automatically runs on every push. Only gates `DEV` and `main` — feature branches pass through unblocked.
 - **Test suite** (`test/ci/`): Vitest tests that parse workflow YAML files and assert structural invariants (triggers, conditions, tags, package scope, etc.).
+- **Version bump**: After tests pass, `stamp-version.ts` bumps `package.json` to the next available version and amends the latest commit. Format: `yyyy.M.d{-#iteration}{-dev}`.
+  - `main` → `2026.3.4`, `2026.3.4-1`, `2026.3.4-2`, ...
+  - `DEV` → `2026.3.4-dev`, `2026.3.4-1-dev`, `2026.3.4-2-dev`, ...
+  - CI then appends a timestamp for DEV prereleases: `2026.3.4-dev.20260304021336`
 - `core.hooksPath` is already set to `git-hooks` by the `prepare` script, so no setup is needed.
 
 ## Existing Tests

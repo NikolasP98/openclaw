@@ -71,6 +71,21 @@ export function createGogExecTool(opts?: { agentId?: string; sessionKey?: string
       // Parse command string into args (respects quoted strings)
       const commandArgs = parseCommandArgs(command);
 
+      // Pre-check: does the credential have the required service for this command?
+      const targetService = commandArgs.find((arg) =>
+        ["gmail", "calendar", "drive", "contacts", "docs", "sheets"].includes(arg),
+      );
+      if (targetService && !credentials.services.includes(targetService)) {
+        const allServices = [...new Set([...credentials.services, targetService])];
+        return jsonResult({
+          error:
+            `Current credentials for ${credentials.email} only have scopes for: ${credentials.services.join(", ")}. ` +
+            `The "${targetService}" service is not authorized. ` +
+            `Re-authenticate with gog_auth_start using services: [${allServices.map((s) => `"${s}"`).join(", ")}] ` +
+            `to add the missing scope.`,
+        });
+      }
+
       // Auto-inject --account flag if not present
       if (!commandArgs.includes("--account") && !commandArgs.includes("-a")) {
         const subcommandIndex = commandArgs.findIndex((arg) =>
@@ -117,8 +132,17 @@ export function createGogExecTool(opts?: { agentId?: string; sessionKey?: string
       }
 
       if (result.code !== 0) {
+        // Detect Google API scope errors and provide actionable guidance
+        const isScopeError = /insufficientPermissions|insufficient.*scopes?|403/i.test(
+          result.stderr,
+        );
+        const scopeHint = isScopeError
+          ? `\nThis is a Google OAuth scope error. The current token was not granted "${targetService || "the required"}" permissions. ` +
+            `Re-authenticate with gog_auth_start (include all needed services: gmail, calendar, drive) to fix this.`
+          : "";
+
         return jsonResult({
-          error: `gog exited with code ${result.code}`,
+          error: `gog exited with code ${result.code}${scopeHint}`,
           stdout: result.stdout,
           stderr: result.stderr,
           keyringSyncWarning,

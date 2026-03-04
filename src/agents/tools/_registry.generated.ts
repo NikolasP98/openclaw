@@ -21,7 +21,7 @@ export const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
     meta: {
       id: "architect_pipeline",
       factory: "createArchitectPipelineTool",
-      groups: [],
+      groups: ["group:minion"],
       contextKeys: ["workspaceDir"],
     },
     load: () => import("./architect-pipeline-tool.js"),
@@ -66,7 +66,7 @@ export const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
     meta: {
       id: "gog_auth_revoke",
       factory: "createGogAuthRevokeTool",
-      groups: [],
+      groups: ["group:gog", "group:minion"],
       contextKeys: ["agentId", "agentDir", "agentSessionKey"],
       condition: "gogOAuthEnabled",
     },
@@ -76,7 +76,7 @@ export const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
     meta: {
       id: "gog_auth_start",
       factory: "createGogAuthStartTool",
-      groups: [],
+      groups: ["group:gog", "group:minion"],
       contextKeys: ["agentId", "agentDir", "agentSessionKey"],
       condition: "gogOAuthEnabled",
     },
@@ -86,7 +86,7 @@ export const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
     meta: {
       id: "gog_auth_status",
       factory: "createGogAuthStatusTool",
-      groups: [],
+      groups: ["group:gog", "group:minion"],
       contextKeys: ["agentId", "agentSessionKey"],
       condition: "gogOAuthEnabled",
     },
@@ -96,7 +96,7 @@ export const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
     meta: {
       id: "gog_exec",
       factory: "createGogExecTool",
-      groups: [],
+      groups: ["group:gog", "group:minion"],
       contextKeys: ["agentId", "agentSessionKey"],
       condition: "gogOAuthEnabled",
     },
@@ -123,7 +123,7 @@ export const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
     meta: {
       id: "knowledge_graph",
       factory: "createKnowledgeGraphTools",
-      groups: [],
+      groups: ["group:memory", "group:minion"],
       multi: true,
       modulePath: "../../memory/knowledge-graph.js",
     },
@@ -228,7 +228,7 @@ export const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
     meta: {
       id: "summarize",
       factory: "createSummarizeTool",
-      groups: [],
+      groups: ["group:minion"],
       skillPromptFile: "./summarize-tool.skill.md",
       requires: { bins: ["summarize"] },
       mcpExport: true,
@@ -239,7 +239,7 @@ export const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
     meta: {
       id: "tts",
       factory: "createTtsTool",
-      groups: [],
+      groups: ["group:minion"],
       contextKeys: ["agentChannel", "config"],
     },
     load: () => import("./tts-tool.js"),
@@ -248,7 +248,7 @@ export const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {
     meta: {
       id: "venture_studio",
       factory: "createVentureStudioTool",
-      groups: [],
+      groups: ["group:minion"],
       contextKeys: ["workspaceDir"],
     },
     load: () => import("./venture-studio-tool.js"),

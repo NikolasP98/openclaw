@@ -57,6 +57,25 @@ if ! pnpm vitest run test/ci/; then
 fi
 
 echo ""
+log_section "Version bump"
+
+DEV_FLAG=""
+if [[ "$BRANCH" == "DEV" ]]; then
+  DEV_FLAG="--dev"
+fi
+
+NEW_VERSION=$(node --import tsx scripts/stamp-version.ts $DEV_FLAG)
+if [[ -z "$NEW_VERSION" ]]; then
+  log "ERROR: stamp-version.ts failed to produce a version."
+  exit 1
+fi
+
+log "Bumped to $NEW_VERSION"
+
+# Stage and amend the version change into the latest commit
+git add package.json
+git commit --amend --no-edit --no-verify
+
 log_section "PUSH ALLOWED"
-log "All CI workflow tests passed."
+log "All CI workflow tests passed. Version: $NEW_VERSION"
 log "Finished at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"

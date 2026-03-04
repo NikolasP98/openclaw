@@ -44,6 +44,8 @@ Minion provides **non-blocking OAuth authentication** via agent tools. When you 
 - `gog_auth_revoke` — Revoke credentials
 - `gog_exec` — **Preferred way to run gog commands.** Auto-injects session credentials (account, keyring env). No need to manually set `GOG_ACCOUNT` or `--account` flags.
 
+**Scope management:** Always authenticate with the default services (gmail, calendar, drive) — do NOT narrow to a single service even if the user only mentions one. Users expect all Google services to work once authenticated. If `gog_exec` returns a "service not authorized" error, re-authenticate with `gog_auth_start` including the missing service.
+
 **Usage pattern:** Authenticate with `gog_auth_start`, then use `gog_exec` for all commands:
 
 ```

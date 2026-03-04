@@ -1,0 +1,5 @@
+[   20056ms] [ERROR] WebSocket connection to 'ws://localhost:28789/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:5174/src/lib/services/gateway.svelte.ts:41
+[   21417ms] [ERROR] WebSocket connection to 'ws://localhost:28789/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:5174/src/lib/services/gateway.svelte.ts:41
+[   23731ms] [ERROR] WebSocket connection to 'ws://localhost:28789/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:5174/src/lib/services/gateway.svelte.ts:41
+[   27663ms] [ERROR] WebSocket connection to 'ws://localhost:28789/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:5174/src/lib/services/gateway.svelte.ts:41
+[   34345ms] [ERROR] WebSocket connection to 'ws://localhost:28789/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:5174/src/lib/services/gateway.svelte.ts:41

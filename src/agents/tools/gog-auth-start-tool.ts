@@ -4,7 +4,7 @@
 
 import { Type } from "@sinclair/typebox";
 import { updateSessionStore, resolveDefaultSessionStorePath } from "../../config/sessions.js";
-import { getGoogleClientId } from "../../hooks/gog-credentials.js";
+import { getGoogleClientId, loadSessionCredentials } from "../../hooks/gog-credentials.js";
 import {
   generateState,
   addPendingFlow,
@@ -47,12 +47,21 @@ export function createGogAuthStartTool(opts?: {
     label: "Google Auth Start",
     name: "gog_auth_start",
     description:
-      "Start non-blocking Google OAuth flow for Gmail, Calendar, Drive, and other Google services. Returns an authorization URL for the user to visit. The agent remains responsive while waiting for authorization.",
+      "Start non-blocking Google OAuth flow for Gmail, Calendar, Drive, and other Google services. Returns an authorization URL for the user to visit. The agent remains responsive while waiting for authorization. " +
+      "IMPORTANT: Always use the default services (gmail, calendar, drive) unless the user explicitly requests only specific services. Do NOT narrow to a single service — users expect all Google services to work once authenticated.",
     parameters: GogAuthStartSchema,
     execute: async (_toolCallId, args) => {
       const params = args as Record<string, unknown>;
       const email = readStringParam(params, "email", { required: true });
-      const services = (params.services as string[] | undefined) || ["gmail", "calendar", "drive"];
+      let services = (params.services as string[] | undefined) || ["gmail", "calendar", "drive"];
+
+      // Merge with existing credential services so re-auth never loses previously granted scopes
+      if (opts?.agentId && opts?.sessionKey) {
+        const existing = await loadSessionCredentials(opts.agentId, opts.sessionKey, email);
+        if (existing?.services?.length) {
+          services = [...new Set([...existing.services, ...services])];
+        }
+      }
 
       // Validate email format
       if (!email.includes("@")) {
