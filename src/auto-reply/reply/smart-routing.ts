@@ -1017,15 +1017,38 @@ export type SessionPin = {
 };
 
 /**
- * In-memory session pin map.
+ * In-memory session pin map — bounded with TTL eviction.
  *
  * When a session's first message is routed to a specific model, subsequent
  * messages reuse that model without re-classifying — preventing jarring
  * mid-conversation model switches.
  *
- * Pins are scoped by session key and auto-expire when the session resets.
+ * Pins are scoped by session key and auto-expire after SESSION_PIN_TTL_MS.
+ * Map is capped at SESSION_PIN_MAX_ENTRIES to prevent unbounded growth in
+ * long-lived processes.
  */
+const SESSION_PIN_TTL_MS = 4 * 60 * 60 * 1000; // 4 hours
+const SESSION_PIN_MAX_ENTRIES = 10_000;
+
 const sessionPins = new Map<string, SessionPin>();
+
+/** Evict expired entries and enforce max-size cap. */
+function evictStalePins(): void {
+  const now = Date.now();
+  for (const [key, pin] of sessionPins) {
+    if (now - pin.pinnedAt > SESSION_PIN_TTL_MS) {
+      sessionPins.delete(key);
+    }
+  }
+  // If still over cap after TTL sweep, remove oldest entries
+  if (sessionPins.size > SESSION_PIN_MAX_ENTRIES) {
+    const entries = [...sessionPins.entries()].toSorted((a, b) => a[1].pinnedAt - b[1].pinnedAt);
+    const toRemove = entries.length - SESSION_PIN_MAX_ENTRIES;
+    for (let i = 0; i < toRemove; i++) {
+      sessionPins.delete(entries[i][0]);
+    }
+  }
+}
 
 /**
  * Pin a session to a specific model routing result.
@@ -1033,6 +1056,10 @@ const sessionPins = new Map<string, SessionPin>();
 export function pinSession(sessionKey: string, result: SmartRoutingResult): void {
   if (!result.provider || !result.model) {
     return;
+  }
+  // Periodic eviction: run every 100 writes to amortize cost
+  if (sessionPins.size > 0 && sessionPins.size % 100 === 0) {
+    evictStalePins();
   }
   sessionPins.set(sessionKey, {
     provider: result.provider,
@@ -1044,10 +1071,19 @@ export function pinSession(sessionKey: string, result: SmartRoutingResult): void
 }
 
 /**
- * Get the current pin for a session, or undefined if not pinned.
+ * Get the current pin for a session, or undefined if not pinned / expired.
  */
 export function getSessionPin(sessionKey: string): SessionPin | undefined {
-  return sessionPins.get(sessionKey);
+  const pin = sessionPins.get(sessionKey);
+  if (!pin) {
+    return undefined;
+  }
+  // Lazy TTL check on read
+  if (Date.now() - pin.pinnedAt > SESSION_PIN_TTL_MS) {
+    sessionPins.delete(sessionKey);
+    return undefined;
+  }
+  return pin;
 }
 
 /**
@@ -1067,6 +1103,9 @@ export function clearAllSessionPins(): void {
 /** @internal — exposed for tests only */
 export const _sessionPinInternals = {
   sessionPins,
+  evictStalePins,
+  SESSION_PIN_TTL_MS,
+  SESSION_PIN_MAX_ENTRIES,
 } as const;
 
 // ── System Prompt ────────────────────────────────────────────────────────────
