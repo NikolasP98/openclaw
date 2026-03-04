@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import * as authModule from "../agents/model-auth.js";
+import * as authModule from "../agents/models/model-auth.js";
 import { type FetchMock, withFetchPreconnect } from "../test-support/fetch-mock.js";
 import { createVoyageEmbeddingProvider, normalizeVoyageModel } from "./embeddings-voyage.js";
 
-vi.mock("../agents/model-auth.js", async () => {
+vi.mock("../agents/models/model-auth.js", async () => {
   const { createModelAuthMockModule } = await import("../test-support/model-auth-mock.js");
   return createModelAuthMockModule();
 });

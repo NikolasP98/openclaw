@@ -2,9 +2,8 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import { runCliAgent } from "../../agents/cli-runner.js";
 import { getCliSessionId } from "../../agents/cli-session.js";
-import { runWithModelFallback } from "../../agents/model-fallback.js";
-import { pinSession } from "./smart-routing.js";
-import { isCliProvider } from "../../agents/model-selection.js";
+import { runWithModelFallback } from "../../agents/models/model-fallback.js";
+import { isCliProvider } from "../../agents/models/model-selection.js";
 import {
   isCompactionFailureError,
   isContextOverflowError,
@@ -39,6 +38,7 @@ import {
 import { type BlockReplyPipeline } from "./block-reply-pipeline.js";
 import type { FollowupRun } from "./queue.js";
 import { createBlockReplyDeliveryHandler } from "./reply-delivery.js";
+import { pinSession } from "./smart-routing.js";
 import type { TypingSignaler } from "./typing-mode.js";
 
 export type AgentRunLoopResult =

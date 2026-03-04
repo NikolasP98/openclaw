@@ -1,0 +1,241 @@
+import { describe, it, expect, vi } from "vitest";
+import type { MinionConfig } from "../../config/config.js";
+import {
+  parseModelRef,
+  resolveModelRefFromString,
+  resolveConfiguredModelRef,
+  buildModelAliasIndex,
+  normalizeProviderId,
+  modelKey,
+} from "./model-selection.js";
+
+describe("model-selection", () => {
+  describe("normalizeProviderId", () => {
+    it("should normalize provider names", () => {
+      expect(normalizeProviderId("Anthropic")).toBe("anthropic");
+      expect(normalizeProviderId("Z.ai")).toBe("zai");
+      expect(normalizeProviderId("z-ai")).toBe("zai");
+      expect(normalizeProviderId("OpenCode-Zen")).toBe("opencode");
+      expect(normalizeProviderId("qwen")).toBe("qwen-portal");
+      expect(normalizeProviderId("kimi-code")).toBe("kimi-coding");
+    });
+  });
+
+  describe("parseModelRef", () => {
+    it("should parse full model refs", () => {
+      expect(parseModelRef("anthropic/claude-3-5-sonnet", "openai")).toEqual({
+        provider: "anthropic",
+        model: "claude-3-5-sonnet",
+      });
+    });
+
+    it("preserves nested model ids after provider prefix", () => {
+      expect(parseModelRef("nvidia/moonshotai/kimi-k2.5", "anthropic")).toEqual({
+        provider: "nvidia",
+        model: "moonshotai/kimi-k2.5",
+      });
+    });
+
+    it("normalizes anthropic alias refs to canonical model ids", () => {
+      expect(parseModelRef("anthropic/opus-4.6", "openai")).toEqual({
+        provider: "anthropic",
+        model: "claude-opus-4-6",
+      });
+      expect(parseModelRef("opus-4.6", "anthropic")).toEqual({
+        provider: "anthropic",
+        model: "claude-opus-4-6",
+      });
+      expect(parseModelRef("anthropic/sonnet-4.6", "openai")).toEqual({
+        provider: "anthropic",
+        model: "claude-sonnet-4-6",
+      });
+      expect(parseModelRef("sonnet-4.6", "anthropic")).toEqual({
+        provider: "anthropic",
+        model: "claude-sonnet-4-6",
+      });
+    });
+
+    it("should use default provider if none specified", () => {
+      expect(parseModelRef("claude-3-5-sonnet", "anthropic")).toEqual({
+        provider: "anthropic",
+        model: "claude-3-5-sonnet",
+      });
+    });
+
+    it("normalizes openai gpt-5.3 codex refs to openai-codex provider", () => {
+      expect(parseModelRef("openai/gpt-5.3-codex", "anthropic")).toEqual({
+        provider: "openai-codex",
+        model: "gpt-5.3-codex",
+      });
+      expect(parseModelRef("gpt-5.3-codex", "openai")).toEqual({
+        provider: "openai-codex",
+        model: "gpt-5.3-codex",
+      });
+      expect(parseModelRef("openai/gpt-5.3-codex-codex", "anthropic")).toEqual({
+        provider: "openai-codex",
+        model: "gpt-5.3-codex-codex",
+      });
+    });
+
+    it("should return null for empty strings", () => {
+      expect(parseModelRef("", "anthropic")).toBeNull();
+      expect(parseModelRef("  ", "anthropic")).toBeNull();
+    });
+
+    it("should handle invalid slash usage", () => {
+      expect(parseModelRef("/", "anthropic")).toBeNull();
+      expect(parseModelRef("anthropic/", "anthropic")).toBeNull();
+      expect(parseModelRef("/model", "anthropic")).toBeNull();
+    });
+  });
+
+  describe("buildModelAliasIndex", () => {
+    it("should build alias index from config", () => {
+      const cfg: Partial<MinionConfig> = {
+        agents: {
+          defaults: {
+            models: {
+              "anthropic/claude-3-5-sonnet": { alias: "fast" },
+              "openai/gpt-4o": { alias: "smart" },
+            },
+          },
+        },
+      };
+
+      const index = buildModelAliasIndex({
+        cfg: cfg as MinionConfig,
+        defaultProvider: "anthropic",
+      });
+
+      expect(index.byAlias.get("fast")?.ref).toEqual({
+        provider: "anthropic",
+        model: "claude-3-5-sonnet",
+      });
+      expect(index.byAlias.get("smart")?.ref).toEqual({ provider: "openai", model: "gpt-4o" });
+      expect(index.byKey.get(modelKey("anthropic", "claude-3-5-sonnet"))).toEqual(["fast"]);
+    });
+
+    // ── Built-in shorthand aliases (Sprint Y.2) ────────────────────────────
+
+    it("includes built-in shorthand aliases without any user config", () => {
+      const index = buildModelAliasIndex({
+        cfg: {} as MinionConfig,
+        defaultProvider: "anthropic",
+      });
+
+      // Anthropic shorthands
+      expect(index.byAlias.get("claude")?.ref.provider).toBe("anthropic");
+      expect(index.byAlias.get("opus")?.ref.provider).toBe("anthropic");
+      expect(index.byAlias.get("haiku")?.ref.provider).toBe("anthropic");
+      // OpenAI shorthands
+      expect(index.byAlias.get("gpt4")?.ref.provider).toBe("openai");
+      expect(index.byAlias.get("mini")?.ref.provider).toBe("openai");
+      // Google shorthands
+      expect(index.byAlias.get("gemini")?.ref.provider).toBe("google");
+      expect(index.byAlias.get("flash")?.ref.provider).toBe("google");
+      // DeepSeek shorthands
+      expect(index.byAlias.get("deepseek")?.ref.provider).toBe("deepseek");
+      expect(index.byAlias.get("r1")?.ref.provider).toBe("deepseek");
+    });
+
+    it("user-configured aliases override built-in shorthands", () => {
+      const cfg: Partial<MinionConfig> = {
+        agents: {
+          defaults: {
+            models: {
+              // Override the built-in "claude" alias to point to a different model
+              "anthropic/claude-haiku-3.5": { alias: "claude" },
+            },
+          },
+        },
+      };
+
+      const index = buildModelAliasIndex({
+        cfg: cfg as MinionConfig,
+        defaultProvider: "anthropic",
+      });
+
+      // User's alias takes precedence
+      expect(index.byAlias.get("claude")?.ref.model).toBe("claude-haiku-3.5");
+    });
+
+    it("built-in aliases resolve via resolveModelRefFromString", () => {
+      const index = buildModelAliasIndex({
+        cfg: {} as MinionConfig,
+        defaultProvider: "anthropic",
+      });
+
+      const resolved = resolveModelRefFromString({
+        raw: "claude",
+        defaultProvider: "anthropic",
+        aliasIndex: index,
+      });
+
+      expect(resolved?.ref.provider).toBe("anthropic");
+      expect(resolved?.alias).toBe("claude");
+    });
+  });
+
+  describe("resolveModelRefFromString", () => {
+    it("should resolve from string with alias", () => {
+      const index = {
+        byAlias: new Map([
+          ["fast", { alias: "fast", ref: { provider: "anthropic", model: "sonnet" } }],
+        ]),
+        byKey: new Map(),
+      };
+
+      const resolved = resolveModelRefFromString({
+        raw: "fast",
+        defaultProvider: "openai",
+        aliasIndex: index,
+      });
+
+      expect(resolved?.ref).toEqual({ provider: "anthropic", model: "sonnet" });
+      expect(resolved?.alias).toBe("fast");
+    });
+
+    it("should resolve direct ref if no alias match", () => {
+      const resolved = resolveModelRefFromString({
+        raw: "openai/gpt-4",
+        defaultProvider: "anthropic",
+      });
+      expect(resolved?.ref).toEqual({ provider: "openai", model: "gpt-4" });
+    });
+  });
+
+  describe("resolveConfiguredModelRef", () => {
+    it("should fall back to anthropic and warn if provider is missing for non-alias", () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const cfg: Partial<MinionConfig> = {
+        agents: {
+          defaults: {
+            model: { primary: "claude-3-5-sonnet" },
+          },
+        },
+      };
+
+      const result = resolveConfiguredModelRef({
+        cfg: cfg as MinionConfig,
+        defaultProvider: "google",
+        defaultModel: "gemini-pro",
+      });
+
+      expect(result).toEqual({ provider: "anthropic", model: "claude-3-5-sonnet" });
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Falling back to "anthropic/claude-3-5-sonnet"'),
+      );
+      warnSpy.mockRestore();
+    });
+
+    it("should use default provider/model if config is empty", () => {
+      const cfg: Partial<MinionConfig> = {};
+      const result = resolveConfiguredModelRef({
+        cfg: cfg as MinionConfig,
+        defaultProvider: "openai",
+        defaultModel: "gpt-4",
+      });
+      expect(result).toEqual({ provider: "openai", model: "gpt-4" });
+    });
+  });
+});

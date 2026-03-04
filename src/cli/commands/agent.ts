@@ -12,8 +12,8 @@ import { runCliAgent } from "../../agents/cli-runner.js";
 import { getCliSessionId } from "../../agents/cli-session.js";
 import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "../../agents/defaults.js";
 import { AGENT_LANE_SUBAGENT } from "../../agents/lanes.js";
-import { loadModelCatalog } from "../../agents/model-catalog.js";
-import { runWithModelFallback } from "../../agents/model-fallback.js";
+import { loadModelCatalog } from "../../agents/models/model-catalog.js";
+import { runWithModelFallback } from "../../agents/models/model-fallback.js";
 import {
   buildAllowedModelSet,
   isCliProvider,
@@ -21,7 +21,7 @@ import {
   normalizeModelRef,
   resolveConfiguredModelRef,
   resolveThinkingDefault,
-} from "../../agents/model-selection.js";
+} from "../../agents/models/model-selection.js";
 import { runEmbeddedPiAgent } from "../../agents/pi-embedded.js";
 import { buildWorkspaceSkillSnapshot } from "../../agents/skills.js";
 import { getSkillsSnapshotVersion } from "../../agents/skills/refresh.js";

@@ -1,13 +1,13 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { resolveApiKeyForProvider } from "../../../agents/model-auth.js";
-import type { ModelCatalogEntry } from "../../../agents/model-catalog.js";
+import { resolveApiKeyForProvider } from "../../../agents/models/model-auth.js";
+import type { ModelCatalogEntry } from "../../../agents/models/model-catalog.js";
 import {
   findModelInCatalog,
   loadModelCatalog,
   modelSupportsVision,
-} from "../../../agents/model-catalog.js";
-import { resolveDefaultModelForAgent } from "../../../agents/model-selection.js";
+} from "../../../agents/models/model-catalog.js";
+import { resolveDefaultModelForAgent } from "../../../agents/models/model-selection.js";
 import type { OpenClawConfig } from "../../../config/config.js";
 import { STATE_DIR } from "../../../config/paths.js";
 import { logVerbose } from "../../../globals.js";

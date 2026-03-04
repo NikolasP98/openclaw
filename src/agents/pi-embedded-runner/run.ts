@@ -23,9 +23,9 @@ import {
   getApiKeyForModel,
   resolveAuthProfileOrder,
   type ResolvedProviderAuth,
-} from "../model-auth.js";
-import { normalizeProviderId } from "../model-selection.js";
-import { ensureOpenClawModelsJson } from "../models-config.js";
+} from "../models/model-auth.js";
+import { normalizeProviderId } from "../models/model-selection.js";
+import { ensureOpenClawModelsJson } from "../models/models-config.js";
 import {
   formatBillingErrorMessage,
   classifyFailoverReason,

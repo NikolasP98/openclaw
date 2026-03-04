@@ -4,8 +4,8 @@ import {
   findModelInCatalog,
   loadModelCatalog,
   modelSupportsVision,
-} from "../../../agents/model-catalog.js";
-import { resolveDefaultModelForAgent } from "../../../agents/model-selection.js";
+} from "../../../agents/models/model-catalog.js";
+import { resolveDefaultModelForAgent } from "../../../agents/models/model-selection.js";
 import { EmbeddedBlockChunker } from "../../../agents/pi-embedded-block-chunker.js";
 import { resolveChunkMode } from "../../../auto-reply/chunk.js";
 import { clearHistoryEntriesIfEnabled } from "../../../auto-reply/reply/history.js";

@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import "./test-support/fast-coding-tools.js";
 import type { MinionConfig } from "../config/config.js";
-import { ensureMinionModelsJson } from "./models-config.js";
+import { ensureMinionModelsJson } from "./models/models-config.js";
 
 vi.mock("@mariozechner/pi-ai", async () => {
   const actual = await vi.importActual<typeof import("@mariozechner/pi-ai")>("@mariozechner/pi-ai");

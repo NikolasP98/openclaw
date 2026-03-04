@@ -8,6 +8,9 @@
 import type { WorkspaceBootstrapFile } from "../agents/workspace.js";
 import type { CliDeps } from "../cli/deps.js";
 import type { MinionConfig } from "../config/config.js";
+import { createSubsystemLogger } from "../logging/subsystem.js";
+
+const log = createSubsystemLogger("hooks");
 
 export type InternalHookEventType = "command" | "session" | "agent" | "gateway" | "message";
 
@@ -201,9 +204,8 @@ export async function triggerInternalHook(event: InternalHookEvent): Promise<voi
     try {
       await handler(event);
     } catch (err) {
-      console.error(
-        `Hook error [${event.type}:${event.action}]:`,
-        err instanceof Error ? err.message : String(err),
+      log.error(
+        `Hook error [${event.type}:${event.action}]: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
   }

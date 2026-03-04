@@ -134,7 +134,9 @@ export async function loadSessionCredentials(
     // No session credentials found - gogcli will fall back to its own global credentials
     return null;
   } catch (error) {
-    console.error("Error loading session credentials:", error);
+    log.error(
+      `Error loading session credentials: ${error instanceof Error ? error.message : String(error)}`,
+    );
     return null;
   }
 }
@@ -286,7 +288,9 @@ export async function revokeCredentials(
       },
     );
   } catch (error) {
-    console.error("Failed to revoke token with Google:", error);
+    log.error(
+      `Failed to revoke token with Google: ${error instanceof Error ? error.message : String(error)}`,
+    );
     // Continue to delete local file even if revocation fails
   }
 
@@ -295,7 +299,9 @@ export async function revokeCredentials(
     try {
       await fs.unlink(credentials.filePath);
     } catch (error) {
-      console.error("Failed to delete credentials file:", error);
+      log.error(
+        `Failed to delete credentials file: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 }
@@ -319,7 +325,9 @@ export async function listCredentials(agentId: string): Promise<GogCredentials[]
           creds.filePath = credPath;
           credentials.push(creds);
         } catch (error) {
-          console.error(`Failed to load credentials file ${file}:`, error);
+          log.error(
+            `Failed to load credentials file ${file}: ${error instanceof Error ? error.message : String(error)}`,
+          );
         }
       }
     }
@@ -491,7 +499,9 @@ export async function syncToGogKeyring(
     return result;
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.warn("[gog-credentials] Failed to sync tokens to gog CLI keyring:", error);
+    log.warn(
+      `Failed to sync tokens to gog CLI keyring: ${error instanceof Error ? error.message : String(error)}`,
+    );
     return { success: false, error: msg };
   }
 }

@@ -7,6 +7,9 @@ import { enqueueFollowupRun } from "../auto-reply/reply/queue/enqueue.ts";
 import type { FollowupRun } from "../auto-reply/reply/queue/types.js";
 import { loadConfig } from "../config/config.js";
 import { loadSessionStore, resolveDefaultSessionStorePath } from "../config/sessions.js";
+import { createSubsystemLogger } from "../logging/subsystem.js";
+
+const log = createSubsystemLogger("gog-oauth/notifications");
 
 /**
  * Notification types
@@ -34,7 +37,7 @@ async function enqueueOAuthNotification(notification: OAuthNotification): Promis
   const sessionEntry = sessionStore[notification.sessionKey];
 
   if (!sessionEntry) {
-    console.error(`Cannot send OAuth notification: session ${notification.sessionKey} not found`);
+    log.error(`Cannot send OAuth notification: session ${notification.sessionKey} not found`);
     return;
   }
 

@@ -1,4 +1,4 @@
-import type { ModelCatalogEntry } from "../agents/model-catalog.js";
+import type { ModelCatalogEntry } from "../agents/models/model-catalog.js";
 import type { HealthSummary } from "../cli/commands/health.js";
 import type { CliDeps } from "../cli/deps.js";
 import type { ChatAbortControllerEntry } from "./chat-abort.js";

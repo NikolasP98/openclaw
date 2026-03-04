@@ -219,3 +219,10 @@ export const AgentsSkillsSetParamsSchema = Type.Object(
   },
   { additionalProperties: false },
 );
+
+export const ToolsStatusParamsSchema = Type.Object(
+  {
+    agentId: Type.Optional(NonEmptyString),
+  },
+  { additionalProperties: false },
+);

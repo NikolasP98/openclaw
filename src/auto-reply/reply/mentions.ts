@@ -5,6 +5,25 @@ import type { OpenClawConfig } from "../../config/config.js";
 import { escapeRegExp } from "../../utils.js";
 import type { MsgContext } from "../templating.js";
 
+// Cache compiled mention regexes keyed by (pattern, flags) — avoids re-creating
+// `new RegExp()` on every `buildMentionRegexes` / `stripMentions` call.
+const mentionRegexCache = new Map<string, RegExp>();
+
+function getCachedRegex(pattern: string, flags: string): RegExp | null {
+  const key = `${pattern}\0${flags}`;
+  let re = mentionRegexCache.get(key);
+  if (re) {
+    return re;
+  }
+  try {
+    re = new RegExp(pattern, flags);
+    mentionRegexCache.set(key, re);
+    return re;
+  } catch {
+    return null;
+  }
+}
+
 function deriveMentionPatterns(identity?: { name?: string; emoji?: string }) {
   const patterns: string[] = [];
   const name = identity?.name?.trim();
@@ -55,13 +74,7 @@ function resolveMentionPatterns(cfg: OpenClawConfig | undefined, agentId?: strin
 export function buildMentionRegexes(cfg: OpenClawConfig | undefined, agentId?: string): RegExp[] {
   const patterns = normalizeMentionPatterns(resolveMentionPatterns(cfg, agentId));
   return patterns
-    .map((pattern) => {
-      try {
-        return new RegExp(pattern, "i");
-      } catch {
-        return null;
-      }
-    })
+    .map((pattern) => getCachedRegex(pattern, "i"))
     .filter((value): value is RegExp => Boolean(value));
 }
 
@@ -139,11 +152,9 @@ export function stripMentions(
     ...(providerMentions?.stripPatterns?.({ ctx, cfg, agentId }) ?? []),
   ]);
   for (const p of patterns) {
-    try {
-      const re = new RegExp(p, "gi");
+    const re = getCachedRegex(p, "gi");
+    if (re) {
       result = result.replace(re, " ");
-    } catch {
-      // ignore invalid regex
     }
   }
   if (providerMentions?.stripMentions) {

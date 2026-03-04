@@ -1,7 +1,7 @@
 import {
   buildModelAliasIndex,
   resolveModelRefFromString,
-} from "../../../agents/model-selection.js";
+} from "../../../agents/models/model-selection.js";
 import type { OpenClawConfig } from "../../../config/config.js";
 import { loadConfig } from "../../../config/config.js";
 import { logConfigUpdated } from "../../../config/logging.js";

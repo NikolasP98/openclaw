@@ -40,9 +40,9 @@ import {
   extractAndStoreMemory,
   extractLastAssistantText,
 } from "../../memory-integration.js";
-import { resolveModelAuthMode } from "../../model-auth.js";
-import { resolveDefaultModelForAgent } from "../../model-selection.js";
-import { createOllamaStreamFn, OLLAMA_NATIVE_BASE_URL } from "../../ollama-stream.js";
+import { resolveModelAuthMode } from "../../models/model-auth.js";
+import { resolveDefaultModelForAgent } from "../../models/model-selection.js";
+import { createOllamaStreamFn, OLLAMA_NATIVE_BASE_URL } from "../../models/ollama-stream.js";
 import {
   isCloudCodeAssistFormatError,
   resolveBootstrapMaxChars,

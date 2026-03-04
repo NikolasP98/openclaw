@@ -197,6 +197,8 @@ import {
   SkillsUpdateParamsSchema,
   type AgentsSkillsSetParams,
   AgentsSkillsSetParamsSchema,
+  type ToolsStatusParams,
+  ToolsStatusParamsSchema,
   type Snapshot,
   SnapshotSchema,
   type StateVersion,
@@ -339,6 +341,7 @@ export const validateSkillsUpdateParams = ajv.compile<SkillsUpdateParams>(Skills
 export const validateAgentsSkillsSetParams = ajv.compile<AgentsSkillsSetParams>(
   AgentsSkillsSetParamsSchema,
 );
+export const validateToolsStatusParams = ajv.compile<ToolsStatusParams>(ToolsStatusParamsSchema);
 export const validateCronListParams = ajv.compile<CronListParams>(CronListParamsSchema);
 export const validateCronStatusParams = ajv.compile<CronStatusParams>(CronStatusParamsSchema);
 export const validateCronAddParams = ajv.compile<CronAddParams>(CronAddParamsSchema);
@@ -535,6 +538,7 @@ export {
   MeshRunParamsSchema,
   MeshStatusParamsSchema,
   MeshRetryParamsSchema,
+  ToolsStatusParamsSchema,
 };
 
 export type {
@@ -644,4 +648,5 @@ export type {
   MeshStatusParams,
   MeshRetryParams,
   MeshWorkflowPlan,
+  ToolsStatusParams,
 };

@@ -1,14 +1,14 @@
 import { ensureAuthProfileStore, listProfilesForProvider } from "../../agents/auth-profiles.js";
 import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "../../agents/defaults.js";
-import { getCustomProviderApiKey, resolveEnvApiKey } from "../../agents/model-auth.js";
-import { loadModelCatalog } from "../../agents/model-catalog.js";
+import { getCustomProviderApiKey, resolveEnvApiKey } from "../../agents/models/model-auth.js";
+import { loadModelCatalog } from "../../agents/models/model-catalog.js";
 import {
   buildAllowedModelSet,
   buildModelAliasIndex,
   modelKey,
   normalizeProviderId,
   resolveConfiguredModelRef,
-} from "../../agents/model-selection.js";
+} from "../../agents/models/model-selection.js";
 import type { OpenClawConfig } from "../../config/config.js";
 import type { WizardPrompter, WizardSelectOption } from "../../wizard/prompts.js";
 import { formatTokenK } from "./models/shared.js";

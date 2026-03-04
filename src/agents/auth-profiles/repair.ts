@@ -1,6 +1,6 @@
 import type { MinionConfig } from "../../config/config.js";
 import type { AuthProfileConfig } from "../../config/types.js";
-import { findNormalizedProviderKey, normalizeProviderId } from "../model-selection.js";
+import { findNormalizedProviderKey, normalizeProviderId } from "../models/model-selection.js";
 import { dedupeProfileIds, listProfilesForProvider } from "./profiles.js";
 import type { AuthProfileIdRepairResult, AuthProfileStore } from "./types.js";
 

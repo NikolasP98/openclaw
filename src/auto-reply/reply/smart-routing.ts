@@ -220,347 +220,429 @@ const MODERATE_KEYWORDS = new Set([
   "describe",
 ]);
 
-// ── Multilingual keyword maps (C.2) ──────────────────────────────────────────
+// ── Multilingual keyword maps (C.2) — lazy-loaded per language ───────────────
 
 type LangKeywordSet = { complex: Set<string>; moderate: Set<string> };
 
-const MULTILINGUAL_KEYWORDS: Record<string, LangKeywordSet> = {
-  zh: {
-    complex: new Set([
-      "修复",
-      "调试",
-      "创建",
-      "构建",
-      "重构",
-      "部署",
-      "配置",
-      "安装",
-      "迁移",
-      "优化",
-      "分析",
-      "设计",
-      "测试",
-      "编译",
-      "实现",
-      "数据库",
-      "算法",
-      "接口",
-      "组件",
-      "模块",
-    ]),
-    moderate: new Set([
-      "显示",
-      "查找",
-      "搜索",
-      "检查",
-      "发送",
-      "读取",
-      "打开",
-      "下载",
-      "上传",
-      "更新",
-      "删除",
-      "添加",
-      "复制",
-      "移动",
-      "状态",
-      "总结",
-      "翻译",
-      "计算",
-      "比较",
-      "解释",
-    ]),
-  },
-  ja: {
-    complex: new Set([
-      "修正",
-      "デバッグ",
-      "作成",
-      "構築",
-      "リファクタ",
-      "デプロイ",
-      "設定",
-      "インストール",
-      "移行",
-      "最適化",
-      "分析",
-      "設計",
-      "テスト",
-      "コンパイル",
-      "実装",
-      "データベース",
-      "アルゴリズム",
-    ]),
-    moderate: new Set([
-      "表示",
-      "検索",
-      "確認",
-      "送信",
-      "読む",
-      "開く",
-      "ダウンロード",
-      "アップロード",
-      "更新",
-      "削除",
-      "追加",
-      "コピー",
-      "移動",
-      "ステータス",
-      "翻訳",
-      "計算",
-      "比較",
-      "説明",
-    ]),
-  },
-  ko: {
-    complex: new Set([
-      "수정",
-      "디버그",
-      "생성",
-      "빌드",
-      "리팩터",
-      "배포",
-      "구성",
-      "설치",
-      "마이그레이션",
-      "최적화",
-      "분석",
-      "설계",
-      "테스트",
-      "컴파일",
-      "구현",
-      "데이터베이스",
-      "알고리즘",
-    ]),
-    moderate: new Set([
-      "표시",
-      "검색",
-      "확인",
-      "보내기",
-      "읽기",
-      "열기",
-      "다운로드",
-      "업로드",
-      "업데이트",
-      "삭제",
-      "추가",
-      "복사",
-      "이동",
-      "상태",
-      "번역",
-      "계산",
-      "비교",
-      "설명",
-    ]),
-  },
-  ru: {
-    complex: new Set([
-      "исправить",
-      "отладить",
-      "создать",
-      "построить",
-      "рефакторинг",
-      "развернуть",
-      "настроить",
-      "установить",
-      "мигрировать",
-      "оптимизировать",
-      "анализировать",
-      "спроектировать",
-      "тестировать",
-      "скомпилировать",
-      "реализовать",
-      "база данных",
-      "алгоритм",
-    ]),
-    moderate: new Set([
-      "показать",
-      "найти",
-      "искать",
-      "проверить",
-      "отправить",
-      "прочитать",
-      "открыть",
-      "скачать",
-      "загрузить",
-      "обновить",
-      "удалить",
-      "добавить",
-      "копировать",
-      "переместить",
-      "статус",
-      "перевести",
-      "посчитать",
-      "сравнить",
-      "объяснить",
-    ]),
-  },
-  de: {
-    complex: new Set([
-      "reparieren",
-      "debuggen",
-      "erstellen",
-      "bauen",
-      "refactoren",
-      "deployen",
-      "konfigurieren",
-      "installieren",
-      "migrieren",
-      "optimieren",
-      "analysieren",
-      "entwerfen",
-      "testen",
-      "kompilieren",
-      "implementieren",
-      "datenbank",
-      "algorithmus",
-    ]),
-    moderate: new Set([
-      "zeigen",
-      "finden",
-      "suchen",
-      "prüfen",
-      "senden",
-      "lesen",
-      "öffnen",
-      "herunterladen",
-      "hochladen",
-      "aktualisieren",
-      "löschen",
-      "hinzufügen",
-      "kopieren",
-      "verschieben",
-      "status",
-      "übersetzen",
-      "berechnen",
-      "vergleichen",
-      "erklären",
-    ]),
-  },
-  es: {
-    complex: new Set([
-      "arreglar",
-      "depurar",
-      "crear",
-      "construir",
-      "refactorizar",
-      "desplegar",
-      "configurar",
-      "instalar",
-      "migrar",
-      "optimizar",
-      "analizar",
-      "diseñar",
-      "probar",
-      "compilar",
-      "implementar",
-      "base de datos",
-      "algoritmo",
-    ]),
-    moderate: new Set([
-      "mostrar",
-      "buscar",
-      "verificar",
-      "enviar",
-      "leer",
-      "abrir",
-      "descargar",
-      "subir",
-      "actualizar",
-      "eliminar",
-      "agregar",
-      "copiar",
-      "mover",
-      "estado",
-      "traducir",
-      "calcular",
-      "comparar",
-      "explicar",
-    ]),
-  },
-  pt: {
-    complex: new Set([
-      "corrigir",
-      "depurar",
-      "criar",
-      "construir",
-      "refatorar",
-      "implantar",
-      "configurar",
-      "instalar",
-      "migrar",
-      "otimizar",
-      "analisar",
-      "projetar",
-      "testar",
-      "compilar",
-      "implementar",
-      "banco de dados",
-      "algoritmo",
-    ]),
-    moderate: new Set([
-      "mostrar",
-      "buscar",
-      "verificar",
-      "enviar",
-      "ler",
-      "abrir",
-      "baixar",
-      "enviar",
-      "atualizar",
-      "excluir",
-      "adicionar",
-      "copiar",
-      "mover",
-      "status",
-      "traduzir",
-      "calcular",
-      "comparar",
-      "explicar",
-    ]),
-  },
-  ar: {
-    complex: new Set([
-      "إصلاح",
-      "تصحيح",
-      "إنشاء",
-      "بناء",
-      "إعادة هيكلة",
-      "نشر",
-      "تكوين",
-      "تثبيت",
-      "ترحيل",
-      "تحسين",
-      "تحليل",
-      "تصميم",
-      "اختبار",
-      "تجميع",
-      "تنفيذ",
-      "قاعدة بيانات",
-      "خوارزمية",
-    ]),
-    moderate: new Set([
-      "عرض",
-      "بحث",
-      "تحقق",
-      "إرسال",
-      "قراءة",
-      "فتح",
-      "تنزيل",
-      "رفع",
-      "تحديث",
-      "حذف",
-      "إضافة",
-      "نسخ",
-      "نقل",
-      "حالة",
-      "ترجمة",
-      "حساب",
-      "مقارنة",
-      "شرح",
-    ]),
-  },
+// Lazy-load keyword sets so they're only materialized when the detected
+// language actually matches. Most sessions only ever hit 0-1 languages.
+
+const _multilingualCache = new Map<string, LangKeywordSet>();
+
+function getZhKeywords(): LangKeywordSet {
+  let kw = _multilingualCache.get("zh");
+  if (!kw) {
+    kw = {
+      complex: new Set([
+        "修复",
+        "调试",
+        "创建",
+        "构建",
+        "重构",
+        "部署",
+        "配置",
+        "安装",
+        "迁移",
+        "优化",
+        "分析",
+        "设计",
+        "测试",
+        "编译",
+        "实现",
+        "数据库",
+        "算法",
+        "接口",
+        "组件",
+        "模块",
+      ]),
+      moderate: new Set([
+        "显示",
+        "查找",
+        "搜索",
+        "检查",
+        "发送",
+        "读取",
+        "打开",
+        "下载",
+        "上传",
+        "更新",
+        "删除",
+        "添加",
+        "复制",
+        "移动",
+        "状态",
+        "总结",
+        "翻译",
+        "计算",
+        "比较",
+        "解释",
+      ]),
+    };
+    _multilingualCache.set("zh", kw);
+  }
+  return kw;
+}
+
+function getJaKeywords(): LangKeywordSet {
+  let kw = _multilingualCache.get("ja");
+  if (!kw) {
+    kw = {
+      complex: new Set([
+        "修正",
+        "デバッグ",
+        "作成",
+        "構築",
+        "リファクタ",
+        "デプロイ",
+        "設定",
+        "インストール",
+        "移行",
+        "最適化",
+        "分析",
+        "設計",
+        "テスト",
+        "コンパイル",
+        "実装",
+        "データベース",
+        "アルゴリズム",
+      ]),
+      moderate: new Set([
+        "表示",
+        "検索",
+        "確認",
+        "送信",
+        "読む",
+        "開く",
+        "ダウンロード",
+        "アップロード",
+        "更新",
+        "削除",
+        "追加",
+        "コピー",
+        "移動",
+        "ステータス",
+        "翻訳",
+        "計算",
+        "比較",
+        "説明",
+      ]),
+    };
+    _multilingualCache.set("ja", kw);
+  }
+  return kw;
+}
+
+function getKoKeywords(): LangKeywordSet {
+  let kw = _multilingualCache.get("ko");
+  if (!kw) {
+    kw = {
+      complex: new Set([
+        "수정",
+        "디버그",
+        "생성",
+        "빌드",
+        "리팩터",
+        "배포",
+        "구성",
+        "설치",
+        "마이그레이션",
+        "최적화",
+        "분석",
+        "설계",
+        "테스트",
+        "컴파일",
+        "구현",
+        "데이터베이스",
+        "알고리즘",
+      ]),
+      moderate: new Set([
+        "표시",
+        "검색",
+        "확인",
+        "보내기",
+        "읽기",
+        "열기",
+        "다운로드",
+        "업로드",
+        "업데이트",
+        "삭제",
+        "추가",
+        "복사",
+        "이동",
+        "상태",
+        "번역",
+        "계산",
+        "비교",
+        "설명",
+      ]),
+    };
+    _multilingualCache.set("ko", kw);
+  }
+  return kw;
+}
+
+function getRuKeywords(): LangKeywordSet {
+  let kw = _multilingualCache.get("ru");
+  if (!kw) {
+    kw = {
+      complex: new Set([
+        "исправить",
+        "отладить",
+        "создать",
+        "построить",
+        "рефакторинг",
+        "развернуть",
+        "настроить",
+        "установить",
+        "мигрировать",
+        "оптимизировать",
+        "анализировать",
+        "спроектировать",
+        "тестировать",
+        "скомпилировать",
+        "реализовать",
+        "база данных",
+        "алгоритм",
+      ]),
+      moderate: new Set([
+        "показать",
+        "найти",
+        "искать",
+        "проверить",
+        "отправить",
+        "прочитать",
+        "открыть",
+        "скачать",
+        "загрузить",
+        "обновить",
+        "удалить",
+        "добавить",
+        "копировать",
+        "переместить",
+        "статус",
+        "перевести",
+        "посчитать",
+        "сравнить",
+        "объяснить",
+      ]),
+    };
+    _multilingualCache.set("ru", kw);
+  }
+  return kw;
+}
+
+function getDeKeywords(): LangKeywordSet {
+  let kw = _multilingualCache.get("de");
+  if (!kw) {
+    kw = {
+      complex: new Set([
+        "reparieren",
+        "debuggen",
+        "erstellen",
+        "bauen",
+        "refactoren",
+        "deployen",
+        "konfigurieren",
+        "installieren",
+        "migrieren",
+        "optimieren",
+        "analysieren",
+        "entwerfen",
+        "testen",
+        "kompilieren",
+        "implementieren",
+        "datenbank",
+        "algorithmus",
+      ]),
+      moderate: new Set([
+        "zeigen",
+        "finden",
+        "suchen",
+        "prüfen",
+        "senden",
+        "lesen",
+        "öffnen",
+        "herunterladen",
+        "hochladen",
+        "aktualisieren",
+        "löschen",
+        "hinzufügen",
+        "kopieren",
+        "verschieben",
+        "status",
+        "übersetzen",
+        "berechnen",
+        "vergleichen",
+        "erklären",
+      ]),
+    };
+    _multilingualCache.set("de", kw);
+  }
+  return kw;
+}
+
+function getEsKeywords(): LangKeywordSet {
+  let kw = _multilingualCache.get("es");
+  if (!kw) {
+    kw = {
+      complex: new Set([
+        "arreglar",
+        "depurar",
+        "crear",
+        "construir",
+        "refactorizar",
+        "desplegar",
+        "configurar",
+        "instalar",
+        "migrar",
+        "optimizar",
+        "analizar",
+        "diseñar",
+        "probar",
+        "compilar",
+        "implementar",
+        "base de datos",
+        "algoritmo",
+      ]),
+      moderate: new Set([
+        "mostrar",
+        "buscar",
+        "verificar",
+        "enviar",
+        "leer",
+        "abrir",
+        "descargar",
+        "subir",
+        "actualizar",
+        "eliminar",
+        "agregar",
+        "copiar",
+        "mover",
+        "estado",
+        "traducir",
+        "calcular",
+        "comparar",
+        "explicar",
+      ]),
+    };
+    _multilingualCache.set("es", kw);
+  }
+  return kw;
+}
+
+function getPtKeywords(): LangKeywordSet {
+  let kw = _multilingualCache.get("pt");
+  if (!kw) {
+    kw = {
+      complex: new Set([
+        "corrigir",
+        "depurar",
+        "criar",
+        "construir",
+        "refatorar",
+        "implantar",
+        "configurar",
+        "instalar",
+        "migrar",
+        "otimizar",
+        "analisar",
+        "projetar",
+        "testar",
+        "compilar",
+        "implementar",
+        "banco de dados",
+        "algoritmo",
+      ]),
+      moderate: new Set([
+        "mostrar",
+        "buscar",
+        "verificar",
+        "enviar",
+        "ler",
+        "abrir",
+        "baixar",
+        "enviar",
+        "atualizar",
+        "excluir",
+        "adicionar",
+        "copiar",
+        "mover",
+        "status",
+        "traduzir",
+        "calcular",
+        "comparar",
+        "explicar",
+      ]),
+    };
+    _multilingualCache.set("pt", kw);
+  }
+  return kw;
+}
+
+function getArKeywords(): LangKeywordSet {
+  let kw = _multilingualCache.get("ar");
+  if (!kw) {
+    kw = {
+      complex: new Set([
+        "إصلاح",
+        "تصحيح",
+        "إنشاء",
+        "بناء",
+        "إعادة هيكلة",
+        "نشر",
+        "تكوين",
+        "تثبيت",
+        "ترحيل",
+        "تحسين",
+        "تحليل",
+        "تصميم",
+        "اختبار",
+        "تجميع",
+        "تنفيذ",
+        "قاعدة بيانات",
+        "خوارزمية",
+      ]),
+      moderate: new Set([
+        "عرض",
+        "بحث",
+        "تحقق",
+        "إرسال",
+        "قراءة",
+        "فتح",
+        "تنزيل",
+        "رفع",
+        "تحديث",
+        "حذف",
+        "إضافة",
+        "نسخ",
+        "نقل",
+        "حالة",
+        "ترجمة",
+        "حساب",
+        "مقارنة",
+        "شرح",
+      ]),
+    };
+    _multilingualCache.set("ar", kw);
+  }
+  return kw;
+}
+
+/** Lazy getter dispatch — returns keyword set for the given language, or undefined. */
+const MULTILINGUAL_GETTERS: Record<string, () => LangKeywordSet> = {
+  zh: getZhKeywords,
+  ja: getJaKeywords,
+  ko: getKoKeywords,
+  ru: getRuKeywords,
+  de: getDeKeywords,
+  es: getEsKeywords,
+  pt: getPtKeywords,
+  ar: getArKeywords,
 };
+
+function getMultilingualKeywords(lang: string): LangKeywordSet | undefined {
+  return MULTILINGUAL_GETTERS[lang]?.();
+}
 
 /**
  * Unicode script range detection for language-specific keyword lookup.
@@ -648,7 +730,7 @@ function detectMessageLanguage(text: string): string {
  * Used as a supplement to the English keyword check.
  */
 function classifyWordMultilingual(word: string, lang: string): "complex" | "moderate" | undefined {
-  const keywords = MULTILINGUAL_KEYWORDS[lang];
+  const keywords = getMultilingualKeywords(lang);
   if (!keywords) {
     return undefined;
   }
@@ -671,6 +753,12 @@ const BARE_ACK_PATTERNS =
 
 // ── Classifier ───────────────────────────────────────────────────────────────
 
+// Memoize the last classification result — messages are processed serially so
+// caching one (message, maxSimpleLength) → result pair avoids redundant work
+// when the same message is classified multiple times in a single turn.
+let _lastClassifyInput: { message: string; maxSimple: number } | undefined;
+let _lastClassifyResult: MessageComplexity | undefined;
+
 /**
  * Classify a message's complexity using heuristic rules.
  * First match wins.
@@ -681,6 +769,24 @@ export function classifyMessage(
 ): MessageComplexity {
   const maxSimple = options?.maxSimpleLength ?? DEFAULT_MAX_SIMPLE_LENGTH;
 
+  // Fast-path: return cached result when inputs haven't changed.
+  if (
+    _lastClassifyInput &&
+    _lastClassifyResult &&
+    _lastClassifyInput.message === message &&
+    _lastClassifyInput.maxSimple === maxSimple
+  ) {
+    return _lastClassifyResult;
+  }
+
+  const result = classifyMessageCore(message, maxSimple);
+  _lastClassifyInput = { message, maxSimple };
+  _lastClassifyResult = result;
+  return result;
+}
+
+/** Core classification logic — separated so the memoization wrapper stays clean. */
+function classifyMessageCore(message: string, maxSimple: number): MessageComplexity {
   // 1. Empty / whitespace-only → simple
   const trimmed = message.trim();
   if (!trimmed) {
@@ -714,7 +820,7 @@ export function classifyMessage(
 
   // 4b. Multilingual keyword check (C.2)
   const lang = detectMessageLanguage(trimmed);
-  if (lang !== "en" && MULTILINGUAL_KEYWORDS[lang]) {
+  if (lang !== "en" && MULTILINGUAL_GETTERS[lang]) {
     let multilingualResult: "complex" | "moderate" | undefined;
     for (const word of words) {
       const result = classifyWordMultilingual(word, lang);

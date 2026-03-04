@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { resolveStateDir } from "../../config/paths.js";
 import { createSubsystemLogger } from "../../logging/subsystem.js";
@@ -16,7 +17,7 @@ const log = createSubsystemLogger("auth/google-bridge");
  * at ~/.minion/agents/{agentId}/gog-credentials/) with the unified
  * auth-profiles store.
  */
-export function syncGoogleCredentialsToAuthStore(): number {
+export async function syncGoogleCredentialsToAuthStore(): Promise<number> {
   let synced = 0;
 
   try {
@@ -27,7 +28,7 @@ export function syncGoogleCredentialsToAuthStore(): number {
       return 0;
     }
 
-    const agentDirs = fs.readdirSync(agentsDir, { withFileTypes: true });
+    const agentDirs = await readdir(agentsDir, { withFileTypes: true });
 
     for (const agentEntry of agentDirs) {
       if (!agentEntry.isDirectory()) {
@@ -40,12 +41,13 @@ export function syncGoogleCredentialsToAuthStore(): number {
       }
 
       try {
-        const files = fs.readdirSync(gogDir).filter((f) => f.endsWith(".json"));
+        const allFiles = await readdir(gogDir);
+        const files = allFiles.filter((f) => f.endsWith(".json"));
 
         for (const file of files) {
           try {
             const credPath = path.join(gogDir, file);
-            const raw = JSON.parse(fs.readFileSync(credPath, "utf-8"));
+            const raw = JSON.parse(await readFile(credPath, "utf-8"));
 
             if (!raw.accessToken || !raw.refreshToken || !raw.email) {
               continue;

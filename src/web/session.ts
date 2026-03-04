@@ -9,10 +9,12 @@ import {
 } from "@whiskeysockets/baileys";
 import qrcode from "qrcode-terminal";
 import { formatCliCommand } from "../cli/command-format.js";
-import { danger, success } from "../globals.js";
 import { getChildLogger, toPinoLikeLogger } from "../logging.js";
+import { createSubsystemLogger } from "../logging/subsystem.js";
 import { ensureDir, resolveUserPath } from "../utils.js";
 import { VERSION } from "../version.js";
+
+const log = createSubsystemLogger("web/session");
 import {
   maybeRestoreCredsFromBackup,
   readCredsJsonRaw,
@@ -127,22 +129,20 @@ export async function createWaSocket(
         if (qr) {
           opts.onQr?.(qr);
           if (printQr) {
-            console.log("Scan this QR in WhatsApp (Linked Devices):");
+            log.info("Scan this QR in WhatsApp (Linked Devices):");
             qrcode.generate(qr, { small: true });
           }
         }
         if (connection === "close") {
           const status = getStatusCode(lastDisconnect?.error);
           if (status === DisconnectReason.loggedOut) {
-            console.error(
-              danger(
-                `WhatsApp session logged out. Run: ${formatCliCommand("minion channels login")}`,
-              ),
+            log.error(
+              `WhatsApp session logged out. Run: ${formatCliCommand("minion channels login")}`,
             );
           }
         }
         if (connection === "open" && verbose) {
-          console.log(success("WhatsApp Web connected."));
+          log.info("WhatsApp Web connected.");
         }
       } catch (err) {
         sessionLogger.error({ error: String(err) }, "connection.update handler error");

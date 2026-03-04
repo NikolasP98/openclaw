@@ -1,8 +1,8 @@
 import {
   discoverHuggingfaceModels,
   isHuggingfacePolicyLocked,
-} from "../../agents/huggingface-models.js";
-import { resolveEnvApiKey } from "../../agents/model-auth.js";
+} from "../../agents/models/huggingface-models.js";
+import { resolveEnvApiKey } from "../../agents/models/model-auth.js";
 import {
   formatApiKeyPreview,
   normalizeApiKeyInput,

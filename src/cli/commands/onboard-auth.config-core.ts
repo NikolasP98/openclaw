@@ -2,30 +2,30 @@ import {
   buildHuggingfaceModelDefinition,
   HUGGINGFACE_BASE_URL,
   HUGGINGFACE_MODEL_CATALOG,
-} from "../../agents/huggingface-models.js";
+} from "../../agents/models/huggingface-models.js";
 import {
   buildQianfanProvider,
   buildXiaomiProvider,
   QIANFAN_DEFAULT_MODEL_ID,
   XIAOMI_DEFAULT_MODEL_ID,
-} from "../../agents/models-config.providers.js";
+} from "../../agents/models/models-config.providers.js";
 import {
   buildSyntheticModelDefinition,
   SYNTHETIC_BASE_URL,
   SYNTHETIC_DEFAULT_MODEL_REF,
   SYNTHETIC_MODEL_CATALOG,
-} from "../../agents/synthetic-models.js";
+} from "../../agents/models/synthetic-models.js";
 import {
   buildTogetherModelDefinition,
   TOGETHER_BASE_URL,
   TOGETHER_MODEL_CATALOG,
-} from "../../agents/together-models.js";
+} from "../../agents/models/together-models.js";
 import {
   buildVeniceModelDefinition,
   VENICE_BASE_URL,
   VENICE_DEFAULT_MODEL_REF,
   VENICE_MODEL_CATALOG,
-} from "../../agents/venice-models.js";
+} from "../../agents/models/venice-models.js";
 import type { OpenClawConfig } from "../../config/config.js";
 import type { ModelApi } from "../../config/types.models.js";
 import {

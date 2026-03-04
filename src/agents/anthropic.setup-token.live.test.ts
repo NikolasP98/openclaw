@@ -16,10 +16,10 @@ import {
   ensureAuthProfileStore,
   saveAuthProfileStore,
 } from "./auth-profiles.js";
-import { getApiKeyForModel, requireApiKey } from "./model-auth.js";
-import { normalizeProviderId, parseModelRef } from "./model-selection.js";
-import { ensureMinionModelsJson } from "./models-config.js";
-import { discoverAuthStorage, discoverModels } from "./pi-model-discovery.js";
+import { getApiKeyForModel, requireApiKey } from "./models/model-auth.js";
+import { normalizeProviderId, parseModelRef } from "./models/model-selection.js";
+import { ensureMinionModelsJson } from "./models/models-config.js";
+import { discoverAuthStorage, discoverModels } from "./models/pi-model-discovery.js";
 
 const LIVE = isTruthyEnvValue(process.env.LIVE) || isTruthyEnvValue(process.env.MINION_LIVE_TEST);
 const SETUP_TOKEN_RAW = process.env.MINION_LIVE_SETUP_TOKEN?.trim() ?? "";

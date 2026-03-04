@@ -9,11 +9,11 @@ import {
   isAnthropicBillingError,
   isAnthropicRateLimitError,
 } from "./live-auth-keys.js";
-import { isModernModelRef } from "./live-model-filter.js";
-import { getApiKeyForModel, requireApiKey } from "./model-auth.js";
-import { ensureMinionModelsJson } from "./models-config.js";
+import { isModernModelRef } from "./models/live-model-filter.js";
+import { getApiKeyForModel, requireApiKey } from "./models/model-auth.js";
+import { ensureMinionModelsJson } from "./models/models-config.js";
+import { discoverAuthStorage, discoverModels } from "./models/pi-model-discovery.js";
 import { isRateLimitErrorMessage } from "./pi-embedded-helpers/errors.js";
-import { discoverAuthStorage, discoverModels } from "./pi-model-discovery.js";
 
 const LIVE = isTruthyEnvValue(process.env.LIVE) || isTruthyEnvValue(process.env.MINION_LIVE_TEST);
 const DIRECT_ENABLED = Boolean(process.env.MINION_LIVE_MODELS?.trim());

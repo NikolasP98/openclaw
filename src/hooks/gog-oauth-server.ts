@@ -9,6 +9,7 @@ import { URL } from "url";
 import { updateSessionStore, resolveDefaultSessionStorePath } from "../config/sessions.js";
 import { upsertSharedEnvVar } from "../infra/env-file.js";
 import { logAcceptedEnvOption } from "../infra/env.js";
+import { createSubsystemLogger } from "../logging/subsystem.js";
 import { runCommandWithTimeout } from "../platform/process/exec.js";
 import {
   saveSessionCredentials,
@@ -30,6 +31,8 @@ import type {
   TokenExchangeResponse,
   GogCredentials,
 } from "./gog-oauth-types.js";
+
+const log = createSubsystemLogger("gog-oauth");
 
 /**
  * Default OAuth server configuration
@@ -73,8 +76,8 @@ export function getRedirectUri(): string {
     const envUri = process.env.MINION_GOG_OAUTH_REDIRECT_URI;
     const externalUri = envUri || configuredExternalRedirectUri;
     if (externalUri) {
-      console.warn(
-        `[gog-oauth] Desktop client detected — ignoring external redirect URI "${externalUri}" ` +
+      log.warn(
+        `Desktop client detected — ignoring external redirect URI "${externalUri}" ` +
           `(installed clients only support localhost redirects). Using: ${localhostUri}`,
       );
     }
@@ -132,7 +135,7 @@ function cleanupExpiredFlows(): void {
 
       // Notify user of timeout
       notifyAuthTimeout(flow.sessionKey, flow.agentId, flow.email).catch((err) => {
-        console.error("Failed to send timeout notification:", err);
+        log.error(`Failed to send timeout notification: ${String(err)}`);
       });
     }
   }
@@ -209,7 +212,7 @@ async function handleCallback(
   // Validate state (CSRF protection)
   const flow = getPendingFlow(params.state);
   if (!flow) {
-    console.warn(`[gog-oauth] Invalid or expired state token: ${params.state}`);
+    log.warn(`Invalid or expired state token: ${params.state}`);
     return {
       status: 400,
       message: "Invalid or expired authorization request",
@@ -278,7 +281,7 @@ async function handleCallback(
       message: "Authentication successful! You can close this window.",
     };
   } catch (error) {
-    console.error("[gog-oauth] Token exchange error:", error);
+    log.error(`Token exchange error: ${error instanceof Error ? error.message : String(error)}`);
     await notifyAuthError(
       flow.sessionKey,
       flow.agentId,
@@ -387,7 +390,7 @@ function tryStartServer(
   return new Promise((resolve, reject) => {
     const srv = http.createServer((req, res) => {
       handleRequest(req, res, config, agentDir).catch((err) => {
-        console.error("[gog-oauth] Request handler error:", err);
+        log.error(`Request handler error: ${err instanceof Error ? err.message : String(err)}`);
         res.statusCode = 500;
         res.end("Internal Server Error");
       });
@@ -422,14 +425,14 @@ async function registerGogClientCredentials(credFile: string): Promise<void> {
       timeoutMs: 10_000,
     });
     if (result.code === 0) {
-      console.log("[gog-oauth] Registered Google client credentials with gog CLI");
+      log.info("Registered Google client credentials with gog CLI");
     } else {
-      console.warn(
-        `[gog-oauth] gog auth credentials failed (code=${result.code}): ${result.stderr || result.stdout}`,
+      log.warn(
+        `gog auth credentials failed (code=${result.code}): ${result.stderr || result.stdout}`,
       );
     }
   } catch (err) {
-    console.warn(`[gog-oauth] Failed to register gog client credentials: ${String(err)}`);
+    log.warn(`Failed to register gog client credentials: ${String(err)}`);
   }
 }
 
@@ -456,7 +459,7 @@ function ensureGogKeyringEnv(): void {
   }
 
   if (dirty) {
-    console.log("[gog-oauth] Initialized GOG keyring credentials and persisted to .env");
+    log.info("Initialized GOG keyring credentials and persisted to .env");
   }
 }
 
@@ -510,7 +513,7 @@ export async function startGogOAuthServer(
     try {
       server = await tryStartServer(port, fullConfig.bind, fullConfig, agentDir);
       actualPort = port;
-      console.log(`[gog-oauth] Server listening on ${fullConfig.bind}:${port}`);
+      log.info(`Server listening on ${fullConfig.bind}:${port}`);
 
       // Start cleanup interval (every 60 seconds)
       cleanupInterval = setInterval(cleanupExpiredFlows, 60000);

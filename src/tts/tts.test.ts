@@ -1,6 +1,6 @@
 import { completeSimple, type AssistantMessage } from "@mariozechner/pi-ai";
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { getApiKeyForModel } from "../agents/model-auth.js";
+import { getApiKeyForModel } from "../agents/models/model-auth.js";
 import { resolveModel } from "../agents/pi-embedded-runner/model.js";
 import type { OpenClawConfig } from "../config/config.js";
 import { withEnv } from "../test-support/env.js";
@@ -31,7 +31,7 @@ vi.mock("../agents/pi-embedded-runner/model.js", () => ({
   })),
 }));
 
-vi.mock("../agents/model-auth.js", () => ({
+vi.mock("../agents/models/model-auth.js", () => ({
   getApiKeyForModel: vi.fn(async () => ({
     apiKey: "test-api-key",
     source: "test",

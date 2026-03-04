@@ -116,9 +116,10 @@ export function getTelegramSequentialKey(ctx: {
 }
 
 export function createTelegramBot(opts: TelegramBotOptions) {
+  const telegramLog = createSubsystemLogger("channels/telegram");
   const runtime: RuntimeEnv = opts.runtime ?? {
-    log: console.log,
-    error: console.error,
+    log: (...args: unknown[]) => telegramLog.info(args.map(String).join(" ")),
+    error: (...args: unknown[]) => telegramLog.error(args.map(String).join(" ")),
     exit: (code: number): never => {
       throw new Error(`exit ${code}`);
     },

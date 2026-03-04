@@ -14,8 +14,8 @@ import {
   DEFAULT_MODEL,
   DEFAULT_PROVIDER,
 } from "../../../agents/defaults.js";
-import { loadModelCatalog } from "../../../agents/model-catalog.js";
-import { runWithModelFallback } from "../../../agents/model-fallback.js";
+import { loadModelCatalog } from "../../../agents/models/model-catalog.js";
+import { runWithModelFallback } from "../../../agents/models/model-fallback.js";
 import {
   getModelRefStatus,
   isCliProvider,
@@ -23,7 +23,7 @@ import {
   resolveConfiguredModelRef,
   resolveHooksGmailModel,
   resolveThinkingDefault,
-} from "../../../agents/model-selection.js";
+} from "../../../agents/models/model-selection.js";
 import type { MessagingToolSend } from "../../../agents/pi-embedded-messaging.js";
 import { runEmbeddedPiAgent } from "../../../agents/pi-embedded.js";
 import { runSubagentAnnounceFlow } from "../../../agents/subagent-announce.js";

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { runWithModelFallback } from "../../../agents/model-fallback.js";
+import { runWithModelFallback } from "../../../agents/models/model-fallback.js";
 
 // ---------- mocks ----------
 

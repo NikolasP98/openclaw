@@ -2,12 +2,12 @@ import { syncGoogleCredentialsToAuthStore } from "../agents/auth-profiles/google
 import { startRefreshScheduler } from "../agents/auth-profiles/refresh-scheduler.js";
 import { runStartupCredentialCheck } from "../agents/auth-profiles/startup-check.js";
 import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "../agents/defaults.js";
-import { loadModelCatalog } from "../agents/model-catalog.js";
+import { loadModelCatalog } from "../agents/models/model-catalog.js";
 import {
   getModelRefStatus,
   resolveConfiguredModelRef,
   resolveHooksGmailModel,
-} from "../agents/model-selection.js";
+} from "../agents/models/model-selection.js";
 import { resolveAgentSessionDirs } from "../agents/session-dirs.js";
 import { cleanStaleLockFiles } from "../agents/session-write-lock.js";
 import type { CliDeps } from "../cli/deps.js";
@@ -65,7 +65,7 @@ export async function startGatewaySidecars(params: {
 
   // Bridge Google credentials into auth-profiles (Phase 1 — non-breaking).
   try {
-    syncGoogleCredentialsToAuthStore();
+    await syncGoogleCredentialsToAuthStore();
   } catch (err) {
     params.log.warn(`Google credential bridge failed: ${String(err)}`);
   }
