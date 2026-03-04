@@ -1,4 +1,8 @@
 import type { Command } from "commander";
+import { loadConfig, readConfigFileSnapshotForWrite, writeConfigFile } from "../config/config.js";
+import type { ReadConfigFileSnapshotForWriteResult } from "../config/io.js";
+import type { OpenClawConfig } from "../config/types.js";
+import { normalizeAgentId } from "../routing/session-key.js";
 import { addGatewayClientOptions, callGatewayFromCli, type GatewayRpcOpts } from "./gateway-rpc.js";
 
 type ToolStatusEntry = {
@@ -27,6 +31,61 @@ async function fetchToolsStatus(
     progress: true,
   });
   return result as unknown as ToolsStatusResult;
+}
+
+type MutableToolsCfg = {
+  profile?: string;
+  allow?: string[];
+  alsoAllow?: string[];
+  deny?: string[];
+};
+
+function resolveToolsConfig(
+  cfg: OpenClawConfig,
+  agentId?: string,
+): { tools: MutableToolsCfg; path: string } {
+  if (!agentId) {
+    const mutable = cfg as { tools?: MutableToolsCfg };
+    mutable.tools = mutable.tools ?? {};
+    return { tools: mutable.tools, path: "tools" };
+  }
+  const normalized = normalizeAgentId(agentId);
+  const mutable = cfg as {
+    agents?: { list?: Array<{ id?: string; tools?: MutableToolsCfg }> };
+  };
+  mutable.agents = mutable.agents ?? {};
+  mutable.agents.list = mutable.agents.list ?? [];
+  let agent = mutable.agents.list.find((a) => normalizeAgentId(a.id) === normalized);
+  if (!agent) {
+    agent = { id: agentId };
+    mutable.agents.list.push(agent);
+  }
+  agent.tools = agent.tools ?? {};
+  return { tools: agent.tools, path: `agents[${agentId}].tools` };
+}
+
+function removeFromArray(arr: string[] | undefined, value: string): string[] {
+  if (!arr) {
+    return [];
+  }
+  return arr.filter((v) => v !== value);
+}
+
+async function writeConfigAndReload(
+  cfg: OpenClawConfig,
+  writeResult: ReadConfigFileSnapshotForWriteResult,
+  opts: GatewayRpcOpts,
+): Promise<void> {
+  await writeConfigFile(cfg, {
+    envSnapshotForRestore: writeResult.writeOptions.envSnapshotForRestore,
+    expectedConfigPath: writeResult.writeOptions.expectedConfigPath,
+  });
+  // Best-effort reload — gateway may not be running
+  try {
+    await callGatewayFromCli("tools.reload", opts, {}, { progress: false });
+  } catch {
+    // Gateway not running, config still written
+  }
 }
 
 export function registerToolsCli(program: Command) {
@@ -146,5 +205,91 @@ export function registerToolsCli(program: Command) {
         console.error(`Reload failed: ${String(err)}`);
         process.exit(1);
       }
+    });
+
+  // --- enable ---
+  tools
+    .command("enable")
+    .description("Enable a tool or group (adds to alsoAllow, removes from deny)")
+    .argument("<name>", "Tool ID or group:name")
+    .option("--agent <id>", "Scope to specific agent")
+    .action(async (name: string, opts) => {
+      const parentOpts = tools.opts();
+      const writeResult = await readConfigFileSnapshotForWrite();
+      const cfg = loadConfig();
+      const { tools: toolsCfg } = resolveToolsConfig(cfg, opts.agent);
+      // Remove from deny
+      toolsCfg.deny = removeFromArray(toolsCfg.deny, name);
+      if (toolsCfg.deny.length === 0) {
+        delete toolsCfg.deny;
+      }
+      // Add to alsoAllow (or allow if that list already exists)
+      if (Array.isArray(toolsCfg.allow)) {
+        if (!toolsCfg.allow.includes(name)) {
+          toolsCfg.allow.push(name);
+        }
+      } else {
+        toolsCfg.alsoAllow = toolsCfg.alsoAllow ?? [];
+        if (!toolsCfg.alsoAllow.includes(name)) {
+          toolsCfg.alsoAllow.push(name);
+        }
+      }
+      await writeConfigAndReload(cfg, writeResult, parentOpts);
+      console.log(`Enabled ${name}${opts.agent ? ` for agent ${opts.agent}` : " (global)"}`);
+    });
+
+  // --- disable ---
+  tools
+    .command("disable")
+    .description("Disable a tool or group (adds to deny, removes from alsoAllow)")
+    .argument("<name>", "Tool ID or group:name")
+    .option("--agent <id>", "Scope to specific agent")
+    .action(async (name: string, opts) => {
+      const parentOpts = tools.opts();
+      const writeResult = await readConfigFileSnapshotForWrite();
+      const cfg = loadConfig();
+      const { tools: toolsCfg } = resolveToolsConfig(cfg, opts.agent);
+      // Remove from alsoAllow
+      toolsCfg.alsoAllow = removeFromArray(toolsCfg.alsoAllow, name);
+      if (toolsCfg.alsoAllow.length === 0) {
+        delete toolsCfg.alsoAllow;
+      }
+      // Remove from allow if present
+      if (Array.isArray(toolsCfg.allow)) {
+        toolsCfg.allow = removeFromArray(toolsCfg.allow, name);
+        if (toolsCfg.allow.length === 0) {
+          delete toolsCfg.allow;
+        }
+      }
+      // Add to deny
+      toolsCfg.deny = toolsCfg.deny ?? [];
+      if (!toolsCfg.deny.includes(name)) {
+        toolsCfg.deny.push(name);
+      }
+      await writeConfigAndReload(cfg, writeResult, parentOpts);
+      console.log(`Disabled ${name}${opts.agent ? ` for agent ${opts.agent}` : " (global)"}`);
+    });
+
+  // --- profile ---
+  tools
+    .command("profile")
+    .description("Set the tool profile (minimal, coding, messaging, full)")
+    .argument("<profile>", "Profile ID")
+    .option("--agent <id>", "Scope to specific agent")
+    .action(async (profile: string, opts) => {
+      const valid = ["minimal", "coding", "messaging", "full"];
+      if (!valid.includes(profile)) {
+        console.error(`Invalid profile: ${profile}. Valid: ${valid.join(", ")}`);
+        process.exit(1);
+      }
+      const parentOpts = tools.opts();
+      const writeResult = await readConfigFileSnapshotForWrite();
+      const cfg = loadConfig();
+      const { tools: toolsCfg } = resolveToolsConfig(cfg, opts.agent);
+      toolsCfg.profile = profile;
+      await writeConfigAndReload(cfg, writeResult, parentOpts);
+      console.log(
+        `Profile set to ${profile}${opts.agent ? ` for agent ${opts.agent}` : " (global)"}`,
+      );
     });
 }
