@@ -27,7 +27,7 @@ vi.mock("../../config/config.js", () => ({
   resolveGatewayPort: () => 18789,
 }));
 
-vi.mock("../../gateway/auth.js", () => ({
+vi.mock("../../gateway/auth/auth.js", () => ({
   resolveGatewayAuth: (params: { authConfig?: { token?: string }; env?: NodeJS.ProcessEnv }) => ({
     mode: "token",
     token: params.authConfig?.token ?? params.env?.OPENCLAW_GATEWAY_TOKEN,

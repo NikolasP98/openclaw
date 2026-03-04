@@ -1,15 +1,15 @@
 import crypto from "node:crypto";
 import { AGENT_LANE_SUBAGENT } from "../../agents/lanes.js";
 import { abortEmbeddedPiRun } from "../../agents/pi-embedded.js";
-import type { SubagentRunRecord } from "../../agents/subagent-registry.js";
+import type { SubagentRunRecord } from "../../agents/subagents/subagent-registry.js";
 import {
   clearSubagentRunSteerRestart,
   listSubagentRunsForRequester,
   markSubagentRunTerminated,
   markSubagentRunForSteerRestart,
   replaceSubagentRunAfterSteer,
-} from "../../agents/subagent-registry.js";
-import { spawnSubagentDirect } from "../../agents/subagent-spawn.js";
+} from "../../agents/subagents/subagent-registry.js";
+import { spawnSubagentDirect } from "../../agents/subagents/subagent-spawn.js";
 import {
   extractAssistantText,
   resolveInternalSessionKey,

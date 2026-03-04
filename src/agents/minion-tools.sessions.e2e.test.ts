@@ -3,7 +3,7 @@ import {
   addSubagentRunForTests,
   listSubagentRunsForRequester,
   resetSubagentRegistryForTests,
-} from "./subagent-registry.js";
+} from "./subagents/subagent-registry.js";
 
 const callGatewayMock = vi.fn();
 vi.mock("../gateway/call.js", () => ({

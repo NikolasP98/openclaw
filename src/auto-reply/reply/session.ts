@@ -25,7 +25,7 @@ import {
   updateSessionStore,
 } from "../../config/sessions.js";
 import type { TtsAutoMode } from "../../config/types.tts.js";
-import { archiveSessionTranscripts } from "../../gateway/session-utils.fs.js";
+import { archiveSessionTranscripts } from "../../gateway/sessions/session-utils.fs.js";
 import { deliverSessionMaintenanceWarning } from "../../infra/session-maintenance-warning.js";
 import { getGlobalHookRunner } from "../../plugins/hook-runner-global.js";
 import { normalizeMainKey } from "../../routing/session-key.js";

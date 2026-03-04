@@ -1,8 +1,8 @@
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import { SessionManager } from "@mariozechner/pi-coding-agent";
 import { describe, expect, it } from "vitest";
-import { guardSessionManager } from "./session-tool-result-guard-wrapper.js";
-import { sanitizeToolUseResultPairing } from "./session-transcript-repair.js";
+import { guardSessionManager } from "./sessions/session-tool-result-guard-wrapper.js";
+import { sanitizeToolUseResultPairing } from "./sessions/session-transcript-repair.js";
 
 function assistantToolCall(id: string): AgentMessage {
   return {

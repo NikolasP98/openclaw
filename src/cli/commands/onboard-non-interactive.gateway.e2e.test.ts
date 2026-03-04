@@ -66,7 +66,8 @@ async function expectGatewayTokenAuth(params: {
   token: string;
   env: NodeJS.ProcessEnv;
 }) {
-  const { authorizeGatewayConnect, resolveGatewayAuth } = await import("../../gateway/auth.js");
+  const { authorizeGatewayConnect, resolveGatewayAuth } =
+    await import("../../gateway/auth/auth.js");
   const auth = resolveGatewayAuth({ authConfig: params.authConfig, env: params.env });
   const resNoToken = await authorizeGatewayConnect({ auth, connectAuth: { token: undefined } });
   expect(resNoToken.ok).toBe(false);

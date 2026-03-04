@@ -4,10 +4,10 @@ import { KnowledgeGraphSession } from "../memory/knowledge-graph.js";
 import { resolvePluginTools } from "../plugins/tools.js";
 import type { GatewayMessageChannel } from "../shared/message-channel.js";
 import { resolveSessionAgentId } from "./agent-scope.js";
+import { resolveWorkspaceRoot } from "./identity/workspace-dir.js";
 import type { SandboxFsBridge } from "./sandbox/fs-bridge.js";
 import { TOOL_REGISTRY, type ToolRegistryEntry } from "./tools/_registry.generated.js";
 import type { AnyAgentTool } from "./tools/common.js";
-import { resolveWorkspaceRoot } from "./workspace-dir.js";
 
 export type CreateOpenClawToolsOptions = {
   sandboxBrowserBridgeUrl?: string;

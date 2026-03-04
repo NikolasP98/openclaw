@@ -10,8 +10,8 @@ import {
   buildAgentMessageFromConversationEntries,
   type ConversationEntry,
 } from "./agent-prompt.js";
-import type { AuthRateLimiter } from "./auth-rate-limit.js";
-import type { ResolvedGatewayAuth } from "./auth.js";
+import type { AuthRateLimiter } from "./auth/auth-rate-limit.js";
+import type { ResolvedGatewayAuth } from "./auth/auth.js";
 import { sendJson, setSseHeaders, writeDone } from "./http-common.js";
 import { handleGatewayPostJsonEndpoint } from "./http-endpoint-helpers.js";
 import { resolveAgentIdForRequest, resolveSessionKey } from "./http-utils.js";

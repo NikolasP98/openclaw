@@ -34,6 +34,7 @@ import {
 import { DEFAULT_CONTEXT_TOKENS } from "../../defaults.js";
 import { resolveOpenClawDocsPath } from "../../docs-path.js";
 import { isTimeoutError } from "../../failover-error.js";
+import { DEFAULT_BOOTSTRAP_FILENAME } from "../../identity/workspace.js";
 import { resolveImageSanitizationLimits } from "../../image-sanitization.js";
 import {
   buildMemoryContext,
@@ -59,13 +60,13 @@ import { toClientToolDefinitions } from "../../pi-tool-definition-adapter.js";
 import { createOpenClawCodingTools, resolveToolLoopDetectionConfig } from "../../pi-tools.js";
 import { resolveSandboxContext } from "../../sandbox.js";
 import { resolveSandboxRuntimeStatus } from "../../sandbox/runtime-status.js";
-import { repairSessionFileIfNeeded } from "../../session-file-repair.js";
-import { guardSessionManager } from "../../session-tool-result-guard-wrapper.js";
-import { sanitizeToolUseResultPairing } from "../../session-transcript-repair.js";
+import { repairSessionFileIfNeeded } from "../../sessions/session-file-repair.js";
+import { guardSessionManager } from "../../sessions/session-tool-result-guard-wrapper.js";
+import { sanitizeToolUseResultPairing } from "../../sessions/session-transcript-repair.js";
 import {
   acquireSessionWriteLock,
   resolveSessionLockMaxHoldFromTimeout,
-} from "../../session-write-lock.js";
+} from "../../sessions/session-write-lock.js";
 import { detectRuntimeShell } from "../../shell-utils.js";
 import {
   resolveSkillEnvMap,
@@ -76,7 +77,6 @@ import {
 import { buildSystemPromptParams } from "../../system-prompt-params.js";
 import { buildSystemPromptReport } from "../../system-prompt-report.js";
 import { resolveTranscriptPolicy } from "../../transcript-policy.js";
-import { DEFAULT_BOOTSTRAP_FILENAME } from "../../workspace.js";
 import { isRunnerAbortError } from "../abort.js";
 import { appendCacheTtlTimestamp, isCacheTtlEligibleProvider } from "../cache-ttl.js";
 import { buildEmbeddedExtensionPaths } from "../extensions.js";

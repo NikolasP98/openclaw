@@ -143,7 +143,7 @@ vi.mock("../cron/service.js", () => ({
   CronService: hoisted.CronService,
 }));
 
-vi.mock("./server-browser.js", () => ({
+vi.mock("./server-core/server-browser.js", () => ({
   startBrowserControlServerIfEnabled: hoisted.startBrowserControlServerIfEnabled,
 }));
 
@@ -156,7 +156,7 @@ vi.mock("../hooks/gmail-watcher.js", () => ({
   stopGmailWatcher: hoisted.stopGmailWatcher,
 }));
 
-vi.mock("./server-channels.js", () => ({
+vi.mock("./server-core/server-channels.js", () => ({
   createChannelManager: hoisted.createChannelManager,
 }));
 

@@ -1,5 +1,5 @@
 import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "../agents/agent-scope.js";
-import { resolveDefaultAgentWorkspaceDir } from "../agents/workspace.js";
+import { resolveDefaultAgentWorkspaceDir } from "../agents/identity/workspace.js";
 import { loadConfig } from "../config/config.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { loadOpenClawPlugins } from "./loader.js";

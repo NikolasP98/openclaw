@@ -21,7 +21,7 @@ import {
   sanitizeToolCallInputs,
   stripToolResultDetails,
   sanitizeToolUseResultPairing,
-} from "../session-transcript-repair.js";
+} from "../sessions/session-transcript-repair.js";
 import type { TranscriptPolicy } from "../transcript-policy.js";
 import { resolveTranscriptPolicy } from "../transcript-policy.js";
 import { log } from "./logger.js";

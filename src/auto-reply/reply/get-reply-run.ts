@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { resolveSessionAuthProfileOverride } from "../../agents/auth-profiles/session-override.js";
-import type { ExecToolDefaults } from "../../agents/bash-tools.js";
+import type { ExecToolDefaults } from "../../agents/bash/bash-tools.js";
 import {
   abortEmbeddedPiRun,
   isEmbeddedPiRunActive,

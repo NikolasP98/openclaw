@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { resetSubagentRegistryForTests } from "../../agents/subagent-registry.js";
-import type { SpawnSubagentResult } from "../../agents/subagent-spawn.js";
+import { resetSubagentRegistryForTests } from "../../agents/subagents/subagent-registry.js";
+import type { SpawnSubagentResult } from "../../agents/subagents/subagent-spawn.js";
 import type { OpenClawConfig } from "../../config/config.js";
 
 const hoisted = vi.hoisted(() => {
@@ -9,7 +9,7 @@ const hoisted = vi.hoisted(() => {
   return { spawnSubagentDirectMock, callGatewayMock };
 });
 
-vi.mock("../../agents/subagent-spawn.js", () => ({
+vi.mock("../../agents/subagents/subagent-spawn.js", () => ({
   spawnSubagentDirect: (...args: unknown[]) => hoisted.spawnSubagentDirectMock(...args),
 }));
 

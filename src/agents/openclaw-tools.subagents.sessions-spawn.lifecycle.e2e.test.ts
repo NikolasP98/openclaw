@@ -5,7 +5,7 @@ import {
   getCallGatewayMock,
   resetSessionsSpawnConfigOverride,
 } from "./openclaw-tools.subagents.sessions-spawn.test-harness.js";
-import { resetSubagentRegistryForTests } from "./subagent-registry.js";
+import { resetSubagentRegistryForTests } from "./subagents/subagent-registry.js";
 
 vi.mock("./pi-embedded.js", () => ({
   isEmbeddedPiRunActive: () => false,

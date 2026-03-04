@@ -237,7 +237,7 @@ vi.mock("../gateway/call.js", async (importOriginal) => {
   return { ...actual, callGateway: mocks.callGateway };
 });
 vi.mock("../gateway/session-utils.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../gateway/session-utils.js")>();
+  const actual = await importOriginal<typeof import("../../gateway/sessions/session-utils.js")>();
   return {
     ...actual,
     listAgentsForGateway: mocks.listAgentsForGateway,

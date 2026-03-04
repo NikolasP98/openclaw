@@ -6,7 +6,10 @@ import { createSubsystemLogger } from "../logging/subsystem.js";
 import { parseAgentSessionKey, normalizeAgentId } from "../routing/session-key.js";
 import { resolveHubMetricsConfig } from "./hub-metrics-config.js";
 import type { ReliabilityEvent } from "./protocol/schema/reliability.js";
-import { loadCombinedSessionStoreForGateway, listSessionsFromStore } from "./session-utils.js";
+import {
+  loadCombinedSessionStoreForGateway,
+  listSessionsFromStore,
+} from "./sessions/session-utils.js";
 
 const log = createSubsystemLogger("hub-metrics");
 

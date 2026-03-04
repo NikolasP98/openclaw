@@ -26,9 +26,9 @@ import {
 } from "./cli-runner/helpers.js";
 import { resolveOpenClawDocsPath } from "./docs-path.js";
 import { FailoverError, resolveFailoverStatus } from "./failover-error.js";
+import { redactRunIdentifier, resolveRunWorkspaceDir } from "./identity/workspace-run.js";
 import { classifyFailoverReason, isFailoverErrorMessage } from "./pi-embedded-helpers.js";
 import type { EmbeddedPiRunResult } from "./pi-embedded-runner.js";
-import { redactRunIdentifier, resolveRunWorkspaceDir } from "./workspace-run.js";
 
 const log = createSubsystemLogger("agent/claude-cli");
 

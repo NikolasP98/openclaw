@@ -14,8 +14,8 @@ import {
   type GatewayClientName,
 } from "../shared/message-channel.js";
 import { getDeterministicFreePortBlock } from "../test-support/ports.js";
+import { buildDeviceAuthPayload } from "./auth/device-auth.js";
 import { GatewayClient } from "./client.js";
-import { buildDeviceAuthPayload } from "./device-auth.js";
 import { PROTOCOL_VERSION } from "./protocol/index.js";
 import { startGatewayServer } from "./server.js";
 

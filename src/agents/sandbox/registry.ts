@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { acquireSessionWriteLock } from "../session-write-lock.js";
+import { acquireSessionWriteLock } from "../sessions/session-write-lock.js";
 import {
   SANDBOX_BROWSER_REGISTRY_PATH,
   SANDBOX_REGISTRY_PATH,

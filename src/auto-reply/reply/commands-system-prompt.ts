@@ -1,6 +1,7 @@
 import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { resolveSessionAgentIds } from "../../agents/agent-scope.js";
 import { resolveBootstrapContextForRun } from "../../agents/bootstrap-files.js";
+import type { WorkspaceBootstrapFile } from "../../agents/identity/workspace.js";
 import { resolveDefaultModelForAgent } from "../../agents/models/model-selection.js";
 import type { EmbeddedContextFile } from "../../agents/pi-embedded-helpers.js";
 import { createOpenClawCodingTools } from "../../agents/pi-tools.js";
@@ -10,7 +11,6 @@ import { getSkillsSnapshotVersion } from "../../agents/skills/refresh.js";
 import { buildSystemPromptParams } from "../../agents/system-prompt-params.js";
 import { buildAgentSystemPrompt } from "../../agents/system-prompt.js";
 import { buildToolSummaryMap } from "../../agents/tool-summaries.js";
-import type { WorkspaceBootstrapFile } from "../../agents/workspace.js";
 import { getRemoteSkillEligibility } from "../../infra/skills-remote.js";
 import { buildTtsSystemPromptHint } from "../../tts/tts.js";
 import type { HandleCommandsParams } from "./commands-types.js";

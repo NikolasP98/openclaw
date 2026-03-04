@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { SubagentRunRecord } from "../../agents/subagent-registry.js";
+import type { SubagentRunRecord } from "../../agents/subagents/subagent-registry.js";
 import type { OpenClawConfig } from "../../config/config.js";
 import {
   getAbortMemory,
@@ -36,7 +36,7 @@ const subagentRegistryMocks = vi.hoisted(() => ({
   markSubagentRunTerminated: vi.fn(() => 1),
 }));
 
-vi.mock("../../agents/subagent-registry.js", () => ({
+vi.mock("../../agents/subagents/subagent-registry.js", () => ({
   listSubagentRunsForRequester: subagentRegistryMocks.listSubagentRunsForRequester,
   markSubagentRunTerminated: subagentRegistryMocks.markSubagentRunTerminated,
 }));

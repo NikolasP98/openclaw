@@ -1,14 +1,14 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { acquireSessionWriteLock } from "../../agents/session-write-lock.js";
+import { acquireSessionWriteLock } from "../../agents/sessions/session-write-lock.js";
 import type { MsgContext } from "../../auto-reply/templating.js";
 import { parseByteSize } from "../../cli/parse-bytes.js";
 import { parseDurationMs } from "../../cli/parse-duration.js";
 import {
   archiveSessionTranscripts,
   cleanupArchivedSessionTranscripts,
-} from "../../gateway/session-utils.fs.js";
+} from "../../gateway/sessions/session-utils.fs.js";
 import { createSubsystemLogger } from "../../logging/subsystem.js";
 import {
   deliveryContextFromSession,

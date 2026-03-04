@@ -18,8 +18,9 @@ import {
   createProcessTool,
   type ExecToolDefaults,
   type ProcessToolDefaults,
-} from "./bash-tools.js";
+} from "./bash/bash-tools.js";
 import { listChannelAgentTools } from "./channel-tools.js";
+import { resolveWorkspaceRoot } from "./identity/workspace-dir.js";
 import { resolveImageSanitizationLimits } from "./image-sanitization.js";
 import type { ModelAuthMode } from "./models/model-auth.js";
 import { createOpenClawTools } from "./openclaw-tools.js";
@@ -46,7 +47,7 @@ import {
 import { cleanToolSchemaForGemini, normalizeToolParameters } from "./pi-tools.schema.js";
 import type { AnyAgentTool } from "./pi-tools.types.js";
 import type { SandboxContext } from "./sandbox.js";
-import { getSubagentDepthFromSessionStore } from "./subagent-depth.js";
+import { getSubagentDepthFromSessionStore } from "./subagents/subagent-depth.js";
 import {
   applyToolPolicyPipeline,
   buildDefaultToolPolicyPipelineSteps,
@@ -57,7 +58,6 @@ import {
   mergeAlsoAllowPolicy,
   resolveToolProfilePolicy,
 } from "./tool-policy.js";
-import { resolveWorkspaceRoot } from "./workspace-dir.js";
 
 function isOpenAIProvider(provider?: string) {
   const normalized = provider?.trim().toLowerCase();

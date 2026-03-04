@@ -27,7 +27,7 @@ import {
 import { AGENT_LANE_SUBAGENT } from "../lanes.js";
 import { abortEmbeddedPiRun } from "../pi-embedded.js";
 import { optionalStringEnum } from "../schema/typebox.js";
-import { getSubagentDepthFromSessionStore } from "../subagent-depth.js";
+import { getSubagentDepthFromSessionStore } from "../subagents/subagent-depth.js";
 import {
   clearSubagentRunSteerRestart,
   listSubagentRunsForRequester,
@@ -35,7 +35,7 @@ import {
   markSubagentRunForSteerRestart,
   replaceSubagentRunAfterSteer,
   type SubagentRunRecord,
-} from "../subagent-registry.js";
+} from "../subagents/subagent-registry.js";
 import type { AnyAgentTool } from "./common.js";
 import { jsonResult, readNumberParam, readStringParam } from "./common.js";
 import { resolveInternalSessionKey, resolveMainSessionAlias } from "./sessions-helpers.js";

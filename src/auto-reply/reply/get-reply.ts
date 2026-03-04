@@ -4,9 +4,12 @@ import {
   resolveSessionAgentId,
   resolveAgentSkillsFilter,
 } from "../../agents/agent-scope.js";
+import {
+  DEFAULT_AGENT_WORKSPACE_DIR,
+  ensureAgentWorkspace,
+} from "../../agents/identity/workspace.js";
 import { resolveModelRefFromString } from "../../agents/models/model-selection.js";
 import { resolveAgentTimeoutMs } from "../../agents/timeout.js";
-import { DEFAULT_AGENT_WORKSPACE_DIR, ensureAgentWorkspace } from "../../agents/workspace.js";
 import { type MinionConfig, loadConfig } from "../../config/config.js";
 import { applyLinkUnderstanding } from "../../link-understanding/apply.js";
 import { applyMediaUnderstanding } from "../../media-understanding/apply.js";

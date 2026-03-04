@@ -6,6 +6,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { resolveDefaultAgentId } from "../agents/agent-scope.js";
+import { listAgentWorkspaceDirs } from "../agents/identity/workspace-dirs.js";
 import { isToolAllowedByPolicies } from "../agents/pi-tools.policy.js";
 import {
   resolveSandboxConfigForAgent,
@@ -14,7 +15,6 @@ import {
 import type { SandboxToolPolicy } from "../agents/sandbox/types.js";
 import { loadWorkspaceSkillEntries } from "../agents/skills.js";
 import { resolveToolProfilePolicy } from "../agents/tool-policy.js";
-import { listAgentWorkspaceDirs } from "../agents/workspace-dirs.js";
 import { LEGACY_MANIFEST_KEYS, MANIFEST_KEY } from "../compat/legacy-names.js";
 import { resolveNativeSkillsEnabled } from "../config/commands.js";
 import type { OpenClawConfig, ConfigFileSnapshot } from "../config/config.js";

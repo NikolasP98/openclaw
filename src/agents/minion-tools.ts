@@ -3,6 +3,7 @@ import { createKnowledgeGraphTools, KnowledgeGraphSession } from "../memory/know
 import { resolvePluginTools } from "../plugins/tools.js";
 import type { GatewayMessageChannel } from "../shared/message-channel.js";
 import { resolveSessionAgentId } from "./agent-scope.js";
+import { resolveWorkspaceRoot } from "./identity/workspace-dir.js";
 import type { SandboxFsBridge } from "./sandbox/fs-bridge.js";
 import { createAgentsListTool } from "./tools/agents-list-tool.js";
 import { createBrowserTool } from "./tools/browser-tool.js";
@@ -21,7 +22,6 @@ import { createSessionsSpawnTool } from "./tools/sessions-spawn-tool.js";
 import { createSubagentsTool } from "./tools/subagents-tool.js";
 import { createTtsTool } from "./tools/tts-tool.js";
 import { createWebFetchTool, createWebSearchTool } from "./tools/web-tools.js";
-import { resolveWorkspaceRoot } from "./workspace-dir.js";
 
 export function createOpenClawTools(options?: {
   sandboxBrowserBridgeUrl?: string;

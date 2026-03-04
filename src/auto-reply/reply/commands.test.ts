@@ -6,7 +6,7 @@ import {
   addSubagentRunForTests,
   listSubagentRunsForRequester,
   resetSubagentRegistryForTests,
-} from "../../agents/subagent-registry.js";
+} from "../../agents/subagents/subagent-registry.js";
 import type { OpenClawConfig } from "../../config/config.js";
 import { updateSessionStore } from "../../config/sessions.js";
 import * as internalHooks from "../../hooks/internal-hooks.js";

@@ -1,5 +1,5 @@
 import { resolveAgentDir } from "../../../agents/agent-scope.js";
-import { resolveIdentityNamePrefix } from "../../../agents/identity.js";
+import { resolveIdentityNamePrefix } from "../../../agents/identity/identity.js";
 import { resolveChunkMode, resolveTextChunkLimit } from "../../../auto-reply/chunk.js";
 import { shouldComputeCommandAuthorized } from "../../../auto-reply/command-detection.js";
 import {

@@ -6,6 +6,7 @@ import { resolveUserPath } from "../../utils.js";
 import { getDefaultLocalRoots, loadWebMedia } from "../../web/media.js";
 import { ensureAuthProfileStore, listProfilesForProvider } from "../auth-profiles.js";
 import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "../defaults.js";
+import { normalizeWorkspaceDir } from "../identity/workspace-dir.js";
 import { minimaxUnderstandImage } from "../models/minimax-vlm.js";
 import { getApiKeyForModel, requireApiKey, resolveEnvApiKey } from "../models/model-auth.js";
 import { runWithImageModelFallback } from "../models/model-fallback.js";
@@ -13,7 +14,6 @@ import { resolveConfiguredModelRef } from "../models/model-selection.js";
 import { ensureOpenClawModelsJson } from "../models/models-config.js";
 import { discoverAuthStorage, discoverModels } from "../models/pi-model-discovery.js";
 import type { SandboxFsBridge } from "../sandbox/fs-bridge.js";
-import { normalizeWorkspaceDir } from "../workspace-dir.js";
 import type { AnyAgentTool } from "./common.js";
 import {
   coerceImageAssistantText,

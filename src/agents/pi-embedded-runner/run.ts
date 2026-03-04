@@ -18,6 +18,7 @@ import {
 } from "../context-window-guard.js";
 import { DEFAULT_CONTEXT_TOKENS, DEFAULT_MODEL, DEFAULT_PROVIDER } from "../defaults.js";
 import { FailoverError, resolveFailoverStatus } from "../failover-error.js";
+import { redactRunIdentifier, resolveRunWorkspaceDir } from "../identity/workspace-run.js";
 import {
   ensureAuthProfileStore,
   getApiKeyForModel,
@@ -44,7 +45,6 @@ import {
   type FailoverReason,
 } from "../pi-embedded-helpers.js";
 import { derivePromptTokens, normalizeUsage, type UsageLike } from "../usage.js";
-import { redactRunIdentifier, resolveRunWorkspaceDir } from "../workspace-run.js";
 import { compactEmbeddedPiSessionDirect } from "./compact.js";
 import { resolveGlobalLane, resolveSessionLane } from "./lanes.js";
 import { log } from "./logger.js";

@@ -1,7 +1,7 @@
 import { getStatusSummary } from "../../cli/commands/status.js";
 import { ErrorCodes, errorShape } from "../protocol/index.js";
-import { HEALTH_REFRESH_INTERVAL_MS } from "../server-constants.js";
-import { formatError } from "../server-utils.js";
+import { HEALTH_REFRESH_INTERVAL_MS } from "../server-core/server-constants.js";
+import { formatError } from "../server-core/server-utils.js";
 import { formatForLog } from "../ws-log.js";
 import type { GatewayRequestHandlers } from "./types.js";
 

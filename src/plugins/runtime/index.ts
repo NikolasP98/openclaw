@@ -1,5 +1,8 @@
 import { createRequire } from "node:module";
-import { resolveEffectiveMessagesConfig, resolveHumanDelayConfig } from "../../agents/identity.js";
+import {
+  resolveEffectiveMessagesConfig,
+  resolveHumanDelayConfig,
+} from "../../agents/identity/identity.js";
 import { createMemoryGetTool, createMemorySearchTool } from "../../agents/tools/memory-tool.js";
 import { handleSlackAction } from "../../agents/tools/slack-actions.js";
 import {

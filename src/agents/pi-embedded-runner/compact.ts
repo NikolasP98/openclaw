@@ -24,7 +24,7 @@ import { buildTtsSystemPromptHint } from "../../tts/tts.js";
 import { resolveUserPath } from "../../utils.js";
 import { resolveOpenClawAgentDir } from "../agent-paths.js";
 import { resolveSessionAgentIds } from "../agent-scope.js";
-import type { ExecElevatedDefaults } from "../bash-tools.js";
+import type { ExecElevatedDefaults } from "../bash/bash-tools.js";
 import { makeBootstrapWarn, resolveBootstrapContextForRun } from "../bootstrap-files.js";
 import { listChannelSupportedActions, resolveChannelMessageToolHints } from "../channel-tools.js";
 import { formatUserTime, resolveUserTimeFormat, resolveUserTimezone } from "../date-time.js";
@@ -43,13 +43,13 @@ import {
 } from "../pi-settings.js";
 import { createOpenClawCodingTools } from "../pi-tools.js";
 import { resolveSandboxContext } from "../sandbox.js";
-import { repairSessionFileIfNeeded } from "../session-file-repair.js";
-import { guardSessionManager } from "../session-tool-result-guard-wrapper.js";
-import { sanitizeToolUseResultPairing } from "../session-transcript-repair.js";
+import { repairSessionFileIfNeeded } from "../sessions/session-file-repair.js";
+import { guardSessionManager } from "../sessions/session-tool-result-guard-wrapper.js";
+import { sanitizeToolUseResultPairing } from "../sessions/session-transcript-repair.js";
 import {
   acquireSessionWriteLock,
   resolveSessionLockMaxHoldFromTimeout,
-} from "../session-write-lock.js";
+} from "../sessions/session-write-lock.js";
 import { detectRuntimeShell } from "../shell-utils.js";
 import {
   resolveSkillEnvMap,

@@ -31,13 +31,13 @@ import {
   validateChatInjectParams,
   validateChatSendParams,
 } from "../protocol/index.js";
-import { getMaxChatHistoryMessagesBytes } from "../server-constants.js";
+import { getMaxChatHistoryMessagesBytes } from "../server-core/server-constants.js";
 import {
   capArrayByJsonBytes,
   loadSessionEntry,
   readSessionMessages,
   resolveSessionModelRef,
-} from "../session-utils.js";
+} from "../sessions/session-utils.js";
 import { formatForLog } from "../ws-log.js";
 import { injectTimestamp, timestampOptsFromConfig } from "./agent-timestamp.js";
 import { normalizeRpcAttachmentsToChatAttachments } from "./attachment-normalize.js";

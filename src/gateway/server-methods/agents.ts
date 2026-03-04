@@ -17,7 +17,7 @@ import {
   DEFAULT_USER_FILENAME,
   ensureAgentWorkspace,
   isWorkspaceOnboardingCompleted,
-} from "../../agents/workspace.js";
+} from "../../agents/identity/workspace.js";
 import { movePathToTrash } from "../../browser/trash.js";
 import {
   applyAgentConfig,
@@ -41,7 +41,7 @@ import {
   validateAgentsListParams,
   validateAgentsUpdateParams,
 } from "../protocol/index.js";
-import { listAgentsForGateway } from "../session-utils.js";
+import { listAgentsForGateway } from "../sessions/session-utils.js";
 import type { GatewayRequestHandlers, RespondFn } from "./types.js";
 
 const BOOTSTRAP_FILE_NAMES = [

@@ -11,6 +11,7 @@ import { clearSessionAuthProfileOverride } from "../../agents/auth-profiles/sess
 import { runCliAgent } from "../../agents/cli-runner.js";
 import { getCliSessionId } from "../../agents/cli-session.js";
 import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "../../agents/defaults.js";
+import { ensureAgentWorkspace } from "../../agents/identity/workspace.js";
 import { AGENT_LANE_SUBAGENT } from "../../agents/lanes.js";
 import { loadModelCatalog } from "../../agents/models/model-catalog.js";
 import { runWithModelFallback } from "../../agents/models/model-fallback.js";
@@ -26,7 +27,6 @@ import { runEmbeddedPiAgent } from "../../agents/pi-embedded.js";
 import { buildWorkspaceSkillSnapshot } from "../../agents/skills.js";
 import { getSkillsSnapshotVersion } from "../../agents/skills/refresh.js";
 import { resolveAgentTimeoutMs } from "../../agents/timeout.js";
-import { ensureAgentWorkspace } from "../../agents/workspace.js";
 import {
   formatThinkingLevels,
   formatXHighModelHint,

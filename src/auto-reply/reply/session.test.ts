@@ -14,7 +14,7 @@ import { persistSessionUsageUpdate } from "./session-usage.js";
 import { initSessionState } from "./session.js";
 
 // Perf: session-store locks are exercised elsewhere; most session tests don't need FS lock files.
-vi.mock("../../agents/session-write-lock.js", () => ({
+vi.mock("../../agents/sessions/session-write-lock.js", () => ({
   acquireSessionWriteLock: async () => ({ release: async () => {} }),
 }));
 
@@ -1094,7 +1094,7 @@ describe("initSessionState preserves behavior overrides across /new and /reset",
       sessionId: existingSessionId,
       overrides: { verboseLevel: "on" },
     });
-    const sessionUtils = await import("../../gateway/session-utils.fs.js");
+    const sessionUtils = await import("../../gateway/sessions/session-utils.fs.js");
     const archiveSpy = vi.spyOn(sessionUtils, "archiveSessionTranscripts");
 
     const cfg = {

@@ -1,4 +1,4 @@
-import { resolveAckReaction } from "../../../../../agents/identity.js";
+import { resolveAckReaction } from "../../../../../agents/identity/identity.js";
 import { hasControlCommand } from "../../../../../auto-reply/command-detection.js";
 import { shouldHandleTextCommands } from "../../../../../auto-reply/commands-registry.js";
 import {

@@ -10,7 +10,7 @@ import {
   type SessionEntry,
   updateSessionStore,
 } from "../../config/sessions.js";
-import { loadCombinedSessionStoreForGateway } from "../../gateway/session-utils.js";
+import { loadCombinedSessionStoreForGateway } from "../../gateway/sessions/session-utils.js";
 import {
   formatUsageWindowSummary,
   loadProviderUsageSummary,

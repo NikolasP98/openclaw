@@ -27,14 +27,14 @@ import {
   AUTH_RATE_LIMIT_SCOPE_DEVICE_TOKEN,
   AUTH_RATE_LIMIT_SCOPE_SHARED_SECRET,
   type AuthRateLimiter,
-} from "../../auth-rate-limit.js";
-import type { GatewayAuthResult, ResolvedGatewayAuth } from "../../auth.js";
-import { authorizeGatewayConnect, isLocalDirectRequest } from "../../auth.js";
-import { buildDeviceAuthPayload } from "../../device-auth.js";
+} from "../../auth/auth-rate-limit.js";
+import type { GatewayAuthResult, ResolvedGatewayAuth } from "../../auth/auth.js";
+import { authorizeGatewayConnect, isLocalDirectRequest } from "../../auth/auth.js";
+import { buildDeviceAuthPayload } from "../../auth/device-auth.js";
+import { checkBrowserOrigin } from "../../auth/origin-check.js";
 import { isLoopbackAddress, isTrustedProxyAddress, resolveGatewayClientIp } from "../../net.js";
 import { resolveHostName } from "../../net.js";
 import { resolveNodeCommandAllowlist } from "../../node-command-policy.js";
-import { checkBrowserOrigin } from "../../origin-check.js";
 import { GATEWAY_CLIENT_IDS } from "../../protocol/client-info.js";
 import {
   type ConnectParams,
@@ -46,10 +46,14 @@ import {
   validateConnectParams,
   validateRequestFrame,
 } from "../../protocol/index.js";
-import { MAX_BUFFERED_BYTES, MAX_PAYLOAD_BYTES, TICK_INTERVAL_MS } from "../../server-constants.js";
-import { handleGatewayRequest } from "../../server-methods.js";
+import {
+  MAX_BUFFERED_BYTES,
+  MAX_PAYLOAD_BYTES,
+  TICK_INTERVAL_MS,
+} from "../../server-core/server-constants.js";
+import { handleGatewayRequest } from "../../server-core/server-methods.js";
+import { formatError } from "../../server-core/server-utils.js";
 import type { GatewayRequestContext, GatewayRequestHandlers } from "../../server-methods/types.js";
-import { formatError } from "../../server-utils.js";
 import { formatForLog, logWs } from "../../ws-log.js";
 import { truncateCloseReason } from "../close-reason.js";
 import {

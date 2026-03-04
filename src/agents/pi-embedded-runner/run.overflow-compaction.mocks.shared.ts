@@ -26,7 +26,7 @@ vi.mock("../usage.js", () => ({
   hasNonzeroUsage: vi.fn(() => false),
 }));
 
-vi.mock("../workspace-run.js", () => ({
+vi.mock("../identity/workspace-run.js", () => ({
   resolveRunWorkspaceDir: vi.fn((params: { workspaceDir: string }) => ({
     workspaceDir: params.workspaceDir,
     usedFallback: false,

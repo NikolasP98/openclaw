@@ -3,7 +3,7 @@ import path from "node:path";
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import type { OpenClawConfig } from "../../config/config.js";
 import { truncateUtf16Safe } from "../../utils.js";
-import type { WorkspaceBootstrapFile } from "../workspace.js";
+import type { WorkspaceBootstrapFile } from "../identity/workspace.js";
 import type { EmbeddedContextFile } from "./types.js";
 
 type ContentBlockWithSignature = {

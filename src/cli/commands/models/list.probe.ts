@@ -9,6 +9,7 @@ import {
   resolveAuthProfileOrder,
 } from "../../../agents/auth-profiles.js";
 import { describeFailoverError } from "../../../agents/failover-error.js";
+import { resolveDefaultAgentWorkspaceDir } from "../../../agents/identity/workspace.js";
 import { getCustomProviderApiKey, resolveEnvApiKey } from "../../../agents/models/model-auth.js";
 import { loadModelCatalog } from "../../../agents/models/model-catalog.js";
 import {
@@ -17,7 +18,6 @@ import {
   parseModelRef,
 } from "../../../agents/models/model-selection.js";
 import { runEmbeddedPiAgent } from "../../../agents/pi-embedded.js";
-import { resolveDefaultAgentWorkspaceDir } from "../../../agents/workspace.js";
 import type { OpenClawConfig } from "../../../config/config.js";
 import {
   resolveSessionTranscriptPath,

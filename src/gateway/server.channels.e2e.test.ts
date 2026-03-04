@@ -29,7 +29,7 @@ const registryState = vi.hoisted(() => ({
   } as unknown as PluginRegistry,
 }));
 
-vi.mock("./server-plugins.js", async () => {
+vi.mock("./server-core/server-plugins.js", async () => {
   const { setActivePluginRegistry } = await import("../plugins/runtime.js");
   return {
     loadGatewayPlugins: (params: { baseMethods: string[] }) => {

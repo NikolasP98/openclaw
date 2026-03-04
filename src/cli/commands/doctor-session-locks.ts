@@ -1,8 +1,8 @@
-import { resolveAgentSessionDirs } from "../../agents/session-dirs.js";
+import { resolveAgentSessionDirs } from "../../agents/sessions/session-dirs.js";
 import {
   cleanStaleLockFiles,
   type SessionLockInspection,
-} from "../../agents/session-write-lock.js";
+} from "../../agents/sessions/session-write-lock.js";
 import { resolveStateDir } from "../../config/paths.js";
 import { note } from "../../terminal/note.js";
 import { shortenHomePath } from "../../utils.js";

@@ -1,7 +1,7 @@
 import { Type } from "@sinclair/typebox";
 import type { GatewayMessageChannel } from "../../shared/message-channel.js";
 import { optionalStringEnum } from "../schema/typebox.js";
-import { spawnSubagentDirect } from "../subagent-spawn.js";
+import { spawnSubagentDirect } from "../subagents/subagent-spawn.js";
 import type { AnyAgentTool } from "./common.js";
 import { jsonResult, readStringParam } from "./common.js";
 

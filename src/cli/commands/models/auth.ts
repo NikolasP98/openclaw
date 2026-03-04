@@ -6,8 +6,8 @@ import {
 } from "../../../agents/agent-scope.js";
 import { upsertAuthProfile } from "../../../agents/auth-profiles.js";
 import type { AuthProfileCredential } from "../../../agents/auth-profiles/types.js";
+import { resolveDefaultAgentWorkspaceDir } from "../../../agents/identity/workspace.js";
 import { normalizeProviderId } from "../../../agents/models/model-selection.js";
-import { resolveDefaultAgentWorkspaceDir } from "../../../agents/workspace.js";
 import { formatCliCommand } from "../../../cli/command-format.js";
 import { parseDurationMs } from "../../../cli/parse-duration.js";
 import { logConfigUpdated } from "../../../config/logging.js";

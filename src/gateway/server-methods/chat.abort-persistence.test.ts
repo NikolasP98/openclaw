@@ -13,8 +13,8 @@ const sessionEntryState = vi.hoisted(() => ({
   sessionId: "",
 }));
 
-vi.mock("../session-utils.js", async (importOriginal) => {
-  const original = await importOriginal<typeof import("../session-utils.js")>();
+vi.mock("../sessions/session-utils.js", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../sessions/session-utils.js")>();
   return {
     ...original,
     loadSessionEntry: () => ({

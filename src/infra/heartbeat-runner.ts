@@ -6,8 +6,8 @@ import {
   resolveDefaultAgentId,
 } from "../agents/agent-scope.js";
 import { appendCronStyleCurrentTimeLine } from "../agents/current-time.js";
-import { resolveEffectiveMessagesConfig } from "../agents/identity.js";
-import { DEFAULT_HEARTBEAT_FILENAME } from "../agents/workspace.js";
+import { resolveEffectiveMessagesConfig } from "../agents/identity/identity.js";
+import { DEFAULT_HEARTBEAT_FILENAME } from "../agents/identity/workspace.js";
 import { resolveHeartbeatReplyPayload } from "../auto-reply/heartbeat-reply-payload.js";
 import {
   DEFAULT_HEARTBEAT_ACK_MAX_CHARS,

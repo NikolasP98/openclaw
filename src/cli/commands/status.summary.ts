@@ -13,7 +13,7 @@ import {
   classifySessionKey,
   listAgentsForGateway,
   resolveSessionModelRef,
-} from "../../gateway/session-utils.js";
+} from "../../gateway/sessions/session-utils.js";
 import { buildChannelSummary } from "../../infra/channel-summary.js";
 import { resolveHeartbeatSummaryForAgent } from "../../infra/heartbeat-runner.js";
 import { peekSystemEvents } from "../../infra/system-events.js";

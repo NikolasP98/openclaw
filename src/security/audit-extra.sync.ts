@@ -15,7 +15,7 @@ import { resolveBrowserConfig } from "../browser/config.js";
 import { formatCliCommand } from "../cli/command-format.js";
 import type { OpenClawConfig } from "../config/config.js";
 import type { AgentToolsConfig } from "../config/types.tools.js";
-import { resolveGatewayAuth } from "../gateway/auth.js";
+import { resolveGatewayAuth } from "../gateway/auth/auth.js";
 import { resolveNodeCommandAllowlist } from "../gateway/node-command-policy.js";
 import { inferParamBFromIdOrName } from "../shared/model-param-b.js";
 import { pickSandboxToolPolicy } from "./audit-tool-policy.js";

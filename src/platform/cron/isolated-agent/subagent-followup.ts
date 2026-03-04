@@ -1,7 +1,7 @@
 import {
   countActiveDescendantRuns,
   listDescendantRunsForRequester,
-} from "../../../agents/subagent-registry.js";
+} from "../../../agents/subagents/subagent-registry.js";
 import { readLatestAssistantReply } from "../../../agents/tools/agent-step.js";
 import { SILENT_REPLY_TOKEN } from "../../../auto-reply/tokens.js";
 

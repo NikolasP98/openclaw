@@ -21,7 +21,7 @@ vi.mock("./sqlite-vec.js", () => ({
   loadSqliteVecExtension: async () => ({ ok: false, error: "sqlite-vec disabled in tests" }),
 }));
 
-vi.mock("./embeddings.js", () => ({
+vi.mock("./embedding/embeddings.js", () => ({
   createEmbeddingProvider: async () => ({
     requestedProvider: "openai",
     provider: {

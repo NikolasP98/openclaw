@@ -1,5 +1,5 @@
 import type { Bot } from "grammy";
-import { resolveAckReaction } from "../../../agents/identity.js";
+import { resolveAckReaction } from "../../../agents/identity/identity.js";
 import {
   findModelInCatalog,
   loadModelCatalog,

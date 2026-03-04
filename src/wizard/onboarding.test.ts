@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { DEFAULT_BOOTSTRAP_FILENAME } from "../agents/workspace.js";
+import { DEFAULT_BOOTSTRAP_FILENAME } from "../agents/identity/workspace.js";
 import type { RuntimeEnv } from "../runtime.js";
 import { runOnboardingWizard } from "./onboarding.js";
 import type { WizardPrompter, WizardSelectParams } from "./prompts.js";

@@ -1,8 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "../../agents/agent-scope.js";
-import { identityHasValues, parseIdentityMarkdown } from "../../agents/identity-file.js";
-import { DEFAULT_IDENTITY_FILENAME } from "../../agents/workspace.js";
+import { identityHasValues, parseIdentityMarkdown } from "../../agents/identity/identity-file.js";
+import { DEFAULT_IDENTITY_FILENAME } from "../../agents/identity/workspace.js";
 import { writeConfigFile } from "../../config/config.js";
 import { logConfigUpdated } from "../../config/logging.js";
 import type { IdentityConfig } from "../../config/types.js";
