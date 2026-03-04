@@ -136,6 +136,14 @@ function buildChatCommands(): ChatCommandDefinition[] {
       description: "Show available commands.",
       textAlias: "/help",
       category: "status",
+      acceptsArgs: true,
+      args: [
+        {
+          name: "command",
+          description: "Command name to get details for",
+          type: "string",
+        },
+      ],
     }),
     defineChatCommand({
       key: "commands",
@@ -641,6 +649,36 @@ function buildChatCommands(): ChatCommandDefinition[] {
           captureRemaining: true,
         },
       ],
+    }),
+    defineChatCommand({
+      key: "gateway",
+      nativeName: "gateway",
+      description: "Gateway management (status, health, sessions, version).",
+      textAlias: "/gateway",
+      category: "admin",
+      acceptsArgs: true,
+      args: [
+        {
+          name: "subcommand",
+          description: "status | health | sessions | version",
+          type: "string",
+          choices: ["status", "health", "sessions", "version"],
+        },
+      ],
+    }),
+    defineChatCommand({
+      key: "team",
+      nativeName: "team",
+      description: "Show team information.",
+      textAlias: "/team",
+      category: "status",
+    }),
+    defineChatCommand({
+      key: "test",
+      nativeName: "test",
+      description: "Test command connectivity.",
+      textAlias: "/test",
+      category: "status",
     }),
     ...listChannelDocks()
       .filter((dock) => dock.capabilities.nativeCommands)

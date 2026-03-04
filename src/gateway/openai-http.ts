@@ -240,6 +240,7 @@ export async function handleOpenAiHttpRequest(
 
       const content = resolveAgentResponseText(result);
 
+      res.setHeader("x-model-selected", String(model ?? "unknown"));
       sendJson(res, 200, {
         id: runId,
         object: "chat.completion",
@@ -264,6 +265,7 @@ export async function handleOpenAiHttpRequest(
   }
 
   setSseHeaders(res);
+  res.setHeader("x-model-selected", String(model ?? "unknown"));
 
   let wroteRole = false;
   let sawAssistantDelta = false;

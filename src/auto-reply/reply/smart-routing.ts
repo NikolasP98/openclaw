@@ -38,6 +38,14 @@ export type AgentRoutingConfig = {
   maxSimpleLength?: number;
   /** Context token cap for fast model (default: 4096). */
   fastModelContextTokens?: number;
+  /** ECO-tier model for ultra-short messages under 20 words (e.g. "gemini-2.5-flash-lite"). */
+  ecoModel?: string;
+  /**
+   * Per-persona model overrides — maps persona name to a model string.
+   * When the current agent persona matches a key, that model is used instead of tier routing.
+   * @example { "Researcher": "anthropic/claude-opus-4-6", "Quick": "openai/gpt-4o-mini" }
+   */
+  personaModels?: Record<string, string>;
 };
 
 export type AgentOrchestratorConfig = {
@@ -218,36 +226,339 @@ type LangKeywordSet = { complex: Set<string>; moderate: Set<string> };
 
 const MULTILINGUAL_KEYWORDS: Record<string, LangKeywordSet> = {
   zh: {
-    complex: new Set(["修复", "调试", "创建", "构建", "重构", "部署", "配置", "安装", "迁移", "优化", "分析", "设计", "测试", "编译", "实现", "数据库", "算法", "接口", "组件", "模块"]),
-    moderate: new Set(["显示", "查找", "搜索", "检查", "发送", "读取", "打开", "下载", "上传", "更新", "删除", "添加", "复制", "移动", "状态", "总结", "翻译", "计算", "比较", "解释"]),
+    complex: new Set([
+      "修复",
+      "调试",
+      "创建",
+      "构建",
+      "重构",
+      "部署",
+      "配置",
+      "安装",
+      "迁移",
+      "优化",
+      "分析",
+      "设计",
+      "测试",
+      "编译",
+      "实现",
+      "数据库",
+      "算法",
+      "接口",
+      "组件",
+      "模块",
+    ]),
+    moderate: new Set([
+      "显示",
+      "查找",
+      "搜索",
+      "检查",
+      "发送",
+      "读取",
+      "打开",
+      "下载",
+      "上传",
+      "更新",
+      "删除",
+      "添加",
+      "复制",
+      "移动",
+      "状态",
+      "总结",
+      "翻译",
+      "计算",
+      "比较",
+      "解释",
+    ]),
   },
   ja: {
-    complex: new Set(["修正", "デバッグ", "作成", "構築", "リファクタ", "デプロイ", "設定", "インストール", "移行", "最適化", "分析", "設計", "テスト", "コンパイル", "実装", "データベース", "アルゴリズム"]),
-    moderate: new Set(["表示", "検索", "確認", "送信", "読む", "開く", "ダウンロード", "アップロード", "更新", "削除", "追加", "コピー", "移動", "ステータス", "翻訳", "計算", "比較", "説明"]),
+    complex: new Set([
+      "修正",
+      "デバッグ",
+      "作成",
+      "構築",
+      "リファクタ",
+      "デプロイ",
+      "設定",
+      "インストール",
+      "移行",
+      "最適化",
+      "分析",
+      "設計",
+      "テスト",
+      "コンパイル",
+      "実装",
+      "データベース",
+      "アルゴリズム",
+    ]),
+    moderate: new Set([
+      "表示",
+      "検索",
+      "確認",
+      "送信",
+      "読む",
+      "開く",
+      "ダウンロード",
+      "アップロード",
+      "更新",
+      "削除",
+      "追加",
+      "コピー",
+      "移動",
+      "ステータス",
+      "翻訳",
+      "計算",
+      "比較",
+      "説明",
+    ]),
   },
   ko: {
-    complex: new Set(["수정", "디버그", "생성", "빌드", "리팩터", "배포", "구성", "설치", "마이그레이션", "최적화", "분석", "설계", "테스트", "컴파일", "구현", "데이터베이스", "알고리즘"]),
-    moderate: new Set(["표시", "검색", "확인", "보내기", "읽기", "열기", "다운로드", "업로드", "업데이트", "삭제", "추가", "복사", "이동", "상태", "번역", "계산", "비교", "설명"]),
+    complex: new Set([
+      "수정",
+      "디버그",
+      "생성",
+      "빌드",
+      "리팩터",
+      "배포",
+      "구성",
+      "설치",
+      "마이그레이션",
+      "최적화",
+      "분석",
+      "설계",
+      "테스트",
+      "컴파일",
+      "구현",
+      "데이터베이스",
+      "알고리즘",
+    ]),
+    moderate: new Set([
+      "표시",
+      "검색",
+      "확인",
+      "보내기",
+      "읽기",
+      "열기",
+      "다운로드",
+      "업로드",
+      "업데이트",
+      "삭제",
+      "추가",
+      "복사",
+      "이동",
+      "상태",
+      "번역",
+      "계산",
+      "비교",
+      "설명",
+    ]),
   },
   ru: {
-    complex: new Set(["исправить", "отладить", "создать", "построить", "рефакторинг", "развернуть", "настроить", "установить", "мигрировать", "оптимизировать", "анализировать", "спроектировать", "тестировать", "скомпилировать", "реализовать", "база данных", "алгоритм"]),
-    moderate: new Set(["показать", "найти", "искать", "проверить", "отправить", "прочитать", "открыть", "скачать", "загрузить", "обновить", "удалить", "добавить", "копировать", "переместить", "статус", "перевести", "посчитать", "сравнить", "объяснить"]),
+    complex: new Set([
+      "исправить",
+      "отладить",
+      "создать",
+      "построить",
+      "рефакторинг",
+      "развернуть",
+      "настроить",
+      "установить",
+      "мигрировать",
+      "оптимизировать",
+      "анализировать",
+      "спроектировать",
+      "тестировать",
+      "скомпилировать",
+      "реализовать",
+      "база данных",
+      "алгоритм",
+    ]),
+    moderate: new Set([
+      "показать",
+      "найти",
+      "искать",
+      "проверить",
+      "отправить",
+      "прочитать",
+      "открыть",
+      "скачать",
+      "загрузить",
+      "обновить",
+      "удалить",
+      "добавить",
+      "копировать",
+      "переместить",
+      "статус",
+      "перевести",
+      "посчитать",
+      "сравнить",
+      "объяснить",
+    ]),
   },
   de: {
-    complex: new Set(["reparieren", "debuggen", "erstellen", "bauen", "refactoren", "deployen", "konfigurieren", "installieren", "migrieren", "optimieren", "analysieren", "entwerfen", "testen", "kompilieren", "implementieren", "datenbank", "algorithmus"]),
-    moderate: new Set(["zeigen", "finden", "suchen", "prüfen", "senden", "lesen", "öffnen", "herunterladen", "hochladen", "aktualisieren", "löschen", "hinzufügen", "kopieren", "verschieben", "status", "übersetzen", "berechnen", "vergleichen", "erklären"]),
+    complex: new Set([
+      "reparieren",
+      "debuggen",
+      "erstellen",
+      "bauen",
+      "refactoren",
+      "deployen",
+      "konfigurieren",
+      "installieren",
+      "migrieren",
+      "optimieren",
+      "analysieren",
+      "entwerfen",
+      "testen",
+      "kompilieren",
+      "implementieren",
+      "datenbank",
+      "algorithmus",
+    ]),
+    moderate: new Set([
+      "zeigen",
+      "finden",
+      "suchen",
+      "prüfen",
+      "senden",
+      "lesen",
+      "öffnen",
+      "herunterladen",
+      "hochladen",
+      "aktualisieren",
+      "löschen",
+      "hinzufügen",
+      "kopieren",
+      "verschieben",
+      "status",
+      "übersetzen",
+      "berechnen",
+      "vergleichen",
+      "erklären",
+    ]),
   },
   es: {
-    complex: new Set(["arreglar", "depurar", "crear", "construir", "refactorizar", "desplegar", "configurar", "instalar", "migrar", "optimizar", "analizar", "diseñar", "probar", "compilar", "implementar", "base de datos", "algoritmo"]),
-    moderate: new Set(["mostrar", "buscar", "verificar", "enviar", "leer", "abrir", "descargar", "subir", "actualizar", "eliminar", "agregar", "copiar", "mover", "estado", "traducir", "calcular", "comparar", "explicar"]),
+    complex: new Set([
+      "arreglar",
+      "depurar",
+      "crear",
+      "construir",
+      "refactorizar",
+      "desplegar",
+      "configurar",
+      "instalar",
+      "migrar",
+      "optimizar",
+      "analizar",
+      "diseñar",
+      "probar",
+      "compilar",
+      "implementar",
+      "base de datos",
+      "algoritmo",
+    ]),
+    moderate: new Set([
+      "mostrar",
+      "buscar",
+      "verificar",
+      "enviar",
+      "leer",
+      "abrir",
+      "descargar",
+      "subir",
+      "actualizar",
+      "eliminar",
+      "agregar",
+      "copiar",
+      "mover",
+      "estado",
+      "traducir",
+      "calcular",
+      "comparar",
+      "explicar",
+    ]),
   },
   pt: {
-    complex: new Set(["corrigir", "depurar", "criar", "construir", "refatorar", "implantar", "configurar", "instalar", "migrar", "otimizar", "analisar", "projetar", "testar", "compilar", "implementar", "banco de dados", "algoritmo"]),
-    moderate: new Set(["mostrar", "buscar", "verificar", "enviar", "ler", "abrir", "baixar", "enviar", "atualizar", "excluir", "adicionar", "copiar", "mover", "status", "traduzir", "calcular", "comparar", "explicar"]),
+    complex: new Set([
+      "corrigir",
+      "depurar",
+      "criar",
+      "construir",
+      "refatorar",
+      "implantar",
+      "configurar",
+      "instalar",
+      "migrar",
+      "otimizar",
+      "analisar",
+      "projetar",
+      "testar",
+      "compilar",
+      "implementar",
+      "banco de dados",
+      "algoritmo",
+    ]),
+    moderate: new Set([
+      "mostrar",
+      "buscar",
+      "verificar",
+      "enviar",
+      "ler",
+      "abrir",
+      "baixar",
+      "enviar",
+      "atualizar",
+      "excluir",
+      "adicionar",
+      "copiar",
+      "mover",
+      "status",
+      "traduzir",
+      "calcular",
+      "comparar",
+      "explicar",
+    ]),
   },
   ar: {
-    complex: new Set(["إصلاح", "تصحيح", "إنشاء", "بناء", "إعادة هيكلة", "نشر", "تكوين", "تثبيت", "ترحيل", "تحسين", "تحليل", "تصميم", "اختبار", "تجميع", "تنفيذ", "قاعدة بيانات", "خوارزمية"]),
-    moderate: new Set(["عرض", "بحث", "تحقق", "إرسال", "قراءة", "فتح", "تنزيل", "رفع", "تحديث", "حذف", "إضافة", "نسخ", "نقل", "حالة", "ترجمة", "حساب", "مقارنة", "شرح"]),
+    complex: new Set([
+      "إصلاح",
+      "تصحيح",
+      "إنشاء",
+      "بناء",
+      "إعادة هيكلة",
+      "نشر",
+      "تكوين",
+      "تثبيت",
+      "ترحيل",
+      "تحسين",
+      "تحليل",
+      "تصميم",
+      "اختبار",
+      "تجميع",
+      "تنفيذ",
+      "قاعدة بيانات",
+      "خوارزمية",
+    ]),
+    moderate: new Set([
+      "عرض",
+      "بحث",
+      "تحقق",
+      "إرسال",
+      "قراءة",
+      "فتح",
+      "تنزيل",
+      "رفع",
+      "تحديث",
+      "حذف",
+      "إضافة",
+      "نسخ",
+      "نقل",
+      "حالة",
+      "ترجمة",
+      "حساب",
+      "مقارنة",
+      "شرح",
+    ]),
   },
 };
 
@@ -267,33 +578,66 @@ function detectMessageLanguage(text: string): string {
 
   for (const char of text) {
     const code = char.codePointAt(0)!;
-    if (code < 0x20) {continue;} // skip control chars
+    if (code < 0x20) {
+      continue;
+    } // skip control chars
     total++;
-    if (code >= 0x4E00 && code <= 0x9FFF) cjkCount++; // CJK Unified
-    else if (code >= 0x3040 && code <= 0x30FF) { cjkCount++; jpOnlyCount++; } // Hiragana + Katakana
-    else if (code >= 0xAC00 && code <= 0xD7AF) hangulCount++; // Hangul
-    else if (code >= 0x0400 && code <= 0x04FF) cyrillicCount++; // Cyrillic
-    else if (code >= 0x0600 && code <= 0x06FF) arabicCount++; // Arabic
-    else if (code >= 0x0041 && code <= 0x024F) latinCount++; // Basic+Extended Latin
+    if (code >= 0x4e00 && code <= 0x9fff) {
+      cjkCount++;
+    } // CJK Unified
+    else if (code >= 0x3040 && code <= 0x30ff) {
+      cjkCount++;
+      jpOnlyCount++;
+    } // Hiragana + Katakana
+    else if (code >= 0xac00 && code <= 0xd7af) {
+      hangulCount++;
+    } // Hangul
+    else if (code >= 0x0400 && code <= 0x04ff) {
+      cyrillicCount++;
+    } // Cyrillic
+    else if (code >= 0x0600 && code <= 0x06ff) {
+      arabicCount++;
+    } // Arabic
+    else if (code >= 0x0041 && code <= 0x024f) {
+      latinCount++;
+    } // Basic+Extended Latin
   }
 
-  if (total === 0) {return "en";}
+  if (total === 0) {
+    return "en";
+  }
   const threshold = total * 0.15;
 
   // Japanese: has Hiragana/Katakana (distinct from pure CJK which signals Chinese)
-  if (jpOnlyCount > threshold) return "ja";
-  if (hangulCount > threshold) return "ko";
-  if (cjkCount > threshold) return "zh";
-  if (cyrillicCount > threshold) return "ru";
-  if (arabicCount > threshold) return "ar";
+  if (jpOnlyCount > threshold) {
+    return "ja";
+  }
+  if (hangulCount > threshold) {
+    return "ko";
+  }
+  if (cjkCount > threshold) {
+    return "zh";
+  }
+  if (cyrillicCount > threshold) {
+    return "ru";
+  }
+  if (arabicCount > threshold) {
+    return "ar";
+  }
 
   // For Latin-script languages, use keyword heuristics
   if (latinCount > threshold) {
     const lower = text.toLowerCase();
     // Quick heuristic: check for common function words
-    if (/\b(der|die|das|ist|und|nicht|ich|ein)\b/.test(lower)) {return "de";}
-    if (/\b(el|la|los|las|es|está|por|con|del)\b/.test(lower)) {return "es";}
-    if (/\b(o|os|as|é|está|por|com|dos|das)\b/.test(lower)) {return "pt";}
+    if (/\b(der|die|das|ist|und|nicht|ich|ein)\b/.test(lower)) {
+      return "de";
+    }
+    if (/\b(el|la|los|las|es|está|por|con|del)\b/.test(lower)) {
+      return "es";
+    }
+    if (/\b(o|os|as|é|está|por|com|dos|das)\b/.test(lower)) {
+      return "pt";
+    }
   }
 
   return "en";
@@ -303,14 +647,17 @@ function detectMessageLanguage(text: string): string {
  * Check if a word matches any multilingual complex/moderate keyword.
  * Used as a supplement to the English keyword check.
  */
-function classifyWordMultilingual(
-  word: string,
-  lang: string,
-): "complex" | "moderate" | undefined {
+function classifyWordMultilingual(word: string, lang: string): "complex" | "moderate" | undefined {
   const keywords = MULTILINGUAL_KEYWORDS[lang];
-  if (!keywords) {return undefined;}
-  if (keywords.complex.has(word)) {return "complex";}
-  if (keywords.moderate.has(word)) {return "moderate";}
+  if (!keywords) {
+    return undefined;
+  }
+  if (keywords.complex.has(word)) {
+    return "complex";
+  }
+  if (keywords.moderate.has(word)) {
+    return "moderate";
+  }
   return undefined;
 }
 
@@ -371,10 +718,16 @@ export function classifyMessage(
     let multilingualResult: "complex" | "moderate" | undefined;
     for (const word of words) {
       const result = classifyWordMultilingual(word, lang);
-      if (result === "complex") {return "complex";}
-      if (result === "moderate") {multilingualResult = "moderate";}
+      if (result === "complex") {
+        return "complex";
+      }
+      if (result === "moderate") {
+        multilingualResult = "moderate";
+      }
     }
-    if (multilingualResult) {return multilingualResult;}
+    if (multilingualResult) {
+      return multilingualResult;
+    }
   }
 
   // 5. Slash commands → complex (they invoke specific functionality)
@@ -478,11 +831,47 @@ export function routeMessage(params: {
   message: string;
   routing?: AgentRoutingConfig;
   orchestrator?: AgentOrchestratorConfig;
+  /** Current agent persona name — used for per-persona model override lookup. */
+  currentPersona?: string;
 }): SmartRoutingResult | undefined {
   const { message, routing } = params;
 
   if (!routing?.enabled) {
     return undefined;
+  }
+
+  // FF.1: Per-persona model override — check before tier classification.
+  if (params.currentPersona && routing.personaModels) {
+    const personaModel = routing.personaModels[params.currentPersona];
+    if (personaModel) {
+      const personaRef = parseModelRef(personaModel);
+      if (personaRef) {
+        return {
+          complexity: "complex",
+          provider: personaRef.provider,
+          model: personaRef.model,
+          disableTools: false,
+        };
+      }
+    }
+  }
+
+  // FF.2: ECO tier — ultra-short messages route to the cheapest configured model.
+  if (routing.ecoModel) {
+    const ecoRef = parseModelRef(routing.ecoModel);
+    if (ecoRef) {
+      const words = params.message.trim().split(/\s+/).filter(Boolean).length;
+      if (words < 20 && params.message.trim().length < 80) {
+        return {
+          complexity: "simple",
+          provider: ecoRef.provider,
+          model: ecoRef.model,
+          disableTools: true,
+          contextTokensCap: routing.fastModelContextTokens ?? DEFAULT_FAST_CONTEXT_TOKENS,
+          timeoutMs: LOCAL_TIER_TIMEOUT_MS,
+        };
+      }
+    }
   }
 
   // "always" strategy: skip tier classification, route everything to orchestrator.

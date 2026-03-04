@@ -1,4 +1,5 @@
 import { logVerbose } from "../../globals.js";
+import { listChatCommandsForConfig } from "../commands-registry.js";
 import { listSkillCommandsForAgents } from "../skill-commands.js";
 import {
   buildCommandsMessage,
@@ -14,7 +15,8 @@ export const handleHelpCommand: CommandHandler = async (params, allowTextCommand
   if (!allowTextCommands) {
     return null;
   }
-  if (params.command.commandBodyNormalized !== "/help") {
+  const normalized = params.command.commandBodyNormalized;
+  if (normalized !== "/help" && !normalized.startsWith("/help ")) {
     return null;
   }
   if (!params.command.isAuthorizedSender) {
@@ -23,9 +25,101 @@ export const handleHelpCommand: CommandHandler = async (params, allowTextCommand
     );
     return { shouldContinue: false };
   }
+
+  const arg = normalized.replace(/^\/help\s*/i, "").trim();
+  if (!arg) {
+    return {
+      shouldContinue: false,
+      reply: { text: buildHelpMessage(params.cfg) },
+    };
+  }
+
+  // Look up the command by key, nativeName, or textAlias
+  const needle = arg.toLowerCase().replace(/^\//, "");
+  const commands = listChatCommandsForConfig(params.cfg);
+  const found = commands.find((cmd) => {
+    if (cmd.key.toLowerCase() === needle) {
+      return true;
+    }
+    if (cmd.nativeName?.toLowerCase() === needle) {
+      return true;
+    }
+    if (cmd.textAliases?.some((a) => a.toLowerCase().replace(/^\//, "") === needle)) {
+      return true;
+    }
+    return false;
+  });
+
+  if (!found) {
+    return {
+      shouldContinue: false,
+      reply: { text: `Unknown command: /${needle}` },
+    };
+  }
+
+  const lines: string[] = [`/${found.key} — ${found.description}`];
+  if (found.textAliases && found.textAliases.length > 0) {
+    lines.push(`Aliases: ${found.textAliases.join(", ")}`);
+  }
+  if (found.args && found.args.length > 0) {
+    const argList = found.args
+      .map((a) => {
+        const req = a.required ? "" : "?";
+        const choices = a.choices ? ` (${a.choices.map(String).join("|")})` : "";
+        return `  ${a.name}${req}${choices} — ${a.description}`;
+      })
+      .join("\n");
+    lines.push(`Arguments:\n${argList}`);
+  }
+  const exampleArgs = found.args
+    ?.filter((a) => a.required)
+    .map((a) => `<${a.name}>`)
+    .join(" ");
+  lines.push(`Usage: /${found.key}${exampleArgs ? ` ${exampleArgs}` : ""}`);
+
   return {
     shouldContinue: false,
-    reply: { text: buildHelpMessage(params.cfg) },
+    reply: { text: lines.join("\n") },
+  };
+};
+
+export const handleTeamCommand: CommandHandler = async (params, allowTextCommands) => {
+  if (!allowTextCommands) {
+    return null;
+  }
+  if (params.command.commandBodyNormalized !== "/team") {
+    return null;
+  }
+  if (!params.command.isAuthorizedSender) {
+    logVerbose(
+      `Ignoring /team from unauthorized sender: ${params.command.senderId || "<unknown>"}`,
+    );
+    return { shouldContinue: false };
+  }
+  return {
+    shouldContinue: false,
+    reply: { text: "👥 Team — coming soon." },
+  };
+};
+
+export const handleTestCommand: CommandHandler = async (params, allowTextCommands) => {
+  if (!allowTextCommands) {
+    return null;
+  }
+  if (params.command.commandBodyNormalized !== "/test") {
+    return null;
+  }
+  if (!params.command.isAuthorizedSender) {
+    logVerbose(
+      `Ignoring /test from unauthorized sender: ${params.command.senderId || "<unknown>"}`,
+    );
+    return { shouldContinue: false };
+  }
+  const channel = params.command.channel ?? "unknown";
+  const time = new Date().toISOString();
+  return {
+    shouldContinue: false,
+    reply: { text: `✅ Commands are working.\nChannel: ${channel}\nTime: ${time}` },
   };
 };
 

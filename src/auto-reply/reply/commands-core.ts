@@ -10,12 +10,15 @@ import { handleApproveCommand } from "./commands-approve.js";
 import { handleBashCommand } from "./commands-bash.js";
 import { handleCompactCommand } from "./commands-compact.js";
 import { handleConfigCommand, handleDebugCommand } from "./commands-config.js";
+import { handleGatewayCommand } from "./commands-gateway.js";
 import {
   handleCommandsListCommand,
   handleContextCommand,
   handleExportSessionCommand,
   handleHelpCommand,
   handleStatusCommand,
+  handleTeamCommand,
+  handleTestCommand,
   handleWhoamiCommand,
 } from "./commands-info.js";
 import { handleModelsCommand } from "./commands-models.js";
@@ -62,6 +65,9 @@ export async function handleCommands(params: HandleCommandsParams): Promise<Comm
       handleExportSessionCommand,
       handleWhoamiCommand,
       handleSubagentsCommand,
+      handleGatewayCommand,
+      handleTeamCommand,
+      handleTestCommand,
       handleConfigCommand,
       handleDebugCommand,
       handleModelsCommand,

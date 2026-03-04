@@ -291,6 +291,10 @@ export function isPrivateIpAddress(address: string): boolean {
     if ((first & 0xfe00) === 0xfc00) {
       return true;
     }
+    // IPv6 multicast: ff00::/8
+    if ((first & 0xff00) === 0xff00) {
+      return true;
+    }
     return false;
   }
 
