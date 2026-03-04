@@ -38,7 +38,7 @@ vi.mock("../config/config.js", async (importOriginal) => {
   };
 });
 
-vi.mock("../agents/model-catalog.js", () => ({
+vi.mock("../agents/models/model-catalog.js", () => ({
   loadModelCatalog: async () => [
     {
       provider: "anthropic",
@@ -61,7 +61,7 @@ vi.mock("../agents/auth-profiles.js", () => ({
   resolveAuthProfileOrder: () => [],
 }));
 
-vi.mock("../agents/model-auth.js", () => ({
+vi.mock("../agents/models/model-auth.js", () => ({
   resolveEnvApiKey: () => null,
   getCustomProviderApiKey: () => null,
   resolveModelAuthMode: () => "api-key",

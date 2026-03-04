@@ -77,7 +77,7 @@ const loadPromise = (async () => {
   }
 
   try {
-    const { discoverAuthStorage, discoverModels } = await import("./pi-model-discovery.js");
+    const { discoverAuthStorage, discoverModels } = await import("./models/pi-model-discovery.js");
     const agentDir = resolveOpenClawAgentDir();
     const authStorage = discoverAuthStorage(agentDir);
     const modelRegistry = discoverModels(authStorage, agentDir) as unknown as ModelRegistryLike;

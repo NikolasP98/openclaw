@@ -66,7 +66,8 @@ vi.mock("./list.table.js", () => ({
 }));
 
 vi.mock("../../agents/model-forward-compat.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../agents/model-forward-compat.js")>();
+  const actual =
+    await importOriginal<typeof import("../../../agents/models/model-forward-compat.js")>();
   return {
     ...actual,
     resolveForwardCompatModel: mocks.resolveForwardCompatModel,

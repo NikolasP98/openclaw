@@ -18,7 +18,7 @@ vi.mock("../../agents/sessions/session-write-lock.js", () => ({
   acquireSessionWriteLock: async () => ({ release: async () => {} }),
 }));
 
-vi.mock("../../agents/model-catalog.js", () => ({
+vi.mock("../../agents/models/model-catalog.js", () => ({
   loadModelCatalog: vi.fn(async () => [
     { provider: "minimax", id: "m2.1", name: "M2.1" },
     { provider: "openai", id: "gpt-4o-mini", name: "GPT-4o mini" },

@@ -238,8 +238,8 @@ export const testIsNixMode = hoisted.testIsNixMode;
 export const sessionStoreSaveDelayMs = hoisted.sessionStoreSaveDelayMs;
 export const embeddedRunMock = hoisted.embeddedRunMock;
 
-vi.mock("../agents/pi-model-discovery.js", async () => {
-  const actual = await vi.importActual<typeof import("../agents/pi-model-discovery.js")>(
+vi.mock("../agents/models/pi-model-discovery.js", async () => {
+  const actual = await vi.importActual<typeof import("../agents/models/pi-model-discovery.js")>(
     "../agents/pi-model-discovery.js",
   );
 

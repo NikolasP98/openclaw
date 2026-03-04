@@ -4,7 +4,7 @@ import { createTempHomeHarness, makeReplyConfig } from "./reply.test-harness.js"
 
 const runEmbeddedPiAgentMock = vi.fn();
 
-vi.mock("../agents/model-fallback.js", () => ({
+vi.mock("../agents/models/model-fallback.js", () => ({
   runWithModelFallback: async ({
     provider,
     model,
