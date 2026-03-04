@@ -655,7 +655,7 @@ function buildChatCommands(): ChatCommandDefinition[] {
       nativeName: "gateway",
       description: "Gateway management (status, health, sessions, version).",
       textAlias: "/gateway",
-      category: "admin",
+      category: "management",
       acceptsArgs: true,
       args: [
         {

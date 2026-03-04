@@ -65,7 +65,7 @@ export const handleHelpCommand: CommandHandler = async (params, allowTextCommand
     const argList = found.args
       .map((a) => {
         const req = a.required ? "" : "?";
-        const choices = a.choices ? ` (${a.choices.map(String).join("|")})` : "";
+        const choices = Array.isArray(a.choices) ? ` (${a.choices.map(String).join("|")})` : "";
         return `  ${a.name}${req}${choices} — ${a.description}`;
       })
       .join("\n");
