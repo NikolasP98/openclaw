@@ -6,7 +6,7 @@ import {
   resolveToolProfilePolicy,
 } from "../../agents/tool-policy.js";
 import { TOOL_REGISTRY } from "../../agents/tools/_registry.generated.js";
-import { loadConfig } from "../../config/config.js";
+import { clearConfigCache, loadConfig } from "../../config/config.js";
 import { normalizeAgentId } from "../../routing/session-key.js";
 import {
   ErrorCodes,
@@ -130,5 +130,21 @@ export const toolsHandlers: GatewayRequestHandlers = {
       });
     }
     respond(true, { tools, groups: TOOL_GROUPS, profile: policy.profile }, undefined);
+  },
+
+  "tools.reload": ({ respond }) => {
+    try {
+      clearConfigCache();
+      const cfg = loadConfig();
+      const agentId = resolveDefaultAgentId(cfg);
+      const policy = resolveAgentToolPolicy(cfg, agentId);
+      respond(true, { reloaded: true, profile: policy.profile }, undefined);
+    } catch (err) {
+      respond(
+        false,
+        undefined,
+        errorShape(ErrorCodes.UNAVAILABLE, `config reload failed: ${String(err)}`),
+      );
+    }
   },
 };

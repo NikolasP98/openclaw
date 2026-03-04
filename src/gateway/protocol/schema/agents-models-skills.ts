@@ -226,3 +226,5 @@ export const ToolsStatusParamsSchema = Type.Object(
   },
   { additionalProperties: false },
 );
+
+export const ToolsReloadParamsSchema = Type.Object({}, { additionalProperties: false });

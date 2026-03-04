@@ -36,6 +36,7 @@ import {
   SkillsUpdateParamsSchema,
   AgentsSkillsSetParamsSchema,
   ToolsStatusParamsSchema,
+  ToolsReloadParamsSchema,
 } from "./agents-models-skills.js";
 import {
   ChannelsLogoutParamsSchema,
@@ -241,6 +242,7 @@ export const ProtocolSchemas: Record<string, TSchema> = {
   SkillsUpdateParams: SkillsUpdateParamsSchema,
   AgentsSkillsSetParams: AgentsSkillsSetParamsSchema,
   ToolsStatusParams: ToolsStatusParamsSchema,
+  ToolsReloadParams: ToolsReloadParamsSchema,
   CronJob: CronJobSchema,
   CronListParams: CronListParamsSchema,
   CronStatusParams: CronStatusParamsSchema,
