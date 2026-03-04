@@ -26,25 +26,25 @@ const modelRegistryState = {
 };
 let previousExitCode: typeof process.exitCode;
 
-vi.mock("../config/config.js", () => ({
+vi.mock("../../hooks/config.js", () => ({
   CONFIG_PATH: "/tmp/openclaw.json",
   STATE_DIR: "/tmp/openclaw-state",
   loadConfig,
 }));
 
-vi.mock("../agents/models-config.js", () => ({
+vi.mock("../../agents/models/models-config.js", () => ({
   ensureOpenClawModelsJson,
 }));
 
-vi.mock("../agents/pi-auth-json.js", () => ({
+vi.mock("../../agents/pi-auth-json.js", () => ({
   ensurePiAuthJsonFromAuthProfiles,
 }));
 
-vi.mock("../agents/agent-paths.js", () => ({
+vi.mock("../../agents/agent-paths.js", () => ({
   resolveOpenClawAgentDir,
 }));
 
-vi.mock("../agents/auth-profiles.js", () => ({
+vi.mock("../../agents/auth-profiles.js", () => ({
   ensureAuthProfileStore,
   listProfilesForProvider,
   resolveAuthProfileDisplayLabel,
@@ -52,13 +52,13 @@ vi.mock("../agents/auth-profiles.js", () => ({
   resolveProfileUnusableUntilForDisplay,
 }));
 
-vi.mock("../agents/model-auth.js", () => ({
+vi.mock("../../agents/models/model-auth.js", () => ({
   resolveEnvApiKey,
   resolveAwsSdkEnvVarName,
   getCustomProviderApiKey,
 }));
 
-vi.mock("../agents/pi-model-discovery.js", () => {
+vi.mock("../../agents/models/pi-model-discovery.js", () => {
   class MockModelRegistry {
     find(provider: string, id: string) {
       return (
@@ -88,7 +88,7 @@ vi.mock("../agents/pi-model-discovery.js", () => {
   };
 });
 
-vi.mock("../agents/pi-embedded-runner/model.js", () => ({
+vi.mock("../../auto-reply/model.js", () => ({
   resolveModel: () => {
     throw new Error("resolveModel should not be called from models.list tests");
   },

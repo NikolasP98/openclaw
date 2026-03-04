@@ -36,11 +36,11 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-vi.mock("../../config/config.js", () => ({
+vi.mock("../../../hooks/config.js", () => ({
   loadConfig: mocks.loadConfig,
 }));
 
-vi.mock("../../agents/auth-profiles.js", async (importOriginal) => {
+vi.mock("../../../agents/auth-profiles.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../agents/auth-profiles.js")>();
   return {
     ...actual,
@@ -65,7 +65,7 @@ vi.mock("./list.table.js", () => ({
   printModelTable: mocks.printModelTable,
 }));
 
-vi.mock("../../agents/model-forward-compat.js", async (importOriginal) => {
+vi.mock("../../../agents/models/model-forward-compat.js", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("../../../agents/models/model-forward-compat.js")>();
   return {

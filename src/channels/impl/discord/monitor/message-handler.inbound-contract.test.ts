@@ -5,7 +5,7 @@ import type { MsgContext } from "../../../../auto-reply/templating.js";
 
 const capture = vi.hoisted(() => ({ ctx: undefined as MsgContext | undefined }));
 
-vi.mock("../../auto-reply/dispatch.js", async (importOriginal) => {
+vi.mock("../../../../auto-reply/dispatch.js", async (importOriginal) => {
   return await buildDispatchInboundContextCapture(importOriginal, capture);
 });
 

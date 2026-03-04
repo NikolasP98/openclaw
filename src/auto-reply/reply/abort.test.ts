@@ -27,7 +27,7 @@ const commandQueueMocks = vi.hoisted(() => ({
   clearCommandLane: vi.fn(),
 }));
 
-vi.mock("../../process/command-queue.js", () => commandQueueMocks);
+vi.mock("../../platform/process/command-queue.js", () => commandQueueMocks);
 
 const subagentRegistryMocks = vi.hoisted(() => ({
   listSubagentRunsForRequester: vi.fn<(requesterSessionKey: string) => SubagentRunRecord[]>(

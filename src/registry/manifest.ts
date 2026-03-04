@@ -39,7 +39,7 @@ export const SkillManifestSchema = z.object({
 
   /**
    * Relative path (from registry root) to the handler module.
-   * E.g. "../../memory/knowledge-graph.js"
+   * E.g. "../memory/knowledge-graph.js"
    */
   handler: z.string().min(1, "handler path is required"),
 
@@ -74,8 +74,6 @@ export function validateManifest(raw: unknown): ManifestValidationResult {
   if (result.success) {
     return { ok: true, manifest: result.data };
   }
-  const errors = result.error.issues.map(
-    (e) => `  ${e.path.join(".") || "(root)"}: ${e.message}`,
-  );
+  const errors = result.error.issues.map((e) => `  ${e.path.join(".") || "(root)"}: ${e.message}`);
   return { ok: false, errors };
 }

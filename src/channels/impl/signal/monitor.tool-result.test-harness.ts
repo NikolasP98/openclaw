@@ -47,7 +47,7 @@ export function setSignalToolResultTestConfig(next: Record<string, unknown>) {
 
 export const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-vi.mock("../config/config.js", async (importOriginal) => {
+vi.mock("../../../hooks/config.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../config/config.js")>();
   return {
     ...actual,
@@ -55,7 +55,7 @@ vi.mock("../config/config.js", async (importOriginal) => {
   };
 });
 
-vi.mock("../auto-reply/reply.js", () => ({
+vi.mock("../../../auto-reply/reply.js", () => ({
   getReplyFromConfig: (...args: unknown[]) => replyMock(...args),
 }));
 
@@ -65,12 +65,12 @@ vi.mock("./send.js", () => ({
   sendReadReceiptSignal: vi.fn().mockResolvedValue(true),
 }));
 
-vi.mock("../pairing/pairing-store.js", () => ({
+vi.mock("../../../pairing/pairing-store.js", () => ({
   readChannelAllowFromStore: (...args: unknown[]) => readAllowFromStoreMock(...args),
   upsertChannelPairingRequest: (...args: unknown[]) => upsertPairingRequestMock(...args),
 }));
 
-vi.mock("../config/sessions.js", () => ({
+vi.mock("../../../config/sessions.js", () => ({
   resolveStorePath: vi.fn(() => "/tmp/minion-sessions.json"),
   updateLastRoute: (...args: unknown[]) => updateLastRouteMock(...args),
   readSessionUpdatedAt: vi.fn(() => undefined),
@@ -87,7 +87,7 @@ vi.mock("./daemon.js", () => ({
   spawnSignalDaemon: vi.fn(() => ({ stop: vi.fn() })),
 }));
 
-vi.mock("../infra/transport-ready.js", () => ({
+vi.mock("../../../infra/transport-ready.js", () => ({
   waitForTransportReady: (...args: unknown[]) => waitForTransportReadyMock(...args),
 }));
 

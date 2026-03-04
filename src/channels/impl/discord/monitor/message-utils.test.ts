@@ -4,15 +4,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const fetchRemoteMedia = vi.fn();
 const saveMediaBuffer = vi.fn();
 
-vi.mock("../../media/fetch.js", () => ({
+vi.mock("../../telegram/fetch.js", () => ({
   fetchRemoteMedia: (...args: unknown[]) => fetchRemoteMedia(...args),
 }));
 
-vi.mock("../../media/store.js", () => ({
+vi.mock("../../../../media/store.js", () => ({
   saveMediaBuffer: (...args: unknown[]) => saveMediaBuffer(...args),
 }));
 
-vi.mock("../../globals.js", () => ({
+vi.mock("../../../../globals.js", () => ({
   logVerbose: () => {},
 }));
 

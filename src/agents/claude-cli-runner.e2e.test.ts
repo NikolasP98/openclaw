@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({
   spawn: vi.fn(),
 }));
 
-vi.mock("../process/supervisor/index.js", () => ({
+vi.mock("./index.js", () => ({
   getProcessSupervisor: () => ({
     spawn: (...args: unknown[]) => mocks.spawn(...args),
     cancel: vi.fn(),

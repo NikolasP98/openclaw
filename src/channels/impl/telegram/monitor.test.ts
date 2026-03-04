@@ -43,7 +43,7 @@ const { startTelegramWebhookSpy } = vi.hoisted(() => ({
   startTelegramWebhookSpy: vi.fn(async () => ({ server: { close: vi.fn() }, stop: vi.fn() })),
 }));
 
-vi.mock("../config/config.js", async (importOriginal) => {
+vi.mock("../../../hooks/config.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../config/config.js")>();
   return {
     ...actual,
@@ -82,7 +82,7 @@ vi.mock("@grammyjs/runner", () => ({
   run: runSpy,
 }));
 
-vi.mock("../infra/backoff.js", () => ({
+vi.mock("../../../infra/backoff.js", () => ({
   computeBackoff,
   sleepWithAbort,
 }));
@@ -91,7 +91,7 @@ vi.mock("./webhook.js", () => ({
   startTelegramWebhook: startTelegramWebhookSpy,
 }));
 
-vi.mock("../auto-reply/reply.js", () => ({
+vi.mock("../../../auto-reply/reply.js", () => ({
   getReplyFromConfig: async (ctx: { Body?: string }) => ({
     text: `echo:${ctx.Body}`,
   }),

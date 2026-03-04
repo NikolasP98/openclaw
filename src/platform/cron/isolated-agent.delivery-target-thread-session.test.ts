@@ -3,19 +3,19 @@ import type { OpenClawConfig } from "../../config/config.js";
 
 // Mock session store so we can control what entries exist.
 const mockStore: Record<string, Record<string, unknown>> = {};
-vi.mock("../config/sessions.js", () => ({
+vi.mock("../../config/sessions.js", () => ({
   loadSessionStore: vi.fn((storePath: string) => mockStore[storePath] ?? {}),
   resolveAgentMainSessionKey: vi.fn(({ agentId }: { agentId: string }) => `agent:${agentId}:main`),
   resolveStorePath: vi.fn((_store: unknown, _opts: unknown) => "/mock/store.json"),
 }));
 
 // Mock channel-selection to avoid real config resolution.
-vi.mock("../infra/outbound/channel-selection.js", () => ({
+vi.mock("../../infra/outbound/channel-selection.js", () => ({
   resolveMessageChannelSelection: vi.fn(async () => ({ channel: "telegram" })),
 }));
 
 // Minimal mock for channel plugins (Telegram resolveTarget is an identity).
-vi.mock("../channels/plugins/index.js", () => ({
+vi.mock("../../index.js", () => ({
   getChannelPlugin: vi.fn(() => ({
     meta: { label: "Telegram" },
     config: {},

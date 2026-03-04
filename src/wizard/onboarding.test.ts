@@ -162,7 +162,7 @@ vi.mock("../cli/commands/systemd-linger.js", () => ({
   ensureSystemdUserLingerInteractive,
 }));
 
-vi.mock("../daemon/systemd.js", () => ({
+vi.mock("../platform/daemon/systemd.js", () => ({
   isSystemdUserServiceAvailable,
 }));
 

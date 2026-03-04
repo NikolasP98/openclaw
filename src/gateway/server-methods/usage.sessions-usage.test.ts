@@ -16,8 +16,9 @@ vi.mock("../../config/config.js", () => {
 });
 
 vi.mock("../sessions/session-utils.js", async () => {
-  const actual =
-    await vi.importActual<typeof import("../sessions/session-utils.js")>("../session-utils.js");
+  const actual = await vi.importActual<typeof import("../sessions/session-utils.js")>(
+    "../sessions/session-utils.js",
+  );
   return {
     ...actual,
     loadCombinedSessionStoreForGateway: vi.fn(() => ({ storePath: "(multiple)", store: {} })),

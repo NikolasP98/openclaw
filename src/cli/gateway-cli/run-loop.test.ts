@@ -32,7 +32,7 @@ vi.mock("../../infra/process-respawn.js", () => ({
   restartGatewayProcessWithFreshPid: () => ({ mode: "skipped" }),
 }));
 
-vi.mock("../../process/command-queue.js", () => ({
+vi.mock("../../platform/process/command-queue.js", () => ({
   getActiveTaskCount: () => getActiveTaskCount(),
   waitForActiveTasks: (timeoutMs: number) => waitForActiveTasks(timeoutMs),
   resetAllLanes: () => resetAllLanes(),

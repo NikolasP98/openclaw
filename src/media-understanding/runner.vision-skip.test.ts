@@ -19,7 +19,7 @@ const catalog = [
 
 vi.mock("../agents/models/model-catalog.js", async () => {
   const actual = await vi.importActual<typeof import("../agents/models/model-catalog.js")>(
-    "../agents/model-catalog.js",
+    "../providers/model-catalog.js",
   );
   return {
     ...actual,

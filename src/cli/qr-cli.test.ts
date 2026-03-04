@@ -18,7 +18,7 @@ const qrGenerate = vi.fn((_input, _opts, cb: (output: string) => void) => {
 
 vi.mock("../runtime.js", () => ({ defaultRuntime: runtime }));
 vi.mock("../config/config.js", () => ({ loadConfig }));
-vi.mock("../process/exec.js", () => ({ runCommandWithTimeout }));
+vi.mock("../auto-reply/reply/exec.js", () => ({ runCommandWithTimeout }));
 vi.mock("qrcode-terminal", () => ({
   default: {
     generate: qrGenerate,

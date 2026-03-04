@@ -139,7 +139,7 @@ const hoisted = vi.hoisted(() => {
   };
 });
 
-vi.mock("../cron/service.js", () => ({
+vi.mock("../platform/cron/service.js", () => ({
   CronService: hoisted.CronService,
 }));
 

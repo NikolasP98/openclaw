@@ -52,7 +52,7 @@ const createHealthSummary = (params: {
 };
 
 const callGatewayMock = vi.fn();
-vi.mock("../gateway/call.js", () => ({
+vi.mock("../../gateway/call.js", () => ({
   callGateway: (...args: unknown[]) => callGatewayMock(...args),
 }));
 

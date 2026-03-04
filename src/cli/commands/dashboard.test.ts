@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   copyToClipboard: vi.fn(),
 }));
 
-vi.mock("../config/config.js", () => ({
+vi.mock("../../hooks/config.js", () => ({
   readConfigFileSnapshot: mocks.readConfigFileSnapshot,
   resolveGatewayPort: mocks.resolveGatewayPort,
 }));
@@ -21,7 +21,7 @@ vi.mock("./onboard-helpers.js", () => ({
   formatControlUiSshHint: vi.fn(() => "ssh hint"),
 }));
 
-vi.mock("../infra/clipboard.js", () => ({
+vi.mock("../../infra/clipboard.js", () => ({
   copyToClipboard: mocks.copyToClipboard,
 }));
 

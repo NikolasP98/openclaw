@@ -4,11 +4,11 @@ import type { MinionConfig } from "../../config/config.js";
 const note = vi.hoisted(() => vi.fn());
 const pluginRegistry = vi.hoisted(() => ({ list: [] as unknown[] }));
 
-vi.mock("../terminal/note.js", () => ({
+vi.mock("../../terminal/note.js", () => ({
   note,
 }));
 
-vi.mock("../channels/plugins/index.js", () => ({
+vi.mock("../index.js", () => ({
   listChannelPlugins: () => pluginRegistry.list,
 }));
 

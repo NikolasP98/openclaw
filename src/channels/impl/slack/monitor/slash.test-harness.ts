@@ -10,28 +10,28 @@ const mocks = vi.hoisted(() => ({
   createReplyPrefixOptionsMock: vi.fn(),
 }));
 
-vi.mock("../../auto-reply/reply/provider-dispatcher.js", () => ({
+vi.mock("../../../../auto-reply/reply/provider-dispatcher.js", () => ({
   dispatchReplyWithDispatcher: (...args: unknown[]) => mocks.dispatchMock(...args),
 }));
 
-vi.mock("../../pairing/pairing-store.js", () => ({
+vi.mock("../../../../pairing/pairing-store.js", () => ({
   readChannelAllowFromStore: (...args: unknown[]) => mocks.readAllowFromStoreMock(...args),
   upsertChannelPairingRequest: (...args: unknown[]) => mocks.upsertPairingRequestMock(...args),
 }));
 
-vi.mock("../../routing/resolve-route.js", () => ({
+vi.mock("../../../../routing/resolve-route.js", () => ({
   resolveAgentRoute: (...args: unknown[]) => mocks.resolveAgentRouteMock(...args),
 }));
 
-vi.mock("../../auto-reply/reply/inbound-context.js", () => ({
+vi.mock("../../../../auto-reply/reply/inbound-context.js", () => ({
   finalizeInboundContext: (...args: unknown[]) => mocks.finalizeInboundContextMock(...args),
 }));
 
-vi.mock("../../channels/conversation-label.js", () => ({
+vi.mock("../../../conversation-label.js", () => ({
   resolveConversationLabel: (...args: unknown[]) => mocks.resolveConversationLabelMock(...args),
 }));
 
-vi.mock("../../channels/reply-prefix.js", () => ({
+vi.mock("../../../reply-prefix.js", () => ({
   createReplyPrefixOptions: (...args: unknown[]) => mocks.createReplyPrefixOptionsMock(...args),
 }));
 

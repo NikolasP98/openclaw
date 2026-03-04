@@ -6,11 +6,11 @@ import type { WizardPrompter } from "../../wizard/prompts.js";
 import { setupInternalHooks } from "./onboard-hooks.js";
 
 // Mock hook discovery modules
-vi.mock("../hooks/hooks-status.js", () => ({
+vi.mock("../../hooks/hooks-status.js", () => ({
   buildWorkspaceHookStatus: vi.fn(),
 }));
 
-vi.mock("../agents/agent-scope.js", () => ({
+vi.mock("../../agents/agent-scope.js", () => ({
   resolveAgentWorkspaceDir: vi.fn().mockReturnValue("/mock/workspace"),
   resolveDefaultAgentId: vi.fn().mockReturnValue("main"),
 }));

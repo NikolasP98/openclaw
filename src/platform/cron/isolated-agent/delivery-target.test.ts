@@ -2,13 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 import { DEFAULT_CHAT_CHANNEL } from "../../../channels/registry.js";
 import type { OpenClawConfig } from "../../../config/config.js";
 
-vi.mock("../../config/sessions.js", () => ({
+vi.mock("../../../config/sessions.js", () => ({
   loadSessionStore: vi.fn().mockReturnValue({}),
   resolveAgentMainSessionKey: vi.fn().mockReturnValue("agent:test:main"),
   resolveStorePath: vi.fn().mockReturnValue("/tmp/test-store.json"),
 }));
 
-vi.mock("../../infra/outbound/channel-selection.js", () => ({
+vi.mock("../../../infra/outbound/channel-selection.js", () => ({
   resolveMessageChannelSelection: vi.fn().mockResolvedValue({ channel: "telegram" }),
 }));
 

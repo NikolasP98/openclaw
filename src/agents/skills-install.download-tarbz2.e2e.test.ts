@@ -99,7 +99,7 @@ afterEach(() => {
   restoreOpenClawStateDir(originalStateDir);
 });
 
-vi.mock("../process/exec.js", () => ({
+vi.mock("../auto-reply/reply/exec.js", () => ({
   runCommandWithTimeout: (...args: unknown[]) => mocks.runCommand(...args),
 }));
 

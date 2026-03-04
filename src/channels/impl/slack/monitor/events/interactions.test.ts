@@ -3,7 +3,7 @@ import { registerSlackInteractionEvents } from "./interactions.js";
 
 const enqueueSystemEventMock = vi.fn();
 
-vi.mock("../../../infra/system-events.js", () => ({
+vi.mock("../../../../../infra/system-events.js", () => ({
   enqueueSystemEvent: (...args: unknown[]) => enqueueSystemEventMock(...args),
 }));
 

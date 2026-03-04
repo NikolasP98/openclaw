@@ -4,10 +4,10 @@ import type { RuntimeEnv } from "../../runtime.js";
 import type { WizardPrompter } from "../../wizard/prompts.js";
 
 // Module under test imports these at module scope.
-vi.mock("../agents/skills-status.js", () => ({
+vi.mock("../../agents/skills-status.js", () => ({
   buildWorkspaceSkillStatus: vi.fn(),
 }));
-vi.mock("../agents/skills-install.js", () => ({
+vi.mock("../../agents/skills-install.js", () => ({
   installSkill: vi.fn(),
 }));
 vi.mock("./onboard-helpers.js", () => ({

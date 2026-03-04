@@ -5,12 +5,12 @@ import type { CliDeps } from "../../cli/deps.js";
 import { makeCfg, makeJob, withTempCronHome } from "./isolated-agent.test-harness.js";
 import type { CronJob } from "./types.js";
 
-vi.mock("../agents/pi-embedded.js", () => ({
+vi.mock("../../agents/pi-embedded.js", () => ({
   abortEmbeddedPiRun: vi.fn().mockReturnValue(false),
   runEmbeddedPiAgent: vi.fn(),
   resolveEmbeddedSessionLane: (key: string) => `session:${key.trim() || "main"}`,
 }));
-vi.mock("../agents/model-catalog.js", () => ({
+vi.mock("../../providers/model-catalog.js", () => ({
   loadModelCatalog: vi.fn(),
 }));
 

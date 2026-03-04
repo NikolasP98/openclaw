@@ -7,7 +7,7 @@ vi.mock("./models-config.js", () => ({
   ensureOpenClawModelsJson: vi.fn().mockResolvedValue({ agentDir: "/tmp", wrote: false }),
 }));
 
-vi.mock("./agent-paths.js", () => ({
+vi.mock("../agent-paths.js", () => ({
   resolveOpenClawAgentDir: () => "/tmp/openclaw",
 }));
 

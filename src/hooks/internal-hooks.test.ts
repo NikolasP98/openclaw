@@ -138,8 +138,7 @@ describe("hooks", () => {
       expect(errorHandler).toHaveBeenCalled();
       expect(successHandler).toHaveBeenCalled();
       expect(consoleError).toHaveBeenCalledWith(
-        expect.stringContaining("Hook error"),
-        expect.stringContaining("Handler failed"),
+        expect.stringMatching(/Hook error.*Handler failed/),
       );
 
       consoleError.mockRestore();
@@ -378,10 +377,7 @@ describe("hooks", () => {
       expect(errorHandler).toHaveBeenCalled();
       expect(successHandler).toHaveBeenCalled();
       // Error was logged but didn't prevent second handler
-      expect(consoleError).toHaveBeenCalledWith(
-        expect.stringContaining("Hook error"),
-        expect.stringContaining("Hook failed"),
-      );
+      expect(consoleError).toHaveBeenCalledWith(expect.stringMatching(/Hook error.*Hook failed/));
 
       consoleError.mockRestore();
     });

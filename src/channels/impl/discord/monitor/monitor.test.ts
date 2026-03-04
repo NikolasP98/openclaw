@@ -54,12 +54,12 @@ const readSessionUpdatedAtMock = vi.hoisted(() => vi.fn());
 const resolveStorePathMock = vi.hoisted(() => vi.fn());
 let lastDispatchCtx: Record<string, unknown> | undefined;
 
-vi.mock("../../pairing/pairing-store.js", () => ({
+vi.mock("../../../../pairing/pairing-store.js", () => ({
   readChannelAllowFromStore: (...args: unknown[]) => readAllowFromStoreMock(...args),
   upsertChannelPairingRequest: (...args: unknown[]) => upsertPairingRequestMock(...args),
 }));
 
-vi.mock("../../infra/system-events.js", async (importOriginal) => {
+vi.mock("./system-events.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../../infra/system-events.js")>();
   return {
     ...actual,
@@ -67,7 +67,7 @@ vi.mock("../../infra/system-events.js", async (importOriginal) => {
   };
 });
 
-vi.mock("../../auto-reply/reply/provider-dispatcher.js", () => ({
+vi.mock("../../../../auto-reply/reply/provider-dispatcher.js", () => ({
   dispatchReplyWithBufferedBlockDispatcher: (...args: unknown[]) => dispatchReplyMock(...args),
 }));
 
@@ -75,11 +75,11 @@ vi.mock("./reply-delivery.js", () => ({
   deliverDiscordReply: (...args: unknown[]) => deliverDiscordReplyMock(...args),
 }));
 
-vi.mock("../../channels/session.js", () => ({
+vi.mock("../../../session.js", () => ({
   recordInboundSession: (...args: unknown[]) => recordInboundSessionMock(...args),
 }));
 
-vi.mock("../../config/sessions.js", async (importOriginal) => {
+vi.mock("../../../../config/sessions.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../../config/sessions.js")>();
   return {
     ...actual,

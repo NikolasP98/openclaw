@@ -9,7 +9,7 @@ const getPluginCommandSpecs = vi.hoisted(() => vi.fn());
 const matchPluginCommand = vi.hoisted(() => vi.fn());
 const executePluginCommand = vi.hoisted(() => vi.fn());
 
-vi.mock("../plugins/commands.js", () => ({
+vi.mock("../../../acp/commands.js", () => ({
   getPluginCommandSpecs,
   matchPluginCommand,
   executePluginCommand,
@@ -18,7 +18,7 @@ vi.mock("../plugins/commands.js", () => ({
 const deliverReplies = vi.hoisted(() => vi.fn(async () => {}));
 vi.mock("./bot/delivery.js", () => ({ deliverReplies }));
 
-vi.mock("../pairing/pairing-store.js", () => ({
+vi.mock("../../../pairing/pairing-store.js", () => ({
   readChannelAllowFromStore: vi.fn(async () => []),
 }));
 

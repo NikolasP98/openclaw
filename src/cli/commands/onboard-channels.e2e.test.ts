@@ -34,7 +34,7 @@ vi.mock("node:fs/promises", () => ({
   },
 }));
 
-vi.mock("../channel-web.js", () => ({
+vi.mock("../../channel-web.js", () => ({
   loginWeb: vi.fn(async () => {}),
 }));
 

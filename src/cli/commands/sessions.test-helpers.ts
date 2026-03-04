@@ -5,7 +5,7 @@ import { vi } from "vitest";
 import type { RuntimeEnv } from "../../runtime.js";
 
 export function mockSessionsConfig() {
-  vi.mock("../config/config.js", async (importOriginal) => {
+  vi.mock("../../hooks/config.js", async (importOriginal) => {
     const actual = await importOriginal<typeof import("../../config/config.js")>();
     return {
       ...actual,

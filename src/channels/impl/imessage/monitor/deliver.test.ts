@@ -14,20 +14,20 @@ vi.mock("../send.js", () => ({
     sendMessageIMessageMock(to, message, opts),
 }));
 
-vi.mock("../../auto-reply/chunk.js", () => ({
+vi.mock("../../discord/chunk.js", () => ({
   chunkTextWithMode: (text: string) => chunkTextWithModeMock(text),
   resolveChunkMode: () => resolveChunkModeMock(),
 }));
 
-vi.mock("../../config/config.js", () => ({
+vi.mock("../../../../hooks/config.js", () => ({
   loadConfig: () => ({}),
 }));
 
-vi.mock("../../config/markdown-tables.js", () => ({
+vi.mock("../../../../config/markdown-tables.js", () => ({
   resolveMarkdownTableMode: () => resolveMarkdownTableModeMock(),
 }));
 
-vi.mock("../../markdown/tables.js", () => ({
+vi.mock("../../../../markdown/tables.js", () => ({
   convertMarkdownTables: (text: string) => convertMarkdownTablesMock(text),
 }));
 

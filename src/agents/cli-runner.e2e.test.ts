@@ -8,7 +8,7 @@ import { resolveCliNoOutputTimeoutMs } from "./cli-runner/helpers.js";
 
 const supervisorSpawnMock = vi.fn();
 
-vi.mock("../process/supervisor/index.js", () => ({
+vi.mock("./index.js", () => ({
   getProcessSupervisor: () => ({
     spawn: (...args: unknown[]) => supervisorSpawnMock(...args),
     cancel: vi.fn(),

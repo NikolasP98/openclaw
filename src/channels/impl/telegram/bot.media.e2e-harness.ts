@@ -46,7 +46,7 @@ vi.mock("@grammyjs/transformer-throttler", () => ({
   apiThrottler: () => throttlerSpy(),
 }));
 
-vi.mock("../media/store.js", async (importOriginal) => {
+vi.mock("../../../media/store.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../media/store.js")>();
   return {
     ...actual,
@@ -59,7 +59,7 @@ vi.mock("../media/store.js", async (importOriginal) => {
   };
 });
 
-vi.mock("../config/config.js", async (importOriginal) => {
+vi.mock("../../../hooks/config.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../config/config.js")>();
   return {
     ...actual,
@@ -69,7 +69,7 @@ vi.mock("../config/config.js", async (importOriginal) => {
   };
 });
 
-vi.mock("../config/sessions.js", async (importOriginal) => {
+vi.mock("../../../config/sessions.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../config/sessions.js")>();
   return {
     ...actual,
@@ -77,7 +77,7 @@ vi.mock("../config/sessions.js", async (importOriginal) => {
   };
 });
 
-vi.mock("../pairing/pairing-store.js", () => ({
+vi.mock("../../../pairing/pairing-store.js", () => ({
   readChannelAllowFromStore: vi.fn(async () => [] as string[]),
   upsertChannelPairingRequest: vi.fn(async () => ({
     code: "PAIRCODE",
@@ -85,7 +85,7 @@ vi.mock("../pairing/pairing-store.js", () => ({
   })),
 }));
 
-vi.mock("../auto-reply/reply.js", () => {
+vi.mock("../../../auto-reply/reply.js", () => {
   const replySpy = vi.fn(async (_ctx, opts) => {
     await opts?.onReplyStart?.();
     return undefined;

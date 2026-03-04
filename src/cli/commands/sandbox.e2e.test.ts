@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
   clackConfirm: vi.fn(),
 }));
 
-vi.mock("../agents/sandbox.js", () => ({
+vi.mock("./sandbox.js", () => ({
   listSandboxContainers: mocks.listSandboxContainers,
   listSandboxBrowsers: mocks.listSandboxBrowsers,
   removeSandboxContainer: mocks.removeSandboxContainer,

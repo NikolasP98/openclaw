@@ -19,13 +19,13 @@ vi.mock("./send.js", () => ({
   sendReadReceiptSignal: sendReadReceiptMock,
 }));
 
-vi.mock("../auto-reply/dispatch.js", () => ({
+vi.mock("../../../auto-reply/dispatch.js", () => ({
   dispatchInboundMessage: dispatchInboundMessageMock,
   dispatchInboundMessageWithDispatcher: dispatchInboundMessageMock,
   dispatchInboundMessageWithBufferedDispatcher: dispatchInboundMessageMock,
 }));
 
-vi.mock("../pairing/pairing-store.js", () => ({
+vi.mock("../../../pairing/pairing-store.js", () => ({
   readChannelAllowFromStore: vi.fn().mockResolvedValue([]),
   upsertChannelPairingRequest: vi.fn(),
 }));

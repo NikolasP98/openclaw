@@ -15,7 +15,7 @@ vi.mock("./send.js", () => ({
   },
 }));
 
-vi.mock("../auto-reply/dispatch.js", async (importOriginal) => {
+vi.mock("../../../auto-reply/dispatch.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../auto-reply/dispatch.js")>();
   return {
     ...actual,
@@ -25,12 +25,12 @@ vi.mock("../auto-reply/dispatch.js", async (importOriginal) => {
   };
 });
 
-vi.mock("../pairing/pairing-store.js", () => ({
+vi.mock("../../../pairing/pairing-store.js", () => ({
   readChannelAllowFromStore: (...args: unknown[]) => readAllowFromStoreMock(...args),
   upsertChannelPairingRequest: (...args: unknown[]) => upsertPairingRequestMock(...args),
 }));
 
-vi.mock("../config/sessions.js", async (importOriginal) => {
+vi.mock("../../../config/sessions.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../config/sessions.js")>();
   return {
     ...actual,

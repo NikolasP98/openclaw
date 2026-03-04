@@ -13,8 +13,9 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../sessions/session-utils.js", async () => {
-  const actual =
-    await vi.importActual<typeof import("../sessions/session-utils.js")>("../session-utils.js");
+  const actual = await vi.importActual<typeof import("../sessions/session-utils.js")>(
+    "../sessions/session-utils.js",
+  );
   return {
     ...actual,
     loadSessionEntry: mocks.loadSessionEntry,

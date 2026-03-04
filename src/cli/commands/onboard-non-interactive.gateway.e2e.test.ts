@@ -18,7 +18,7 @@ const gatewayClientCalls: Array<{
   onClose?: (code: number, reason: string) => void;
 }> = [];
 
-vi.mock("../gateway/client.js", () => ({
+vi.mock("../../acp/client.js", () => ({
   GatewayClient: class {
     params: {
       url?: string;

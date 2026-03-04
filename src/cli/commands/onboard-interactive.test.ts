@@ -9,15 +9,15 @@ const mocks = vi.hoisted(() => ({
   restoreTerminalState: vi.fn(),
 }));
 
-vi.mock("../wizard/clack-prompter.js", () => ({
+vi.mock("../../wizard/clack-prompter.js", () => ({
   createClackPrompter: mocks.createClackPrompter,
 }));
 
-vi.mock("../wizard/onboarding.js", () => ({
+vi.mock("../../wizard/onboarding.js", () => ({
   runOnboardingWizard: mocks.runOnboardingWizard,
 }));
 
-vi.mock("../terminal/restore.js", () => ({
+vi.mock("../../terminal/restore.js", () => ({
   restoreTerminalState: mocks.restoreTerminalState,
 }));
 

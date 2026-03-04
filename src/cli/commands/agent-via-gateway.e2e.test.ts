@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../gateway/call.js", () => ({
+vi.mock("../../gateway/call.js", () => ({
   callGateway: vi.fn(),
   randomIdempotencyKey: () => "idem-1",
 }));

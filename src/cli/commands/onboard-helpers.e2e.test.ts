@@ -23,11 +23,11 @@ const mocks = vi.hoisted(() => ({
   pickPrimaryTailnetIPv4: vi.fn<() => string | undefined>(() => undefined),
 }));
 
-vi.mock("../process/exec.js", () => ({
+vi.mock("../../auto-reply/reply/exec.js", () => ({
   runCommandWithTimeout: mocks.runCommandWithTimeout,
 }));
 
-vi.mock("../infra/tailnet.js", () => ({
+vi.mock("../../infra/tailnet.js", () => ({
   pickPrimaryTailnetIPv4: mocks.pickPrimaryTailnetIPv4,
 }));
 
