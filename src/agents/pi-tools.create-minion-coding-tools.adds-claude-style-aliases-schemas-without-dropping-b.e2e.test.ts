@@ -1,9 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import type { MinionConfig } from "../config/config.js";
 import "./test-support/fast-coding-tools.js";
 import { createMinionCodingTools } from "./pi-tools.js";
+import type { AnyAgentTool } from "./tools/common.js";
 
-const defaultTools = createMinionCodingTools();
+let defaultTools: AnyAgentTool[];
+beforeAll(async () => {
+  defaultTools = await createMinionCodingTools();
+});
 
 describe("createMinionCodingTools", () => {
   it("preserves action enums in normalized schemas", () => {
@@ -56,7 +60,7 @@ describe("createMinionCodingTools", () => {
     expect(defaultTools.some((tool) => tool.name === "process")).toBe(true);
     expect(defaultTools.some((tool) => tool.name === "apply_patch")).toBe(false);
   });
-  it("gates apply_patch behind tools.exec.applyPatch for OpenAI models", () => {
+  it("gates apply_patch behind tools.exec.applyPatch for OpenAI models", async () => {
     const config: MinionConfig = {
       tools: {
         exec: {
@@ -64,21 +68,21 @@ describe("createMinionCodingTools", () => {
         },
       },
     };
-    const openAiTools = createMinionCodingTools({
+    const openAiTools = await createMinionCodingTools({
       config,
       modelProvider: "openai",
       modelId: "gpt-5.2",
     });
     expect(openAiTools.some((tool) => tool.name === "apply_patch")).toBe(true);
 
-    const anthropicTools = createMinionCodingTools({
+    const anthropicTools = await createMinionCodingTools({
       config,
       modelProvider: "anthropic",
       modelId: "claude-opus-4-5",
     });
     expect(anthropicTools.some((tool) => tool.name === "apply_patch")).toBe(false);
   });
-  it("respects apply_patch allowModels", () => {
+  it("respects apply_patch allowModels", async () => {
     const config: MinionConfig = {
       tools: {
         exec: {
@@ -86,22 +90,22 @@ describe("createMinionCodingTools", () => {
         },
       },
     };
-    const allowed = createMinionCodingTools({
+    const allowed = await createMinionCodingTools({
       config,
       modelProvider: "openai",
       modelId: "gpt-5.2",
     });
     expect(allowed.some((tool) => tool.name === "apply_patch")).toBe(true);
 
-    const denied = createMinionCodingTools({
+    const denied = await createMinionCodingTools({
       config,
       modelProvider: "openai",
       modelId: "gpt-5-mini",
     });
     expect(denied.some((tool) => tool.name === "apply_patch")).toBe(false);
   });
-  it("keeps canonical tool names for Anthropic OAuth (pi-ai remaps on the wire)", () => {
-    const tools = createMinionCodingTools({
+  it("keeps canonical tool names for Anthropic OAuth (pi-ai remaps on the wire)", async () => {
+    const tools = await createMinionCodingTools({
       modelProvider: "anthropic",
       modelAuthMode: "oauth",
     });
@@ -112,8 +116,8 @@ describe("createMinionCodingTools", () => {
     expect(names.has("edit")).toBe(true);
     expect(names.has("apply_patch")).toBe(false);
   });
-  it("provides top-level object schemas for all tools", () => {
-    const tools = createMinionCodingTools();
+  it("provides top-level object schemas for all tools", async () => {
+    const tools = await createMinionCodingTools();
     const offenders = tools
       .map((tool) => {
         const schema =

@@ -20,11 +20,13 @@ vi.mock("../config/config.js", async (importOriginal) => {
 import "./test-support/fast-core-tools.js";
 import { createOpenClawTools } from "./openclaw-tools.js";
 
-function getSessionsHistoryTool(options?: { sandboxed?: boolean }) {
-  const tool = createOpenClawTools({
-    agentSessionKey: "main",
-    sandboxed: options?.sandboxed,
-  }).find((candidate) => candidate.name === "sessions_history");
+async function getSessionsHistoryTool(options?: { sandboxed?: boolean }) {
+  const tool = (
+    await createOpenClawTools({
+      agentSessionKey: "main",
+      sandboxed: options?.sandboxed,
+    })
+  ).find((candidate) => candidate.name === "sessions_history");
   expect(tool).toBeDefined();
   if (!tool) {
     throw new Error("missing sessions_history tool");
@@ -66,7 +68,7 @@ describe("sessions tools visibility", () => {
       return undefined;
     });
 
-    const tool = getSessionsHistoryTool();
+    const tool = await getSessionsHistoryTool();
 
     const denied = await tool.execute("call1", {
       sessionKey: "agent:main:discord:direct:someone-else",
@@ -85,7 +87,7 @@ describe("sessions tools visibility", () => {
       tools: { sessions: { visibility: "all" }, agentToAgent: { enabled: false } },
     };
     mockGatewayWithHistory();
-    const tool = getSessionsHistoryTool();
+    const tool = await getSessionsHistoryTool();
 
     const result = await tool.execute("call3", {
       sessionKey: "agent:main:discord:direct:someone-else",
@@ -108,7 +110,7 @@ describe("sessions tools visibility", () => {
       return undefined;
     });
 
-    const tool = getSessionsHistoryTool({ sandboxed: true });
+    const tool = await getSessionsHistoryTool({ sandboxed: true });
 
     const denied = await tool.execute("call4", {
       sessionKey: "agent:other:main",

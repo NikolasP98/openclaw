@@ -17,7 +17,7 @@ describe("venture_studio tool", () => {
   });
 
   it("records findings, dedupes duplicates, and generates plan/workflow/spec artifacts", async () => {
-    const tool = createOpenClawTools({ workspaceDir }).find(
+    const tool = (await createOpenClawTools({ workspaceDir })).find(
       (candidate) => candidate.name === "venture_studio",
     );
     if (!tool) {
@@ -86,7 +86,7 @@ describe("venture_studio tool", () => {
   });
 
   it("builds a scaffold for a generated plan", async () => {
-    const tool = createOpenClawTools({ workspaceDir }).find(
+    const tool = (await createOpenClawTools({ workspaceDir })).find(
       (candidate) => candidate.name === "venture_studio",
     );
     if (!tool) {
@@ -146,7 +146,7 @@ describe("venture_studio tool", () => {
   });
 
   it("rejects operations before init", async () => {
-    const tool = createOpenClawTools({ workspaceDir }).find(
+    const tool = (await createOpenClawTools({ workspaceDir })).find(
       (candidate) => candidate.name === "venture_studio",
     );
     if (!tool) {

@@ -2,14 +2,18 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import sharp from "sharp";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import "./test-support/fast-coding-tools.js";
 import { createOpenClawCodingTools } from "./pi-tools.js";
 import { createHostSandboxFsBridge } from "./test-support/host-sandbox-fs-bridge.js";
 
-const defaultTools = createOpenClawCodingTools();
+let defaultTools: Awaited<ReturnType<typeof createOpenClawCodingTools>>;
 
 describe("createOpenClawCodingTools", () => {
+  beforeAll(async () => {
+    defaultTools = await createOpenClawCodingTools();
+  });
+
   it("keeps read tool image metadata intact", async () => {
     const readTool = defaultTools.find((tool) => tool.name === "read");
     expect(readTool).toBeDefined();
@@ -47,7 +51,7 @@ describe("createOpenClawCodingTools", () => {
     }
   });
   it("returns text content without image blocks for text files", async () => {
-    const tools = createOpenClawCodingTools();
+    const tools = await createOpenClawCodingTools();
     const readTool = tools.find((tool) => tool.name === "read");
     expect(readTool).toBeDefined();
 
@@ -72,7 +76,7 @@ describe("createOpenClawCodingTools", () => {
       await fs.rm(tmpDir, { recursive: true, force: true });
     }
   });
-  it("filters tools by sandbox policy", () => {
+  it("filters tools by sandbox policy", async () => {
     const sandboxDir = path.join(os.tmpdir(), "moltbot-sandbox");
     const sandbox = {
       enabled: true,
@@ -100,12 +104,12 @@ describe("createOpenClawCodingTools", () => {
       },
       browserAllowHostControl: false,
     };
-    const tools = createOpenClawCodingTools({ sandbox });
+    const tools = await createOpenClawCodingTools({ sandbox });
     expect(tools.some((tool) => tool.name === "exec")).toBe(true);
     expect(tools.some((tool) => tool.name === "read")).toBe(false);
     expect(tools.some((tool) => tool.name === "browser")).toBe(false);
   });
-  it("hard-disables write/edit when sandbox workspaceAccess is ro", () => {
+  it("hard-disables write/edit when sandbox workspaceAccess is ro", async () => {
     const sandboxDir = path.join(os.tmpdir(), "moltbot-sandbox");
     const sandbox = {
       enabled: true,
@@ -133,13 +137,13 @@ describe("createOpenClawCodingTools", () => {
       },
       browserAllowHostControl: false,
     };
-    const tools = createOpenClawCodingTools({ sandbox });
+    const tools = await createOpenClawCodingTools({ sandbox });
     expect(tools.some((tool) => tool.name === "read")).toBe(true);
     expect(tools.some((tool) => tool.name === "write")).toBe(false);
     expect(tools.some((tool) => tool.name === "edit")).toBe(false);
   });
-  it("filters tools by agent tool policy even without sandbox", () => {
-    const tools = createOpenClawCodingTools({
+  it("filters tools by agent tool policy even without sandbox", async () => {
+    const tools = await createOpenClawCodingTools({
       config: { tools: { deny: ["browser"] } },
     });
     expect(tools.some((tool) => tool.name === "exec")).toBe(true);

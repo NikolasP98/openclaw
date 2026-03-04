@@ -1,0 +1,35 @@
+// AUTO-GENERATED — do not edit. Run: pnpm generate:tools
+
+export const GENERATED_TOOL_GROUPS: Record<string, string[]> = {
+  "group:automation": ["cron", "gateway"],
+  "group:messaging": ["message"],
+  "group:minion": [
+    "agents_list",
+    "browser",
+    "canvas",
+    "cron",
+    "gateway",
+    "image",
+    "message",
+    "nodes",
+    "session_status",
+    "sessions_history",
+    "sessions_list",
+    "sessions_send",
+    "sessions_spawn",
+    "subagents",
+    "web_fetch",
+    "web_search",
+  ],
+  "group:nodes": ["nodes"],
+  "group:sessions": [
+    "session_status",
+    "sessions_history",
+    "sessions_list",
+    "sessions_send",
+    "sessions_spawn",
+    "subagents",
+  ],
+  "group:ui": ["browser", "canvas"],
+  "group:web": ["web_fetch", "web_search"],
+};

@@ -20,8 +20,8 @@ function unexpectedGatewayMethod(method: unknown): never {
   throw new Error(`unexpected method: ${String(method)}`);
 }
 
-function getNodesTool() {
-  const tool = createOpenClawTools().find((candidate) => candidate.name === "nodes");
+async function getNodesTool() {
+  const tool = (await createOpenClawTools()).find((candidate) => candidate.name === "nodes");
   if (!tool) {
     throw new Error("missing nodes tool");
   }
@@ -29,7 +29,7 @@ function getNodesTool() {
 }
 
 async function executeNodes(input: Record<string, unknown>) {
-  return getNodesTool().execute("call1", input as never);
+  return (await getNodesTool()).execute("call1", input as never);
 }
 
 function mockNodeList(commands?: string[]) {

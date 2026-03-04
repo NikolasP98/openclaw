@@ -111,7 +111,7 @@ vi.mock("../agents/openclaw-tools.js", () => {
   ];
 
   return {
-    createOpenClawTools: () => tools,
+    createOpenClawTools: async () => tools,
   };
 });
 

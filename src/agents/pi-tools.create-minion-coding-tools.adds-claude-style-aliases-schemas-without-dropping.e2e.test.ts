@@ -11,7 +11,7 @@ import { createOpenClawReadTool, createSandboxedReadTool } from "./pi-tools.read
 import { createHostSandboxFsBridge } from "./test-support/host-sandbox-fs-bridge.js";
 import { createBrowserTool } from "./tools/browser-tool.js";
 
-const defaultTools = createOpenClawCodingTools();
+const defaultTools = await createOpenClawCodingTools();
 
 function findUnionKeywordOffenders(
   tools: Array<{ name: string; parameters: unknown }>,
@@ -289,8 +289,8 @@ describe("createOpenClawCodingTools", () => {
   it("avoids anyOf/oneOf/allOf in tool schemas", () => {
     expect(findUnionKeywordOffenders(defaultTools)).toEqual([]);
   });
-  it("keeps raw core tool schemas union-free", () => {
-    const tools = createOpenClawTools();
+  it("keeps raw core tool schemas union-free", async () => {
+    const tools = await createOpenClawTools();
     const coreTools = new Set([
       "browser",
       "canvas",
@@ -309,16 +309,16 @@ describe("createOpenClawCodingTools", () => {
     ]);
     expect(findUnionKeywordOffenders(tools, { onlyNames: coreTools })).toEqual([]);
   });
-  it("does not expose provider-specific message tools", () => {
-    const tools = createOpenClawCodingTools({ messageProvider: "discord" });
+  it("does not expose provider-specific message tools", async () => {
+    const tools = await createOpenClawCodingTools({ messageProvider: "discord" });
     const names = new Set(tools.map((tool) => tool.name));
     expect(names.has("discord")).toBe(false);
     expect(names.has("slack")).toBe(false);
     expect(names.has("telegram")).toBe(false);
     expect(names.has("whatsapp")).toBe(false);
   });
-  it("filters session tools for sub-agent sessions by default", () => {
-    const tools = createOpenClawCodingTools({
+  it("filters session tools for sub-agent sessions by default", async () => {
+    const tools = await createOpenClawCodingTools({
       sessionKey: "agent:main:subagent:test",
     });
     const names = new Set(tools.map((tool) => tool.name));
@@ -355,7 +355,7 @@ describe("createOpenClawCodingTools", () => {
       "utf-8",
     );
 
-    const tools = createOpenClawCodingTools({
+    const tools = await createOpenClawCodingTools({
       sessionKey: "agent:main:subagent:flat",
       config: {
         session: {
@@ -376,8 +376,8 @@ describe("createOpenClawCodingTools", () => {
     expect(names.has("sessions_history")).toBe(false);
     expect(names.has("subagents")).toBe(true);
   });
-  it("supports allow-only sub-agent tool policy", () => {
-    const tools = createOpenClawCodingTools({
+  it("supports allow-only sub-agent tool policy", async () => {
+    const tools = await createOpenClawCodingTools({
       sessionKey: "agent:main:subagent:test",
       // Intentionally partial config; only fields used by pi-tools are provided.
       config: {
@@ -394,8 +394,8 @@ describe("createOpenClawCodingTools", () => {
     expect(tools.map((tool) => tool.name)).toEqual(["read"]);
   });
 
-  it("applies tool profiles before allow/deny policies", () => {
-    const tools = createOpenClawCodingTools({
+  it("applies tool profiles before allow/deny policies", async () => {
+    const tools = await createOpenClawCodingTools({
       config: { tools: { profile: "messaging" } },
     });
     const names = new Set(tools.map((tool) => tool.name));
@@ -405,8 +405,8 @@ describe("createOpenClawCodingTools", () => {
     expect(names.has("exec")).toBe(false);
     expect(names.has("browser")).toBe(false);
   });
-  it("expands group shorthands in global tool policy", () => {
-    const tools = createOpenClawCodingTools({
+  it("expands group shorthands in global tool policy", async () => {
+    const tools = await createOpenClawCodingTools({
       config: { tools: { allow: ["group:fs"] } },
     });
     const names = new Set(tools.map((tool) => tool.name));
@@ -416,8 +416,8 @@ describe("createOpenClawCodingTools", () => {
     expect(names.has("exec")).toBe(false);
     expect(names.has("browser")).toBe(false);
   });
-  it("expands group shorthands in global tool deny policy", () => {
-    const tools = createOpenClawCodingTools({
+  it("expands group shorthands in global tool deny policy", async () => {
+    const tools = await createOpenClawCodingTools({
       config: { tools: { deny: ["group:fs"] } },
     });
     const names = new Set(tools.map((tool) => tool.name));
@@ -426,8 +426,8 @@ describe("createOpenClawCodingTools", () => {
     expect(names.has("edit")).toBe(false);
     expect(names.has("exec")).toBe(true);
   });
-  it("lets agent profiles override global profiles", () => {
-    const tools = createOpenClawCodingTools({
+  it("lets agent profiles override global profiles", async () => {
+    const tools = await createOpenClawCodingTools({
       sessionKey: "agent:work:main",
       config: {
         tools: { profile: "coding" },

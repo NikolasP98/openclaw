@@ -1,3 +1,4 @@
+import { GENERATED_TOOL_GROUPS } from "./tools/_groups.generated.js";
 import type { AnyAgentTool } from "./tools/common.js";
 
 export type ToolProfileId = "minimal" | "coding" | "messaging" | "full";
@@ -12,52 +13,22 @@ const TOOL_NAME_ALIASES: Record<string, string> = {
   "apply-patch": "apply_patch",
 };
 
+/**
+ * Tool groups: generated from *.meta.ts sidecars, merged with manual overrides
+ * for tools outside the registry (fs/runtime tools from pi-tools, memory tools
+ * from plugin runtime).
+ */
 export const TOOL_GROUPS: Record<string, string[]> = {
-  // NOTE: Keep canonical (lowercase) tool names here.
+  ...GENERATED_TOOL_GROUPS,
+  // --- Manual overrides (tools not in the tool registry) ---
+  // Memory tools are provided by the plugin runtime, not the tool registry.
   "group:memory": ["memory_search", "memory_get"],
-  "group:web": ["web_search", "web_fetch"],
-  // Basic workspace/file tools
+  // Basic workspace/file tools (from pi-coding-agent, not the tool registry).
   "group:fs": ["read", "write", "edit", "apply_patch"],
-  // Host/runtime execution tools
+  // Host/runtime execution tools (from pi-tools.ts, not the tool registry).
   "group:runtime": ["exec", "process"],
-  // Session management tools
-  "group:sessions": [
-    "sessions_list",
-    "sessions_history",
-    "sessions_send",
-    "sessions_spawn",
-    "subagents",
-    "session_status",
-  ],
-  // UI helpers
-  "group:ui": ["browser", "canvas"],
-  // Automation + infra
-  "group:automation": ["cron", "gateway"],
-  // Messaging surface
-  "group:messaging": ["message"],
-  // Nodes + device tools
-  "group:nodes": ["nodes"],
-  // All Minion native tools (excludes provider plugins).
-  "group:minion": [
-    "browser",
-    "canvas",
-    "nodes",
-    "cron",
-    "message",
-    "gateway",
-    "agents_list",
-    "sessions_list",
-    "sessions_history",
-    "sessions_send",
-    "sessions_spawn",
-    "subagents",
-    "session_status",
-    "memory_search",
-    "memory_get",
-    "web_search",
-    "web_fetch",
-    "image",
-  ],
+  // Extend group:minion with memory tools (not in registry).
+  "group:minion": [...(GENERATED_TOOL_GROUPS["group:minion"] ?? []), "memory_search", "memory_get"],
 };
 
 const OWNER_ONLY_TOOL_NAMES = new Set<string>(["whatsapp_login"]);

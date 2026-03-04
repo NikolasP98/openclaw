@@ -15,7 +15,7 @@ describe("createMinionCodingTools", () => {
       await fs.writeFile(path.join(tmpDir, testFile), testContent, "utf8");
 
       // Create tools with explicit workspaceDir
-      const tools = createMinionCodingTools({ workspaceDir: tmpDir });
+      const tools = await createMinionCodingTools({ workspaceDir: tmpDir });
       const readTool = tools.find((tool) => tool.name === "read");
       expect(readTool).toBeDefined();
 
@@ -40,7 +40,7 @@ describe("createMinionCodingTools", () => {
       const testContent = "written via workspace path";
 
       // Create tools with explicit workspaceDir
-      const tools = createMinionCodingTools({ workspaceDir: tmpDir });
+      const tools = await createMinionCodingTools({ workspaceDir: tmpDir });
       const writeTool = tools.find((tool) => tool.name === "write");
       expect(writeTool).toBeDefined();
 
@@ -66,7 +66,7 @@ describe("createMinionCodingTools", () => {
       await fs.writeFile(path.join(tmpDir, testFile), originalContent, "utf8");
 
       // Create tools with explicit workspaceDir
-      const tools = createMinionCodingTools({ workspaceDir: tmpDir });
+      const tools = await createMinionCodingTools({ workspaceDir: tmpDir });
       const editTool = tools.find((tool) => tool.name === "edit");
       expect(editTool).toBeDefined();
 
@@ -87,7 +87,7 @@ describe("createMinionCodingTools", () => {
   it("accepts Claude Code parameter aliases for read/write/edit", async () => {
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "minion-alias-"));
     try {
-      const tools = createMinionCodingTools({ workspaceDir: tmpDir });
+      const tools = await createMinionCodingTools({ workspaceDir: tmpDir });
       const readTool = tools.find((tool) => tool.name === "read");
       const writeTool = tools.find((tool) => tool.name === "write");
       const editTool = tools.find((tool) => tool.name === "edit");
@@ -124,7 +124,7 @@ describe("createMinionCodingTools", () => {
   it("coerces structured content blocks for write", async () => {
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-structured-write-"));
     try {
-      const tools = createMinionCodingTools({ workspaceDir: tmpDir });
+      const tools = await createMinionCodingTools({ workspaceDir: tmpDir });
       const writeTool = tools.find((tool) => tool.name === "write");
       expect(writeTool).toBeDefined();
 
@@ -151,7 +151,7 @@ describe("createMinionCodingTools", () => {
       const filePath = path.join(tmpDir, "structured-edit.js");
       await fs.writeFile(filePath, "const value = 'old';\n", "utf8");
 
-      const tools = createMinionCodingTools({ workspaceDir: tmpDir });
+      const tools = await createMinionCodingTools({ workspaceDir: tmpDir });
       const editTool = tools.find((tool) => tool.name === "edit");
       expect(editTool).toBeDefined();
 

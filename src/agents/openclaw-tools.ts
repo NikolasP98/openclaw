@@ -1,37 +1,15 @@
 import type { OpenClawConfig } from "../config/config.js";
 import { isTruthyEnvValue } from "../infra/env.js";
-import { createKnowledgeGraphTools, KnowledgeGraphSession } from "../memory/knowledge-graph.js";
+import { KnowledgeGraphSession } from "../memory/knowledge-graph.js";
 import { resolvePluginTools } from "../plugins/tools.js";
 import type { GatewayMessageChannel } from "../shared/message-channel.js";
 import { resolveSessionAgentId } from "./agent-scope.js";
 import type { SandboxFsBridge } from "./sandbox/fs-bridge.js";
-import { createAgentsListTool } from "./tools/agents-list-tool.js";
-import { createArchitectPipelineTool } from "./tools/architect-pipeline-tool.js";
-import { createBrowserTool } from "./tools/browser-tool.js";
-import { createCanvasTool } from "./tools/canvas-tool.js";
+import { TOOL_REGISTRY, type ToolRegistryEntry } from "./tools/_registry.generated.js";
 import type { AnyAgentTool } from "./tools/common.js";
-import { createCronTool } from "./tools/cron-tool.js";
-import { createGatewayTool } from "./tools/gateway-tool.js";
-import { createGogAuthRevokeTool } from "./tools/gog-auth-revoke-tool.js";
-import { createGogAuthStartTool } from "./tools/gog-auth-start-tool.js";
-import { createGogAuthStatusTool } from "./tools/gog-auth-status-tool.js";
-import { createGogExecTool } from "./tools/gog-exec-tool.js";
-import { createImageTool } from "./tools/image-tool.js";
-import { createMessageTool } from "./tools/message-tool.js";
-import { createNodesTool } from "./tools/nodes-tool.js";
-import { createSessionStatusTool } from "./tools/session-status-tool.js";
-import { createSessionsHistoryTool } from "./tools/sessions-history-tool.js";
-import { createSessionsListTool } from "./tools/sessions-list-tool.js";
-import { createSessionsSendTool } from "./tools/sessions-send-tool.js";
-import { createSessionsSpawnTool } from "./tools/sessions-spawn-tool.js";
-import { createSubagentsTool } from "./tools/subagents-tool.js";
-import { createSummarizeTool } from "./tools/summarize-tool.js";
-import { createTtsTool } from "./tools/tts-tool.js";
-import { createVentureStudioTool } from "./tools/venture-studio-tool.js";
-import { createWebFetchTool, createWebSearchTool } from "./tools/web-tools.js";
 import { resolveWorkspaceRoot } from "./workspace-dir.js";
 
-export function createOpenClawTools(options?: {
+export type CreateOpenClawToolsOptions = {
   sandboxBrowserBridgeUrl?: string;
   allowHostBrowserControl?: boolean;
   agentSessionKey?: string;
@@ -70,42 +48,185 @@ export function createOpenClawTools(options?: {
   requireExplicitMessageTarget?: boolean;
   /** If true, omit the message tool from the tool list. */
   disableMessageTool?: boolean;
-}): AnyAgentTool[] {
-  const workspaceDir = resolveWorkspaceRoot(options?.workspaceDir);
-  const imageTool = options?.agentDir?.trim()
-    ? createImageTool({
-        config: options?.config,
-        agentDir: options.agentDir,
-        workspaceDir,
+};
+
+/**
+ * Derived context computed once from options, shared across all factory calls.
+ */
+type ToolContext = {
+  options: CreateOpenClawToolsOptions | undefined;
+  workspaceDir: string;
+  agentId: string;
+  kgSession: KnowledgeGraphSession | undefined;
+  gogOAuthEnabled: boolean;
+};
+
+/**
+ * Tool order: preserves the exact registration order from the previous
+ * manual implementation. New tools should be appended at the end.
+ */
+const TOOL_ORDER: string[] = [
+  "browser",
+  "canvas",
+  "nodes",
+  "cron",
+  "message",
+  "tts",
+  "gateway",
+  "agents_list",
+  "sessions_list",
+  "sessions_history",
+  "sessions_send",
+  "sessions_spawn",
+  "subagents",
+  "session_status",
+  "gog_auth_start",
+  "gog_auth_status",
+  "gog_auth_revoke",
+  "gog_exec",
+  "web_search",
+  "web_fetch",
+  "image",
+  "architect_pipeline",
+  "venture_studio",
+  "knowledge_graph",
+  "summarize",
+];
+
+/**
+ * Maps tool IDs to factory-specific options derived from the master options bag.
+ * Each factory has its own parameter names, so explicit mapping is required.
+ */
+function buildToolOptions(id: string, ctx: ToolContext): Record<string, unknown> | undefined {
+  const opts = ctx.options;
+  switch (id) {
+    case "browser":
+      return {
+        sandboxBridgeUrl: opts?.sandboxBrowserBridgeUrl,
+        allowHostControl: opts?.allowHostBrowserControl,
+      };
+    case "canvas":
+      return { config: opts?.config };
+    case "nodes":
+      return { agentSessionKey: opts?.agentSessionKey, config: opts?.config };
+    case "cron":
+      return { agentSessionKey: opts?.agentSessionKey };
+    case "message":
+      return {
+        agentAccountId: opts?.agentAccountId,
+        agentSessionKey: opts?.agentSessionKey,
+        config: opts?.config,
+        currentChannelId: opts?.currentChannelId,
+        currentChannelProvider: opts?.agentChannel,
+        currentThreadTs: opts?.currentThreadTs,
+        replyToMode: opts?.replyToMode,
+        hasRepliedRef: opts?.hasRepliedRef,
+        sandboxRoot: opts?.sandboxRoot,
+        requireExplicitTarget: opts?.requireExplicitMessageTarget,
+      };
+    case "tts":
+      return { agentChannel: opts?.agentChannel, config: opts?.config };
+    case "gateway":
+      return { agentSessionKey: opts?.agentSessionKey, config: opts?.config };
+    case "agents_list":
+      return {
+        agentSessionKey: opts?.agentSessionKey,
+        requesterAgentIdOverride: opts?.requesterAgentIdOverride,
+      };
+    case "sessions_list":
+      return { agentSessionKey: opts?.agentSessionKey, sandboxed: opts?.sandboxed };
+    case "sessions_history":
+      return { agentSessionKey: opts?.agentSessionKey, sandboxed: opts?.sandboxed };
+    case "sessions_send":
+      return {
+        agentSessionKey: opts?.agentSessionKey,
+        agentChannel: opts?.agentChannel,
+        sandboxed: opts?.sandboxed,
+      };
+    case "sessions_spawn":
+      return {
+        agentSessionKey: opts?.agentSessionKey,
+        agentChannel: opts?.agentChannel,
+        agentAccountId: opts?.agentAccountId,
+        agentTo: opts?.agentTo,
+        agentThreadId: opts?.agentThreadId,
+        agentGroupId: opts?.agentGroupId,
+        agentGroupChannel: opts?.agentGroupChannel,
+        agentGroupSpace: opts?.agentGroupSpace,
+        sandboxed: opts?.sandboxed,
+        requesterAgentIdOverride: opts?.requesterAgentIdOverride,
+      };
+    case "subagents":
+      return { agentSessionKey: opts?.agentSessionKey };
+    case "session_status":
+      return { agentSessionKey: opts?.agentSessionKey, config: opts?.config };
+    case "gog_auth_start":
+      return {
+        agentId: ctx.agentId,
+        agentDir: opts?.agentDir,
+        sessionKey: opts?.agentSessionKey,
+      };
+    case "gog_auth_status":
+      return { agentId: ctx.agentId, sessionKey: opts?.agentSessionKey };
+    case "gog_auth_revoke":
+      return {
+        agentId: ctx.agentId,
+        agentDir: opts?.agentDir,
+        sessionKey: opts?.agentSessionKey,
+      };
+    case "gog_exec":
+      return { agentId: ctx.agentId, sessionKey: opts?.agentSessionKey };
+    case "web_search":
+      return { config: opts?.config, sandboxed: opts?.sandboxed };
+    case "web_fetch":
+      return { config: opts?.config, sandboxed: opts?.sandboxed };
+    case "image":
+      return {
+        config: opts?.config,
+        agentDir: opts?.agentDir,
+        workspaceDir: ctx.workspaceDir,
         sandbox:
-          options?.sandboxRoot && options?.sandboxFsBridge
-            ? { root: options.sandboxRoot, bridge: options.sandboxFsBridge }
+          opts?.sandboxRoot && opts?.sandboxFsBridge
+            ? { root: opts.sandboxRoot, bridge: opts.sandboxFsBridge }
             : undefined,
-        modelHasVision: options?.modelHasVision,
-      })
-    : null;
-  const webSearchTool = createWebSearchTool({
-    config: options?.config,
-    sandboxed: options?.sandboxed,
-  });
-  const webFetchTool = createWebFetchTool({
-    config: options?.config,
-    sandboxed: options?.sandboxed,
-  });
-  const messageTool = options?.disableMessageTool
-    ? null
-    : createMessageTool({
-        agentAccountId: options?.agentAccountId,
-        agentSessionKey: options?.agentSessionKey,
-        config: options?.config,
-        currentChannelId: options?.currentChannelId,
-        currentChannelProvider: options?.agentChannel,
-        currentThreadTs: options?.currentThreadTs,
-        replyToMode: options?.replyToMode,
-        hasRepliedRef: options?.hasRepliedRef,
-        sandboxRoot: options?.sandboxRoot,
-        requireExplicitTarget: options?.requireExplicitMessageTarget,
-      });
+        modelHasVision: opts?.modelHasVision,
+      };
+    case "architect_pipeline":
+      return { workspaceDir: ctx.workspaceDir };
+    case "venture_studio":
+      return { workspaceDir: ctx.workspaceDir };
+    case "knowledge_graph":
+      // KG factory takes a positional arg, not an options bag.
+      // Handled specially in the main loop.
+      return undefined;
+    case "summarize":
+      // No options.
+      return undefined;
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Evaluates condition predicates declared in tool metadata.
+ */
+function evaluateCondition(condition: string, ctx: ToolContext): boolean {
+  switch (condition) {
+    case "gogOAuthEnabled":
+      return ctx.gogOAuthEnabled;
+    case "hasAgentDir":
+      return !!ctx.options?.agentDir?.trim();
+    case "messageEnabled":
+      return !ctx.options?.disableMessageTool;
+    default:
+      return true;
+  }
+}
+
+export async function createOpenClawTools(
+  options?: CreateOpenClawToolsOptions,
+): Promise<AnyAgentTool[]> {
+  const workspaceDir = resolveWorkspaceRoot(options?.workspaceDir);
   const agentId = resolveSessionAgentId({
     sessionKey: options?.agentSessionKey,
     config: options?.config,
@@ -121,95 +242,47 @@ export function createOpenClawTools(options?: {
     options?.config?.hooks?.gogOAuth?.enabled !== false &&
     !isTruthyEnvValue(process.env.OPENCLAW_SKIP_GOG_OAUTH);
 
-  const tools: AnyAgentTool[] = [
-    createBrowserTool({
-      sandboxBridgeUrl: options?.sandboxBrowserBridgeUrl,
-      allowHostControl: options?.allowHostBrowserControl,
-    }),
-    createCanvasTool({ config: options?.config }),
-    createNodesTool({
-      agentSessionKey: options?.agentSessionKey,
-      config: options?.config,
-    }),
-    createCronTool({
-      agentSessionKey: options?.agentSessionKey,
-    }),
-    ...(messageTool ? [messageTool] : []),
-    createTtsTool({
-      agentChannel: options?.agentChannel,
-      config: options?.config,
-    }),
-    createGatewayTool({
-      agentSessionKey: options?.agentSessionKey,
-      config: options?.config,
-    }),
-    createAgentsListTool({
-      agentSessionKey: options?.agentSessionKey,
-      requesterAgentIdOverride: options?.requesterAgentIdOverride,
-    }),
-    createSessionsListTool({
-      agentSessionKey: options?.agentSessionKey,
-      sandboxed: options?.sandboxed,
-    }),
-    createSessionsHistoryTool({
-      agentSessionKey: options?.agentSessionKey,
-      sandboxed: options?.sandboxed,
-    }),
-    createSessionsSendTool({
-      agentSessionKey: options?.agentSessionKey,
-      agentChannel: options?.agentChannel,
-      sandboxed: options?.sandboxed,
-    }),
-    createSessionsSpawnTool({
-      agentSessionKey: options?.agentSessionKey,
-      agentChannel: options?.agentChannel,
-      agentAccountId: options?.agentAccountId,
-      agentTo: options?.agentTo,
-      agentThreadId: options?.agentThreadId,
-      agentGroupId: options?.agentGroupId,
-      agentGroupChannel: options?.agentGroupChannel,
-      agentGroupSpace: options?.agentGroupSpace,
-      sandboxed: options?.sandboxed,
-      requesterAgentIdOverride: options?.requesterAgentIdOverride,
-    }),
-    createSubagentsTool({
-      agentSessionKey: options?.agentSessionKey,
-    }),
-    createSessionStatusTool({
-      agentSessionKey: options?.agentSessionKey,
-      config: options?.config,
-    }),
-    ...(gogOAuthEnabled
-      ? [
-          createGogAuthStartTool({
-            agentId,
-            agentDir: options?.agentDir,
-            sessionKey: options?.agentSessionKey,
-          }),
-          createGogAuthStatusTool({
-            agentId,
-            sessionKey: options?.agentSessionKey,
-          }),
-          createGogAuthRevokeTool({
-            agentId,
-            agentDir: options?.agentDir,
-            sessionKey: options?.agentSessionKey,
-          }),
-          createGogExecTool({
-            agentId,
-            sessionKey: options?.agentSessionKey,
-          }),
-        ]
-      : []),
-    ...(webSearchTool ? [webSearchTool] : []),
-    ...(webFetchTool ? [webFetchTool] : []),
-    ...(imageTool ? [imageTool] : []),
-    createArchitectPipelineTool({ workspaceDir }),
-    createVentureStudioTool({ workspaceDir }),
-    ...createKnowledgeGraphTools(kgSession),
-    createSummarizeTool(),
-  ];
+  const ctx: ToolContext = { options, workspaceDir, agentId, kgSession, gogOAuthEnabled };
 
+  const tools: AnyAgentTool[] = [];
+
+  for (const id of TOOL_ORDER) {
+    const entry: ToolRegistryEntry | undefined = TOOL_REGISTRY[id];
+    if (!entry) {
+      continue;
+    }
+
+    // Check conditions
+    if (entry.meta.condition && !evaluateCondition(entry.meta.condition, ctx)) {
+      continue;
+    }
+
+    // Lazy-load the module
+    const mod = await entry.load();
+    const factory = mod[entry.meta.factory] as (...args: unknown[]) => unknown;
+    if (!factory) {
+      continue;
+    }
+
+    // Build options and call factory
+    let result: unknown;
+    if (id === "knowledge_graph") {
+      // KG factory takes a positional KnowledgeGraphSession argument.
+      result = factory(ctx.kgSession);
+    } else {
+      const factoryOpts = buildToolOptions(id, ctx);
+      result = factory(factoryOpts);
+    }
+
+    // Handle multi-tool factories and nullable results
+    if (entry.meta.multi && Array.isArray(result)) {
+      tools.push(...(result as AnyAgentTool[]));
+    } else if (result) {
+      tools.push(result as AnyAgentTool);
+    }
+  }
+
+  // Plugin tools: unchanged
   const pluginTools = resolvePluginTools({
     context: {
       config: options?.config,
