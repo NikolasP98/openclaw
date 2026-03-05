@@ -2,7 +2,8 @@ import { z } from "zod";
 import { ToolsSchema } from "./zod-schema.agent-runtime.js";
 import { AgentsSchema, AudioSchema, BindingsSchema, BroadcastSchema } from "./zod-schema.agents.js";
 import { ApprovalsSchema } from "./zod-schema.approvals.js";
-export { AuthProvidersConfigSchema } from "./zod-schema.auth-providers.js";
+import { AuthProvidersConfigSchema } from "./zod-schema.auth-providers.js";
+export { AuthProvidersConfigSchema };
 import { HexColorSchema, ModelsConfigSchema } from "./zod-schema.core.js";
 import {
   GogOAuthSchema,
@@ -289,6 +290,7 @@ export const MinionSchema = z
       })
       .strict()
       .optional(),
+    authProviders: AuthProvidersConfigSchema,
     models: ModelsConfigSchema,
     nodeHost: NodeHostSchema,
     agents: AgentsSchema,

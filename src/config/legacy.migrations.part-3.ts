@@ -15,6 +15,48 @@ import {
 
 export const LEGACY_CONFIG_MIGRATIONS_PART_3: LegacyConfigMigration[] = [
   {
+    id: "hooks.gogOAuth->authProviders",
+    describe: "Migrate hooks.gogOAuth config to authProviders",
+    apply: (raw, changes) => {
+      const hooks = getRecord(raw.hooks);
+      const gogOAuth = getRecord(hooks?.gogOAuth);
+      if (!gogOAuth) {
+        return;
+      }
+      // Only migrate if authProviders.providers.google is not already set
+      const existing = getRecord(raw.authProviders);
+      const existingProviders = getRecord(existing?.providers);
+      if (existingProviders?.google !== undefined) {
+        return;
+      }
+      const authProviders = ensureRecord(raw, "authProviders");
+      const providers = ensureRecord(authProviders, "providers");
+      const google: Record<string, unknown> = {};
+      if (gogOAuth.googleClientCredentialsFile !== undefined) {
+        google.clientCredentialsFile = gogOAuth.googleClientCredentialsFile;
+      }
+      if (gogOAuth.externalRedirectUri !== undefined) {
+        google.externalRedirectUri = gogOAuth.externalRedirectUri;
+      }
+      if (Object.keys(google).length > 0) {
+        providers.google = google;
+      }
+      // Migrate server-level fields
+      const serverFields = ["port", "bind", "callbackPath", "timeoutMinutes", "enabled"] as const;
+      const serverConfig: Record<string, unknown> = {};
+      for (const field of serverFields) {
+        if (gogOAuth[field] !== undefined) {
+          serverConfig[field] = gogOAuth[field];
+        }
+      }
+      if (Object.keys(serverConfig).length > 0) {
+        const server = ensureRecord(authProviders, "server");
+        mergeMissing(server, serverConfig);
+      }
+      changes.push("Migrated hooks.gogOAuth → authProviders (deprecated, update your config).");
+    },
+  },
+  {
     id: "memorySearch->agents.defaults.memorySearch",
     describe: "Move top-level memorySearch to agents.defaults.memorySearch",
     apply: (raw, changes) => {
