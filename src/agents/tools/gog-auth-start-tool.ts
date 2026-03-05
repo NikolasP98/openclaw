@@ -156,8 +156,9 @@ export function createGogAuthStartTool(opts?: {
         state,
         expiresIn: 300, // 5 minutes in seconds
         instructions:
-          `IMPORTANT: You MUST include the full authUrl in your response to the user as a clickable link. ` +
-          `Do NOT say "click the link" without actually pasting the URL. ` +
+          `IMPORTANT: You MUST paste the full authUrl as plain text in your response — do NOT wrap it in markdown link format like [text](url) or [url](url). ` +
+          `The messaging platform auto-links plain URLs; markdown formatting breaks the URL and causes auth errors. ` +
+          `Just paste the raw URL on its own line. ` +
           `The user will visit this link to authorize access to their Google account (${services.join(", ")}). ` +
           `You'll be notified when authentication completes (or if it times out after 5 minutes).`,
       };
