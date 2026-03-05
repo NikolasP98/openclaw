@@ -20,6 +20,7 @@ import {
   notifyAuthError,
   notifyAuthTimeout,
 } from "./gog-oauth-notifications.js";
+import { getServicesFromScopes } from "./gog-oauth-types.js";
 import type {
   OAuthServerConfig,
   PendingOAuthFlow,
@@ -153,7 +154,7 @@ function resolveProvider(_flow: PendingOAuthFlow): AuthProvider {
  */
 async function handleCallback(
   params: OAuthCallbackParams,
-): Promise<{ status: number; message: string }> {
+): Promise<{ status: number; message: string; services?: string[] }> {
   // Check for error from Google
   if (params.error) {
     const state = params.state;
@@ -228,12 +229,16 @@ async function handleCallback(
       }
     });
 
+    // Derive which services were actually granted (user may have deselected some)
+    const grantedServices = tokens.scope ? getServicesFromScopes(tokens.scope) : flow.services;
+
     // Notify user of success
-    await notifyAuthSuccess(flow.sessionKey, flow.agentId, flow.email, flow.services);
+    await notifyAuthSuccess(flow.sessionKey, flow.agentId, flow.email, grantedServices);
 
     return {
       status: 200,
       message: "Authentication successful! You can close this window.",
+      services: grantedServices,
     };
   } catch (error) {
     log.error(`Token exchange error: ${error instanceof Error ? error.message : String(error)}`);
@@ -251,15 +256,110 @@ async function handleCallback(
   }
 }
 
+type SupportedLocale = "en" | "es";
+
+const I18N: Record<
+  SupportedLocale,
+  {
+    title: string;
+    authenticated: string;
+    error: string;
+    successMessage: string;
+    errorMessage: string;
+  }
+> = {
+  en: {
+    title: "OAuth \u2013 Minion Hub",
+    authenticated: "Authenticated",
+    error: "Error",
+    successMessage: "Authentication successful! You can close this window.",
+    errorMessage: "Failed to complete authentication. Please try again.",
+  },
+  es: {
+    title: "OAuth \u2013 Minion Hub",
+    authenticated: "Autenticado",
+    error: "Error",
+    successMessage: "\u00a1Autenticaci\u00f3n exitosa! Puedes cerrar esta ventana.",
+    errorMessage: "No se pudo completar la autenticaci\u00f3n. Int\u00e9ntalo de nuevo.",
+  },
+};
+
+/** Parse Accept-Language header into a supported locale. */
+function parseLocale(header: string | undefined): SupportedLocale {
+  if (!header) {
+    return "en";
+  }
+  const supported = Object.keys(I18N) as SupportedLocale[];
+  for (const part of header.split(",")) {
+    const lang = part.split(";")[0].trim().toLowerCase().slice(0, 2);
+    if (supported.includes(lang as SupportedLocale)) {
+      return lang as SupportedLocale;
+    }
+  }
+  return "en";
+}
+
 /** Build the HTML response page shown to the user after the OAuth callback. */
-function buildCallbackHtml(result: { status: number; message: string }): string {
-  const color = result.status === 200 ? "#10b981" : "#ef4444";
-  const heading = result.status === 200 ? "Success" : "Error";
-  return `<!DOCTYPE html><html><head><title>Google OAuth - Minion</title>
-<style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)}
-.c{background:#fff;padding:2rem;border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,.1);text-align:center;max-width:400px}
-h1{color:${color};margin-top:0}p{color:#6b7280;line-height:1.5}</style></head>
-<body><div class="c"><h1>${heading}</h1><p>${result.message}</p></div></body></html>`;
+function buildCallbackHtml(
+  result: { status: number; message: string; services?: string[] },
+  locale: SupportedLocale = "en",
+): string {
+  const isSuccess = result.status === 200;
+  const t = I18N[locale];
+  const accent = isSuccess ? "#e8547a" : "#ef4444";
+  const heading = isSuccess ? t.authenticated : t.error;
+  const message = isSuccess ? t.successMessage : t.errorMessage;
+  const icon = isSuccess
+    ? `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`
+    : `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
+
+  const services = result.services ?? [];
+  const servicesBadges =
+    services.length > 0
+      ? `<div class="services">${services.map((s) => `<span class="svc">${s}</span>`).join("")}</div>`
+      : "";
+
+  return `<!DOCTYPE html><html lang="${locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${t.title}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+display:flex;align-items:center;justify-content:center;height:100vh;
+background:#09090b;color:#fafafa;overflow:hidden}
+body::before{content:"";position:fixed;inset:0;
+background:radial-gradient(ellipse 80% 60% at 50% 40%,rgba(232,84,122,.08),transparent 70%);
+pointer-events:none}
+.card{position:relative;background:#0c0c0e;border:1px solid #27272a;
+padding:2.5rem 2rem;text-align:center;max-width:380px;width:90%}
+.card::before{content:"";position:absolute;inset:-1px;
+background:linear-gradient(135deg,${accent}33,transparent 50%,${accent}11);
+z-index:-1;padding:1px;
+-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+-webkit-mask-composite:xor;mask-composite:exclude}
+.icon{margin:0 auto 1rem;width:48px;height:48px;display:flex;align-items:center;
+justify-content:center;background:${accent}15;border:1px solid ${accent}30;border-radius:50%}
+h1{font-size:1.125rem;font-weight:700;letter-spacing:-.01em;color:#fafafa;margin-bottom:.5rem}
+p{font-size:.8125rem;color:#a1a1aa;line-height:1.6}
+.services{display:flex;flex-wrap:wrap;justify-content:center;gap:.375rem;margin-top:.75rem}
+.svc{font-size:.6875rem;font-weight:600;padding:.25rem .625rem;
+background:${accent}12;border:1px solid ${accent}25;color:${accent};
+text-transform:capitalize;letter-spacing:.03em}
+.brand{margin-top:1.5rem;padding-top:1rem;border-top:1px solid #27272a;
+display:flex;align-items:center;justify-content:center;gap:.375rem}
+.brand-name{font-weight:900;font-size:.6875rem;letter-spacing:.06em;text-transform:uppercase;color:${accent}}
+.brand-sub{font-weight:600;font-size:.6875rem;color:#71717a}
+.pulse{animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+</style></head>
+<body>
+<div class="card">
+<div class="icon${isSuccess ? " pulse" : ""}">${icon}</div>
+<h1>${heading}</h1>
+<p>${message}</p>
+${servicesBadges}
+<div class="brand"><span class="brand-name">MINION</span><span class="brand-sub">hub</span></div>
+</div>
+</body></html>`;
 }
 
 /**
@@ -290,10 +390,11 @@ async function handleRequest(
     };
 
     const result = await handleCallback(params);
+    const locale = parseLocale(req.headers["accept-language"]);
 
     res.statusCode = result.status;
     res.setHeader("Content-Type", "text/html");
-    res.end(buildCallbackHtml(result));
+    res.end(buildCallbackHtml(result, locale));
     return;
   }
 
