@@ -10,6 +10,11 @@ import {
   XIAOMI_DEFAULT_MODEL_ID,
 } from "../../agents/models/models-config.providers.js";
 import {
+  OPENROUTER_BASE_URL,
+  OPENROUTER_MODEL_ALIASES,
+  OPENROUTER_MODEL_CATALOG,
+} from "../../agents/models/openrouter-models.js";
+import {
   buildSyntheticModelDefinition,
   SYNTHETIC_BASE_URL,
   SYNTHETIC_DEFAULT_MODEL_REF,
@@ -139,22 +144,44 @@ export function applyZaiConfig(
 }
 
 export function applyOpenrouterProviderConfig(cfg: OpenClawConfig): OpenClawConfig {
-  const models = { ...cfg.agents?.defaults?.models };
-  models[OPENROUTER_DEFAULT_MODEL_REF] = {
-    ...models[OPENROUTER_DEFAULT_MODEL_REF],
-    alias: models[OPENROUTER_DEFAULT_MODEL_REF]?.alias ?? "OpenRouter",
+  const agentModels = { ...cfg.agents?.defaults?.models };
+
+  // Add the openrouter/auto catch-all alias
+  agentModels[OPENROUTER_DEFAULT_MODEL_REF] = {
+    ...agentModels[OPENROUTER_DEFAULT_MODEL_REF],
+    alias: agentModels[OPENROUTER_DEFAULT_MODEL_REF]?.alias ?? "OpenRouter",
   };
 
-  return {
-    ...cfg,
-    agents: {
-      ...cfg.agents,
-      defaults: {
-        ...cfg.agents?.defaults,
-        models,
-      },
-    },
+  // Add aliases for all curated models (skip if user already customised them)
+  for (const [alias, modelRef] of Object.entries(OPENROUTER_MODEL_ALIASES)) {
+    const entry = agentModels[modelRef];
+    if (!entry) {
+      agentModels[modelRef] = { alias };
+    } else if (!entry.alias) {
+      agentModels[modelRef] = { ...entry, alias };
+    }
+  }
+
+  // Populate provider entry with curated model catalog (merge with any existing models)
+  const providers = { ...cfg.models?.providers };
+  const existingProvider = providers.openrouter;
+  const existingModels = Array.isArray(existingProvider?.models) ? existingProvider.models : [];
+  const seen = new Set(existingModels.map((m) => m.id));
+  const mergedModels = [...existingModels];
+  for (const model of OPENROUTER_MODEL_CATALOG) {
+    if (!seen.has(model.id)) {
+      mergedModels.push(model);
+    }
+  }
+
+  providers.openrouter = {
+    ...existingProvider,
+    baseUrl: existingProvider?.baseUrl ?? OPENROUTER_BASE_URL,
+    api: existingProvider?.api ?? "openai-completions",
+    models: mergedModels,
   };
+
+  return applyOnboardAuthAgentModelsAndProviders(cfg, { agentModels, providers });
 }
 
 export function applyOpenrouterConfig(cfg: OpenClawConfig): OpenClawConfig {
