@@ -53,7 +53,7 @@ import { startChannelHealthMonitor } from "./channel-health-monitor.js";
 import { startGatewayConfigReloader } from "./config-reload.js";
 import type { ControlUiRootState } from "./control-ui.js";
 import { ExecApprovalManager } from "./exec-approval-manager.js";
-import { startHubMetricsPush } from "./hub-metrics-push.js";
+import { getHubMetricsPushClient, startHubMetricsPush } from "./hub-metrics-push.js";
 import { NodeRegistry } from "./node-registry.js";
 import type { startBrowserControlServerIfEnabled } from "./server-core/server-browser.js";
 import { createChannelManager } from "./server-core/server-channels.js";
@@ -459,6 +459,10 @@ export async function startGatewayServer(
   });
   const { getRuntimeSnapshot, startChannels, startChannel, stopChannel, markChannelLoggedOut } =
     channelManager;
+
+  // Wire channel snapshot into hub metrics heartbeat (push client may have been
+  // created before the channel manager).
+  getHubMetricsPushClient()?.setChannelSnapshotProvider(() => getRuntimeSnapshot());
 
   if (!minimalTestGateway) {
     const machineDisplayName = await getMachineDisplayName();
