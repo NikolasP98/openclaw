@@ -35,7 +35,8 @@ export function createGogExecTool(opts?: { agentId?: string; sessionKey?: string
     name: "gog_exec",
     description:
       "Run gog CLI commands with auto-injected session credentials. Requires prior authentication via gog_auth_start. See the gog skill for command reference. " +
-      "If this tool returns a scope/permission error, IMMEDIATELY call gog_auth_start with the missing service — do NOT try workarounds or alternative commands.",
+      "If this tool returns a scope/permission error, IMMEDIATELY call gog_auth_start with the missing service — do NOT try workarounds or alternative commands. " +
+      "IMPORTANT: When this tool returns data (file lists, emails, events), you MUST include the actual content in your reply to the user — do NOT just summarize or say 'here is the list' without showing it.",
     parameters: GogExecSchema,
     execute: async (_toolCallId, args) => {
       const params = args as Record<string, unknown>;
