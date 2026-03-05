@@ -1001,9 +1001,10 @@ export async function runEmbeddedPiAgent(
             toolResultFormat: resolvedToolResultFormat,
             suppressToolErrorWarnings: params.suppressToolErrorWarnings,
             inlineToolResultsAllowed: false,
-            // When block streaming is off, intermediate assistant texts (LLM reasoning
-            // between tool calls) should not be sent as separate messages to the user.
-            consolidateIntermediateTexts: !params.onBlockReply,
+            // Intermediate assistant texts (LLM reasoning between tool calls like
+            // "Let me check..." or "I'll try another approach...") should not be sent
+            // as separate messages. Only keep the final answer.
+            consolidateIntermediateTexts: true,
           });
 
           // Timeout aborts can leave the run without any assistant payloads.
