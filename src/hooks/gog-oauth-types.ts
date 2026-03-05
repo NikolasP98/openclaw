@@ -45,6 +45,8 @@ export interface PendingOAuthFlow {
   expiresAt: number;
   /** OAuth authorization URL sent to user */
   authUrl: string;
+  /** Auth provider identifier (e.g. "google") */
+  providerId?: string;
 }
 
 /**

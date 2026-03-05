@@ -1,24 +1,20 @@
 /**
  * OAuth callback server for non-blocking Google authentication
- * Handles localhost OAuth redirects and token exchange
+ * Handles localhost OAuth redirects and delegates token exchange
+ * and credential storage to the AuthProvider.
  */
 
 import crypto from "crypto";
 import http from "http";
 import { URL } from "url";
+import { createGoogleAuthProvider } from "../auth/google/google-auth-provider.js";
+import type { AuthProvider } from "../auth/provider.js";
 import { updateSessionStore, resolveDefaultSessionStorePath } from "../config/sessions.js";
 import { upsertSharedEnvVar } from "../infra/env-file.js";
 import { logAcceptedEnvOption } from "../infra/env.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { runCommandWithTimeout } from "../platform/process/exec.js";
-import {
-  saveSessionCredentials,
-  getGoogleClientId,
-  getGoogleClientSecret,
-  getGoogleClientType,
-  setGoogleClientCredentialsFile,
-  syncToGogKeyring,
-} from "./gog-credentials.js";
+import { getGoogleClientType, setGoogleClientCredentialsFile } from "./gog-credentials.js";
 import {
   notifyAuthSuccess,
   notifyAuthError,
@@ -28,8 +24,6 @@ import type {
   OAuthServerConfig,
   PendingOAuthFlow,
   OAuthCallbackParams,
-  TokenExchangeResponse,
-  GogCredentials,
 } from "./gog-oauth-types.js";
 
 const log = createSubsystemLogger("gog-oauth");
@@ -63,7 +57,7 @@ let configuredExternalRedirectUri: string | undefined;
 
 /**
  * Get the redirect URI for OAuth flows.
- * Desktop ("installed") clients only support localhost redirects — Google rejects
+ * Desktop ("installed") clients only support localhost redirects -- Google rejects
  * external URIs with redirect_uri_mismatch. When a Desktop client is detected,
  * we always return the localhost URI regardless of env/config settings.
  * For "web" or "unknown" clients: env var > config > localhost fallback.
@@ -146,35 +140,12 @@ function cleanupExpiredFlows(): void {
 }
 
 /**
- * Exchange authorization code for tokens
+ * Resolve the appropriate AuthProvider for a pending flow.
+ * Currently only Google is supported; future providers can be dispatched
+ * based on flow.providerId.
  */
-async function exchangeCodeForTokens(
-  code: string,
-  redirectUri: string,
-): Promise<TokenExchangeResponse> {
-  const clientId = getGoogleClientId();
-  const clientSecret = getGoogleClientSecret();
-
-  const response = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({
-      code,
-      client_id: clientId,
-      client_secret: clientSecret,
-      redirect_uri: redirectUri,
-      grant_type: "authorization_code",
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Token exchange failed: ${error}`);
-  }
-
-  return await response.json();
+function resolveProvider(_flow: PendingOAuthFlow): AuthProvider {
+  return createGoogleAuthProvider();
 }
 
 /**
@@ -182,7 +153,6 @@ async function exchangeCodeForTokens(
  */
 async function handleCallback(
   params: OAuthCallbackParams,
-  _agentDir: string,
 ): Promise<{ status: number; message: string }> {
   // Check for error from Google
   if (params.error) {
@@ -233,27 +203,18 @@ async function handleCallback(
   removePendingFlow(params.state);
 
   try {
-    // Exchange code for tokens
+    // Delegate token exchange and credential storage to the provider
+    const provider = resolveProvider(flow);
     const redirectUri = getRedirectUri();
-    const tokens = await exchangeCodeForTokens(params.code, redirectUri);
+    const tokens = await provider.exchangeCode(params.code, redirectUri);
 
-    // Create credentials object
-    const credentials: GogCredentials = {
+    const credPath = await provider.storeCredentials({
+      tokens,
       email: flow.email,
-      accessToken: tokens.access_token,
-      refreshToken: tokens.refresh_token || "",
-      expiresAt: Date.now() + tokens.expires_in * 1000,
-      createdAt: Date.now(),
+      services: flow.services,
       sessionKey: flow.sessionKey,
       agentId: flow.agentId,
-      services: flow.services,
-    };
-
-    // Save credentials
-    const credPath = await saveSessionCredentials(credentials);
-
-    // Best-effort sync to gog CLI keyring — capture result for notification
-    const syncResult = await syncToGogKeyring(credentials);
+    });
 
     // Update session entry
     const storePath = resolveDefaultSessionStorePath(flow.agentId);
@@ -267,14 +228,8 @@ async function handleCallback(
       }
     });
 
-    // Notify user of success (include keyring sync warning if applicable)
-    await notifyAuthSuccess(
-      flow.sessionKey,
-      flow.agentId,
-      flow.email,
-      flow.services,
-      syncResult.success ? undefined : syncResult.error,
-    );
+    // Notify user of success
+    await notifyAuthSuccess(flow.sessionKey, flow.agentId, flow.email, flow.services);
 
     return {
       status: 200,
@@ -296,6 +251,17 @@ async function handleCallback(
   }
 }
 
+/** Build the HTML response page shown to the user after the OAuth callback. */
+function buildCallbackHtml(result: { status: number; message: string }): string {
+  const color = result.status === 200 ? "#10b981" : "#ef4444";
+  const heading = result.status === 200 ? "Success" : "Error";
+  return `<!DOCTYPE html><html><head><title>Google OAuth - Minion</title>
+<style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)}
+.c{background:#fff;padding:2rem;border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,.1);text-align:center;max-width:400px}
+h1{color:${color};margin-top:0}p{color:#6b7280;line-height:1.5}</style></head>
+<body><div class="c"><h1>${heading}</h1><p>${result.message}</p></div></body></html>`;
+}
+
 /**
  * Handle HTTP request
  */
@@ -303,7 +269,6 @@ async function handleRequest(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   config: Required<Omit<OAuthServerConfig, "externalRedirectUri" | "googleClientCredentialsFile">>,
-  agentDir: string,
 ): Promise<void> {
   const url = new URL(req.url || "/", `http://${req.headers.host}`);
 
@@ -324,51 +289,11 @@ async function handleRequest(
       error_description: url.searchParams.get("error_description") || undefined,
     };
 
-    const result = await handleCallback(params, agentDir);
+    const result = await handleCallback(params);
 
     res.statusCode = result.status;
     res.setHeader("Content-Type", "text/html");
-    res.end(`
-<!DOCTYPE html>
-<html>
-<head>
-	<title>Google OAuth - Minion</title>
-	<style>
-		body {
-			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			height: 100vh;
-			margin: 0;
-			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-		}
-		.container {
-			background: white;
-			padding: 2rem;
-			border-radius: 8px;
-			box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-			text-align: center;
-			max-width: 400px;
-		}
-		h1 {
-			color: ${result.status === 200 ? "#10b981" : "#ef4444"};
-			margin-top: 0;
-		}
-		p {
-			color: #6b7280;
-			line-height: 1.5;
-		}
-	</style>
-</head>
-<body>
-	<div class="container">
-		<h1>${result.status === 200 ? "✓ Success" : "✗ Error"}</h1>
-		<p>${result.message}</p>
-	</div>
-</body>
-</html>
-		`);
+    res.end(buildCallbackHtml(result));
     return;
   }
 
@@ -385,11 +310,10 @@ function tryStartServer(
   port: number,
   bind: string,
   config: Required<Omit<OAuthServerConfig, "externalRedirectUri" | "googleClientCredentialsFile">>,
-  agentDir: string,
 ): Promise<http.Server> {
   return new Promise((resolve, reject) => {
     const srv = http.createServer((req, res) => {
-      handleRequest(req, res, config, agentDir).catch((err) => {
+      handleRequest(req, res, config).catch((err) => {
         log.error(`Request handler error: ${err instanceof Error ? err.message : String(err)}`);
         res.statusCode = 500;
         res.end("Internal Server Error");
@@ -412,14 +336,12 @@ function tryStartServer(
 
 /**
  * Register Google OAuth client credentials with the gog CLI keyring (best-effort).
- * Runs `gog auth credentials <file>` so subsequent `gog auth tokens import` calls succeed.
- * Skips silently if gog is not installed.
  */
 async function registerGogClientCredentials(credFile: string): Promise<void> {
   try {
     const gogCheck = await runCommandWithTimeout(["which", "gog"], { timeoutMs: 2_000 });
     if (gogCheck.code !== 0) {
-      return; // gog not installed — skip silently
+      return;
     }
     const result = await runCommandWithTimeout(["gog", "auth", "credentials", credFile], {
       timeoutMs: 10_000,
@@ -438,9 +360,7 @@ async function registerGogClientCredentials(credFile: string): Promise<void> {
 
 /**
  * Ensure GOG_KEYRING_BACKEND and GOG_KEYRING_PASSWORD are set in process.env
- * and persisted to ~/.minion/.env. Called once at gateway startup.
- * Self-healing: generates a secure random password on first run, then reuses it.
- * No-ops if variables are already present (from systemd Environment= or .env).
+ * and persisted to ~/.minion/.env.
  */
 function ensureGogKeyringEnv(): void {
   let dirty = false;
@@ -475,6 +395,9 @@ export async function startGogOAuthServer(
 }> {
   ensureGogKeyringEnv();
 
+  // agentDir kept in signature for backward compatibility but no longer passed to handlers
+  void agentDir;
+
   const { externalRedirectUri, googleClientCredentialsFile, ...rest } = config;
   const fullConfig: Required<
     Omit<OAuthServerConfig, "externalRedirectUri" | "googleClientCredentialsFile">
@@ -497,7 +420,6 @@ export async function startGogOAuthServer(
   }
   if (credFile) {
     setGoogleClientCredentialsFile(credFile);
-    // Register credentials with gog CLI so `gog auth tokens import` works (best-effort)
     void registerGogClientCredentials(credFile);
   }
 
@@ -511,7 +433,7 @@ export async function startGogOAuthServer(
 
   for (const port of ports) {
     try {
-      server = await tryStartServer(port, fullConfig.bind, fullConfig, agentDir);
+      server = await tryStartServer(port, fullConfig.bind, fullConfig);
       actualPort = port;
       log.info(`Server listening on ${fullConfig.bind}:${port}`);
 
@@ -542,7 +464,6 @@ export async function startGogOAuthServer(
       };
     } catch (error) {
       lastError = error as Error;
-      // Try next port
     }
   }
 
