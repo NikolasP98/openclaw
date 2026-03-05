@@ -1,4 +1,4 @@
-import { listAgentIds, resolveDefaultAgentId } from "../../agents/agent-scope.js";
+import { listAgentEntries, listAgentIds, resolveDefaultAgentId } from "../../agents/agent-scope.js";
 import type { ToolMeta } from "../../agents/tool-meta.js";
 import {
   TOOL_GROUPS,
@@ -6,13 +6,15 @@ import {
   resolveToolProfilePolicy,
 } from "../../agents/tool-policy.js";
 import { TOOL_REGISTRY } from "../../agents/tools/_registry.generated.js";
-import { clearConfigCache, loadConfig } from "../../config/config.js";
+import { clearConfigCache, loadConfig, writeConfigFile } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { normalizeAgentId } from "../../routing/session-key.js";
 import {
   ErrorCodes,
   errorShape,
   formatValidationErrors,
   validateToolsStatusParams,
+  validateToolsUpdateParams,
 } from "../protocol/index.js";
 import type { GatewayRequestHandlers } from "./types.js";
 
@@ -130,6 +132,70 @@ export const toolsHandlers: GatewayRequestHandlers = {
       });
     }
     respond(true, { tools, groups: TOOL_GROUPS, profile: policy.profile }, undefined);
+  },
+
+  "tools.update": async ({ params, respond }) => {
+    if (!validateToolsUpdateParams(params)) {
+      respond(
+        false,
+        undefined,
+        errorShape(
+          ErrorCodes.INVALID_REQUEST,
+          `invalid tools.update params: ${formatValidationErrors(validateToolsUpdateParams.errors)}`,
+        ),
+      );
+      return;
+    }
+    const p = params as { agentId?: string; toolId: string; enabled: boolean };
+    const cfg = loadConfig();
+    const agentIdRaw = typeof p.agentId === "string" ? p.agentId.trim() : "";
+    const agentId = agentIdRaw ? normalizeAgentId(agentIdRaw) : resolveDefaultAgentId(cfg);
+    if (agentIdRaw) {
+      const knownAgents = listAgentIds(cfg);
+      if (!knownAgents.includes(agentId)) {
+        respond(
+          false,
+          undefined,
+          errorShape(ErrorCodes.INVALID_REQUEST, `unknown agent id "${agentIdRaw}"`),
+        );
+        return;
+      }
+    }
+    // Find or create the agent entry in config
+    const agents = listAgentEntries(cfg);
+    const agentIndex = agents.findIndex((a) => normalizeAgentId(a.id) === agentId);
+    const nextAgentsList = [...(cfg.agents?.list ?? [])];
+    let updatedEntry = agentIndex >= 0 ? { ...nextAgentsList[agentIndex] } : { id: agentId };
+    const agentTools = updatedEntry.tools ? { ...updatedEntry.tools } : {};
+    const deny = Array.isArray(agentTools.deny) ? [...agentTools.deny] : [];
+    if (p.enabled) {
+      // Remove from deny list
+      const idx = deny.indexOf(p.toolId);
+      if (idx >= 0) {
+        deny.splice(idx, 1);
+      }
+    } else {
+      // Add to deny list
+      if (!deny.includes(p.toolId)) {
+        deny.push(p.toolId);
+      }
+    }
+    agentTools.deny = deny.length > 0 ? deny : undefined;
+    updatedEntry.tools = agentTools;
+    if (agentIndex >= 0) {
+      nextAgentsList[agentIndex] = updatedEntry;
+    } else {
+      nextAgentsList.push(updatedEntry);
+    }
+    const nextConfig: OpenClawConfig = {
+      ...cfg,
+      agents: {
+        ...cfg.agents,
+        list: nextAgentsList,
+      },
+    };
+    await writeConfigFile(nextConfig);
+    respond(true, { ok: true, toolId: p.toolId, enabled: p.enabled }, undefined);
   },
 
   "tools.reload": ({ respond }) => {

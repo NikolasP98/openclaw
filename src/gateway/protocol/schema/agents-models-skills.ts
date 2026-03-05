@@ -227,4 +227,13 @@ export const ToolsStatusParamsSchema = Type.Object(
   { additionalProperties: false },
 );
 
+export const ToolsUpdateParamsSchema = Type.Object(
+  {
+    agentId: Type.Optional(NonEmptyString),
+    toolId: NonEmptyString,
+    enabled: Type.Boolean(),
+  },
+  { additionalProperties: false },
+);
+
 export const ToolsReloadParamsSchema = Type.Object({}, { additionalProperties: false });

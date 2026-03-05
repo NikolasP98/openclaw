@@ -34,6 +34,7 @@ import type {
   SkillsUpdateParamsSchema,
   AgentsSkillsSetParamsSchema,
   ToolsStatusParamsSchema,
+  ToolsUpdateParamsSchema,
   ToolsReloadParamsSchema,
 } from "./agents-models-skills.js";
 import type {
@@ -222,6 +223,7 @@ export type SkillsInstallParams = Static<typeof SkillsInstallParamsSchema>;
 export type SkillsUpdateParams = Static<typeof SkillsUpdateParamsSchema>;
 export type AgentsSkillsSetParams = Static<typeof AgentsSkillsSetParamsSchema>;
 export type ToolsStatusParams = Static<typeof ToolsStatusParamsSchema>;
+export type ToolsUpdateParams = Static<typeof ToolsUpdateParamsSchema>;
 export type ToolsReloadParams = Static<typeof ToolsReloadParamsSchema>;
 export type CronJob = Static<typeof CronJobSchema>;
 export type CronListParams = Static<typeof CronListParamsSchema>;
