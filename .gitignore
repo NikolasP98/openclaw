@@ -99,3 +99,4 @@ extensions/**/*.mjs
 
 # Local iOS signing overrides
 apps/ios/LocalSigning.xcconfig
+.planning/
