@@ -34,7 +34,8 @@ export function createGogExecTool(opts?: { agentId?: string; sessionKey?: string
     label: "Google Exec",
     name: "gog_exec",
     description:
-      "Run gog CLI commands with auto-injected session credentials. Requires prior authentication via gog_auth_start. See the gog skill for command reference.",
+      "Run gog CLI commands with auto-injected session credentials. Requires prior authentication via gog_auth_start. See the gog skill for command reference. " +
+      "If this tool returns a scope/permission error, IMMEDIATELY call gog_auth_start with the missing service — do NOT try workarounds or alternative commands.",
     parameters: GogExecSchema,
     execute: async (_toolCallId, args) => {
       const params = args as Record<string, unknown>;
@@ -79,10 +80,10 @@ export function createGogExecTool(opts?: { agentId?: string; sessionKey?: string
         const allServices = [...new Set([...credentials.services, targetService])];
         return jsonResult({
           error:
-            `Current credentials for ${credentials.email} only have scopes for: ${credentials.services.join(", ")}. ` +
+            `SCOPE MISSING: Current credentials for ${credentials.email} only have scopes for: ${credentials.services.join(", ")}. ` +
             `The "${targetService}" service is not authorized. ` +
-            `Re-authenticate with gog_auth_start using services: [${allServices.map((s) => `"${s}"`).join(", ")}] ` +
-            `to add the missing scope.`,
+            `ACTION REQUIRED: Call gog_auth_start NOW with email="${credentials.email}" and services=[${allServices.map((s) => `"${s}"`).join(", ")}]. ` +
+            `Do NOT retry this command or try alternative commands — authentication must be expanded first.`,
         });
       }
 
@@ -137,8 +138,9 @@ export function createGogExecTool(opts?: { agentId?: string; sessionKey?: string
           result.stderr,
         );
         const scopeHint = isScopeError
-          ? `\nThis is a Google OAuth scope error. The current token was not granted "${targetService || "the required"}" permissions. ` +
-            `Re-authenticate with gog_auth_start (include all needed services: gmail, calendar, drive) to fix this.`
+          ? `\nSCOPE ERROR: The current token was not granted "${targetService || "the required"}" permissions. ` +
+            `ACTION REQUIRED: Call gog_auth_start NOW with email="${credentials.email}" and services=["gmail", "calendar", "drive"] to fix this. ` +
+            `Do NOT retry this command or try alternative commands.`
           : "";
 
         return jsonResult({

@@ -44,7 +44,7 @@ Minion provides **non-blocking OAuth authentication** via agent tools. When you 
 - `gog_auth_revoke` — Revoke credentials
 - `gog_exec` — **Preferred way to run gog commands.** Auto-injects session credentials (account, keyring env). No need to manually set `GOG_ACCOUNT` or `--account` flags.
 
-**Scope management:** Always authenticate with the default services (gmail, calendar, drive) — do NOT narrow to a single service even if the user only mentions one. Users expect all Google services to work once authenticated. If `gog_exec` returns a "service not authorized" error, re-authenticate with `gog_auth_start` including the missing service.
+**Scope management:** Always authenticate with the default services (gmail, calendar, drive) — do NOT narrow to a single service even if the user only mentions one. Users expect all Google services to work once authenticated. If `gog_exec` returns a scope/permission/403 error, **IMMEDIATELY call `gog_auth_start`** with all needed services — do NOT retry the command, try alternative gog commands, or attempt workarounds. The only fix for a scope error is re-authentication.
 
 **Usage pattern:** Authenticate with `gog_auth_start`, then use `gog_exec` for all commands:
 
@@ -81,7 +81,10 @@ Common commands
 - Calendar show colors: `gog calendar colors`
 - Drive list root: `gog drive ls --max 20`
 - Drive list folder: `gog drive ls --parent FOLDER_ID --max 50`
+- Drive list shared/external folders: `gog drive ls --all-drives --max 20`
+- Drive list shared drives: `gog drive drives --max 100`
 - Drive search: `gog drive search "query" --max 10`
+- Drive search shared files: `gog drive search "query" --all-drives --max 10`
 - Drive create folder: `gog drive mkdir "Folder Name" --parent PARENT_FOLDER_ID`
 - Drive upload file: `gog drive upload /path/to/file --parent FOLDER_ID`
 - Drive copy file: `gog drive copy FILE_ID "new name" --parent FOLDER_ID`
@@ -144,6 +147,8 @@ Email Formatting
 
 Notes
 
+- **Shared folders:** Files shared from other accounts or shared drives are NOT visible in regular `drive ls`. Use `--all-drives` flag to include them: `gog drive ls --all-drives --max 20` or `gog drive search "name" --all-drives`. If a folder was shared but can't be found, try `gog drive search "folder name" --all-drives`.
+- **Valid drive subcommands:** Only use documented flags. Do NOT invent flags like `--query`, `--id`, `--folder`, or `--name`. The valid drive subcommands are: `ls`, `search`, `mkdir`, `upload`, `copy`, `drives`. Use `search` for queries, not `ls --query`.
 - When using `gog_exec`, `--account` is auto-injected. For raw CLI usage, set `GOG_ACCOUNT=you@gmail.com` to avoid repeating `--account`.
 - For scripting, prefer `--json` plus `--no-input`.
 - Sheets values can be passed via `--values-json` (recommended) or as inline rows.
