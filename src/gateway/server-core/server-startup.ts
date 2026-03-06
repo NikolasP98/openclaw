@@ -21,6 +21,7 @@ import {
 } from "../../hooks/internal-hooks.js";
 import { loadInternalHooks } from "../../hooks/loader.js";
 import { isTruthyEnvValue } from "../../infra/env.js";
+import { pruneOldTraceFiles } from "../../logging/chat-trace.js";
 import type { loadOpenClawPlugins } from "../../plugins/loader.js";
 import { type PluginServicesHandle, startPluginServices } from "../../plugins/services.js";
 import { runModelHealthChecks } from "../model-health-check.js";
@@ -62,6 +63,9 @@ export async function startGatewaySidecars(params: {
   } catch (err) {
     params.log.warn(`session lock cleanup failed on startup: ${String(err)}`);
   }
+
+  // Prune old chat trace files (best-effort).
+  pruneOldTraceFiles();
 
   // Bridge Google credentials into auth-profiles (Phase 1 — non-breaking).
   try {

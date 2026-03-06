@@ -25,6 +25,7 @@ import {
 } from "../../../config/sessions.js";
 import { logVerbose, shouldLogVerbose } from "../../../globals.js";
 import type { getChildLogger } from "../../../logging.js";
+import { deriveTraceId, traceChatEvent } from "../../../logging/chat-trace.js";
 import { transcribeFirstAudio } from "../../../media-understanding/audio-preflight.js";
 import { getAgentScopedMediaLocalRoots } from "../../../media/local-roots.js";
 import { readChannelAllowFromStore } from "../../../pairing/pairing-store.js";
@@ -442,6 +443,17 @@ export async function processMessage(params: {
           const fromDisplay =
             params.msg.chatType === "group" ? conversationId : (params.msg.from ?? "unknown");
           const hasMedia = Boolean(payload.mediaUrl || payload.mediaUrls?.length);
+          const deliveryTraceId = deriveTraceId(params.msg.id ?? params.msg.conversationId);
+          traceChatEvent({
+            agentId: params.route.agentId,
+            traceId: deliveryTraceId,
+            stage: "DELIVERED",
+            data: {
+              to: fromDisplay,
+              hasMedia,
+              textLength: payload.text?.length ?? 0,
+            },
+          });
           whatsappOutboundLog.info(`Auto-replied to ${fromDisplay}${hasMedia ? " (media)" : ""}`);
           if (shouldLogVerbose()) {
             const preview = payload.text != null ? elide(payload.text, 400) : "<media>";

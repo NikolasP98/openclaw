@@ -2,6 +2,7 @@ import type { getReplyFromConfig } from "../../../auto-reply/reply.js";
 import type { MsgContext } from "../../../auto-reply/templating.js";
 import { loadConfig } from "../../../config/config.js";
 import { logVerbose } from "../../../globals.js";
+import { deriveTraceId, traceChatEvent } from "../../../logging/chat-trace.js";
 import { resolveAgentRoute } from "../../../routing/resolve-route.js";
 import { buildGroupHistoryKey } from "../../../routing/session-key.js";
 import { normalizeE164 } from "../../../utils.js";
@@ -73,6 +74,29 @@ export function createWebOnMessageHandler(params: {
         id: peerId,
       },
     });
+    const traceId = deriveTraceId(msg.id ?? msg.conversationId);
+    traceChatEvent({
+      agentId: route.agentId,
+      traceId,
+      stage: "INGESTED",
+      data: {
+        channel: "whatsapp",
+        from: msg.from,
+        chatType: msg.chatType ?? "dm",
+        body: msg.body?.slice(0, 100),
+      },
+    });
+    traceChatEvent({
+      agentId: route.agentId,
+      traceId,
+      stage: "ROUTED",
+      data: {
+        agentId: route.agentId,
+        sessionKey: route.sessionKey,
+        matchedBy: route.matchedBy,
+      },
+    });
+
     const groupHistoryKey =
       msg.chatType === "group"
         ? buildGroupHistoryKey({
