@@ -4,7 +4,7 @@ import { loadSessionStore, resolveStorePath } from "../../config/sessions.js";
 import { logVerbose } from "../../globals.js";
 import { createInternalHookEvent, triggerInternalHook } from "../../hooks/internal-hooks.js";
 import { isDiagnosticsEnabled } from "../../infra/diagnostic-events.js";
-import { deriveTraceId, traceChatEvent } from "../../logging/chat-trace.js";
+import { deriveTraceId, traceChatEvent, traceGatewayEvent } from "../../logging/chat-trace.js";
 import {
   logMessageProcessed,
   logMessageQueued,
@@ -571,18 +571,16 @@ export async function dispatchReplyFromConfig(params: {
     markIdle("message_completed");
     return { queuedFinal, counts };
   } catch (err) {
+    const errorData = {
+      agentId: sessionAgentId,
+      error: err instanceof Error ? err.message : String(err),
+      errorClass: err instanceof Error ? err.constructor.name : typeof err,
+      durationMs: Date.now() - startTime,
+    };
     if (sessionAgentId) {
-      traceChatEvent({
-        agentId: sessionAgentId,
-        traceId,
-        stage: "LLM_ERROR",
-        data: {
-          error: err instanceof Error ? err.message : String(err),
-          errorClass: err instanceof Error ? err.constructor.name : typeof err,
-          durationMs: Date.now() - startTime,
-        },
-      });
+      traceChatEvent({ agentId: sessionAgentId, traceId, stage: "LLM_ERROR", data: errorData });
     }
+    traceGatewayEvent({ traceId, stage: "LLM_ERROR", data: errorData });
     recordProcessed("error", { error: String(err) });
     markIdle("message_error");
     throw err;

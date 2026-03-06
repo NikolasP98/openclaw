@@ -2,24 +2,31 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { deriveTraceId, pruneOldTraceFiles, traceChatEvent } from "./chat-trace.js";
+import {
+  deriveTraceId,
+  pruneOldTraceFiles,
+  traceChatEvent,
+  traceGatewayEvent,
+} from "./chat-trace.js";
 
 describe("chat-trace", () => {
   const testAgentId = "__trace_test_agent__";
+  const gatewayScope = "_gateway";
 
   afterAll(() => {
-    // Clean up test trace files
     const stateDir = process.env.OPENCLAW_STATE_DIR || path.join(os.homedir(), ".minion");
-    const agentDir = path.join(stateDir, "logs", "traces", testAgentId);
-    try {
-      if (fs.existsSync(agentDir)) {
-        for (const f of fs.readdirSync(agentDir)) {
-          fs.unlinkSync(path.join(agentDir, f));
+    for (const scope of [testAgentId, gatewayScope]) {
+      const dir = path.join(stateDir, "logs", "traces", scope);
+      try {
+        if (fs.existsSync(dir)) {
+          for (const f of fs.readdirSync(dir)) {
+            fs.unlinkSync(path.join(dir, f));
+          }
+          fs.rmdirSync(dir);
         }
-        fs.rmdirSync(agentDir);
+      } catch {
+        // ignore cleanup errors
       }
-    } catch {
-      // ignore cleanup errors
     }
   });
 
@@ -72,6 +79,26 @@ describe("chat-trace", () => {
       expect(line).not.toContain("missing=");
       expect(line).not.toContain("empty=");
       expect(line).not.toContain("nil=");
+    });
+  });
+
+  describe("traceGatewayEvent", () => {
+    it("writes to the _gateway scope", () => {
+      traceGatewayEvent({
+        traceId: "gw123456",
+        stage: "INGESTED",
+        data: { channel: "whatsapp", agentId: "renzo_bot" },
+      });
+
+      const stateDir = process.env.OPENCLAW_STATE_DIR || path.join(os.homedir(), ".minion");
+      const today = new Date().toISOString().slice(0, 10);
+      const gwFile = path.join(stateDir, "logs", "traces", gatewayScope, `${today}.txt`);
+
+      expect(fs.existsSync(gwFile)).toBe(true);
+      const content = fs.readFileSync(gwFile, "utf-8");
+      expect(content).toContain("[gw123456] INGESTED");
+      expect(content).toContain("channel=whatsapp");
+      expect(content).toContain("agentId=renzo_bot");
     });
   });
 

@@ -3,6 +3,7 @@ import path from "node:path";
 import { resolveStateDir } from "../config/paths.js";
 
 const TRACE_DIR_NAME = "traces";
+const GATEWAY_SCOPE = "_gateway";
 const MAX_AGE_DAYS = 7;
 
 function resolveTraceDir(): string {
@@ -33,8 +34,27 @@ export function deriveTraceId(messageId?: string | null): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
+function formatTraceLine(traceId: string, stage: string, data?: Record<string, unknown>): string {
+  const parts = [`${new Date().toISOString()} [${traceId}] ${stage}`];
+  if (data) {
+    for (const [key, value] of Object.entries(data)) {
+      if (value !== undefined && value !== null && value !== "") {
+        parts.push(`${key}=${formatValue(value)}`);
+      }
+    }
+  }
+  return parts.join(" ") + "\n";
+}
+
+function appendToScope(scope: string, line: string): void {
+  const today = new Date().toISOString().slice(0, 10);
+  const dir = path.join(resolveTraceDir(), scope);
+  fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+  fs.appendFileSync(path.join(dir, `${today}.txt`), line, { encoding: "utf-8" });
+}
+
 /**
- * Append a trace event for a chat message lifecycle stage.
+ * Append a trace event for a chat message lifecycle stage (agent scope).
  * Best-effort, never throws or blocks.
  */
 export function traceChatEvent(params: {
@@ -44,25 +64,27 @@ export function traceChatEvent(params: {
   data?: Record<string, unknown>;
 }): void {
   try {
-    const { agentId, traceId, stage, data } = params;
-    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-    const dir = path.join(resolveTraceDir(), agentId);
-    fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
-
-    const parts = [`${new Date().toISOString()} [${traceId}] ${stage}`];
-    if (data) {
-      for (const [key, value] of Object.entries(data)) {
-        if (value !== undefined && value !== null && value !== "") {
-          parts.push(`${key}=${formatValue(value)}`);
-        }
-      }
-    }
-
-    fs.appendFileSync(path.join(dir, `${today}.txt`), parts.join(" ") + "\n", {
-      encoding: "utf-8",
-    });
+    const line = formatTraceLine(params.traceId, params.stage, params.data);
+    appendToScope(params.agentId, line);
   } catch {
     // best-effort — never block message processing
+  }
+}
+
+/**
+ * Append a trace event to the gateway-level log (unified view across all agents).
+ * Best-effort, never throws or blocks.
+ */
+export function traceGatewayEvent(params: {
+  traceId: string;
+  stage: string;
+  data?: Record<string, unknown>;
+}): void {
+  try {
+    const line = formatTraceLine(params.traceId, params.stage, params.data);
+    appendToScope(GATEWAY_SCOPE, line);
+  } catch {
+    // best-effort
   }
 }
 
