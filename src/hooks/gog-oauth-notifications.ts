@@ -123,7 +123,7 @@ export async function notifyAuthTimeout(
     email,
     sessionKey,
     agentId,
-    message: `⏱ Gmail authorization timed out (5 minutes). Would you like to try again?`,
+    message: `⏱ Google authorization for ${email} timed out (5 minutes). Would you like to try again?`,
   });
 }
 
@@ -139,9 +139,9 @@ export async function notifyAuthError(
   let message: string;
 
   if (error === "access_denied") {
-    message = `✗ Gmail authorization was declined. Let me know if you'd like to try again.`;
+    message = `✗ Google authorization for ${email} was declined. Let me know if you'd like to try again.`;
   } else {
-    message = `✗ Gmail authorization failed: ${error}. Please try again.`;
+    message = `✗ Google authorization for ${email} failed: ${error}. Please try again.`;
   }
 
   await enqueueOAuthNotification({

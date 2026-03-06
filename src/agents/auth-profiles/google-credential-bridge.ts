@@ -35,18 +35,29 @@ export async function syncGoogleCredentialsToAuthStore(): Promise<number> {
         continue;
       }
 
+      // Scan both new (auth-credentials/google/) and legacy (gog-credentials/) paths
+      const newDir = path.join(agentsDir, agentEntry.name, "auth-credentials", "google");
       const gogDir = path.join(agentsDir, agentEntry.name, "gog-credentials");
-      if (!fs.existsSync(gogDir)) {
+      const dirsToScan = [newDir, gogDir].filter((d) => fs.existsSync(d));
+      if (dirsToScan.length === 0) {
         continue;
       }
 
       try {
-        const allFiles = await readdir(gogDir);
-        const files = allFiles.filter((f) => f.endsWith(".json"));
+        const allFiles: string[] = [];
+        const seenFilenames = new Set<string>();
+        for (const dir of dirsToScan) {
+          for (const f of await readdir(dir)) {
+            if (f.endsWith(".json") && !seenFilenames.has(f)) {
+              seenFilenames.add(f);
+              allFiles.push(path.join(dir, f));
+            }
+          }
+        }
+        const files = allFiles;
 
-        for (const file of files) {
+        for (const credPath of files) {
           try {
-            const credPath = path.join(gogDir, file);
             const raw = JSON.parse(await readFile(credPath, "utf-8"));
 
             if (!raw.accessToken || !raw.refreshToken || !raw.email) {
@@ -82,14 +93,14 @@ export async function syncGoogleCredentialsToAuthStore(): Promise<number> {
             });
           } catch (err) {
             log.warn("failed to bridge Google credential file", {
-              file,
+              file: credPath,
               agentId: agentEntry.name,
               err: String(err),
             });
           }
         }
       } catch (err) {
-        log.warn("failed to scan gog-credentials dir", {
+        log.warn("failed to scan Google credentials dirs", {
           agentId: agentEntry.name,
           err: String(err),
         });

@@ -61,9 +61,19 @@ export function setGoogleClientCredentialsFile(filePath: string): void {
 }
 
 /**
- * Get the credentials directory for an agent
+ * Get the credentials directory for an agent (new canonical path).
+ * Aligned with GoogleAuthProvider's `auth-credentials/google/` layout.
  */
 export function getCredentialsDir(agentId: string): string {
+  const homeDir = os.homedir();
+  return path.join(homeDir, ".minion", "agents", agentId, "auth-credentials", "google");
+}
+
+/**
+ * Get the legacy credentials directory for an agent (gog-credentials/).
+ * Used only for fallback reads and migration.
+ */
+function getLegacyCredentialsDir(agentId: string): string {
   const homeDir = os.homedir();
   return path.join(homeDir, ".minion", "agents", agentId, "gog-credentials");
 }
@@ -88,39 +98,38 @@ async function ensureCredentialsDir(agentId: string): Promise<void> {
 }
 
 /**
- * Load session credentials if they exist
- * Falls back to checking global gogcli credentials if no session credentials found
+ * Load session credentials if they exist.
+ * Checks the canonical `auth-credentials/google/` path first, then falls back
+ * to the legacy `gog-credentials/` path (and migrates if found).
  */
 export async function loadSessionCredentials(
   agentId: string,
   sessionKey: string,
   email?: string,
 ): Promise<GogCredentials | null> {
-  try {
-    // If email is provided, try to load specific credentials
+  const safeSessionKey = sessionKey.replace(/[^a-zA-Z0-9_-]/g, "_");
+
+  // Helper: try to load from a specific directory
+  async function tryLoadFromDir(dir: string): Promise<GogCredentials | null> {
     if (email) {
-      const credPath = getCredentialsPath(agentId, sessionKey, email);
+      const safeEmail = email.replace(/[^a-zA-Z0-9@._-]/g, "_");
+      const credPath = path.join(dir, `${safeSessionKey}_${safeEmail}.json`);
       try {
         const data = await fs.readFile(credPath, "utf-8");
         const creds: GogCredentials = JSON.parse(data);
         creds.filePath = credPath;
         return creds;
       } catch {
-        // File doesn't exist or is invalid, continue to search
+        // Not found at this specific path
       }
     }
 
     // Search for any credentials file for this session
-    const dir = getCredentialsDir(agentId);
-    const safeSessionKey = sessionKey.replace(/[^a-zA-Z0-9_-]/g, "_");
     const pattern = `${safeSessionKey}_`;
-
     try {
       const files = await fs.readdir(dir);
       const matchingFiles = files.filter((f) => f.startsWith(pattern));
-
       if (matchingFiles.length > 0) {
-        // Load the first matching credentials file
         const credPath = path.join(dir, matchingFiles[0]);
         const data = await fs.readFile(credPath, "utf-8");
         const creds: GogCredentials = JSON.parse(data);
@@ -131,7 +140,42 @@ export async function loadSessionCredentials(
       // Directory doesn't exist or can't be read
     }
 
-    // No session credentials found - gogcli will fall back to its own global credentials
+    return null;
+  }
+
+  try {
+    // 1. Check canonical path first (auth-credentials/google/)
+    const newDir = getCredentialsDir(agentId);
+    const result = await tryLoadFromDir(newDir);
+    if (result) {
+      return result;
+    }
+
+    // 2. Fallback to legacy path (gog-credentials/) and migrate if found
+    const legacyDir = getLegacyCredentialsDir(agentId);
+    const legacyResult = await tryLoadFromDir(legacyDir);
+    if (legacyResult && legacyResult.filePath) {
+      // Migrate: copy to new path, then delete old file
+      const filename = path.basename(legacyResult.filePath);
+      await fs.mkdir(newDir, { recursive: true, mode: 0o700 });
+      const newPath = path.join(newDir, filename);
+      await fs.writeFile(newPath, JSON.stringify(legacyResult, null, 2), { mode: 0o600 });
+
+      try {
+        await fs.unlink(legacyResult.filePath);
+        log.info(
+          `Migrated credential from gog-credentials/ to auth-credentials/google/ for session ${safeSessionKey}`,
+        );
+      } catch {
+        log.warn(
+          `Migration: new file written but could not delete old file at ${legacyResult.filePath}`,
+        );
+      }
+
+      legacyResult.filePath = newPath;
+      return legacyResult;
+    }
+
     return null;
   } catch (error) {
     log.error(
@@ -307,33 +351,41 @@ export async function revokeCredentials(
 }
 
 /**
- * List all credentials files for an agent
+ * List all credentials files for an agent (scans both new and legacy dirs)
  */
 export async function listCredentials(agentId: string): Promise<GogCredentials[]> {
-  const dir = getCredentialsDir(agentId);
   const credentials: GogCredentials[] = [];
+  const seenEmails = new Set<string>();
 
-  try {
-    const files = await fs.readdir(dir);
-
-    for (const file of files) {
-      if (file.endsWith(".json")) {
-        try {
-          const credPath = path.join(dir, file);
-          const data = await fs.readFile(credPath, "utf-8");
-          const creds: GogCredentials = JSON.parse(data);
-          creds.filePath = credPath;
-          credentials.push(creds);
-        } catch (error) {
-          log.error(
-            `Failed to load credentials file ${file}: ${error instanceof Error ? error.message : String(error)}`,
-          );
+  async function scanDir(dir: string): Promise<void> {
+    try {
+      const files = await fs.readdir(dir);
+      for (const file of files) {
+        if (file.endsWith(".json")) {
+          try {
+            const credPath = path.join(dir, file);
+            const data = await fs.readFile(credPath, "utf-8");
+            const creds: GogCredentials = JSON.parse(data);
+            creds.filePath = credPath;
+            // Deduplicate by email (new path takes priority, scanned first)
+            if (!seenEmails.has(creds.email)) {
+              seenEmails.add(creds.email);
+              credentials.push(creds);
+            }
+          } catch (error) {
+            log.error(
+              `Failed to load credentials file ${file}: ${error instanceof Error ? error.message : String(error)}`,
+            );
+          }
         }
       }
+    } catch {
+      // Directory doesn't exist or can't be read
     }
-  } catch {
-    // Directory doesn't exist or can't be read
   }
+
+  await scanDir(getCredentialsDir(agentId));
+  await scanDir(getLegacyCredentialsDir(agentId));
 
   return credentials;
 }
