@@ -14,6 +14,8 @@ import { normalizeControlUiBasePath } from "../control-ui-shared.js";
 import { resolveHooksConfig } from "../hooks.js";
 import { isLoopbackHost, resolveGatewayBindHost } from "../net.js";
 
+export type AuthTokenSource = "config" | "env" | "none";
+
 export type GatewayRuntimeConfig = {
   bindHost: string;
   controlUiEnabled: boolean;
@@ -24,10 +26,13 @@ export type GatewayRuntimeConfig = {
   controlUiRoot?: string;
   resolvedAuth: ResolvedGatewayAuth;
   authMode: ResolvedGatewayAuth["mode"];
+  authTokenSource: AuthTokenSource;
   tailscaleConfig: GatewayTailscaleConfig;
   tailscaleMode: "off" | "serve" | "funnel";
   hooksConfig: ReturnType<typeof resolveHooksConfig>;
   canvasHostEnabled: boolean;
+  /** Non-empty when gateway.auth.token and MINION_GATEWAY_TOKEN env var are both set but differ. */
+  authTokenDivergenceWarning?: string;
 };
 
 export async function resolveGatewayRuntimeConfig(params: {
@@ -69,6 +74,19 @@ export async function resolveGatewayRuntimeConfig(params: {
     tailscaleMode,
   });
   const authMode: ResolvedGatewayAuth["mode"] = resolvedAuth.mode;
+
+  // Detect divergence between config token and env token
+  const configToken = params.cfg.gateway?.auth?.token;
+  const envToken = process.env.MINION_GATEWAY_TOKEN;
+  const authTokenSource: AuthTokenSource = configToken ? "config" : envToken ? "env" : "none";
+  let authTokenDivergenceWarning: string | undefined;
+  if (configToken && envToken && configToken !== envToken) {
+    authTokenDivergenceWarning =
+      "gateway.auth.token and MINION_GATEWAY_TOKEN env var are both set but differ. " +
+      "Config value takes priority. CLI clients using the env var will fail to authenticate. " +
+      "Remove one to avoid mismatch.";
+  }
+
   const hasToken = typeof resolvedAuth.token === "string" && resolvedAuth.token.trim().length > 0;
   const hasPassword =
     typeof resolvedAuth.password === "string" && resolvedAuth.password.trim().length > 0;
@@ -120,6 +138,8 @@ export async function resolveGatewayRuntimeConfig(params: {
     controlUiRoot,
     resolvedAuth,
     authMode,
+    authTokenSource,
+    authTokenDivergenceWarning,
     tailscaleConfig,
     tailscaleMode,
     hooksConfig,

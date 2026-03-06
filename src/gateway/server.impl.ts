@@ -331,6 +331,10 @@ export async function startGatewayServer(
   let hooksConfig = runtimeConfig.hooksConfig;
   const canvasHostEnabled = runtimeConfig.canvasHostEnabled;
 
+  if (runtimeConfig.authTokenDivergenceWarning) {
+    log.warn(runtimeConfig.authTokenDivergenceWarning);
+  }
+
   // Create auth rate limiter only when explicitly configured.
   const rateLimitConfig = cfgAtStart.gateway?.auth?.rateLimit;
   const authRateLimiter: AuthRateLimiter | undefined = rateLimitConfig

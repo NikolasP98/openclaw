@@ -254,6 +254,68 @@ export async function runConfigGet(opts: { path: string; json?: boolean; runtime
   }
 }
 
+export async function runConfigValidate(opts: { json?: boolean; runtime?: RuntimeEnv }) {
+  const runtime = opts.runtime ?? defaultRuntime;
+  try {
+    const snapshot = await readConfigFileSnapshot();
+    if (!snapshot.exists) {
+      const msg = "No config file found.";
+      if (opts.json) {
+        runtime.log(
+          JSON.stringify({ valid: false, exists: false, issues: [{ message: msg }] }, null, 2),
+        );
+      } else {
+        runtime.error(danger(msg));
+      }
+      runtime.exit(1);
+      return;
+    }
+    if (snapshot.valid) {
+      const msg = `Config valid: ${shortenHomePath(snapshot.path)}`;
+      if (opts.json) {
+        runtime.log(
+          JSON.stringify(
+            { valid: true, path: snapshot.path, issues: [], warnings: snapshot.warnings },
+            null,
+            2,
+          ),
+        );
+      } else {
+        runtime.log(info(msg));
+      }
+      if (snapshot.warnings.length > 0) {
+        for (const warning of snapshot.warnings) {
+          runtime.log(`  ${theme.muted("warn")} ${warning.path || "<root>"}: ${warning.message}`);
+        }
+      }
+      return;
+    }
+    if (opts.json) {
+      runtime.log(
+        JSON.stringify(
+          {
+            valid: false,
+            path: snapshot.path,
+            issues: snapshot.issues,
+            warnings: snapshot.warnings,
+          },
+          null,
+          2,
+        ),
+      );
+    } else {
+      runtime.error(danger(`Config invalid: ${shortenHomePath(snapshot.path)}`));
+      for (const issue of snapshot.issues) {
+        runtime.error(`  ${issue.path || "<root>"}: ${issue.message}`);
+      }
+    }
+    runtime.exit(1);
+  } catch (err) {
+    runtime.error(danger(String(err)));
+    runtime.exit(1);
+  }
+}
+
 export async function runConfigUnset(opts: { path: string; runtime?: RuntimeEnv }) {
   const runtime = opts.runtime ?? defaultRuntime;
   try {
@@ -314,6 +376,7 @@ export function registerConfigCli(program: Command) {
     .argument("<path>", "Config path (dot or bracket notation)")
     .argument("<value>", "Value (JSON5 or raw string)")
     .option("--json", "Parse value as JSON5 (required)", false)
+    .option("--dry-run", "Validate the resulting config without writing", false)
     .action(async (path: string, value: string, opts) => {
       try {
         const parsedPath = parsePath(path);
@@ -327,6 +390,20 @@ export function registerConfigCli(program: Command) {
         // This prevents runtime defaults from leaking into the written config file (issue #6070)
         const next = structuredClone(snapshot.resolved) as Record<string, unknown>;
         setAtPath(next, parsedPath, parsedValue);
+        if (opts.dryRun) {
+          const { validateConfigObjectRawWithPlugins } = await import("../config/validation.js");
+          const result = validateConfigObjectRawWithPlugins(next);
+          if (result.ok) {
+            defaultRuntime.log(info(`Dry run: config would be valid after setting ${path}.`));
+          } else {
+            defaultRuntime.error(danger(`Dry run: config would be invalid after setting ${path}:`));
+            for (const issue of result.issues) {
+              defaultRuntime.error(`  ${issue.path || "<root>"}: ${issue.message}`);
+            }
+            defaultRuntime.exit(1);
+          }
+          return;
+        }
         await writeConfigFile(next);
         defaultRuntime.log(info(`Updated ${path}. Restart the gateway to apply.`));
       } catch (err) {
@@ -341,5 +418,13 @@ export function registerConfigCli(program: Command) {
     .argument("<path>", "Config path (dot or bracket notation)")
     .action(async (path: string) => {
       await runConfigUnset({ path });
+    });
+
+  cmd
+    .command("validate")
+    .description("Validate config file without starting the gateway")
+    .option("--json", "Output validation result as JSON", false)
+    .action(async (opts) => {
+      await runConfigValidate({ json: Boolean(opts.json) });
     });
 }

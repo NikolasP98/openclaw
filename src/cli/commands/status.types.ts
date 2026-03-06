@@ -32,6 +32,7 @@ export type HeartbeatStatus = {
 };
 
 export type StatusSummary = {
+  authTokenSource?: "config" | "env" | "none";
   linkChannel?: {
     id: ChannelId;
     label: string;

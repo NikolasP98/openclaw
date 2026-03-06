@@ -191,7 +191,17 @@ export async function getStatusSummary(
   const recent = allSessions.slice(0, 10);
   const totalSessions = allSessions.length;
 
+  // Resolve auth token source for status visibility
+  const configAuthToken = cfg.gateway?.auth?.token;
+  const envAuthToken = process.env.MINION_GATEWAY_TOKEN;
+  const authTokenSource: StatusSummary["authTokenSource"] = configAuthToken
+    ? "config"
+    : envAuthToken
+      ? "env"
+      : "none";
+
   const summary: StatusSummary = {
+    authTokenSource,
     linkChannel: linkContext
       ? {
           id: linkContext.plugin.id,
