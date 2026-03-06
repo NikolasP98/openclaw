@@ -406,6 +406,16 @@ export async function runWithModelFallback<T>(params: {
       // that may have a smaller context window and fail worse.
       const errMessage = err instanceof Error ? err.message : String(err);
       if (isLikelyContextOverflowError(errMessage)) {
+        traceGatewayEvent({
+          traceId: `fb${String(i).padStart(6, "0")}`,
+          level: "WARN",
+          stage: "CONTEXT_OVERFLOW",
+          data: {
+            provider: candidate.provider,
+            model: candidate.model,
+            error: errMessage.slice(0, 200),
+          },
+        });
         throw err;
       }
       const normalized =

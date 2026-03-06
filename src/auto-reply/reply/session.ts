@@ -27,6 +27,7 @@ import {
 import type { TtsAutoMode } from "../../config/types.tts.js";
 import { archiveSessionTranscripts } from "../../gateway/sessions/session-utils.fs.js";
 import { deliverSessionMaintenanceWarning } from "../../infra/session-maintenance-warning.js";
+import { traceChatEvent } from "../../logging/chat-trace.js";
 import { getGlobalHookRunner } from "../../plugins/hook-runner-global.js";
 import { normalizeMainKey } from "../../routing/session-key.js";
 import { normalizeSessionDeliveryFields } from "../../shared/delivery-context.js";
@@ -358,6 +359,19 @@ export async function initSessionState(params: {
       agentId,
       ctx.MessageThreadId,
     );
+  }
+  if (isNewSession && resetTriggered) {
+    traceChatEvent({
+      agentId,
+      traceId: (sessionId ?? sessionKey).slice(0, 8),
+      level: "WARN",
+      stage: "SESSION_RESET",
+      data: {
+        sessionKey,
+        agentId,
+        previousSessionId: previousSessionEntry?.sessionId,
+      },
+    });
   }
   if (isNewSession) {
     sessionEntry.compactionCount = 0;

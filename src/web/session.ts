@@ -10,6 +10,7 @@ import {
 import qrcode from "qrcode-terminal";
 import { formatCliCommand } from "../cli/command-format.js";
 import { getChildLogger, toPinoLikeLogger } from "../logging.js";
+import { traceGatewayEvent } from "../logging/chat-trace.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { ensureDir, resolveUserPath } from "../utils.js";
 import { VERSION } from "../version.js";
@@ -135,14 +136,32 @@ export async function createWaSocket(
         }
         if (connection === "close") {
           const status = getStatusCode(lastDisconnect?.error);
+          traceGatewayEvent({
+            traceId: "wa_conn_",
+            level: "WARN",
+            stage: "CHANNEL_DISCONNECTED",
+            data: {
+              channel: "whatsapp",
+              statusCode: status,
+              loggedOut: status === DisconnectReason.loggedOut,
+            },
+          });
           if (status === DisconnectReason.loggedOut) {
             log.error(
               `WhatsApp session logged out. Run: ${formatCliCommand("minion channels login")}`,
             );
           }
         }
-        if (connection === "open" && verbose) {
-          log.info("WhatsApp Web connected.");
+        if (connection === "open") {
+          traceGatewayEvent({
+            traceId: "wa_conn_",
+            level: "INFO",
+            stage: "CHANNEL_CONNECTED",
+            data: { channel: "whatsapp" },
+          });
+          if (verbose) {
+            log.info("WhatsApp Web connected.");
+          }
         }
       } catch (err) {
         sessionLogger.error({ error: String(err) }, "connection.update handler error");

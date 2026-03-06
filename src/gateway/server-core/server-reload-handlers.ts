@@ -16,6 +16,7 @@ import {
   emitGatewayRestart,
   setGatewaySigusr1RestartPolicy,
 } from "../../infra/restart.js";
+import { traceGatewayEvent } from "../../logging/chat-trace.js";
 import {
   setCommandLaneConcurrency,
   getTotalQueueSize,
@@ -130,6 +131,12 @@ export function createGatewayReloadHandlers(params: {
     setCommandLaneConcurrency(CommandLane.Subagent, resolveSubagentMaxConcurrent(nextConfig));
 
     if (plan.hotReasons.length > 0) {
+      traceGatewayEvent({
+        traceId: "cfg_reld",
+        level: "INFO",
+        stage: "CONFIG_HOT_RELOAD",
+        data: { reasons: plan.hotReasons.join(", ") },
+      });
       params.logReload.info(`config hot reload applied (${plan.hotReasons.join(", ")})`);
     } else if (plan.noopPaths.length > 0) {
       params.logReload.info(`config change applied (dynamic reads: ${plan.noopPaths.join(", ")})`);
@@ -148,6 +155,13 @@ export function createGatewayReloadHandlers(params: {
     const reasons = plan.restartReasons.length
       ? plan.restartReasons.join(", ")
       : plan.changedPaths.join(", ");
+
+    traceGatewayEvent({
+      traceId: "cfg_reld",
+      level: "WARN",
+      stage: "GATEWAY_RESTART_REQUESTED",
+      data: { reasons },
+    });
 
     if (process.listenerCount("SIGUSR1") === 0) {
       params.logReload.warn("no SIGUSR1 listener found; restart skipped");

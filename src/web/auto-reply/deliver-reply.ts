@@ -2,6 +2,7 @@ import { chunkMarkdownTextWithMode, type ChunkMode } from "../../auto-reply/chun
 import type { ReplyPayload } from "../../auto-reply/types.js";
 import type { MarkdownTableMode } from "../../config/types.base.js";
 import { logVerbose, shouldLogVerbose } from "../../globals.js";
+import { traceGatewayEvent } from "../../logging/chat-trace.js";
 import { convertMarkdownTables } from "../../markdown/tables.js";
 import { markdownToWhatsApp } from "../../markdown/whatsapp.js";
 import { sleep } from "../../utils.js";
@@ -55,6 +56,12 @@ export async function deliverWebReply(params: {
           throw err;
         }
         const backoffMs = 500 * attempt;
+        traceGatewayEvent({
+          traceId: (msg.id ?? msg.from ?? "").slice(0, 8),
+          level: "WARN",
+          stage: "DELIVERY_RETRY",
+          data: { to: msg.from, label, attempt, error: errText },
+        });
         logVerbose(
           `Retrying ${label} to ${msg.from} after failure (${attempt}/${maxAttempts - 1}) in ${backoffMs}ms: ${errText}`,
         );
@@ -173,6 +180,12 @@ export async function deliverWebReply(params: {
         "auto-reply sent (media)",
       );
     } catch (err) {
+      traceGatewayEvent({
+        traceId: (msg.id ?? msg.from ?? "").slice(0, 8),
+        level: "ERROR",
+        stage: "MEDIA_UPLOAD_FAILED",
+        data: { to: msg.from, mediaUrl, error: err instanceof Error ? err.message : String(err) },
+      });
       whatsappOutboundLog.error(`Failed sending web media to ${msg.from}: ${formatError(err)}`);
       replyLogger.warn({ err, mediaUrl }, "failed to send web media reply");
       if (index === 0) {
