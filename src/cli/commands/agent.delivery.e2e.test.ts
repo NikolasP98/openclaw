@@ -10,18 +10,18 @@ const mocks = vi.hoisted(() => ({
   resolveOutboundTarget: vi.fn(() => ({ ok: true as const, to: "+15551234567" })),
 }));
 
-vi.mock("../channels/plugins/index.js", () => ({
+vi.mock("../index.js", () => ({
   getChannelPlugin: mocks.getChannelPlugin,
   normalizeChannelId: (value: string) => value,
 }));
 
-vi.mock("../infra/outbound/deliver.js", () => ({
+vi.mock("../../infra/outbound/deliver.js", () => ({
   deliverOutboundPayloads: mocks.deliverOutboundPayloads,
 }));
 
-vi.mock("../infra/outbound/targets.js", async () => {
+vi.mock("../../channels/targets.js", async () => {
   const actual = await vi.importActual<typeof import("../../infra/outbound/targets.js")>(
-    "../infra/outbound/targets.js",
+    "../../channels/targets.js",
   );
   return {
     ...actual,

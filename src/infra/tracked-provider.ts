@@ -37,6 +37,13 @@ export interface SessionLedger {
   totalInputTokens: number;
   totalOutputTokens: number;
   totalCalls: number;
+  /** Running total of cache-read tokens across all calls in this session. */
+  totalCacheReadTokens: number;
+  /**
+   * Cache hit-rate: ratio of cache-read tokens to total input tokens (0–1).
+   * 0 when no calls have been recorded yet.
+   */
+  cacheHitRate: number;
 }
 
 // ── Pricing table (cents per 1K tokens) ──────────────────────────────
@@ -50,13 +57,13 @@ const MODEL_PRICING: Record<string, [number, number]> = {
   // OpenAI
   "gpt-4o": [0.25, 1.0],
   "gpt-4o-mini": [0.015, 0.06],
-  "o1": [1.5, 6.0],
+  o1: [1.5, 6.0],
   "o3-mini": [0.11, 0.44],
   // Google
   "gemini-2.5-pro": [0.125, 0.5],
   "gemini-2.5-flash": [0.015, 0.06],
   // Local models — free
-  "ollama": [0, 0],
+  ollama: [0, 0],
 };
 
 /**
@@ -64,8 +71,8 @@ const MODEL_PRICING: Record<string, [number, number]> = {
  */
 export function estimateCostCents(model: string, usage: TokenUsage): number {
   // Try exact match first, then prefix match.
-  const pricing = MODEL_PRICING[model]
-    ?? Object.entries(MODEL_PRICING).find(([key]) => model.includes(key))?.[1];
+  const pricing =
+    MODEL_PRICING[model] ?? Object.entries(MODEL_PRICING).find(([key]) => model.includes(key))?.[1];
 
   if (!pricing) {
     // Unknown model — assume local/free.
@@ -96,6 +103,8 @@ export class SessionCostLedger {
       totalInputTokens: 0,
       totalOutputTokens: 0,
       totalCalls: 0,
+      totalCacheReadTokens: 0,
+      cacheHitRate: 0,
     };
   }
 
@@ -125,6 +134,11 @@ export class SessionCostLedger {
     this.ledger.totalInputTokens += params.usage.inputTokens;
     this.ledger.totalOutputTokens += params.usage.outputTokens;
     this.ledger.totalCalls++;
+    this.ledger.totalCacheReadTokens += params.usage.cacheReadTokens ?? 0;
+    this.ledger.cacheHitRate =
+      this.ledger.totalInputTokens > 0
+        ? this.ledger.totalCacheReadTokens / this.ledger.totalInputTokens
+        : 0;
 
     log.debug(
       `[${this.ledger.sessionId}] ${params.model}: ${params.usage.inputTokens}→${params.usage.outputTokens} tokens, $${(costCents / 100).toFixed(4)}, ${params.latencyMs}ms`,

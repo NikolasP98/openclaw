@@ -1,3 +1,4 @@
+import { traceGatewayEvent } from "../../../logging/chat-trace.js";
 import { applyQueueDropPolicy, shouldSkipQueueItem } from "../../../shared/queue-helpers.js";
 import { FOLLOWUP_QUEUES, getFollowupQueue } from "./state.js";
 import type { FollowupRun, QueueDedupeMode, QueueSettings } from "./types.js";
@@ -44,12 +45,32 @@ export function enqueueFollowupRun(
   queue.lastEnqueuedAt = Date.now();
   queue.lastRun = run.run;
 
+  const prevCount = queue.items.length;
   const shouldEnqueue = applyQueueDropPolicy({
     queue,
     summarize: (item) => item.summaryLine?.trim() || item.prompt.trim(),
   });
   if (!shouldEnqueue) {
+    traceGatewayEvent({
+      traceId: (run.messageId ?? key).slice(0, 8),
+      level: "WARN",
+      stage: "QUEUE_OVERFLOW",
+      data: { key, policy: "drop-new", cap: queue.cap, depth: prevCount },
+    });
     return false;
+  }
+  if (queue.items.length < prevCount) {
+    traceGatewayEvent({
+      traceId: (run.messageId ?? key).slice(0, 8),
+      level: "WARN",
+      stage: "QUEUE_OVERFLOW",
+      data: {
+        key,
+        policy: queue.dropPolicy,
+        cap: queue.cap,
+        dropped: prevCount - queue.items.length,
+      },
+    });
   }
 
   queue.items.push(run);

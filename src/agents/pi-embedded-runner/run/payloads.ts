@@ -83,6 +83,10 @@ export function buildEmbeddedRunPayloads(params: {
   toolResultFormat?: ToolResultFormat;
   suppressToolErrorWarnings?: boolean;
   inlineToolResultsAllowed: boolean;
+  /** When true, only keep the last assistantText (the final answer).
+   *  Intermediate texts between tool calls are LLM "thinking out loud" —
+   *  not meant for end users when block streaming is disabled. */
+  consolidateIntermediateTexts?: boolean;
 }): Array<{
   text?: string;
   mediaUrl?: string;
@@ -205,13 +209,21 @@ export function buildEmbeddedRunPayloads(params: {
     }
     return isRawApiErrorPayload(trimmed);
   };
-  const answerTexts = (
+  const allAnswerTexts = (
     params.assistantTexts.length
       ? params.assistantTexts
       : fallbackAnswerText
         ? [fallbackAnswerText]
         : []
   ).filter((text) => !shouldSuppressRawErrorText(text));
+
+  // When block streaming is disabled, intermediate texts (LLM reasoning between
+  // tool calls like "Let me check..." or "I'll try another approach...") should
+  // not be sent as separate messages. Only keep the last text — the final answer.
+  const answerTexts =
+    params.consolidateIntermediateTexts && allAnswerTexts.length > 1
+      ? [allAnswerTexts[allAnswerTexts.length - 1]]
+      : allAnswerTexts;
 
   let hasUserFacingAssistantReply = false;
   for (const text of answerTexts) {

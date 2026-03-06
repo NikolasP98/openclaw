@@ -1,6 +1,6 @@
 import { lookupContextTokens } from "../../agents/context.js";
 import { DEFAULT_CONTEXT_TOKENS, DEFAULT_MODEL, DEFAULT_PROVIDER } from "../../agents/defaults.js";
-import { resolveConfiguredModelRef } from "../../agents/model-selection.js";
+import { resolveConfiguredModelRef } from "../../agents/models/model-selection.js";
 import { loadConfig } from "../../config/config.js";
 import {
   loadSessionStore,
@@ -13,7 +13,7 @@ import {
   classifySessionKey,
   listAgentsForGateway,
   resolveSessionModelRef,
-} from "../../gateway/session-utils.js";
+} from "../../gateway/sessions/session-utils.js";
 import { buildChannelSummary } from "../../infra/channel-summary.js";
 import { resolveHeartbeatSummaryForAgent } from "../../infra/heartbeat-runner.js";
 import { peekSystemEvents } from "../../infra/system-events.js";
@@ -191,7 +191,17 @@ export async function getStatusSummary(
   const recent = allSessions.slice(0, 10);
   const totalSessions = allSessions.length;
 
+  // Resolve auth token source for status visibility
+  const configAuthToken = cfg.gateway?.auth?.token;
+  const envAuthToken = process.env.MINION_GATEWAY_TOKEN;
+  const authTokenSource: StatusSummary["authTokenSource"] = configAuthToken
+    ? "config"
+    : envAuthToken
+      ? "env"
+      : "none";
+
   const summary: StatusSummary = {
+    authTokenSource,
     linkChannel: linkContext
       ? {
           id: linkContext.plugin.id,

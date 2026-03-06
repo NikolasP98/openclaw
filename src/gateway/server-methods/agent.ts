@@ -43,7 +43,7 @@ import {
   loadSessionEntry,
   pruneLegacyStoreKeys,
   resolveGatewaySessionStoreTarget,
-} from "../session-utils.js";
+} from "../sessions/session-utils.js";
 import { formatForLog } from "../ws-log.js";
 import { waitForAgentJob } from "./agent-job.js";
 import { injectTimestamp, timestampOptsFromConfig } from "./agent-timestamp.js";

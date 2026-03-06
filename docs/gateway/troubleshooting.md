@@ -243,6 +243,39 @@ Related:
 - [/tools/chrome-extension](/tools/chrome-extension)
 - [/tools/browser](/tools/browser)
 
+## Device token mismatch
+
+If CLI clients get "device token mismatch" errors while the gateway is running fine:
+
+```bash
+minion config get gateway.auth.token
+echo $MINION_GATEWAY_TOKEN
+minion gateway status --json | jq .authTokenSource
+```
+
+### Root cause
+
+The gateway and CLI resolve the auth token from two sources with different precedence:
+
+- **Gateway** uses: `gateway.auth.token` (config) ?? `MINION_GATEWAY_TOKEN` (env) — config wins.
+- **CLI client** uses: `MINION_GATEWAY_TOKEN` (env) ?? stored token — env wins.
+
+When both are set to different values, the CLI sends the env token but the gateway expects the config token.
+
+### Fix
+
+Keep only one source. Either:
+
+1. **Remove the config token** — `minion config unset gateway.auth.token` and rely on the env var.
+2. **Remove the env var** — unset `MINION_GATEWAY_TOKEN` from your systemd unit / `.env` file.
+3. **Set both to the same value** — ensure `gateway.auth.token` matches `MINION_GATEWAY_TOKEN`.
+
+The gateway now logs a warning at startup when it detects this divergence. Check `minion logs` for:
+
+```
+gateway.auth.token and MINION_GATEWAY_TOKEN env var are both set but differ.
+```
+
 ## If you upgraded and something suddenly broke
 
 Most post-upgrade breakage is config drift or stricter defaults now being enforced.

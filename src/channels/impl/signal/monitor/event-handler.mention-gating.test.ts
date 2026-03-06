@@ -18,7 +18,7 @@ function getCapturedCtx() {
   return capturedCtx as SignalMsgContext;
 }
 
-vi.mock("../../auto-reply/dispatch.js", async (importOriginal) => {
+vi.mock("../../../../auto-reply/dispatch.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../../auto-reply/dispatch.js")>();
   return buildDispatchInboundCaptureMock(actual, (ctx) => {
     capturedCtx = ctx as SignalMsgContext;

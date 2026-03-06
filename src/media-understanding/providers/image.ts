@@ -1,9 +1,9 @@
 import type { Api, Context, Model } from "@mariozechner/pi-ai";
 import { complete } from "@mariozechner/pi-ai";
-import { minimaxUnderstandImage } from "../../agents/minimax-vlm.js";
-import { getApiKeyForModel, requireApiKey } from "../../agents/model-auth.js";
-import { ensureMinionModelsJson } from "../../agents/models-config.js";
-import { discoverAuthStorage, discoverModels } from "../../agents/pi-model-discovery.js";
+import { minimaxUnderstandImage } from "../../agents/models/minimax-vlm.js";
+import { getApiKeyForModel, requireApiKey } from "../../agents/models/model-auth.js";
+import { ensureMinionModelsJson } from "../../agents/models/models-config.js";
+import { discoverAuthStorage, discoverModels } from "../../agents/models/pi-model-discovery.js";
 import { coerceImageAssistantText } from "../../agents/tools/image-tool.helpers.js";
 import type { ImageDescriptionRequest, ImageDescriptionResult } from "../types.js";
 

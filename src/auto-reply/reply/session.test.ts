@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { buildModelAliasIndex } from "../../agents/model-selection.js";
+import { buildModelAliasIndex } from "../../agents/models/model-selection.js";
 import type { OpenClawConfig } from "../../config/config.js";
 import type { SessionEntry } from "../../config/sessions.js";
 import { saveSessionStore } from "../../config/sessions.js";
@@ -14,11 +14,11 @@ import { persistSessionUsageUpdate } from "./session-usage.js";
 import { initSessionState } from "./session.js";
 
 // Perf: session-store locks are exercised elsewhere; most session tests don't need FS lock files.
-vi.mock("../../agents/session-write-lock.js", () => ({
+vi.mock("../../agents/sessions/session-write-lock.js", () => ({
   acquireSessionWriteLock: async () => ({ release: async () => {} }),
 }));
 
-vi.mock("../../agents/model-catalog.js", () => ({
+vi.mock("../../agents/models/model-catalog.js", () => ({
   loadModelCatalog: vi.fn(async () => [
     { provider: "minimax", id: "m2.1", name: "M2.1" },
     { provider: "openai", id: "gpt-4o-mini", name: "GPT-4o mini" },
@@ -1094,7 +1094,7 @@ describe("initSessionState preserves behavior overrides across /new and /reset",
       sessionId: existingSessionId,
       overrides: { verboseLevel: "on" },
     });
-    const sessionUtils = await import("../../gateway/session-utils.fs.js");
+    const sessionUtils = await import("../../gateway/sessions/session-utils.fs.js");
     const archiveSpy = vi.spyOn(sessionUtils, "archiveSessionTranscripts");
 
     const cfg = {

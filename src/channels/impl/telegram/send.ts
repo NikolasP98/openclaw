@@ -13,6 +13,7 @@ import { isDiagnosticFlagEnabled } from "../../../infra/diagnostic-flags.js";
 import { formatErrorMessage, formatUncaughtError } from "../../../infra/errors.js";
 import { createTelegramRetryRunner } from "../../../infra/retry-policy.js";
 import type { RetryConfig } from "../../../infra/retry.js";
+import { traceChannelEvent } from "../../../logging/chat-trace.js";
 import { redactSensitiveText } from "../../../logging/redact.js";
 import { createSubsystemLogger } from "../../../logging/subsystem.js";
 import { mediaKindFromMime } from "../../../media/constants.js";
@@ -98,6 +99,12 @@ function createTelegramHttpLogger(cfg: ReturnType<typeof loadConfig>) {
       return;
     }
     const detail = redactSensitiveText(formatUncaughtError(err.error ?? err));
+    traceChannelEvent({
+      traceId: "tg_error",
+      level: "WARN",
+      stage: "TELEGRAM_HTTP_ERROR",
+      data: { label, detail: detail.slice(0, 200) },
+    });
     diagLogger.warn(`telegram http error (${label}): ${detail}`);
   };
 }

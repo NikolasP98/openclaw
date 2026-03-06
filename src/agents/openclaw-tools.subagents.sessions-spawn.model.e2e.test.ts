@@ -7,8 +7,8 @@ import {
   resetSessionsSpawnConfigOverride,
   setSessionsSpawnConfigOverride,
 } from "./openclaw-tools.subagents.sessions-spawn.test-harness.js";
-import { resetSubagentRegistryForTests } from "./subagent-registry.js";
-import { SUBAGENT_SPAWN_ACCEPTED_NOTE } from "./subagent-spawn.js";
+import { resetSubagentRegistryForTests } from "./subagents/subagent-registry.js";
+import { SUBAGENT_SPAWN_ACCEPTED_NOTE } from "./subagents/subagent-spawn.js";
 
 const callGatewayMock = getCallGatewayMock();
 type GatewayCall = { method?: string; params?: unknown };

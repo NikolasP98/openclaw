@@ -18,10 +18,11 @@ import {
   createProcessTool,
   type ExecToolDefaults,
   type ProcessToolDefaults,
-} from "./bash-tools.js";
+} from "./bash/bash-tools.js";
 import { listChannelAgentTools } from "./channel-tools.js";
+import { resolveWorkspaceRoot } from "./identity/workspace-dir.js";
 import { resolveImageSanitizationLimits } from "./image-sanitization.js";
-import type { ModelAuthMode } from "./model-auth.js";
+import type { ModelAuthMode } from "./models/model-auth.js";
 import { createOpenClawTools } from "./openclaw-tools.js";
 import { wrapToolWithAbortSignal } from "./pi-tools.abort.js";
 import { wrapToolWithBeforeToolCallHook } from "./pi-tools.before-tool-call.js";
@@ -46,7 +47,7 @@ import {
 import { cleanToolSchemaForGemini, normalizeToolParameters } from "./pi-tools.schema.js";
 import type { AnyAgentTool } from "./pi-tools.types.js";
 import type { SandboxContext } from "./sandbox.js";
-import { getSubagentDepthFromSessionStore } from "./subagent-depth.js";
+import { getSubagentDepthFromSessionStore } from "./subagents/subagent-depth.js";
 import {
   applyToolPolicyPipeline,
   buildDefaultToolPolicyPipelineSteps,
@@ -57,7 +58,6 @@ import {
   mergeAlsoAllowPolicy,
   resolveToolProfilePolicy,
 } from "./tool-policy.js";
-import { resolveWorkspaceRoot } from "./workspace-dir.js";
 
 function isOpenAIProvider(provider?: string) {
   const normalized = provider?.trim().toLowerCase();
@@ -161,7 +161,7 @@ export const __testing = {
   assertRequiredParams,
 } as const;
 
-export function createOpenClawCodingTools(options?: {
+export async function createOpenClawCodingTools(options?: {
   exec?: ExecToolDefaults & ProcessToolDefaults;
   messageProvider?: string;
   agentAccountId?: string;
@@ -217,7 +217,7 @@ export function createOpenClawCodingTools(options?: {
   senderIsOwner?: boolean;
   /** Session-scoped env overrides for the exec tool (e.g. skill auth tokens). */
   skillEnvOverrides?: Record<string, string>;
-}): AnyAgentTool[] {
+}): Promise<AnyAgentTool[]> {
   const execToolName = "exec";
   const sandbox = options?.sandbox?.enabled ? options.sandbox : undefined;
   const {
@@ -422,7 +422,7 @@ export function createOpenClawCodingTools(options?: {
     processTool as unknown as AnyAgentTool,
     // Channel docking: include channel-defined agent tools (login, etc.).
     ...listChannelAgentTools({ cfg: options?.config }),
-    ...createOpenClawTools({
+    ...(await createOpenClawTools({
       sandboxBrowserBridgeUrl: sandbox?.browser?.bridgeUrl,
       allowHostBrowserControl: sandbox ? sandbox.browserAllowHostControl : true,
       agentSessionKey: options?.sessionKey,
@@ -458,7 +458,7 @@ export function createOpenClawCodingTools(options?: {
       requireExplicitMessageTarget: options?.requireExplicitMessageTarget,
       disableMessageTool: options?.disableMessageTool,
       requesterAgentIdOverride: agentId,
-    }),
+    })),
   ];
   // Security: treat unknown/undefined as unauthorized (opt-in, not opt-out)
   const senderIsOwner = options?.senderIsOwner === true;

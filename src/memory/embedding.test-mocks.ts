@@ -25,7 +25,7 @@ export function resetEmbeddingMocks(): void {
   hoisted.embedQuery.mockImplementation(async () => [0, 1, 0]);
 }
 
-vi.mock("./embeddings.js", () => ({
+vi.mock("./embedding/embeddings.js", () => ({
   createEmbeddingProvider: async () => ({
     requestedProvider: "openai",
     provider: {

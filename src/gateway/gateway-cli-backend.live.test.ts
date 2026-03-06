@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { parseModelRef } from "../agents/model-selection.js";
+import { parseModelRef } from "../agents/models/model-selection.js";
 import { loadConfig } from "../config/config.js";
 import { isTruthyEnvValue } from "../infra/env.js";
 import { GATEWAY_CLIENT_NAMES } from "../shared/message-channel.js";

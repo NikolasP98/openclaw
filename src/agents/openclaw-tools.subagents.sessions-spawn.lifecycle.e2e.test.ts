@@ -5,7 +5,7 @@ import {
   getCallGatewayMock,
   resetSessionsSpawnConfigOverride,
 } from "./openclaw-tools.subagents.sessions-spawn.test-harness.js";
-import { resetSubagentRegistryForTests } from "./subagent-registry.js";
+import { resetSubagentRegistryForTests } from "./subagents/subagent-registry.js";
 
 vi.mock("./pi-embedded.js", () => ({
   isEmbeddedPiRunActive: () => false,
@@ -22,7 +22,9 @@ type CreateOpenClawToolsOpts = Parameters<CreateOpenClawTools>[0];
 async function getSessionsSpawnTool(opts: CreateOpenClawToolsOpts) {
   // Dynamic import: ensure harness mocks are installed before tool modules load.
   const { createOpenClawTools } = await import("./openclaw-tools.js");
-  const tool = createOpenClawTools(opts).find((candidate) => candidate.name === "sessions_spawn");
+  const tool = (await createOpenClawTools(opts)).find(
+    (candidate) => candidate.name === "sessions_spawn",
+  );
   if (!tool) {
     throw new Error("missing sessions_spawn tool");
   }

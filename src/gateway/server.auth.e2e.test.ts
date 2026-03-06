@@ -2,9 +2,9 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi 
 import { WebSocket } from "ws";
 import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../shared/message-channel.js";
 import { withEnvAsync } from "../test-support/env.js";
-import { buildDeviceAuthPayload } from "./device-auth.js";
+import { buildDeviceAuthPayload } from "./auth/device-auth.js";
 import { PROTOCOL_VERSION } from "./protocol/index.js";
-import { getHandshakeTimeoutMs } from "./server-constants.js";
+import { getHandshakeTimeoutMs } from "./server-core/server-constants.js";
 import {
   connectReq,
   getFreePort,
@@ -871,7 +871,7 @@ describe("gateway server auth/connect", () => {
     const { mkdtemp } = await import("node:fs/promises");
     const { tmpdir } = await import("node:os");
     const { join } = await import("node:path");
-    const { buildDeviceAuthPayload } = await import("./device-auth.js");
+    const { buildDeviceAuthPayload } = await import("./auth/device-auth.js");
     const { loadOrCreateDeviceIdentity, publicKeyRawBase64UrlFromPem, signDevicePayload } =
       await import("../infra/device-identity.js");
     const { getPairedDevice } = await import("../infra/device-pairing.js");

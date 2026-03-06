@@ -17,6 +17,55 @@ function buildPayloads(overrides: Partial<BuildPayloadParams> = {}) {
   });
 }
 
+describe("buildEmbeddedRunPayloads consolidateIntermediateTexts", () => {
+  it("sends all texts when consolidation is disabled", () => {
+    const payloads = buildPayloads({
+      assistantTexts: [
+        "Let me check that...",
+        "I'll try another approach...",
+        "Here is your answer.",
+      ],
+    });
+    expect(payloads).toHaveLength(3);
+  });
+
+  it("only sends last text when consolidation is enabled", () => {
+    const payloads = buildPayloads({
+      assistantTexts: [
+        "Let me check that...",
+        "I'll try another approach...",
+        "Here is your answer.",
+      ],
+      consolidateIntermediateTexts: true,
+    });
+    expect(payloads).toHaveLength(1);
+    expect(payloads[0]?.text).toBe("Here is your answer.");
+  });
+
+  it("sends single text unchanged when consolidation is enabled", () => {
+    const payloads = buildPayloads({
+      assistantTexts: ["Here is your answer."],
+      consolidateIntermediateTexts: true,
+    });
+    expect(payloads).toHaveLength(1);
+    expect(payloads[0]?.text).toBe("Here is your answer.");
+  });
+
+  it("preserves error payloads alongside consolidated text", () => {
+    const payloads = buildPayloads({
+      assistantTexts: ["Intermediate thought", "Final answer"],
+      consolidateIntermediateTexts: true,
+      lastToolError: { toolName: "write", error: "failed", mutatingAction: true },
+    });
+    // Should have the consolidated text + the error warning
+    const texts = payloads.filter((p) => !p.isError);
+    const errors = payloads.filter((p) => p.isError);
+    expect(texts).toHaveLength(1);
+    expect(texts[0]?.text).toBe("Final answer");
+    expect(errors).toHaveLength(1);
+  });
+});
+
 describe("buildEmbeddedRunPayloads tool-error warnings", () => {
   it("suppresses exec tool errors when verbose mode is off", () => {
     const payloads = buildPayloads({

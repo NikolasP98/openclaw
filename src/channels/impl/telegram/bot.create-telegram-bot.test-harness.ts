@@ -20,7 +20,7 @@ export function getLoadWebMediaMock(): AnyMock {
   return loadWebMedia;
 }
 
-vi.mock("../web/media.js", () => ({
+vi.mock("../../../web/media.js", () => ({
   loadWebMedia,
 }));
 
@@ -31,7 +31,7 @@ const { loadConfig } = vi.hoisted((): { loadConfig: AnyMock } => ({
 export function getLoadConfigMock(): AnyMock {
   return loadConfig;
 }
-vi.mock("../config/config.js", async (importOriginal) => {
+vi.mock("../../../hooks/config.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../config/config.js")>();
   return {
     ...actual,
@@ -39,7 +39,7 @@ vi.mock("../config/config.js", async (importOriginal) => {
   };
 });
 
-vi.mock("../config/sessions.js", async (importOriginal) => {
+vi.mock("../../../config/sessions.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../config/sessions.js")>();
   return {
     ...actual,
@@ -68,7 +68,7 @@ export function getUpsertChannelPairingRequestMock(): AnyAsyncMock {
   return upsertChannelPairingRequest;
 }
 
-vi.mock("../pairing/pairing-store.js", () => ({
+vi.mock("../../../pairing/pairing-store.js", () => ({
   readChannelAllowFromStore,
   upsertChannelPairingRequest,
 }));
@@ -78,7 +78,7 @@ const skillCommandsHoisted = vi.hoisted(() => ({
 }));
 export const listSkillCommandsForAgents = skillCommandsHoisted.listSkillCommandsForAgents;
 
-vi.mock("../auto-reply/skill-commands.js", () => ({
+vi.mock("../../../auto-reply/skill-commands.js", () => ({
   listSkillCommandsForAgents,
 }));
 
@@ -87,7 +87,7 @@ const systemEventsHoisted = vi.hoisted(() => ({
 }));
 export const enqueueSystemEventSpy: AnyMock = systemEventsHoisted.enqueueSystemEventSpy;
 
-vi.mock("../infra/system-events.js", () => ({
+vi.mock("../../../infra/system-events.js", () => ({
   enqueueSystemEvent: enqueueSystemEventSpy,
 }));
 
@@ -193,7 +193,7 @@ export const replySpy: MockFn<
   return undefined;
 });
 
-vi.mock("../auto-reply/reply.js", () => ({
+vi.mock("../../../auto-reply/reply.js", () => ({
   getReplyFromConfig: replySpy,
   __replySpy: replySpy,
 }));

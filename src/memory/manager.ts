@@ -6,6 +6,7 @@ import { resolveAgentDir, resolveAgentWorkspaceDir } from "../agents/agent-scope
 import type { ResolvedMemorySearchConfig } from "../agents/memory-search.js";
 import { resolveMemorySearchConfig } from "../agents/memory-search.js";
 import type { OpenClawConfig } from "../config/config.js";
+import { traceGatewayEvent } from "../logging/chat-trace.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import {
   createEmbeddingProvider,
@@ -14,12 +15,12 @@ import {
   type GeminiEmbeddingClient,
   type OpenAiEmbeddingClient,
   type VoyageEmbeddingClient,
-} from "./embeddings.js";
-import { bm25RankToScore, buildFtsQuery, mergeHybridResults } from "./hybrid.js";
+} from "./embedding/embeddings.js";
 import { isMemoryPath, normalizeExtraMemoryPaths } from "./internal.js";
 import { MemoryManagerEmbeddingOps } from "./manager-embedding-ops.js";
-import { searchKeyword, searchVector } from "./manager-search.js";
-import { extractKeywords } from "./query-expansion.js";
+import { bm25RankToScore, buildFtsQuery, mergeHybridResults } from "./search/hybrid.js";
+import { searchKeyword, searchVector } from "./search/manager-search.js";
+import { extractKeywords } from "./search/query-expansion.js";
 import type {
   MemoryEmbeddingProbeResult,
   MemoryProviderStatus,
@@ -193,6 +194,12 @@ export class MemoryIndexManager extends MemoryManagerEmbeddingOps implements Mem
       return;
     }
     void this.sync({ reason: "session-start" }).catch((err) => {
+      traceGatewayEvent({
+        traceId: "mem_sync",
+        level: "WARN",
+        stage: "MEMORY_SYNC_FAILED",
+        data: { reason: "session-start", error: String(err).slice(0, 200) },
+      });
       log.warn(`memory sync failed (session-start): ${String(err)}`);
     });
     if (key) {
@@ -211,6 +218,12 @@ export class MemoryIndexManager extends MemoryManagerEmbeddingOps implements Mem
     void this.warmSession(opts?.sessionKey);
     if (this.settings.sync.onSearch && (this.dirty || this.sessionsDirty)) {
       void this.sync({ reason: "search" }).catch((err) => {
+        traceGatewayEvent({
+          traceId: "mem_sync",
+          level: "WARN",
+          stage: "MEMORY_SYNC_FAILED",
+          data: { reason: "search", error: String(err).slice(0, 200) },
+        });
         log.warn(`memory sync failed (search): ${String(err)}`);
       });
     }

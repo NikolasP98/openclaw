@@ -110,7 +110,7 @@ describe("tools.fs.workspaceOnly", () => {
     await withUnsafeMountedSandboxHarness(async ({ sandboxRoot, agentRoot, sandbox }) => {
       await fs.writeFile(path.join(agentRoot, "secret.txt"), "shh", "utf8");
 
-      const tools = createOpenClawCodingTools({ sandbox, workspaceDir: sandboxRoot });
+      const tools = await createOpenClawCodingTools({ sandbox, workspaceDir: sandboxRoot });
       const readTool = tools.find((tool) => tool.name === "read");
       const writeTool = tools.find((tool) => tool.name === "write");
       expect(readTool).toBeDefined();
@@ -129,7 +129,11 @@ describe("tools.fs.workspaceOnly", () => {
       await fs.writeFile(path.join(agentRoot, "secret.txt"), "shh", "utf8");
 
       const cfg = { tools: { fs: { workspaceOnly: true } } } as unknown as OpenClawConfig;
-      const tools = createOpenClawCodingTools({ sandbox, workspaceDir: sandboxRoot, config: cfg });
+      const tools = await createOpenClawCodingTools({
+        sandbox,
+        workspaceDir: sandboxRoot,
+        config: cfg,
+      });
       const readTool = tools.find((tool) => tool.name === "read");
       const writeTool = tools.find((tool) => tool.name === "write");
       const editTool = tools.find((tool) => tool.name === "edit");

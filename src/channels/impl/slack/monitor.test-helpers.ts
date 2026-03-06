@@ -148,7 +148,7 @@ export function resetSlackTestState(config: Record<string, unknown> = defaultSla
   getSlackHandlers()?.clear();
 }
 
-vi.mock("../config/config.js", async (importOriginal) => {
+vi.mock("../../../hooks/config.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../config/config.js")>();
   return {
     ...actual,
@@ -156,7 +156,7 @@ vi.mock("../config/config.js", async (importOriginal) => {
   };
 });
 
-vi.mock("../auto-reply/reply.js", () => ({
+vi.mock("../../../auto-reply/reply.js", () => ({
   getReplyFromConfig: (...args: unknown[]) => slackTestState.replyMock(...args),
 }));
 
@@ -174,13 +174,13 @@ vi.mock("./send.js", () => ({
   sendMessageSlack: (...args: unknown[]) => slackTestState.sendMock(...args),
 }));
 
-vi.mock("../pairing/pairing-store.js", () => ({
+vi.mock("../../../pairing/pairing-store.js", () => ({
   readChannelAllowFromStore: (...args: unknown[]) => slackTestState.readAllowFromStoreMock(...args),
   upsertChannelPairingRequest: (...args: unknown[]) =>
     slackTestState.upsertPairingRequestMock(...args),
 }));
 
-vi.mock("../config/sessions.js", () => ({
+vi.mock("../../../config/sessions.js", () => ({
   resolveStorePath: vi.fn(() => "/tmp/minion-sessions.json"),
   updateLastRoute: (...args: unknown[]) => slackTestState.updateLastRouteMock(...args),
   resolveSessionKey: vi.fn(),

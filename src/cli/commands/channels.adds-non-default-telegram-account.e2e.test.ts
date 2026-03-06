@@ -15,7 +15,7 @@ const offsetMocks = vi.hoisted(() => ({
   deleteTelegramUpdateOffset: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../config/config.js", async (importOriginal) => {
+vi.mock("../../hooks/config.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../config/config.js")>();
   return {
     ...actual,
@@ -24,7 +24,7 @@ vi.mock("../config/config.js", async (importOriginal) => {
   };
 });
 
-vi.mock("../agents/auth-profiles.js", async (importOriginal) => {
+vi.mock("../../agents/auth-profiles.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../agents/auth-profiles.js")>();
   return {
     ...actual,
@@ -32,7 +32,7 @@ vi.mock("../agents/auth-profiles.js", async (importOriginal) => {
   };
 });
 
-vi.mock("../channels/impl/telegram/update-offset-store.js", async (importOriginal) => {
+vi.mock("../../channels/impl/telegram/update-offset-store.js", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("../../channels/impl/telegram/update-offset-store.js")>();
   return {

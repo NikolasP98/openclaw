@@ -7,7 +7,7 @@ import { installSkill } from "./skills-install.js";
 const runCommandWithTimeoutMock = vi.fn();
 const scanDirectoryWithSummaryMock = vi.fn();
 
-vi.mock("../process/exec.js", () => ({
+vi.mock("../auto-reply/reply/exec.js", () => ({
   runCommandWithTimeout: (...args: unknown[]) => runCommandWithTimeoutMock(...args),
 }));
 

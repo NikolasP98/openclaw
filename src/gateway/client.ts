@@ -20,7 +20,7 @@ import {
   type GatewayClientMode,
   type GatewayClientName,
 } from "../shared/message-channel.js";
-import { buildDeviceAuthPayload } from "./device-auth.js";
+import { buildDeviceAuthPayload } from "./auth/device-auth.js";
 import {
   type ConnectParams,
   type EventFrame,

@@ -11,22 +11,22 @@ const mocks = vi.hoisted(() => ({
   note: vi.fn(),
 }));
 
-vi.mock("../config/paths.js", () => ({
+vi.mock("../../config/paths.js", () => ({
   resolveGatewayPort: mocks.resolveGatewayPort,
   resolveIsNixMode: mocks.resolveIsNixMode,
 }));
 
-vi.mock("../daemon/inspect.js", () => ({
+vi.mock("../../platform/daemon/inspect.js", () => ({
   findExtraGatewayServices: vi.fn().mockResolvedValue([]),
   renderGatewayServiceCleanupHints: vi.fn().mockReturnValue([]),
 }));
 
-vi.mock("../daemon/runtime-paths.js", () => ({
+vi.mock("../../platform/daemon/runtime-paths.js", () => ({
   renderSystemNodeWarning: vi.fn().mockReturnValue(undefined),
   resolveSystemNodeInfo: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock("../daemon/service-audit.js", () => ({
+vi.mock("../../platform/daemon/service-audit.js", () => ({
   auditGatewayServiceConfig: mocks.auditGatewayServiceConfig,
   needsNodeRuntimeMigration: vi.fn(() => false),
   SERVICE_AUDIT_CODES: {
@@ -34,14 +34,14 @@ vi.mock("../daemon/service-audit.js", () => ({
   },
 }));
 
-vi.mock("../daemon/service.js", () => ({
+vi.mock("../../platform/cron/service.js", () => ({
   resolveGatewayService: () => ({
     readCommand: mocks.readCommand,
     install: mocks.install,
   }),
 }));
 
-vi.mock("../terminal/note.js", () => ({
+vi.mock("../../terminal/note.js", () => ({
   note: mocks.note,
 }));
 

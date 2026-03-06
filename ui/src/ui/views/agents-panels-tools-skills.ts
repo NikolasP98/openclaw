@@ -21,12 +21,15 @@ export function renderAgentTools(params: {
   agentId: string;
   configForm: Record<string, unknown> | null;
   configLoading: boolean;
-  configSaving: boolean;
-  configDirty: boolean;
-  onProfileChange: (agentId: string, profile: string | null, clearAllow: boolean) => void;
-  onOverridesChange: (agentId: string, alsoAllow: string[], deny: string[]) => void;
+  onOverridesSave: (
+    agentId: string,
+    overrides: {
+      profile?: string | null;
+      alsoAllow?: string[] | null;
+      deny?: string[] | null;
+    },
+  ) => Promise<void>;
   onConfigReload: () => void;
-  onConfigSave: () => void;
 }) {
   const config = resolveAgentConfig(params.configForm, params.agentId);
   const agentTools = config.entry?.tools ?? {};
@@ -39,8 +42,7 @@ export function renderAgentTools(params: {
       : "default";
   const hasAgentAllow = Array.isArray(agentTools.allow) && agentTools.allow.length > 0;
   const hasGlobalAllow = Array.isArray(globalTools.allow) && globalTools.allow.length > 0;
-  const editable =
-    Boolean(params.configForm) && !params.configLoading && !params.configSaving && !hasAgentAllow;
+  const editable = Boolean(params.configForm) && !params.configLoading && !hasAgentAllow;
   const alsoAllow = hasAgentAllow
     ? []
     : Array.isArray(agentTools.alsoAllow)
@@ -65,38 +67,17 @@ export function renderAgentTools(params: {
   };
   const enabledCount = toolIds.filter((toolId) => resolveAllowed(toolId).allowed).length;
 
-  const updateTool = (toolId: string, nextEnabled: boolean) => {
+  const computeOverrides = (changes: Array<{ toolId: string; enabled: boolean }>) => {
     const nextAllow = new Set(
       alsoAllow.map((entry) => normalizeToolName(entry)).filter((entry) => entry.length > 0),
     );
     const nextDeny = new Set(
       deny.map((entry) => normalizeToolName(entry)).filter((entry) => entry.length > 0),
     );
-    const baseAllowed = resolveAllowed(toolId).baseAllowed;
-    const normalized = normalizeToolName(toolId);
-    if (nextEnabled) {
-      nextDeny.delete(normalized);
-      if (!baseAllowed) {
-        nextAllow.add(normalized);
-      }
-    } else {
-      nextAllow.delete(normalized);
-      nextDeny.add(normalized);
-    }
-    params.onOverridesChange(params.agentId, [...nextAllow], [...nextDeny]);
-  };
-
-  const updateAll = (nextEnabled: boolean) => {
-    const nextAllow = new Set(
-      alsoAllow.map((entry) => normalizeToolName(entry)).filter((entry) => entry.length > 0),
-    );
-    const nextDeny = new Set(
-      deny.map((entry) => normalizeToolName(entry)).filter((entry) => entry.length > 0),
-    );
-    for (const toolId of toolIds) {
+    for (const { toolId, enabled } of changes) {
       const baseAllowed = resolveAllowed(toolId).baseAllowed;
       const normalized = normalizeToolName(toolId);
-      if (nextEnabled) {
+      if (enabled) {
         nextDeny.delete(normalized);
         if (!baseAllowed) {
           nextAllow.add(normalized);
@@ -106,7 +87,22 @@ export function renderAgentTools(params: {
         nextDeny.add(normalized);
       }
     }
-    params.onOverridesChange(params.agentId, [...nextAllow], [...nextDeny]);
+    return {
+      alsoAllow: nextAllow.size > 0 ? [...nextAllow] : null,
+      deny: nextDeny.size > 0 ? [...nextDeny] : null,
+    };
+  };
+
+  const updateTool = (toolId: string, nextEnabled: boolean) => {
+    void params.onOverridesSave(
+      params.agentId,
+      computeOverrides([{ toolId, enabled: nextEnabled }]),
+    );
+  };
+
+  const updateAll = (nextEnabled: boolean) => {
+    const changes = toolIds.map((toolId) => ({ toolId, enabled: nextEnabled }));
+    void params.onOverridesSave(params.agentId, computeOverrides(changes));
   };
 
   return html`
@@ -128,13 +124,6 @@ export function renderAgentTools(params: {
           </button>
           <button class="btn btn--sm" ?disabled=${params.configLoading} @click=${params.onConfigReload}>
             Reload Config
-          </button>
-          <button
-            class="btn btn--sm primary"
-            ?disabled=${params.configSaving || !params.configDirty}
-            @click=${params.onConfigSave}
-          >
-            ${params.configSaving ? "Saving…" : "Save"}
           </button>
         </div>
       </div>
@@ -176,16 +165,6 @@ export function renderAgentTools(params: {
           <div class="label">Source</div>
           <div>${profileSource}</div>
         </div>
-        ${
-          params.configDirty
-            ? html`
-                <div class="agent-kv">
-                  <div class="label">Status</div>
-                  <div class="mono">unsaved</div>
-                </div>
-              `
-            : nothing
-        }
       </div>
 
       <div class="agent-tools-presets" style="margin-top: 16px;">
@@ -196,7 +175,12 @@ export function renderAgentTools(params: {
               <button
                 class="btn btn--sm ${profile === option.id ? "active" : ""}"
                 ?disabled=${!editable}
-                @click=${() => params.onProfileChange(params.agentId, option.id, true)}
+                @click=${() =>
+                  void params.onOverridesSave(params.agentId, {
+                    profile: option.id,
+                    alsoAllow: null,
+                    deny: null,
+                  })}
               >
                 ${option.label}
               </button>
@@ -205,7 +189,7 @@ export function renderAgentTools(params: {
           <button
             class="btn btn--sm"
             ?disabled=${!editable}
-            @click=${() => params.onProfileChange(params.agentId, null, false)}
+            @click=${() => void params.onOverridesSave(params.agentId, { profile: null })}
           >
             Inherit
           </button>
@@ -257,8 +241,6 @@ export function renderAgentSkills(params: {
   activeAgentId: string | null;
   configForm: Record<string, unknown> | null;
   configLoading: boolean;
-  configSaving: boolean;
-  configDirty: boolean;
   filter: string;
   onFilterChange: (next: string) => void;
   onRefresh: () => void;
@@ -266,9 +248,8 @@ export function renderAgentSkills(params: {
   onClear: (agentId: string) => void;
   onDisableAll: (agentId: string) => void;
   onConfigReload: () => void;
-  onConfigSave: () => void;
 }) {
-  const editable = Boolean(params.configForm) && !params.configLoading && !params.configSaving;
+  const editable = Boolean(params.configForm) && !params.configLoading;
   const config = resolveAgentConfig(params.configForm, params.agentId);
   const allowlist = Array.isArray(config.entry?.skills) ? config.entry?.skills : undefined;
   const allowSet = new Set((allowlist ?? []).map((name) => name.trim()).filter(Boolean));
@@ -317,13 +298,6 @@ export function renderAgentSkills(params: {
           </button>
           <button class="btn btn--sm" ?disabled=${params.loading} @click=${params.onRefresh}>
             ${params.loading ? "Loading…" : "Refresh"}
-          </button>
-          <button
-            class="btn btn--sm primary"
-            ?disabled=${params.configSaving || !params.configDirty}
-            @click=${params.onConfigSave}
-          >
-            ${params.configSaving ? "Saving…" : "Save"}
           </button>
         </div>
       </div>

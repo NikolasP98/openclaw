@@ -45,6 +45,8 @@ export interface PendingOAuthFlow {
   expiresAt: number;
   /** OAuth authorization URL sent to user */
   authUrl: string;
+  /** Auth provider identifier (e.g. "google") */
+  providerId?: string;
 }
 
 /**
@@ -199,4 +201,19 @@ export function getScopesForServices(services: string[]): string[] {
     }
   }
   return Array.from(scopes);
+}
+
+/**
+ * Reverse-map a granted scope string back to service names.
+ * A service counts as granted if at least one of its scopes was approved.
+ */
+export function getServicesFromScopes(grantedScope: string): string[] {
+  const granted = new Set(grantedScope.split(" "));
+  const services: string[] = [];
+  for (const [service, scopes] of Object.entries(GOOGLE_SERVICE_SCOPES)) {
+    if (scopes.some((s) => granted.has(s))) {
+      services.push(service);
+    }
+  }
+  return services;
 }

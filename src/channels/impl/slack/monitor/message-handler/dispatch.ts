@@ -1,4 +1,4 @@
-import { resolveHumanDelayConfig } from "../../../../../agents/identity.js";
+import { resolveHumanDelayConfig } from "../../../../../agents/identity/identity.js";
 import { dispatchInboundMessage } from "../../../../../auto-reply/dispatch.js";
 import { clearHistoryEntriesIfEnabled } from "../../../../../auto-reply/reply/history.js";
 import { createReplyDispatcherWithTyping } from "../../../../../auto-reply/reply/reply-dispatcher.js";

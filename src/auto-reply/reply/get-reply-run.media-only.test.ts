@@ -23,7 +23,7 @@ vi.mock("../../globals.js", () => ({
   logVerbose: vi.fn(),
 }));
 
-vi.mock("../../process/command-queue.js", () => ({
+vi.mock("../../platform/process/command-queue.js", () => ({
   clearCommandLane: vi.fn().mockReturnValue(0),
   getQueueSize: vi.fn().mockReturnValue(0),
 }));

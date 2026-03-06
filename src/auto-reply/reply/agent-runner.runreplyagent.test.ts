@@ -41,7 +41,7 @@ async function getRunReplyAgent() {
   return await runReplyAgentPromise;
 }
 
-vi.mock("../../agents/model-fallback.js", () => ({
+vi.mock("../../agents/models/model-fallback.js", () => ({
   runWithModelFallback: async ({
     provider,
     model,

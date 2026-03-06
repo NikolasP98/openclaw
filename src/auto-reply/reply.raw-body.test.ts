@@ -19,7 +19,7 @@ vi.mock("../agents/pi-embedded.js", () => ({
   isEmbeddedPiRunStreaming: vi.fn().mockReturnValue(false),
 }));
 
-vi.mock("../agents/model-catalog.js", () => ({
+vi.mock("../agents/models/model-catalog.js", () => ({
   loadModelCatalog: agentMocks.loadModelCatalog,
 }));
 

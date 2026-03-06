@@ -76,18 +76,18 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-vi.mock("../../agents/agent-paths.js", () => ({
+vi.mock("../../../agents/agent-paths.js", () => ({
   resolveOpenClawAgentDir: mocks.resolveOpenClawAgentDir,
 }));
 
-vi.mock("../../agents/agent-scope.js", () => ({
+vi.mock("../../../agents/agent-scope.js", () => ({
   resolveAgentDir: mocks.resolveAgentDir,
   resolveAgentModelPrimary: mocks.resolveAgentModelPrimary,
   resolveAgentModelFallbacksOverride: mocks.resolveAgentModelFallbacksOverride,
   listAgentIds: mocks.listAgentIds,
 }));
 
-vi.mock("../../agents/auth-profiles.js", async (importOriginal) => {
+vi.mock("../../../agents/auth-profiles.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../agents/auth-profiles.js")>();
   return {
     ...actual,
@@ -98,17 +98,17 @@ vi.mock("../../agents/auth-profiles.js", async (importOriginal) => {
   };
 });
 
-vi.mock("../../agents/model-auth.js", () => ({
+vi.mock("../../../agents/models/model-auth.js", () => ({
   resolveEnvApiKey: mocks.resolveEnvApiKey,
   getCustomProviderApiKey: mocks.getCustomProviderApiKey,
 }));
 
-vi.mock("../../infra/shell-env.js", () => ({
+vi.mock("../../../infra/shell-env.js", () => ({
   getShellEnvAppliedKeys: mocks.getShellEnvAppliedKeys,
   shouldEnableShellEnvFallback: mocks.shouldEnableShellEnvFallback,
 }));
 
-vi.mock("../../config/config.js", async (importOriginal) => {
+vi.mock("../../../hooks/config.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../config/config.js")>();
   return {
     ...actual,

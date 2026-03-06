@@ -5,7 +5,7 @@ import {
   resolveAgentWorkspaceDir,
 } from "../../agents/agent-scope.js";
 import { upsertAuthProfile } from "../../agents/auth-profiles.js";
-import { resolveDefaultAgentWorkspaceDir } from "../../agents/workspace.js";
+import { resolveDefaultAgentWorkspaceDir } from "../../agents/identity/workspace.js";
 import { enablePluginInConfig } from "../../plugins/enable.js";
 import { resolvePluginProviders } from "../../plugins/providers.js";
 import type { ApplyAuthChoiceParams, ApplyAuthChoiceResult } from "./auth-choice.apply.js";

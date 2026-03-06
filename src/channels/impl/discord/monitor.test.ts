@@ -771,11 +771,11 @@ const { enqueueSystemEventSpy, resolveAgentRouteMock } = vi.hoisted(() => ({
   })),
 }));
 
-vi.mock("../infra/system-events.js", () => ({
+vi.mock("./monitor/system-events.js", () => ({
   enqueueSystemEvent: enqueueSystemEventSpy,
 }));
 
-vi.mock("../routing/resolve-route.js", () => ({
+vi.mock("../../../routing/resolve-route.js", () => ({
   resolveAgentRoute: resolveAgentRouteMock,
 }));
 

@@ -175,15 +175,15 @@ vi.mock("@clack/prompts", () => ({
   select,
 }));
 
-vi.mock("../agents/skills-status.js", () => ({
+vi.mock("../../agents/skills-status.js", () => ({
   buildWorkspaceSkillStatus: () => ({ skills: [] }),
 }));
 
-vi.mock("../plugins/loader.js", () => ({
+vi.mock("../../hooks/loader.js", () => ({
   loadOpenClawPlugins: () => ({ plugins: [], diagnostics: [] }),
 }));
 
-vi.mock("../config/config.js", async (importOriginal) => {
+vi.mock("../../hooks/config.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../config/config.js")>();
   return {
     ...actual,
@@ -195,21 +195,21 @@ vi.mock("../config/config.js", async (importOriginal) => {
   };
 });
 
-vi.mock("../daemon/legacy.js", () => ({
+vi.mock("../../config/legacy.js", () => ({
   findLegacyGatewayServices,
   uninstallLegacyGatewayServices,
 }));
 
-vi.mock("../daemon/inspect.js", () => ({
+vi.mock("../../platform/daemon/inspect.js", () => ({
   findExtraGatewayServices,
   renderGatewayServiceCleanupHints,
 }));
 
-vi.mock("../daemon/program-args.js", () => ({
+vi.mock("../../platform/daemon/program-args.js", () => ({
   resolveGatewayProgramArguments,
 }));
 
-vi.mock("../gateway/call.js", async (importOriginal) => {
+vi.mock("../../gateway/call.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../gateway/call.js")>();
   return {
     ...actual,
@@ -217,20 +217,20 @@ vi.mock("../gateway/call.js", async (importOriginal) => {
   };
 });
 
-vi.mock("../process/exec.js", () => ({
+vi.mock("../../auto-reply/reply/exec.js", () => ({
   runExec,
   runCommandWithTimeout,
 }));
 
-vi.mock("../infra/openclaw-root.js", () => ({
+vi.mock("../../infra/openclaw-root.js", () => ({
   resolveOpenClawPackageRoot,
 }));
 
-vi.mock("../infra/update-runner.js", () => ({
+vi.mock("../../infra/update-runner.js", () => ({
   runGatewayUpdate,
 }));
 
-vi.mock("../agents/auth-profiles.js", async (importOriginal) => {
+vi.mock("../../agents/auth-profiles.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../agents/auth-profiles.js")>();
   return {
     ...actual,
@@ -238,7 +238,7 @@ vi.mock("../agents/auth-profiles.js", async (importOriginal) => {
   };
 });
 
-vi.mock("../daemon/service.js", () => ({
+vi.mock("../../platform/cron/service.js", () => ({
   resolveGatewayService: () => ({
     label: "LaunchAgent",
     loadedText: "loaded",
@@ -253,16 +253,16 @@ vi.mock("../daemon/service.js", () => ({
   }),
 }));
 
-vi.mock("../pairing/pairing-store.js", () => ({
+vi.mock("../../pairing/pairing-store.js", () => ({
   readChannelAllowFromStore: vi.fn().mockResolvedValue([]),
   upsertChannelPairingRequest: vi.fn().mockResolvedValue({ code: "000000", created: false }),
 }));
 
-vi.mock("../channels/impl/telegram/token.js", () => ({
+vi.mock("../../channels/impl/slack/token.js", () => ({
   resolveTelegramToken: vi.fn(() => ({ token: "", source: "none" })),
 }));
 
-vi.mock("../runtime.js", () => ({
+vi.mock("../../runtime.js", () => ({
   defaultRuntime: {
     log: () => {},
     error: () => {},
@@ -272,7 +272,7 @@ vi.mock("../runtime.js", () => ({
   },
 }));
 
-vi.mock("../utils.js", async (importOriginal) => {
+vi.mock("../../utils.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../utils.js")>();
   return {
     ...actual,

@@ -49,7 +49,7 @@ vi.mock("../send.shared.js", async (importOriginal) => {
   };
 });
 
-vi.mock("../../gateway/client.js", () => ({
+vi.mock("../client.js", () => ({
   GatewayClient: class {
     private params: Record<string, unknown>;
     constructor(params: Record<string, unknown>) {
@@ -63,7 +63,7 @@ vi.mock("../../gateway/client.js", () => ({
   },
 }));
 
-vi.mock("../../logger.js", () => ({
+vi.mock("../../../../logger.js", () => ({
   logDebug: vi.fn(),
   logError: vi.fn(),
 }));

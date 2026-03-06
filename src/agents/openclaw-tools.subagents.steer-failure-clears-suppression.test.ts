@@ -10,7 +10,7 @@ import {
   addSubagentRunForTests,
   listSubagentRunsForRequester,
   resetSubagentRegistryForTests,
-} from "./subagent-registry.js";
+} from "./subagents/subagent-registry.js";
 import "./test-support/fast-core-tools.js";
 import { createSubagentsTool } from "./tools/subagents-tool.js";
 

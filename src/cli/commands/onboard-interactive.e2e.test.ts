@@ -5,9 +5,9 @@ const createClackPrompterMock = vi.hoisted(() => vi.fn());
 const runOnboardingWizardMock = vi.hoisted(() => vi.fn());
 const restoreTerminalStateMock = vi.hoisted(() => vi.fn());
 
-vi.mock("../wizard/clack-prompter.js", () => ({ createClackPrompter: createClackPrompterMock }));
-vi.mock("../wizard/onboarding.js", () => ({ runOnboardingWizard: runOnboardingWizardMock }));
-vi.mock("../terminal/restore.js", () => ({ restoreTerminalState: restoreTerminalStateMock }));
+vi.mock("../../wizard/clack-prompter.js", () => ({ createClackPrompter: createClackPrompterMock }));
+vi.mock("../../wizard/onboarding.js", () => ({ runOnboardingWizard: runOnboardingWizardMock }));
+vi.mock("../../terminal/restore.js", () => ({ restoreTerminalState: restoreTerminalStateMock }));
 
 import { WizardCancelledError } from "../../wizard/prompts.js";
 import { runInteractiveOnboarding } from "./onboard-interactive.js";

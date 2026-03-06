@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { OpenClawConfig } from "../../../config/config.js";
 
-vi.mock("../../config/sessions.js", () => ({
+vi.mock("../../../config/sessions.js", () => ({
   loadSessionStore: vi.fn(),
   resolveStorePath: vi.fn().mockReturnValue("/tmp/test-store.json"),
   evaluateSessionFreshness: vi.fn().mockReturnValue({ fresh: true }),

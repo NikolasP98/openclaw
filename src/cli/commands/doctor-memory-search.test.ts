@@ -8,20 +8,20 @@ const resolveAgentDir = vi.hoisted(() => vi.fn(() => "/tmp/agent-default"));
 const resolveMemorySearchConfig = vi.hoisted(() => vi.fn());
 const resolveApiKeyForProvider = vi.hoisted(() => vi.fn());
 
-vi.mock("../terminal/note.js", () => ({
+vi.mock("../../terminal/note.js", () => ({
   note,
 }));
 
-vi.mock("../agents/agent-scope.js", () => ({
+vi.mock("../../agents/agent-scope.js", () => ({
   resolveDefaultAgentId,
   resolveAgentDir,
 }));
 
-vi.mock("../agents/memory-search.js", () => ({
+vi.mock("../../agents/memory-search.js", () => ({
   resolveMemorySearchConfig,
 }));
 
-vi.mock("../agents/model-auth.js", () => ({
+vi.mock("../../agents/models/model-auth.js", () => ({
   resolveApiKeyForProvider,
 }));
 

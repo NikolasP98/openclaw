@@ -8,7 +8,7 @@ import type { createSubsystemLogger } from "../../logging/subsystem.js";
 import { runCronIsolatedAgentTurn } from "../../platform/cron/isolated-agent.js";
 import type { CronJob } from "../../platform/cron/types.js";
 import type { HookMessageChannel, HooksConfigResolved } from "../hooks.js";
-import { createHooksRequestHandler } from "../server-http.js";
+import { createHooksRequestHandler } from "../server-core/server-http.js";
 
 type SubsystemLogger = ReturnType<typeof createSubsystemLogger>;
 

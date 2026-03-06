@@ -35,7 +35,9 @@ export function setSessionsSpawnConfigOverride(next: SessionsSpawnTestConfig): v
 export async function getSessionsSpawnTool(opts: CreateOpenClawToolsOpts) {
   // Dynamic import: ensure harness mocks are installed before tool modules load.
   const { createOpenClawTools } = await import("./openclaw-tools.js");
-  const tool = createOpenClawTools(opts).find((candidate) => candidate.name === "sessions_spawn");
+  const tool = (await createOpenClawTools(opts)).find(
+    (candidate) => candidate.name === "sessions_spawn",
+  );
   if (!tool) {
     throw new Error("missing sessions_spawn tool");
   }
@@ -45,8 +47,8 @@ export async function getSessionsSpawnTool(opts: CreateOpenClawToolsOpts) {
 vi.mock("../gateway/call.js", () => ({
   callGateway: (opts: unknown) => hoisted.callGatewayMock(opts),
 }));
-// Some tools import callGateway via "../../gateway/call.js" (from nested folders). Mock that too.
-vi.mock("../../gateway/call.js", () => ({
+// Some tools import callGateway via "../gateway/call.js" (from nested folders). Mock that too.
+vi.mock("../gateway/call.js", () => ({
   callGateway: (opts: unknown) => hoisted.callGatewayMock(opts),
 }));
 
@@ -60,7 +62,7 @@ vi.mock("../config/config.js", async (importOriginal) => {
 });
 
 // Same module, different specifier (used by tools under src/agents/tools/*).
-vi.mock("../../config/config.js", async (importOriginal) => {
+vi.mock("./skills/config.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../config/config.js")>();
   return {
     ...actual,

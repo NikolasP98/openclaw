@@ -1,18 +1,18 @@
 import type { OpenClawConfig } from "../config/config.js";
 import { isTruthyEnvValue, logAcceptedEnvOption } from "../infra/env.js";
 import { applyBootstrapHookOverrides } from "./bootstrap-hooks.js";
+import {
+  filterBootstrapFilesForSession,
+  isWorkspaceOnboardingCompleted,
+  loadWorkspaceBootstrapFiles,
+  type WorkspaceBootstrapFile,
+} from "./identity/workspace.js";
 import type { EmbeddedContextFile } from "./pi-embedded-helpers.js";
 import {
   buildBootstrapContextFiles,
   resolveBootstrapMaxChars,
   resolveBootstrapTotalMaxChars,
 } from "./pi-embedded-helpers.js";
-import {
-  filterBootstrapFilesForSession,
-  isWorkspaceOnboardingCompleted,
-  loadWorkspaceBootstrapFiles,
-  type WorkspaceBootstrapFile,
-} from "./workspace.js";
 
 export function makeBootstrapWarn(params: {
   sessionLabel: string;

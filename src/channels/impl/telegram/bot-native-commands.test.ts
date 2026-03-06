@@ -19,14 +19,14 @@ const deliveryMocks = vi.hoisted(() => ({
   deliverReplies: vi.fn(async () => ({ delivered: true })),
 }));
 
-vi.mock("../auto-reply/skill-commands.js", async (importOriginal) => {
+vi.mock("../../../auto-reply/skill-commands.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../auto-reply/skill-commands.js")>();
   return {
     ...actual,
     listSkillCommandsForAgents,
   };
 });
-vi.mock("../plugins/commands.js", () => ({
+vi.mock("../../../acp/commands.js", () => ({
   getPluginCommandSpecs: pluginCommandMocks.getPluginCommandSpecs,
   matchPluginCommand: pluginCommandMocks.matchPluginCommand,
   executePluginCommand: pluginCommandMocks.executePluginCommand,

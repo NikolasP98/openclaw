@@ -144,7 +144,7 @@ const mocks = vi.hoisted(() => ({
   }),
 }));
 
-vi.mock("../memory/manager.js", () => ({
+vi.mock("../../memory/manager.js", () => ({
   MemoryIndexManager: {
     get: vi.fn(async ({ agentId }: { agentId: string }) => ({
       probeVectorAvailability: vi.fn(async () => true),
@@ -174,7 +174,7 @@ vi.mock("../memory/manager.js", () => ({
   },
 }));
 
-vi.mock("../config/sessions.js", () => ({
+vi.mock("./sessions.js", () => ({
   loadSessionStore: mocks.loadSessionStore,
   resolveMainSessionKey: mocks.resolveMainSessionKey,
   resolveStorePath: mocks.resolveStorePath,
@@ -187,7 +187,7 @@ vi.mock("../config/sessions.js", () => ({
   readSessionUpdatedAt: vi.fn(() => undefined),
   recordSessionMetaFromInbound: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("../channels/plugins/index.js", () => ({
+vi.mock("../index.js", () => ({
   listChannelPlugins: () =>
     [
       {
@@ -223,30 +223,30 @@ vi.mock("../channels/plugins/index.js", () => ({
       },
     ] as unknown,
 }));
-vi.mock("../web/session.js", () => ({
+vi.mock("./agent/session.js", () => ({
   webAuthExists: mocks.webAuthExists,
   getWebAuthAgeMs: mocks.getWebAuthAgeMs,
   readWebSelfId: mocks.readWebSelfId,
   logWebSelfId: mocks.logWebSelfId,
 }));
-vi.mock("../gateway/probe.js", () => ({
+vi.mock("../../linq/probe.js", () => ({
   probeGateway: mocks.probeGateway,
 }));
-vi.mock("../gateway/call.js", async (importOriginal) => {
+vi.mock("../../gateway/call.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../gateway/call.js")>();
   return { ...actual, callGateway: mocks.callGateway };
 });
-vi.mock("../gateway/session-utils.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../gateway/session-utils.js")>();
+vi.mock("../../gateway/sessions/session-utils.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../gateway/sessions/session-utils.js")>();
   return {
     ...actual,
     listAgentsForGateway: mocks.listAgentsForGateway,
   };
 });
-vi.mock("../infra/openclaw-root.js", () => ({
+vi.mock("../../infra/openclaw-root.js", () => ({
   resolveOpenClawPackageRoot: vi.fn().mockResolvedValue("/tmp/openclaw"),
 }));
-vi.mock("../infra/os-summary.js", () => ({
+vi.mock("../../infra/os-summary.js", () => ({
   resolveOsSummary: () => ({
     platform: "darwin",
     arch: "arm64",
@@ -254,7 +254,7 @@ vi.mock("../infra/os-summary.js", () => ({
     label: "macos 14.0 (arm64)",
   }),
 }));
-vi.mock("../infra/update-check.js", () => ({
+vi.mock("../../infra/update-check.js", () => ({
   checkUpdateStatus: vi.fn().mockResolvedValue({
     root: "/tmp/openclaw",
     installKind: "git",
@@ -279,14 +279,14 @@ vi.mock("../infra/update-check.js", () => ({
   formatGitInstallLabel: vi.fn(() => "main · @ deadbeef"),
   compareSemverStrings: vi.fn(() => 0),
 }));
-vi.mock("../config/config.js", async (importOriginal) => {
+vi.mock("../../hooks/config.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../config/config.js")>();
   return {
     ...actual,
     loadConfig: () => ({ session: {} }),
   };
 });
-vi.mock("../daemon/service.js", () => ({
+vi.mock("../../platform/cron/service.js", () => ({
   resolveGatewayService: () => ({
     label: "LaunchAgent",
     loadedText: "loaded",
@@ -299,7 +299,7 @@ vi.mock("../daemon/service.js", () => ({
     }),
   }),
 }));
-vi.mock("../daemon/node-service.js", () => ({
+vi.mock("../../platform/daemon/node-service.js", () => ({
   resolveNodeService: () => ({
     label: "LaunchAgent",
     loadedText: "loaded",
@@ -312,7 +312,7 @@ vi.mock("../daemon/node-service.js", () => ({
     }),
   }),
 }));
-vi.mock("../security/audit.js", () => ({
+vi.mock("../../security/audit.js", () => ({
   runSecurityAudit: mocks.runSecurityAudit,
 }));
 

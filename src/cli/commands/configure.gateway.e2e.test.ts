@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
   randomToken: vi.fn(),
 }));
 
-vi.mock("../config/config.js", async (importActual) => {
+vi.mock("../../hooks/config.js", async (importActual) => {
   const actual = await importActual<typeof import("../../config/config.js")>();
   return {
     ...actual,
@@ -25,7 +25,7 @@ vi.mock("./configure.shared.js", () => ({
   confirm: mocks.confirm,
 }));
 
-vi.mock("../terminal/note.js", () => ({
+vi.mock("../../terminal/note.js", () => ({
   note: mocks.note,
 }));
 
@@ -33,7 +33,7 @@ vi.mock("./configure.gateway-auth.js", () => ({
   buildGatewayAuthConfig: mocks.buildGatewayAuthConfig,
 }));
 
-vi.mock("../infra/tailscale.js", () => ({
+vi.mock("../../infra/tailscale.js", () => ({
   findTailscaleBinary: vi.fn(async () => undefined),
 }));
 

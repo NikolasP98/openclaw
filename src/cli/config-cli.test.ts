@@ -169,4 +169,136 @@ describe("config cli", () => {
       expect(written.logging).toEqual(resolved.logging);
     });
   });
+
+  describe("config validate", () => {
+    it("reports success for a valid config", async () => {
+      const resolved: OpenClawConfig = { gateway: { port: 18789 } };
+      mockReadConfigFileSnapshot.mockResolvedValueOnce(
+        buildSnapshot({ resolved, config: resolved }),
+      );
+
+      await runConfigCommand(["config", "validate"]);
+
+      expect(mockLog).toHaveBeenCalledWith(expect.stringContaining("Config valid"));
+    });
+
+    it("exits 1 for an invalid config", async () => {
+      mockReadConfigFileSnapshot.mockResolvedValueOnce({
+        path: "/tmp/openclaw.json",
+        exists: true,
+        raw: "{}",
+        parsed: {},
+        resolved: {} as OpenClawConfig,
+        valid: false,
+        config: {} as OpenClawConfig,
+        issues: [{ path: "gateway.port", message: "Expected number" }],
+        warnings: [],
+        legacyIssues: [],
+      });
+
+      await expect(runConfigCommand(["config", "validate"])).rejects.toThrow("__exit__:1");
+      expect(mockError).toHaveBeenCalledWith(expect.stringContaining("Config invalid"));
+    });
+
+    it("outputs JSON when --json flag is used with valid config", async () => {
+      const resolved: OpenClawConfig = { gateway: { port: 18789 } };
+      mockReadConfigFileSnapshot.mockResolvedValueOnce(
+        buildSnapshot({ resolved, config: resolved }),
+      );
+
+      await runConfigCommand(["config", "validate", "--json"]);
+
+      const jsonCall = mockLog.mock.calls.find((c) => {
+        try {
+          JSON.parse(c[0]);
+          return true;
+        } catch {
+          return false;
+        }
+      });
+      expect(jsonCall).toBeDefined();
+      const parsed = JSON.parse(jsonCall![0]);
+      expect(parsed.valid).toBe(true);
+    });
+
+    it("outputs JSON when --json flag is used with invalid config", async () => {
+      mockReadConfigFileSnapshot.mockResolvedValueOnce({
+        path: "/tmp/openclaw.json",
+        exists: true,
+        raw: "{}",
+        parsed: {},
+        resolved: {} as OpenClawConfig,
+        valid: false,
+        config: {} as OpenClawConfig,
+        issues: [{ path: "gateway.port", message: "Expected number" }],
+        warnings: [],
+        legacyIssues: [],
+      });
+
+      await expect(runConfigCommand(["config", "validate", "--json"])).rejects.toThrow(
+        "__exit__:1",
+      );
+      const jsonCall = mockLog.mock.calls.find((c) => {
+        try {
+          JSON.parse(c[0]);
+          return true;
+        } catch {
+          return false;
+        }
+      });
+      expect(jsonCall).toBeDefined();
+      const parsed = JSON.parse(jsonCall![0]);
+      expect(parsed.valid).toBe(false);
+      expect(parsed.issues).toHaveLength(1);
+    });
+
+    it("exits 1 when no config file exists", async () => {
+      mockReadConfigFileSnapshot.mockResolvedValueOnce({
+        path: "",
+        exists: false,
+        raw: null,
+        parsed: null,
+        resolved: {} as OpenClawConfig,
+        valid: false,
+        config: {} as OpenClawConfig,
+        issues: [],
+        warnings: [],
+        legacyIssues: [],
+      });
+
+      await expect(runConfigCommand(["config", "validate"])).rejects.toThrow("__exit__:1");
+    });
+
+    it("shows warnings for valid config with warnings", async () => {
+      mockReadConfigFileSnapshot.mockResolvedValueOnce({
+        path: "/tmp/openclaw.json",
+        exists: true,
+        raw: "{}",
+        parsed: {},
+        resolved: {} as OpenClawConfig,
+        valid: true,
+        config: {} as OpenClawConfig,
+        issues: [],
+        warnings: [{ path: "agents.list[0]", message: "Missing model" }],
+        legacyIssues: [],
+      });
+
+      await runConfigCommand(["config", "validate"]);
+
+      expect(mockLog).toHaveBeenCalledWith(expect.stringContaining("Config valid"));
+      expect(mockLog).toHaveBeenCalledWith(expect.stringContaining("Missing model"));
+    });
+  });
+
+  describe("config set --dry-run", () => {
+    it("validates without writing when --dry-run is used", async () => {
+      const resolved: OpenClawConfig = { gateway: { port: 18789 } };
+      setSnapshot(resolved, resolved);
+
+      await runConfigCommand(["config", "set", "--dry-run", "gateway.auth.mode", "token"]);
+
+      expect(mockWriteConfigFile).not.toHaveBeenCalled();
+      expect(mockLog).toHaveBeenCalledWith(expect.stringContaining("Dry run"));
+    });
+  });
 });

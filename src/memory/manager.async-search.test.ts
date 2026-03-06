@@ -9,7 +9,7 @@ import { createOpenAIEmbeddingProviderMock } from "./test-embeddings-mock.js";
 const embedBatch = vi.fn(async () => []);
 const embedQuery = vi.fn(async () => [0.2, 0.2, 0.2]);
 
-vi.mock("./embeddings.js", () => ({
+vi.mock("./embedding/embeddings.js", () => ({
   createEmbeddingProvider: async () =>
     createOpenAIEmbeddingProviderMock({
       embedQuery,

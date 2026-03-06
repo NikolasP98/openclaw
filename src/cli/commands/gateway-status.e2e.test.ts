@@ -91,20 +91,20 @@ const probeGateway = vi.fn(async (opts: { url: string }) => {
   };
 });
 
-vi.mock("../config/config.js", () => ({
+vi.mock("../../hooks/config.js", () => ({
   loadConfig,
   resolveGatewayPort,
 }));
 
-vi.mock("../infra/bonjour-discovery.js", () => ({
+vi.mock("../../infra/bonjour-discovery.js", () => ({
   discoverGatewayBeacons,
 }));
 
-vi.mock("../infra/tailnet.js", () => ({
+vi.mock("../../infra/tailnet.js", () => ({
   pickPrimaryTailnetIPv4,
 }));
 
-vi.mock("../infra/ssh-tunnel.js", async (importOriginal) => {
+vi.mock("../../infra/ssh-tunnel.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../infra/ssh-tunnel.js")>();
   return {
     ...actual,
@@ -112,11 +112,11 @@ vi.mock("../infra/ssh-tunnel.js", async (importOriginal) => {
   };
 });
 
-vi.mock("../infra/ssh-config.js", () => ({
+vi.mock("../../infra/ssh-config.js", () => ({
   resolveSshConfig,
 }));
 
-vi.mock("../gateway/probe.js", () => ({
+vi.mock("../../linq/probe.js", () => ({
   probeGateway,
 }));
 

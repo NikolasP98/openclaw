@@ -2,8 +2,8 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import { runCliAgent } from "../../agents/cli-runner.js";
 import { getCliSessionId } from "../../agents/cli-session.js";
-import { runWithModelFallback } from "../../agents/model-fallback.js";
-import { isCliProvider } from "../../agents/model-selection.js";
+import { runWithModelFallback } from "../../agents/models/model-fallback.js";
+import { isCliProvider } from "../../agents/models/model-selection.js";
 import {
   isCompactionFailureError,
   isContextOverflowError,
@@ -20,6 +20,7 @@ import {
 } from "../../config/sessions.js";
 import { logVerbose } from "../../globals.js";
 import { emitAgentEvent, registerAgentRunContext } from "../../infra/agent-events.js";
+import { traceChatEvent } from "../../logging/chat-trace.js";
 import { defaultRuntime } from "../../runtime.js";
 import {
   isMarkdownCapableMessageChannel,
@@ -38,6 +39,7 @@ import {
 import { type BlockReplyPipeline } from "./block-reply-pipeline.js";
 import type { FollowupRun } from "./queue.js";
 import { createBlockReplyDeliveryHandler } from "./reply-delivery.js";
+import { pinSession } from "./smart-routing.js";
 import type { TypingSignaler } from "./typing-mode.js";
 
 export type AgentRunLoopResult =
@@ -333,6 +335,16 @@ export async function runAgentTurnWithFallback(params: {
                 const phase = typeof evt.data.phase === "string" ? evt.data.phase : "";
                 if (phase === "end") {
                   autoCompactionCompleted = true;
+                  const agentId = params.followupRun.run.agentId;
+                  if (agentId) {
+                    traceChatEvent({
+                      agentId,
+                      traceId: (params.sessionKey ?? runId).slice(0, 8),
+                      level: "INFO",
+                      stage: "COMPACTION_TRIGGERED",
+                      data: { sessionKey: params.sessionKey },
+                    });
+                  }
                 }
               }
             },
@@ -392,6 +404,22 @@ export async function runAgentTurnWithFallback(params: {
       fallbackProvider = fallbackResult.provider;
       fallbackModel = fallbackResult.model;
 
+      // S.3: If fallback routing used a different model than originally planned, update
+      // the session pin so subsequent messages go directly to the fallback model rather
+      // than retrying the primary (which just failed) on each turn.
+      if (
+        params.sessionKey &&
+        (fallbackResult.provider !== params.followupRun.run.provider ||
+          fallbackResult.model !== params.followupRun.run.model)
+      ) {
+        pinSession(params.sessionKey, {
+          provider: fallbackResult.provider,
+          model: fallbackResult.model,
+          complexity: "complex", // Fallback pinned at highest tier to avoid downgrade
+          disableTools: false,
+        });
+      }
+
       // Some embedded runs surface context overflow as an error payload instead of throwing.
       // Treat those as a session-level failure and auto-recover by starting a fresh session.
       const embeddedError = runResult.meta?.error;
@@ -402,6 +430,16 @@ export async function runAgentTurnWithFallback(params: {
         (await params.resetSessionAfterCompactionFailure(embeddedError.message))
       ) {
         didResetAfterCompactionFailure = true;
+        const agentId = params.followupRun.run.agentId;
+        if (agentId) {
+          traceChatEvent({
+            agentId,
+            traceId: (params.sessionKey ?? runId).slice(0, 8),
+            level: "ERROR",
+            stage: "COMPACTION_FAILED",
+            data: { reason: "context_overflow", sessionKey: params.sessionKey },
+          });
+        }
         return {
           kind: "final",
           payload: {
@@ -436,6 +474,20 @@ export async function runAgentTurnWithFallback(params: {
         (await params.resetSessionAfterCompactionFailure(message))
       ) {
         didResetAfterCompactionFailure = true;
+        const agentId = params.followupRun.run.agentId;
+        if (agentId) {
+          traceChatEvent({
+            agentId,
+            traceId: (params.sessionKey ?? runId).slice(0, 8),
+            level: "ERROR",
+            stage: "COMPACTION_FAILED",
+            data: {
+              reason: "compaction_error",
+              error: message.slice(0, 200),
+              sessionKey: params.sessionKey,
+            },
+          });
+        }
         return {
           kind: "final",
           payload: {

@@ -15,8 +15,10 @@ vi.mock("../../config/config.js", () => {
   };
 });
 
-vi.mock("../session-utils.js", async () => {
-  const actual = await vi.importActual<typeof import("../session-utils.js")>("../session-utils.js");
+vi.mock("../sessions/session-utils.js", async () => {
+  const actual = await vi.importActual<typeof import("../sessions/session-utils.js")>(
+    "../sessions/session-utils.js",
+  );
   return {
     ...actual,
     loadCombinedSessionStoreForGateway: vi.fn(() => ({ storePath: "(multiple)", store: {} })),
@@ -79,7 +81,7 @@ import {
   loadSessionLogs,
   loadSessionUsageTimeSeries,
 } from "../../infra/session-cost-usage.js";
-import { loadCombinedSessionStoreForGateway } from "../session-utils.js";
+import { loadCombinedSessionStoreForGateway } from "../sessions/session-utils.js";
 import { usageHandlers } from "./usage.js";
 
 async function runSessionsUsage(params: Record<string, unknown>) {

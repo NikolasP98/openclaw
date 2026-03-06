@@ -18,7 +18,7 @@ const gatewayClientCalls: Array<{
   onClose?: (code: number, reason: string) => void;
 }> = [];
 
-vi.mock("../gateway/client.js", () => ({
+vi.mock("../../acp/client.js", () => ({
   GatewayClient: class {
     params: {
       url?: string;
@@ -66,7 +66,8 @@ async function expectGatewayTokenAuth(params: {
   token: string;
   env: NodeJS.ProcessEnv;
 }) {
-  const { authorizeGatewayConnect, resolveGatewayAuth } = await import("../../gateway/auth.js");
+  const { authorizeGatewayConnect, resolveGatewayAuth } =
+    await import("../../gateway/auth/auth.js");
   const auth = resolveGatewayAuth({ authConfig: params.authConfig, env: params.env });
   const resNoToken = await authorizeGatewayConnect({ auth, connectAuth: { token: undefined } });
   expect(resNoToken.ok).toBe(false);

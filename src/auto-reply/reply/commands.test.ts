@@ -6,7 +6,7 @@ import {
   addSubagentRunForTests,
   listSubagentRunsForRequester,
   resetSubagentRegistryForTests,
-} from "../../agents/subagent-registry.js";
+} from "../../agents/subagents/subagent-registry.js";
 import type { OpenClawConfig } from "../../config/config.js";
 import { updateSessionStore } from "../../config/sessions.js";
 import * as internalHooks from "../../hooks/internal-hooks.js";
@@ -62,7 +62,7 @@ vi.mock("../../channels/plugins/pairing.js", async () => {
   };
 });
 
-vi.mock("../../agents/model-catalog.js", () => ({
+vi.mock("../../agents/models/model-catalog.js", () => ({
   loadModelCatalog: vi.fn(async () => [
     { provider: "anthropic", id: "claude-opus-4-5", name: "Claude Opus" },
     { provider: "anthropic", id: "claude-sonnet-4-5", name: "Claude Sonnet" },

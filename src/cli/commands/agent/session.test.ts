@@ -7,10 +7,9 @@ const mocks = vi.hoisted(() => ({
   listAgentIds: vi.fn(),
 }));
 
-vi.mock("../../config/sessions.js", async () => {
-  const actual = await vi.importActual<typeof import("../../../config/sessions.js")>(
-    "../../config/sessions.js",
-  );
+vi.mock("../sessions.js", async () => {
+  const actual =
+    await vi.importActual<typeof import("../../../config/sessions.js")>("../sessions.js");
   return {
     ...actual,
     loadSessionStore: mocks.loadSessionStore,
@@ -18,7 +17,7 @@ vi.mock("../../config/sessions.js", async () => {
   };
 });
 
-vi.mock("../../agents/agent-scope.js", () => ({
+vi.mock("../../../agents/agent-scope.js", () => ({
   listAgentIds: mocks.listAgentIds,
 }));
 

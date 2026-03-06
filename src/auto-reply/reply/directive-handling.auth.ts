@@ -9,8 +9,11 @@ import {
   getCustomProviderApiKey,
   resolveAuthProfileOrder,
   resolveEnvApiKey,
-} from "../../agents/model-auth.js";
-import { findNormalizedProviderValue, normalizeProviderId } from "../../agents/model-selection.js";
+} from "../../agents/models/model-auth.js";
+import {
+  findNormalizedProviderValue,
+  normalizeProviderId,
+} from "../../agents/models/model-selection.js";
 import type { OpenClawConfig } from "../../config/config.js";
 import { maskApiKey } from "../../shared/mask-api-key.js";
 import { shortenHomePath } from "../../utils.js";

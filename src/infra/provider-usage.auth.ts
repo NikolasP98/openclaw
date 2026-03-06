@@ -8,8 +8,8 @@ import {
   resolveApiKeyForProfile,
   resolveAuthProfileOrder,
 } from "../agents/auth-profiles.js";
-import { getCustomProviderApiKey, resolveEnvApiKey } from "../agents/model-auth.js";
-import { normalizeProviderId } from "../agents/model-selection.js";
+import { getCustomProviderApiKey, resolveEnvApiKey } from "../agents/models/model-auth.js";
+import { normalizeProviderId } from "../agents/models/model-selection.js";
 import { loadConfig } from "../config/config.js";
 import { normalizeSecretInput } from "../shared/normalize-secret-input.js";
 import type { UsageProviderId } from "./provider-usage.types.js";

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getModelContextWindow, modelFitsContext } from "./model-catalog.js";
+import { getModelContextWindow, modelFitsContext, modelSupportsToolCalling } from "./model-catalog.js";
 
 describe("getModelContextWindow", () => {
   it("returns exact match for known model", () => {
@@ -47,5 +47,47 @@ describe("modelFitsContext", () => {
 
   it("returns true for zero estimated tokens", () => {
     expect(modelFitsContext("qwen3:1.7b", 0)).toBe(true);
+  });
+});
+
+// ── Tool Calling Capability (Sprint S.1 / Y.1) ───────────────────────────────
+
+describe("modelSupportsToolCalling", () => {
+  it("returns false for Minimax models (known tool-incompatible)", () => {
+    expect(modelSupportsToolCalling("minimax/abab6.5-chat")).toBe(false);
+    expect(modelSupportsToolCalling("minimax/abab5.5-chat")).toBe(false);
+  });
+
+  it("case-insensitive matching for Minimax", () => {
+    expect(modelSupportsToolCalling("Minimax/abab6.5-chat")).toBe(false);
+    expect(modelSupportsToolCalling("MINIMAX/abab6.5-chat")).toBe(false);
+  });
+
+  it("returns true for all major tool-capable models", () => {
+    // Anthropic
+    expect(modelSupportsToolCalling("anthropic/claude-sonnet-4-6")).toBe(true);
+    expect(modelSupportsToolCalling("claude-sonnet-4-6")).toBe(true);
+    // OpenAI
+    expect(modelSupportsToolCalling("openai/gpt-4o")).toBe(true);
+    expect(modelSupportsToolCalling("gpt-4o")).toBe(true);
+    // Google
+    expect(modelSupportsToolCalling("google/gemini-2.0-flash")).toBe(true);
+    // DeepSeek
+    expect(modelSupportsToolCalling("deepseek/deepseek-chat")).toBe(true);
+    // Groq
+    expect(modelSupportsToolCalling("groq/llama3-8b-8192")).toBe(true);
+    // Ollama local
+    expect(modelSupportsToolCalling("ollama/qwen3:8b")).toBe(true);
+  });
+
+  it("returns true for unknown models (fail-open)", () => {
+    expect(modelSupportsToolCalling("completely-unknown-provider/model")).toBe(true);
+    expect(modelSupportsToolCalling("future-model-2030")).toBe(true);
+  });
+
+  it("does not false-positive on models with similar prefixes", () => {
+    // "minimax-style" should NOT match "minimax"
+    // The prefix check requires exact "minimax" + "/" or "-" separator
+    expect(modelSupportsToolCalling("not-minimax/model")).toBe(true);
   });
 });

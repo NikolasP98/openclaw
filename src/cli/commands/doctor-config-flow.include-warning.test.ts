@@ -7,7 +7,7 @@ const { noteSpy } = vi.hoisted(() => ({
   noteSpy: vi.fn(),
 }));
 
-vi.mock("../terminal/note.js", () => ({
+vi.mock("../../terminal/note.js", () => ({
   note: noteSpy,
 }));
 

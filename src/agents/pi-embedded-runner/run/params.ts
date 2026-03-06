@@ -5,7 +5,7 @@ import type { MinionConfig } from "../../../config/config.js";
 import type { enqueueCommand } from "../../../platform/process/command-queue.js";
 import type { PermissionLevel } from "../../../security/permission-level.js";
 import type { InputProvenance } from "../../../sessions/input-provenance.js";
-import type { ExecElevatedDefaults, ExecToolDefaults } from "../../bash-tools.js";
+import type { ExecElevatedDefaults, ExecToolDefaults } from "../../bash/bash-tools.js";
 import type { BlockReplyPayload } from "../../pi-embedded-payloads.js";
 import type { BlockReplyChunking, ToolResultFormat } from "../../pi-embedded-subscribe.js";
 import type { SkillSnapshot } from "../../skills.js";

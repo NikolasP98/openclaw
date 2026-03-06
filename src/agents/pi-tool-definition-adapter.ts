@@ -5,7 +5,9 @@ import type {
 } from "@mariozechner/pi-agent-core";
 import type { ToolDefinition } from "@mariozechner/pi-coding-agent";
 import { logDebug, logError } from "../logger.js";
+import { trackSkillExecution } from "../logging/reliability.js";
 import { getGlobalHookRunner } from "../plugins/hook-runner-global.js";
+import { getPluginToolMeta } from "../plugins/tools.js";
 import { isPlainObject } from "../utils.js";
 import type { ClientToolDefinition } from "./pi-embedded-runner/run/params.js";
 import type { HookContext } from "./pi-tools.before-tool-call.js";
@@ -91,6 +93,7 @@ export function toToolDefinitions(tools: AnyAgentTool[]): ToolDefinition[] {
     const name = tool.name || "tool";
     const normalizedName = normalizeToolName(name);
     const beforeHookWrapped = isToolWrappedWithBeforeToolCallHook(tool);
+    const skillName = getPluginToolMeta(tool)?.pluginId;
     return {
       name,
       label: tool.label ?? name,
@@ -99,6 +102,7 @@ export function toToolDefinitions(tools: AnyAgentTool[]): ToolDefinition[] {
       execute: async (...args: ToolExecuteArgs): Promise<AgentToolResult<unknown>> => {
         const { toolCallId, params, onUpdate, signal } = splitToolExecuteArgs(args);
         let executeParams = params;
+        const statStartTime = skillName ? Date.now() : 0;
         try {
           if (!beforeHookWrapped) {
             const hookOutcome = await runBeforeToolCallHook({
@@ -115,6 +119,16 @@ export function toToolDefinitions(tools: AnyAgentTool[]): ToolDefinition[] {
           const afterParams = beforeHookWrapped
             ? (consumeAdjustedParamsForToolCall(toolCallId) ?? executeParams)
             : executeParams;
+
+          // Track skill execution stat
+          if (skillName) {
+            trackSkillExecution({
+              skillName,
+              status: "ok",
+              durationMs: Date.now() - statStartTime,
+              occurredAt: statStartTime,
+            });
+          }
 
           // Call after_tool_call hook
           const hookRunner = getGlobalHookRunner();
@@ -138,6 +152,14 @@ export function toToolDefinitions(tools: AnyAgentTool[]): ToolDefinition[] {
           return result;
         } catch (err) {
           if (signal?.aborted) {
+            if (skillName) {
+              trackSkillExecution({
+                skillName,
+                status: "timeout",
+                durationMs: Date.now() - statStartTime,
+                occurredAt: statStartTime,
+              });
+            }
             throw err;
           }
           const name =
@@ -145,6 +167,14 @@ export function toToolDefinitions(tools: AnyAgentTool[]): ToolDefinition[] {
               ? String((err as { name?: unknown }).name)
               : "";
           if (name === "AbortError") {
+            if (skillName) {
+              trackSkillExecution({
+                skillName,
+                status: "timeout",
+                durationMs: Date.now() - statStartTime,
+                occurredAt: statStartTime,
+              });
+            }
             throw err;
           }
           if (beforeHookWrapped) {
@@ -155,6 +185,23 @@ export function toToolDefinitions(tools: AnyAgentTool[]): ToolDefinition[] {
             logDebug(`tools: ${normalizedName} failed stack:\n${described.stack}`);
           }
           logError(`[tools] ${normalizedName} failed: ${described.message}`);
+
+          // Track skill execution failure
+          if (skillName) {
+            const msg = described.message.toLowerCase();
+            const isAuthError =
+              msg.includes("unauthorized") ||
+              msg.includes("auth") ||
+              msg.includes("401") ||
+              msg.includes("forbidden");
+            trackSkillExecution({
+              skillName,
+              status: isAuthError ? "auth_error" : "error",
+              durationMs: Date.now() - statStartTime,
+              errorMessage: described.message,
+              occurredAt: statStartTime,
+            });
+          }
 
           const errorResult = jsonResult({
             status: "error",

@@ -79,7 +79,7 @@ async function createVoiceCallArchive(params: {
     pkgDir,
     name: "@openclaw/voice-call",
     version: params.version,
-    extensions: ["./dist/index.js"],
+    extensions: ["../index.js"],
   });
   const archivePath = await packToArchive({
     pkgDir,
@@ -146,7 +146,7 @@ async function expectArchiveInstallReservedSegmentRejection(params: {
     JSON.stringify({
       name: params.packageName,
       version: "0.0.1",
-      openclaw: { extensions: ["./dist/index.js"] },
+      openclaw: { extensions: ["../index.js"] },
     }),
     "utf-8",
   );
@@ -241,7 +241,7 @@ describe("installPluginFromArchive", () => {
       JSON.stringify({
         name: "@openclaw/zipper",
         version: "0.0.1",
-        openclaw: { extensions: ["./dist/index.js"] },
+        openclaw: { extensions: ["../index.js"] },
       }),
     );
     zip.file("package/dist/index.js", "export {};");
@@ -426,7 +426,7 @@ describe("installPluginFromDir", () => {
       JSON.stringify({
         name: "@openclaw/test-plugin",
         version: "0.0.1",
-        openclaw: { extensions: ["./dist/index.js"] },
+        openclaw: { extensions: ["../index.js"] },
         dependencies: { "left-pad": "1.3.0" },
       }),
       "utf-8",
@@ -471,7 +471,7 @@ describe("installPluginFromNpmSpec", () => {
       JSON.stringify({
         name: "@openclaw/voice-call",
         version: "0.0.1",
-        openclaw: { extensions: ["./dist/index.js"] },
+        openclaw: { extensions: ["../index.js"] },
       }),
       "utf-8",
     );

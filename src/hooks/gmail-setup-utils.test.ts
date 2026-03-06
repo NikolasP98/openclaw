@@ -11,7 +11,7 @@ import {
 const itUnix = process.platform === "win32" ? it.skip : it;
 const runCommandWithTimeoutMock = vi.fn();
 
-vi.mock("../process/exec.js", () => ({
+vi.mock("../auto-reply/reply/exec.js", () => ({
   runCommandWithTimeout: (...args: unknown[]) => runCommandWithTimeoutMock(...args),
 }));
 

@@ -219,3 +219,31 @@ export const AgentsSkillsSetParamsSchema = Type.Object(
   },
   { additionalProperties: false },
 );
+
+export const ToolsStatusParamsSchema = Type.Object(
+  {
+    agentId: Type.Optional(NonEmptyString),
+  },
+  { additionalProperties: false },
+);
+
+export const ToolsUpdateParamsSchema = Type.Object(
+  {
+    agentId: Type.Optional(NonEmptyString),
+    toolId: NonEmptyString,
+    enabled: Type.Boolean(),
+  },
+  { additionalProperties: false },
+);
+
+export const ToolsOverridesSetParamsSchema = Type.Object(
+  {
+    agentId: NonEmptyString,
+    profile: Type.Optional(Type.Union([NonEmptyString, Type.Null()])),
+    alsoAllow: Type.Optional(Type.Union([Type.Array(Type.String()), Type.Null()])),
+    deny: Type.Optional(Type.Union([Type.Array(Type.String()), Type.Null()])),
+  },
+  { additionalProperties: false },
+);
+
+export const ToolsReloadParamsSchema = Type.Object({}, { additionalProperties: false });

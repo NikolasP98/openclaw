@@ -26,7 +26,7 @@ vi.mock("../usage.js", () => ({
   hasNonzeroUsage: vi.fn(() => false),
 }));
 
-vi.mock("../workspace-run.js", () => ({
+vi.mock("../identity/workspace-run.js", () => ({
   resolveRunWorkspaceDir: vi.fn((params: { workspaceDir: string }) => ({
     workspaceDir: params.workspaceDir,
     usedFallback: false,
@@ -80,7 +80,7 @@ vi.mock("./model.js", () => ({
   })),
 }));
 
-vi.mock("../model-auth.js", () => ({
+vi.mock("../models/model-auth.js", () => ({
   ensureAuthProfileStore: vi.fn(() => ({})),
   getApiKeyForModel: vi.fn(async () => ({
     apiKey: "test-key",
@@ -90,7 +90,7 @@ vi.mock("../model-auth.js", () => ({
   resolveAuthProfileOrder: vi.fn(() => []),
 }));
 
-vi.mock("../models-config.js", () => ({
+vi.mock("../models/models-config.js", () => ({
   ensureMinionModelsJson: vi.fn(async () => {}),
 }));
 
@@ -109,7 +109,7 @@ vi.mock("../context-window-guard.js", () => ({
   })),
 }));
 
-vi.mock("../../process/command-queue.js", () => ({
+vi.mock("../../platform/process/command-queue.js", () => ({
   enqueueCommandInLane: vi.fn((_lane: string, task: () => unknown) => task()),
 }));
 

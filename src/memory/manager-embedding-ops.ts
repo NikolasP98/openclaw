@@ -1,14 +1,14 @@
 import fs from "node:fs/promises";
 import { createSubsystemLogger } from "../logging/subsystem.js";
-import { runGeminiEmbeddingBatches, type GeminiBatchRequest } from "./batch-gemini.js";
+import { runGeminiEmbeddingBatches, type GeminiBatchRequest } from "./batch/batch-gemini.js";
 import {
   OPENAI_BATCH_ENDPOINT,
   type OpenAiBatchRequest,
   runOpenAiEmbeddingBatches,
-} from "./batch-openai.js";
-import { type VoyageBatchRequest, runVoyageEmbeddingBatches } from "./batch-voyage.js";
-import { enforceEmbeddingMaxInputTokens } from "./embedding-chunk-limits.js";
-import { estimateUtf8Bytes } from "./embedding-input-limits.js";
+} from "./batch/batch-openai.js";
+import { type VoyageBatchRequest, runVoyageEmbeddingBatches } from "./batch/batch-voyage.js";
+import { enforceEmbeddingMaxInputTokens } from "./embedding/embedding-chunk-limits.js";
+import { estimateUtf8Bytes } from "./embedding/embedding-input-limits.js";
 import {
   chunkMarkdown,
   hashText,
@@ -17,8 +17,8 @@ import {
   type MemoryChunk,
   type MemoryFileEntry,
 } from "./internal.js";
-import { MemoryManagerSyncOps } from "./manager-sync-ops.js";
 import type { SessionFileEntry } from "./session-files.js";
+import { MemoryManagerSyncOps } from "./sync/manager-sync-ops.js";
 import type { MemorySource } from "./types.js";
 
 const VECTOR_TABLE = "chunks_vec";

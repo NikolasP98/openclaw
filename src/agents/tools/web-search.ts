@@ -1,6 +1,7 @@
 import { Type } from "@sinclair/typebox";
 import { formatCliCommand } from "../../cli/command-format.js";
 import type { OpenClawConfig } from "../../config/config.js";
+import { wrapToolWithTracking } from "../../logging/tool-tracking.js";
 import { wrapWebContent } from "../../security/external-content.js";
 import { normalizeSecretInput } from "../../shared/normalize-secret-input.js";
 import type { AnyAgentTool } from "./common.js";
@@ -863,95 +864,99 @@ export function createWebSearchTool(options?: {
           ? "Search the web using xAI Grok. Returns AI-synthesized answers with citations from real-time web search."
           : "Search the web using Brave Search API. Supports region-specific and localized search via country and language parameters. Returns titles, URLs, and snippets for fast research.";
 
-  return {
-    label: "Web Search",
-    name: "web_search",
-    description,
-    parameters: WebSearchSchema,
-    execute: async (_toolCallId, args) => {
-      const perplexityAuth =
-        provider === "perplexity" ? resolvePerplexityApiKey(perplexityConfig) : undefined;
-      const apiKey =
-        provider === "perplexity"
-          ? perplexityAuth?.apiKey
-          : provider === "gemini"
-            ? resolveGeminiApiKey(geminiConfig)
-            : provider === "grok"
-              ? resolveGrokApiKey(grokConfig)
-              : resolveSearchApiKey(search);
+  return wrapToolWithTracking(
+    {
+      label: "Web Search",
+      name: "web_search",
+      description,
+      parameters: WebSearchSchema,
+      execute: async (_toolCallId, args) => {
+        const perplexityAuth =
+          provider === "perplexity" ? resolvePerplexityApiKey(perplexityConfig) : undefined;
+        const apiKey =
+          provider === "perplexity"
+            ? perplexityAuth?.apiKey
+            : provider === "gemini"
+              ? resolveGeminiApiKey(geminiConfig)
+              : provider === "grok"
+                ? resolveGrokApiKey(grokConfig)
+                : resolveSearchApiKey(search);
 
-      const params = args as Record<string, unknown>;
-      if (!apiKey) {
-        const browserFallbackEnabled = search?.browserFallback !== false;
-        if (browserFallbackEnabled && isBrowserSearchAvailable()) {
-          try {
-            const result = await runBrowserSearch({
-              query: readStringParam(params, "query", { required: true }),
-              count: resolveSearchCount(
-                readNumberParam(params, "count", { integer: true }) ??
-                  search?.maxResults ??
-                  undefined,
-                DEFAULT_SEARCH_COUNT,
-              ),
-              cacheTtlMs: resolveCacheTtlMs(search?.cacheTtlMinutes, DEFAULT_CACHE_TTL_MINUTES),
-            });
-            return jsonResult(result);
-          } catch (browserErr) {
-            return jsonResult({
-              ...missingSearchKeyPayload(provider),
-              browserFallbackError: String(browserErr),
-            });
+        const params = args as Record<string, unknown>;
+        if (!apiKey) {
+          const browserFallbackEnabled = search?.browserFallback !== false;
+          if (browserFallbackEnabled && isBrowserSearchAvailable()) {
+            try {
+              const result = await runBrowserSearch({
+                query: readStringParam(params, "query", { required: true }),
+                count: resolveSearchCount(
+                  readNumberParam(params, "count", { integer: true }) ??
+                    search?.maxResults ??
+                    undefined,
+                  DEFAULT_SEARCH_COUNT,
+                ),
+                cacheTtlMs: resolveCacheTtlMs(search?.cacheTtlMinutes, DEFAULT_CACHE_TTL_MINUTES),
+              });
+              return jsonResult(result);
+            } catch (browserErr) {
+              return jsonResult({
+                ...missingSearchKeyPayload(provider),
+                browserFallbackError: String(browserErr),
+              });
+            }
           }
+          return jsonResult(missingSearchKeyPayload(provider));
         }
-        return jsonResult(missingSearchKeyPayload(provider));
-      }
-      const query = readStringParam(params, "query", { required: true });
-      const count =
-        readNumberParam(params, "count", { integer: true }) ?? search?.maxResults ?? undefined;
-      const country = readStringParam(params, "country");
-      const search_lang = readStringParam(params, "search_lang");
-      const ui_lang = readStringParam(params, "ui_lang");
-      const rawFreshness = readStringParam(params, "freshness");
-      if (rawFreshness && provider !== "brave" && provider !== "perplexity") {
-        return jsonResult({
-          error: "unsupported_freshness",
-          message: "freshness is only supported by the Brave and Perplexity web_search providers.",
-          docs: "https://docs.openclaw.ai/tools/web",
+        const query = readStringParam(params, "query", { required: true });
+        const count =
+          readNumberParam(params, "count", { integer: true }) ?? search?.maxResults ?? undefined;
+        const country = readStringParam(params, "country");
+        const search_lang = readStringParam(params, "search_lang");
+        const ui_lang = readStringParam(params, "ui_lang");
+        const rawFreshness = readStringParam(params, "freshness");
+        if (rawFreshness && provider !== "brave" && provider !== "perplexity") {
+          return jsonResult({
+            error: "unsupported_freshness",
+            message:
+              "freshness is only supported by the Brave and Perplexity web_search providers.",
+            docs: "https://docs.openclaw.ai/tools/web",
+          });
+        }
+        const freshness = rawFreshness ? normalizeFreshness(rawFreshness) : undefined;
+        if (rawFreshness && !freshness) {
+          return jsonResult({
+            error: "invalid_freshness",
+            message:
+              "freshness must be one of pd, pw, pm, py, or a range like YYYY-MM-DDtoYYYY-MM-DD.",
+            docs: "https://docs.openclaw.ai/tools/web",
+          });
+        }
+        const result = await runWebSearch({
+          query,
+          count: resolveSearchCount(count, DEFAULT_SEARCH_COUNT),
+          apiKey,
+          timeoutSeconds: resolveTimeoutSeconds(search?.timeoutSeconds, DEFAULT_TIMEOUT_SECONDS),
+          cacheTtlMs: resolveCacheTtlMs(search?.cacheTtlMinutes, DEFAULT_CACHE_TTL_MINUTES),
+          provider,
+          country,
+          search_lang,
+          ui_lang,
+          freshness,
+          perplexityBaseUrl: resolvePerplexityBaseUrl(
+            perplexityConfig,
+            perplexityAuth?.source,
+            perplexityAuth?.apiKey,
+          ),
+          perplexityModel: resolvePerplexityModel(perplexityConfig),
+          grokModel: resolveGrokModel(grokConfig),
+          grokInlineCitations: resolveGrokInlineCitations(grokConfig),
+          geminiModel: resolveGeminiModel(geminiConfig),
         });
-      }
-      const freshness = rawFreshness ? normalizeFreshness(rawFreshness) : undefined;
-      if (rawFreshness && !freshness) {
-        return jsonResult({
-          error: "invalid_freshness",
-          message:
-            "freshness must be one of pd, pw, pm, py, or a range like YYYY-MM-DDtoYYYY-MM-DD.",
-          docs: "https://docs.openclaw.ai/tools/web",
-        });
-      }
-      const result = await runWebSearch({
-        query,
-        count: resolveSearchCount(count, DEFAULT_SEARCH_COUNT),
-        apiKey,
-        timeoutSeconds: resolveTimeoutSeconds(search?.timeoutSeconds, DEFAULT_TIMEOUT_SECONDS),
-        cacheTtlMs: resolveCacheTtlMs(search?.cacheTtlMinutes, DEFAULT_CACHE_TTL_MINUTES),
-        provider,
-        country,
-        search_lang,
-        ui_lang,
-        freshness,
-        perplexityBaseUrl: resolvePerplexityBaseUrl(
-          perplexityConfig,
-          perplexityAuth?.source,
-          perplexityAuth?.apiKey,
-        ),
-        perplexityModel: resolvePerplexityModel(perplexityConfig),
-        grokModel: resolveGrokModel(grokConfig),
-        grokInlineCitations: resolveGrokInlineCitations(grokConfig),
-        geminiModel: resolveGeminiModel(geminiConfig),
-      });
-      return jsonResult(result);
+        return jsonResult(result);
+      },
     },
-  };
+    "builtin:web_search",
+  );
 }
 
 export const __testing = {

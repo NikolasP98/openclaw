@@ -11,7 +11,7 @@ const VALID_MANIFEST = {
   version: "1.0.0",
   tools: ["remember", "recall_entity"],
   requires: [],
-  handler: "../../memory/knowledge-graph.js",
+  handler: "../memory/knowledge-graph.js",
   testCoverage: 100,
 };
 
@@ -34,8 +34,8 @@ describe("loadRegistry — happy path", () => {
 
   it("returns manifest data intact", () => {
     const { skills } = loadRegistry(makeDeps());
-    expect(skills[0]!.manifest.id).toBe("knowledge-graph");
-    expect(skills[0]!.manifest.tools).toContain("remember");
+    expect(skills[0].manifest.id).toBe("knowledge-graph");
+    expect(skills[0].manifest.tools).toContain("remember");
   });
 
   it("loads multiple valid manifests", () => {
@@ -54,15 +54,15 @@ describe("loadRegistry — happy path", () => {
 
   it("populates source field on each entry", () => {
     const { skills } = loadRegistry(makeDeps());
-    expect(skills[0]!.source).toBe("test/knowledge-graph.manifest.json");
+    expect(skills[0].source).toBe("test/knowledge-graph.manifest.json");
   });
 
   it("applies schema defaults (empty tools and requires)", () => {
     const minimal = { ...VALID_MANIFEST, tools: undefined, requires: undefined };
     const deps = makeDeps({ readManifests: () => [{ raw: minimal, source: "test" }] });
     const { skills } = loadRegistry(deps);
-    expect(skills[0]!.manifest.tools).toEqual([]);
-    expect(skills[0]!.manifest.requires).toEqual([]);
+    expect(skills[0].manifest.tools).toEqual([]);
+    expect(skills[0].manifest.requires).toEqual([]);
   });
 });
 
@@ -82,7 +82,9 @@ describe("loadRegistry — schema validation", () => {
     const deps = makeDeps({ readManifests: () => [{ raw: noHandler, source: "test" }] });
     const { skills, diagnostics } = loadRegistry(deps);
     expect(skills).toHaveLength(0);
-    expect(diagnostics.some((d) => d.level === "error" && d.message.includes("handler"))).toBe(true);
+    expect(diagnostics.some((d) => d.level === "error" && d.message.includes("handler"))).toBe(
+      true,
+    );
   });
 
   it("skips manifest with invalid version format", () => {
@@ -127,7 +129,9 @@ describe("loadRegistry — env var requirements", () => {
     });
     const { skills, diagnostics } = loadRegistry(deps);
     expect(skills).toHaveLength(0);
-    expect(diagnostics.some((d) => d.level === "warn" && d.message.includes("OPENAI_API_KEY"))).toBe(true);
+    expect(
+      diagnostics.some((d) => d.level === "warn" && d.message.includes("OPENAI_API_KEY")),
+    ).toBe(true);
   });
 
   it("excludes skill with multiple missing env vars, listing all in warning", () => {
@@ -169,7 +173,9 @@ describe("loadRegistry — test coverage gate", () => {
     });
     const { skills, diagnostics } = loadRegistry(deps);
     expect(skills).toHaveLength(0);
-    expect(diagnostics.some((d) => d.level === "warn" && d.message.includes("coverage"))).toBe(true);
+    expect(diagnostics.some((d) => d.level === "warn" && d.message.includes("coverage"))).toBe(
+      true,
+    );
   });
 
   it("excludes skill with undefined coverage when gate is active", () => {
@@ -198,11 +204,15 @@ describe("loadRegistry — test coverage gate", () => {
 describe("loadRegistry — error resilience", () => {
   it("returns empty registry + error diagnostic when readManifests throws", () => {
     const deps = makeDeps({
-      readManifests: () => { throw new Error("disk error"); },
+      readManifests: () => {
+        throw new Error("disk error");
+      },
     });
     const { skills, diagnostics } = loadRegistry(deps);
     expect(skills).toHaveLength(0);
-    expect(diagnostics.some((d) => d.level === "error" && d.message.includes("disk error"))).toBe(true);
+    expect(diagnostics.some((d) => d.level === "error" && d.message.includes("disk error"))).toBe(
+      true,
+    );
   });
 
   it("does not crash on completely invalid raw input", () => {
@@ -237,11 +247,13 @@ const require = createRequire(import.meta.url);
 describe("sample manifests from manifests/", () => {
   it("knowledge-graph manifest parses and validates", () => {
     const raw = require("./manifests/knowledge-graph.manifest.json") as unknown;
-    const deps = makeDeps({ readManifests: () => [{ raw, source: "knowledge-graph.manifest.json" }] });
+    const deps = makeDeps({
+      readManifests: () => [{ raw, source: "knowledge-graph.manifest.json" }],
+    });
     const { skills, diagnostics } = loadRegistry(deps);
     expect(skills).toHaveLength(1);
     expect(diagnostics.filter((d) => d.level === "error")).toHaveLength(0);
-    expect(skills[0]!.manifest.id).toBe("knowledge-graph");
+    expect(skills[0].manifest.id).toBe("knowledge-graph");
   });
 
   it("web-search manifest parses and validates", () => {
@@ -253,7 +265,9 @@ describe("sample manifests from manifests/", () => {
 
   it("browser-control manifest parses and validates", () => {
     const raw = require("./manifests/browser-control.manifest.json") as unknown;
-    const deps = makeDeps({ readManifests: () => [{ raw, source: "browser-control.manifest.json" }] });
+    const deps = makeDeps({
+      readManifests: () => [{ raw, source: "browser-control.manifest.json" }],
+    });
     const { skills } = loadRegistry(deps);
     expect(skills).toHaveLength(1);
   });

@@ -3,7 +3,7 @@ import { abortEmbeddedPiRun } from "../../agents/pi-embedded.js";
 import {
   listSubagentRunsForRequester,
   markSubagentRunTerminated,
-} from "../../agents/subagent-registry.js";
+} from "../../agents/subagents/subagent-registry.js";
 import {
   resolveInternalSessionKey,
   resolveMainSessionAlias,

@@ -3,10 +3,16 @@
  */
 
 import { resolveAgentDir, resolveAgentWorkspaceDir } from "../agents/agent-scope.js";
+import { createFollowupRunner } from "../auto-reply/reply/followup-runner.js";
+import { scheduleFollowupDrain } from "../auto-reply/reply/queue/drain.js";
 import { enqueueFollowupRun } from "../auto-reply/reply/queue/enqueue.ts";
 import type { FollowupRun } from "../auto-reply/reply/queue/types.js";
+import { createTypingController } from "../auto-reply/reply/typing.js";
 import { loadConfig } from "../config/config.js";
 import { loadSessionStore, resolveDefaultSessionStorePath } from "../config/sessions.js";
+import { createSubsystemLogger } from "../logging/subsystem.js";
+
+const log = createSubsystemLogger("gog-oauth/notifications");
 
 /**
  * Notification types
@@ -34,7 +40,7 @@ async function enqueueOAuthNotification(notification: OAuthNotification): Promis
   const sessionEntry = sessionStore[notification.sessionKey];
 
   if (!sessionEntry) {
-    console.error(`Cannot send OAuth notification: session ${notification.sessionKey} not found`);
+    log.error(`Cannot send OAuth notification: session ${notification.sessionKey} not found`);
     return;
   }
 
@@ -70,7 +76,7 @@ async function enqueueOAuthNotification(notification: OAuthNotification): Promis
   };
 
   // Enqueue the notification
-  enqueueFollowupRun(
+  const enqueued = enqueueFollowupRun(
     notification.sessionKey,
     followupRun,
     {
@@ -79,6 +85,21 @@ async function enqueueOAuthNotification(notification: OAuthNotification): Promis
     },
     "none", // No deduplication
   );
+
+  // Trigger drain so the notification is processed immediately
+  if (enqueued) {
+    const typing = createTypingController({});
+    const runFollowup = createFollowupRunner({
+      typing,
+      typingMode: "never",
+      sessionEntry,
+      sessionStore,
+      sessionKey: notification.sessionKey,
+      storePath,
+      defaultModel: sessionEntry.model || "claude-sonnet-4-5-20250929",
+    });
+    scheduleFollowupDrain(notification.sessionKey, runFollowup);
+  }
 }
 
 /**
@@ -120,7 +141,7 @@ export async function notifyAuthTimeout(
     email,
     sessionKey,
     agentId,
-    message: `⏱ Gmail authorization timed out (5 minutes). Would you like to try again?`,
+    message: `⏱ Google authorization for ${email} timed out (5 minutes). Would you like to try again?`,
   });
 }
 
@@ -136,9 +157,9 @@ export async function notifyAuthError(
   let message: string;
 
   if (error === "access_denied") {
-    message = `✗ Gmail authorization was declined. Let me know if you'd like to try again.`;
+    message = `✗ Google authorization for ${email} was declined. Let me know if you'd like to try again.`;
   } else {
-    message = `✗ Gmail authorization failed: ${error}. Please try again.`;
+    message = `✗ Google authorization for ${email} failed: ${error}. Please try again.`;
   }
 
   await enqueueOAuthNotification({

@@ -17,7 +17,7 @@ describe("architect_pipeline tool", () => {
   });
 
   it("initializes and reads default state", async () => {
-    const tool = createOpenClawTools({ workspaceDir }).find(
+    const tool = (await createOpenClawTools({ workspaceDir })).find(
       (candidate) => candidate.name === "architect_pipeline",
     );
     if (!tool) {
@@ -49,7 +49,7 @@ describe("architect_pipeline tool", () => {
   });
 
   it("applies decision gate retries and escalates at retry limit", async () => {
-    const tool = createOpenClawTools({ workspaceDir }).find(
+    const tool = (await createOpenClawTools({ workspaceDir })).find(
       (candidate) => candidate.name === "architect_pipeline",
     );
     if (!tool) {
@@ -84,7 +84,7 @@ describe("architect_pipeline tool", () => {
   });
 
   it("rejects state paths outside workspace", async () => {
-    const tool = createOpenClawTools({ workspaceDir }).find(
+    const tool = (await createOpenClawTools({ workspaceDir })).find(
       (candidate) => candidate.name === "architect_pipeline",
     );
     if (!tool) {

@@ -17,10 +17,10 @@ import {
   isAnthropicBillingError,
   isAnthropicRateLimitError,
 } from "../agents/live-auth-keys.js";
-import { isModernModelRef } from "../agents/live-model-filter.js";
-import { getApiKeyForModel } from "../agents/model-auth.js";
-import { ensureOpenClawModelsJson } from "../agents/models-config.js";
-import { discoverAuthStorage, discoverModels } from "../agents/pi-model-discovery.js";
+import { isModernModelRef } from "../agents/models/live-model-filter.js";
+import { getApiKeyForModel } from "../agents/models/model-auth.js";
+import { ensureOpenClawModelsJson } from "../agents/models/models-config.js";
+import { discoverAuthStorage, discoverModels } from "../agents/models/pi-model-discovery.js";
 import { loadConfig } from "../config/config.js";
 import type { ModelsConfig, OpenClawConfig, ModelProviderConfig } from "../config/types.js";
 import { isTruthyEnvValue } from "../infra/env.js";

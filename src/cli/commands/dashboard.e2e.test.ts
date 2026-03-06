@@ -9,7 +9,7 @@ const openUrlMock = vi.hoisted(() => vi.fn());
 const formatControlUiSshHintMock = vi.hoisted(() => vi.fn());
 const copyToClipboardMock = vi.hoisted(() => vi.fn());
 
-vi.mock("../config/config.js", () => ({
+vi.mock("../../hooks/config.js", () => ({
   readConfigFileSnapshot: readConfigFileSnapshotMock,
   resolveGatewayPort: resolveGatewayPortMock,
 }));
@@ -21,7 +21,7 @@ vi.mock("./onboard-helpers.js", () => ({
   formatControlUiSshHint: formatControlUiSshHintMock,
 }));
 
-vi.mock("../infra/clipboard.js", () => ({
+vi.mock("../../infra/clipboard.js", () => ({
   copyToClipboard: copyToClipboardMock,
 }));
 

@@ -6,8 +6,8 @@ import {
   resolveDefaultAgentId,
 } from "../agents/agent-scope.js";
 import { appendCronStyleCurrentTimeLine } from "../agents/current-time.js";
-import { resolveEffectiveMessagesConfig } from "../agents/identity.js";
-import { DEFAULT_HEARTBEAT_FILENAME } from "../agents/workspace.js";
+import { resolveEffectiveMessagesConfig } from "../agents/identity/identity.js";
+import { DEFAULT_HEARTBEAT_FILENAME } from "../agents/identity/workspace.js";
 import { resolveHeartbeatReplyPayload } from "../auto-reply/heartbeat-reply-payload.js";
 import {
   DEFAULT_HEARTBEAT_ACK_MAX_CHARS,
@@ -35,6 +35,7 @@ import {
   updateSessionStore,
 } from "../config/sessions.js";
 import type { AgentDefaultsConfig } from "../config/types.agent-defaults.js";
+import { traceGatewayEvent } from "../logging/chat-trace.js";
 import { writeHeartbeatLogEntry } from "../logging/heartbeat-log.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { getQueueSize } from "../platform/process/command-queue.js";
@@ -958,6 +959,12 @@ export async function runHeartbeatOnce(opts: {
       channel: delivery.channel !== "none" ? delivery.channel : undefined,
       accountId: delivery.accountId,
       indicatorType: visibility.useIndicator ? resolveIndicatorType("failed") : undefined,
+    });
+    traceGatewayEvent({
+      traceId: "hb_error",
+      level: "ERROR",
+      stage: "HEARTBEAT_FAILED",
+      data: { reason: reason.slice(0, 200) },
     });
     log.error(`heartbeat failed: ${reason}`, { error: reason });
     return { status: "failed", reason };

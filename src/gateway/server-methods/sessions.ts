@@ -39,9 +39,9 @@ import {
   type SessionsPatchResult,
   type SessionsPreviewEntry,
   type SessionsPreviewResult,
-} from "../session-utils.js";
-import { applySessionsPatchToStore } from "../sessions-patch.js";
-import { resolveSessionKeyFromResolveParams } from "../sessions-resolve.js";
+} from "../sessions/session-utils.js";
+import { applySessionsPatchToStore } from "../sessions/sessions-patch.js";
+import { resolveSessionKeyFromResolveParams } from "../sessions/sessions-resolve.js";
 import type { GatewayRequestHandlers, RespondFn } from "./types.js";
 import { assertValidParams } from "./validation.js";
 

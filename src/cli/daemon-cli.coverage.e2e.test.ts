@@ -27,11 +27,11 @@ vi.mock("../gateway/call.js", () => ({
   callGateway: (opts: unknown) => callGateway(opts),
 }));
 
-vi.mock("../daemon/program-args.js", () => ({
+vi.mock("../platform/daemon/program-args.js", () => ({
   resolveGatewayProgramArguments: (opts: unknown) => resolveGatewayProgramArguments(opts),
 }));
 
-vi.mock("../daemon/service.js", () => ({
+vi.mock("../platform/cron/service.js", () => ({
   resolveGatewayService: () => ({
     label: "LaunchAgent",
     loadedText: "loaded",
@@ -46,11 +46,11 @@ vi.mock("../daemon/service.js", () => ({
   }),
 }));
 
-vi.mock("../daemon/legacy.js", () => ({
+vi.mock("../config/legacy.js", () => ({
   findLegacyGatewayServices: async () => [],
 }));
 
-vi.mock("../daemon/inspect.js", () => ({
+vi.mock("../platform/daemon/inspect.js", () => ({
   findExtraGatewayServices: (env: unknown, opts?: unknown) => findExtraGatewayServices(env, opts),
   renderGatewayServiceCleanupHints: () => [],
 }));

@@ -448,62 +448,18 @@ export function renderApp(state: AppViewState) {
                     state.agentFileDrafts[name] ?? state.agentFileContents[name] ?? "";
                   void saveAgentFile(state, resolvedAgentId, name, content);
                 },
-                onToolsProfileChange: (agentId, profile, clearAllow) => {
-                  if (!configValue) {
+                onToolsOverridesSave: async (agentId, overrides) => {
+                  if (!state.client || !state.connected) {
                     return;
                   }
-                  const list = (configValue as { agents?: { list?: unknown[] } }).agents?.list;
-                  if (!Array.isArray(list)) {
-                    return;
-                  }
-                  const index = list.findIndex(
-                    (entry) =>
-                      entry &&
-                      typeof entry === "object" &&
-                      "id" in entry &&
-                      (entry as { id?: string }).id === agentId,
-                  );
-                  if (index < 0) {
-                    return;
-                  }
-                  const basePath = ["agents", "list", index, "tools"];
-                  if (profile) {
-                    updateConfigFormValue(state, [...basePath, "profile"], profile);
-                  } else {
-                    removeConfigFormValue(state, [...basePath, "profile"]);
-                  }
-                  if (clearAllow) {
-                    removeConfigFormValue(state, [...basePath, "allow"]);
-                  }
-                },
-                onToolsOverridesChange: (agentId, alsoAllow, deny) => {
-                  if (!configValue) {
-                    return;
-                  }
-                  const list = (configValue as { agents?: { list?: unknown[] } }).agents?.list;
-                  if (!Array.isArray(list)) {
-                    return;
-                  }
-                  const index = list.findIndex(
-                    (entry) =>
-                      entry &&
-                      typeof entry === "object" &&
-                      "id" in entry &&
-                      (entry as { id?: string }).id === agentId,
-                  );
-                  if (index < 0) {
-                    return;
-                  }
-                  const basePath = ["agents", "list", index, "tools"];
-                  if (alsoAllow.length > 0) {
-                    updateConfigFormValue(state, [...basePath, "alsoAllow"], alsoAllow);
-                  } else {
-                    removeConfigFormValue(state, [...basePath, "alsoAllow"]);
-                  }
-                  if (deny.length > 0) {
-                    updateConfigFormValue(state, [...basePath, "deny"], deny);
-                  } else {
-                    removeConfigFormValue(state, [...basePath, "deny"]);
+                  try {
+                    await state.client.request("tools.overrides.set", {
+                      agentId,
+                      ...overrides,
+                    });
+                    await loadConfig(state);
+                  } catch (err) {
+                    state.lastError = String(err);
                   }
                 },
                 onConfigReload: () => loadConfig(state),
@@ -516,34 +472,31 @@ export function renderApp(state: AppViewState) {
                     void loadAgentSkills(state, resolvedAgentId);
                   }
                 },
-                onAgentSkillToggle: (agentId, skillName, enabled) => {
-                  if (!configValue) {
+                onAgentSkillToggle: async (agentId, skillName, enabled) => {
+                  if (!state.client || !state.connected) {
                     return;
                   }
-                  const list = (configValue as { agents?: { list?: unknown[] } }).agents?.list;
-                  if (!Array.isArray(list)) {
-                    return;
-                  }
-                  const index = list.findIndex(
-                    (entry) =>
-                      entry &&
-                      typeof entry === "object" &&
-                      "id" in entry &&
-                      (entry as { id?: string }).id === agentId,
-                  );
-                  if (index < 0) {
-                    return;
-                  }
-                  const entry = list[index] as { skills?: unknown };
                   const normalizedSkill = skillName.trim();
                   if (!normalizedSkill) {
                     return;
                   }
+
+                  const list = (configValue as { agents?: { list?: unknown[] } })?.agents?.list;
+                  const entry = Array.isArray(list)
+                    ? (list.find(
+                        (e) =>
+                          e &&
+                          typeof e === "object" &&
+                          "id" in e &&
+                          (e as { id?: string }).id === agentId,
+                      ) as { skills?: unknown } | undefined)
+                    : undefined;
+
                   const allSkills =
                     state.agentSkillsReport?.skills?.map((skill) => skill.name).filter(Boolean) ??
                     [];
-                  const existing = Array.isArray(entry.skills)
-                    ? entry.skills.map((name) => String(name).trim()).filter(Boolean)
+                  const existing = Array.isArray(entry?.skills)
+                    ? (entry.skills as string[]).map((name) => String(name).trim()).filter(Boolean)
                     : undefined;
                   const base = existing ?? allSkills;
                   const next = new Set(base);
@@ -552,47 +505,43 @@ export function renderApp(state: AppViewState) {
                   } else {
                     next.delete(normalizedSkill);
                   }
-                  updateConfigFormValue(state, ["agents", "list", index, "skills"], [...next]);
+                  try {
+                    await state.client.request("agents.skills.set", {
+                      agentId,
+                      skills: [...next],
+                    });
+                    await loadConfig(state);
+                  } catch (err) {
+                    state.lastError = String(err);
+                  }
                 },
-                onAgentSkillsClear: (agentId) => {
-                  if (!configValue) {
+                onAgentSkillsClear: async (agentId) => {
+                  if (!state.client || !state.connected) {
                     return;
                   }
-                  const list = (configValue as { agents?: { list?: unknown[] } }).agents?.list;
-                  if (!Array.isArray(list)) {
-                    return;
+                  try {
+                    await state.client.request("agents.skills.set", {
+                      agentId,
+                      skills: null,
+                    });
+                    await loadConfig(state);
+                  } catch (err) {
+                    state.lastError = String(err);
                   }
-                  const index = list.findIndex(
-                    (entry) =>
-                      entry &&
-                      typeof entry === "object" &&
-                      "id" in entry &&
-                      (entry as { id?: string }).id === agentId,
-                  );
-                  if (index < 0) {
-                    return;
-                  }
-                  removeConfigFormValue(state, ["agents", "list", index, "skills"]);
                 },
-                onAgentSkillsDisableAll: (agentId) => {
-                  if (!configValue) {
+                onAgentSkillsDisableAll: async (agentId) => {
+                  if (!state.client || !state.connected) {
                     return;
                   }
-                  const list = (configValue as { agents?: { list?: unknown[] } }).agents?.list;
-                  if (!Array.isArray(list)) {
-                    return;
+                  try {
+                    await state.client.request("agents.skills.set", {
+                      agentId,
+                      skills: [],
+                    });
+                    await loadConfig(state);
+                  } catch (err) {
+                    state.lastError = String(err);
                   }
-                  const index = list.findIndex(
-                    (entry) =>
-                      entry &&
-                      typeof entry === "object" &&
-                      "id" in entry &&
-                      (entry as { id?: string }).id === agentId,
-                  );
-                  if (index < 0) {
-                    return;
-                  }
-                  updateConfigFormValue(state, ["agents", "list", index, "skills"], []);
                 },
                 onModelChange: (agentId, modelId) => {
                   if (!configValue) {

@@ -23,8 +23,8 @@ import { getPluginToolMeta } from "../plugins/tools.js";
 import { isSubagentSessionKey } from "../routing/session-key.js";
 import { DEFAULT_GATEWAY_HTTP_TOOL_DENY } from "../security/dangerous-tools.js";
 import { normalizeMessageChannel } from "../shared/message-channel.js";
-import type { AuthRateLimiter } from "./auth-rate-limit.js";
-import { authorizeGatewayConnect, type ResolvedGatewayAuth } from "./auth.js";
+import type { AuthRateLimiter } from "./auth/auth-rate-limit.js";
+import { authorizeGatewayConnect, type ResolvedGatewayAuth } from "./auth/auth.js";
 import {
   readJsonBodyOrError,
   sendGatewayAuthFailure,
@@ -235,7 +235,7 @@ export async function handleToolsInvokeHttpRequest(
     : undefined;
 
   // Build tool list (core + plugin tools).
-  const allTools = createOpenClawTools({
+  const allTools = await createOpenClawTools({
     agentSessionKey: sessionKey,
     agentChannel: messageChannel ?? undefined,
     agentAccountId: accountId,

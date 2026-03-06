@@ -6,7 +6,10 @@ import { createSubsystemLogger } from "../logging/subsystem.js";
 import { parseAgentSessionKey, normalizeAgentId } from "../routing/session-key.js";
 import { resolveHubMetricsConfig } from "./hub-metrics-config.js";
 import type { ReliabilityEvent } from "./protocol/schema/reliability.js";
-import { loadCombinedSessionStoreForGateway, listSessionsFromStore } from "./session-utils.js";
+import {
+  loadCombinedSessionStoreForGateway,
+  listSessionsFromStore,
+} from "./sessions/session-utils.js";
 
 const log = createSubsystemLogger("hub-metrics");
 
@@ -24,11 +27,15 @@ type SkillStatEntry = {
   occurredAt: number;
 };
 
+type ChannelSnapshotProvider = () => Record<string, unknown>;
+
 type HubMetricsPushHandle = {
   /** Push a reliability event to the buffer. */
   pushEvent: (event: ReliabilityEvent) => void;
   /** Push a skill execution stat. */
   pushSkillStat: (stat: SkillStatEntry) => void;
+  /** Provide a function that returns the channel runtime snapshot for heartbeats. */
+  setChannelSnapshotProvider: (provider: ChannelSnapshotProvider) => void;
   /** Force an immediate flush (for shutdown). */
   flush: () => Promise<void>;
   /** Stop the push client. */
@@ -92,6 +99,7 @@ export function startHubMetricsPush(rawConfig: unknown): HubMetricsPushHandle | 
   const skillStatsBuffer: SkillStatEntry[] = [];
   let currentBackoffMs = pushIntervalMs;
   let consecutiveFailures = 0;
+  let channelSnapshotProvider: ChannelSnapshotProvider | null = null;
 
   function pushEvent(event: ReliabilityEvent): void {
     eventBuffer.push(event);
@@ -124,17 +132,30 @@ export function startHubMetricsPush(rawConfig: unknown): HubMetricsPushHandle | 
       // Auth store unavailable — omit
     }
 
+    // Build sessions snapshot (used for both heartbeat counts and batch payload)
+    const sessions = buildSessionsBatch();
+
+    // Build channel status snapshot if a provider is registered
+    let channelStatusJson: string | undefined;
+    try {
+      if (channelSnapshotProvider) {
+        channelStatusJson = JSON.stringify(channelSnapshotProvider());
+      }
+    } catch {
+      // Best effort — omit if serialization fails
+    }
+
     // Build heartbeat
-    const heartbeat = {
+    const heartbeat: Record<string, unknown> = {
       uptimeMs: Math.round(process.uptime() * 1000),
-      activeSessions: 0, // Placeholder — wired up when integrated into server.impl.ts
-      activeAgents: 0,
+      activeSessions: sessions.length,
+      activeAgents: new Set(sessions.map((s) => s.agentId)).size,
       memoryRssMb: Math.round((process.memoryUsage().rss / 1024 / 1024) * 100) / 100,
       capturedAt: Date.now(),
     };
-
-    // Build sessions snapshot
-    const sessions = buildSessionsBatch();
+    if (channelStatusJson) {
+      heartbeat.channelStatusJson = channelStatusJson;
+    }
 
     const batch: Record<string, unknown> = { heartbeat };
 
@@ -230,6 +251,9 @@ export function startHubMetricsPush(rawConfig: unknown): HubMetricsPushHandle | 
   const handle: HubMetricsPushHandle = {
     pushEvent,
     pushSkillStat,
+    setChannelSnapshotProvider(provider: ChannelSnapshotProvider) {
+      channelSnapshotProvider = provider;
+    },
     flush,
     stop() {
       clearInterval(interval);

@@ -11,7 +11,7 @@ import { getHealthSnapshot } from "./health.js";
 let testConfig: Record<string, unknown> = {};
 let testStore: Record<string, { updatedAt?: number }> = {};
 
-vi.mock("../config/config.js", async (importOriginal) => {
+vi.mock("../../hooks/config.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../config/config.js")>();
   return {
     ...actual,
@@ -19,7 +19,7 @@ vi.mock("../config/config.js", async (importOriginal) => {
   };
 });
 
-vi.mock("../config/sessions.js", () => ({
+vi.mock("./sessions.js", () => ({
   resolveStorePath: () => "/tmp/sessions.json",
   loadSessionStore: () => testStore,
   readSessionUpdatedAt: vi.fn(() => undefined),
@@ -27,7 +27,7 @@ vi.mock("../config/sessions.js", () => ({
   updateLastRoute: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../web/auth-store.js", () => ({
+vi.mock("../../web/auth-store.js", () => ({
   webAuthExists: vi.fn(async () => true),
   getWebAuthAgeMs: vi.fn(() => 1234),
   readWebSelfId: vi.fn(() => ({ e164: null, jid: null })),

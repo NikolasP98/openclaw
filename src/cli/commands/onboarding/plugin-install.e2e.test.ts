@@ -8,11 +8,11 @@ vi.mock("node:fs", () => ({
 }));
 
 const installPluginFromNpmSpec = vi.fn();
-vi.mock("../../plugins/install.js", () => ({
+vi.mock("../../../hooks/install.js", () => ({
   installPluginFromNpmSpec: (...args: unknown[]) => installPluginFromNpmSpec(...args),
 }));
 
-vi.mock("../../plugins/loader.js", () => ({
+vi.mock("../../../hooks/loader.js", () => ({
   loadOpenClawPlugins: vi.fn(),
 }));
 

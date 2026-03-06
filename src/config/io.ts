@@ -15,6 +15,7 @@ import {
 import { VERSION } from "../version.js";
 import { DuplicateAgentDirError, findDuplicateAgentDirs } from "./agent-dirs.js";
 import { rotateConfigBackups } from "./backup-rotation.js";
+import { parseWithComments, stringifyWithComments, transferComments } from "./comment-preserve.js";
 import {
   applyCompactionDefaults,
   applyContextPruningDefaults,
@@ -952,7 +953,23 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
     // Do NOT apply runtime defaults when writing — user config should only contain
     // explicitly set values. Runtime defaults are applied when loading (issue #6070).
     const stampedOutputConfig = stampConfigVersion(outputConfig);
-    const json = JSON.stringify(stampedOutputConfig, null, 2).trimEnd().concat("\n");
+
+    // Preserve user comments from the existing config file by parsing with
+    // comment-json (which stores comments as Symbol metadata) and transferring
+    // those symbols to the output config before serializing.
+    let commentSource: unknown = null;
+    try {
+      if (deps.fs.existsSync(configPath)) {
+        const existingRaw = await deps.fs.promises.readFile(configPath, "utf-8");
+        commentSource = parseWithComments(existingRaw);
+      }
+    } catch {
+      // If reading fails, proceed without comment preservation
+    }
+    const commentedOutput = commentSource
+      ? transferComments(commentSource, stampedOutputConfig)
+      : stampedOutputConfig;
+    const json = stringifyWithComments(commentedOutput, 2).trimEnd().concat("\n");
     const nextHash = hashConfigRaw(json);
     const previousHash = resolveConfigSnapshotHash(snapshot);
     const changedPathCount = changedPaths?.size;

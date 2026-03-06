@@ -32,6 +32,7 @@ const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
   "claude-3-haiku": 200_000,
 
   // OpenAI
+  "gpt-5.2": 200_000, // ClawRouter v0.10.0
   "gpt-4o": 128_000,
   "gpt-4o-mini": 128_000,
   "gpt-4-turbo": 128_000,
@@ -43,7 +44,9 @@ const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
   "o4-mini": 200_000,
 
   // Google
+  "gemini-3.1-pro": 2_000_000, // ClawRouter v0.10.0 (preview)
   "gemini-2.5-pro": 1_000_000,
+  "gemini-2.5-flash-lite": 1_000_000, // ClawRouter v0.10.0 ECO tier
   "gemini-2.5-flash": 1_000_000,
   "gemini-2.0-flash": 1_000_000,
   "gemini-1.5-pro": 2_000_000,
@@ -121,4 +124,39 @@ export function modelFitsContext(modelId: string, estimatedTokens: number): bool
     return true; // Unknown model — fail-open
   }
   return contextWindow >= estimatedTokens * 1.1;
+}
+
+// ── Tool Calling Capability ───────────────────────────────────────────────────
+
+/**
+ * Models known to NOT support tool/function calling.
+ *
+ * Key format: lowercase model-id prefix (without provider prefix).
+ * Prefix matching is used — "minimax" matches "minimax/abab6.5-chat", etc.
+ *
+ * Only list models where tool calling is confirmed broken or unsupported.
+ * Unknown models are treated as tool-capable (fail-open).
+ *
+ * Sources:
+ * - Minimax removed from ClawRouter auto-routing chains due to tool schema
+ *   incompatibilities (ClawRouter v0.10.0, commit 0255524)
+ */
+const TOOL_INCOMPATIBLE_PREFIXES: ReadonlySet<string> = new Set([
+  "minimax",
+]);
+
+/**
+ * Check if a model supports tool/function calling.
+ *
+ * Returns false only for models explicitly listed as tool-incompatible.
+ * Returns true for unknown models (fail-open: don't skip what we can't verify).
+ */
+export function modelSupportsToolCalling(modelId: string): boolean {
+  const lower = modelId.toLowerCase();
+  for (const prefix of TOOL_INCOMPATIBLE_PREFIXES) {
+    if (lower === prefix || lower.startsWith(`${prefix}/`) || lower.startsWith(`${prefix}-`)) {
+      return false;
+    }
+  }
+  return true;
 }

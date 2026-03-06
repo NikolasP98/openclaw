@@ -13,7 +13,7 @@ import {
 import { __resetDiscordChannelInfoCacheForTest } from "./monitor/message-utils.js";
 const loadConfigMock = vi.fn();
 
-vi.mock("../config/config.js", async (importOriginal) => {
+vi.mock("../../../hooks/config.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../config/config.js")>();
   return {
     ...actual,

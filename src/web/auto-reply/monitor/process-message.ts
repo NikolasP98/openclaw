@@ -1,5 +1,5 @@
 import { resolveAgentDir } from "../../../agents/agent-scope.js";
-import { resolveIdentityNamePrefix } from "../../../agents/identity.js";
+import { resolveIdentityNamePrefix } from "../../../agents/identity/identity.js";
 import { resolveChunkMode, resolveTextChunkLimit } from "../../../auto-reply/chunk.js";
 import { shouldComputeCommandAuthorized } from "../../../auto-reply/command-detection.js";
 import {
@@ -25,6 +25,7 @@ import {
 } from "../../../config/sessions.js";
 import { logVerbose, shouldLogVerbose } from "../../../globals.js";
 import type { getChildLogger } from "../../../logging.js";
+import { deriveTraceId, traceChatEvent, traceGatewayEvent } from "../../../logging/chat-trace.js";
 import { transcribeFirstAudio } from "../../../media-understanding/audio-preflight.js";
 import { getAgentScopedMediaLocalRoots } from "../../../media/local-roots.js";
 import { readChannelAllowFromStore } from "../../../pairing/pairing-store.js";
@@ -442,6 +443,26 @@ export async function processMessage(params: {
           const fromDisplay =
             params.msg.chatType === "group" ? conversationId : (params.msg.from ?? "unknown");
           const hasMedia = Boolean(payload.mediaUrl || payload.mediaUrls?.length);
+          const deliveryTraceId = deriveTraceId(params.msg.id ?? params.msg.conversationId);
+          const deliveryData = {
+            agentId: params.route.agentId,
+            to: fromDisplay,
+            hasMedia,
+            textLength: payload.text?.length ?? 0,
+          };
+          traceChatEvent({
+            agentId: params.route.agentId,
+            traceId: deliveryTraceId,
+            level: "INFO",
+            stage: "DELIVERED",
+            data: deliveryData,
+          });
+          traceGatewayEvent({
+            traceId: deliveryTraceId,
+            level: "INFO",
+            stage: "DELIVERED",
+            data: deliveryData,
+          });
           whatsappOutboundLog.info(`Auto-replied to ${fromDisplay}${hasMedia ? " (media)" : ""}`);
           if (shouldLogVerbose()) {
             const preview = payload.text != null ? elide(payload.text, 400) : "<media>";

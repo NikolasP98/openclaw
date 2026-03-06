@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { OpenClawConfig } from "../config/config.js";
+import type { WorkspaceBootstrapFile } from "./identity/workspace.js";
+import { DEFAULT_AGENTS_FILENAME } from "./identity/workspace.js";
 import {
   buildBootstrapContextFiles,
   DEFAULT_BOOTSTRAP_MAX_CHARS,
@@ -7,8 +9,6 @@ import {
   resolveBootstrapMaxChars,
   resolveBootstrapTotalMaxChars,
 } from "./pi-embedded-helpers.js";
-import type { WorkspaceBootstrapFile } from "./workspace.js";
-import { DEFAULT_AGENTS_FILENAME } from "./workspace.js";
 
 const makeFile = (overrides: Partial<WorkspaceBootstrapFile>): WorkspaceBootstrapFile => ({
   name: DEFAULT_AGENTS_FILENAME,

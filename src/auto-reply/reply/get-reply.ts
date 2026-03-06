@@ -4,9 +4,12 @@ import {
   resolveSessionAgentId,
   resolveAgentSkillsFilter,
 } from "../../agents/agent-scope.js";
-import { resolveModelRefFromString } from "../../agents/model-selection.js";
+import {
+  DEFAULT_AGENT_WORKSPACE_DIR,
+  ensureAgentWorkspace,
+} from "../../agents/identity/workspace.js";
+import { resolveModelRefFromString } from "../../agents/models/model-selection.js";
 import { resolveAgentTimeoutMs } from "../../agents/timeout.js";
-import { DEFAULT_AGENT_WORKSPACE_DIR, ensureAgentWorkspace } from "../../agents/workspace.js";
 import { type MinionConfig, loadConfig } from "../../config/config.js";
 import { applyLinkUnderstanding } from "../../link-understanding/apply.js";
 import { applyMediaUnderstanding } from "../../media-understanding/apply.js";
@@ -22,7 +25,7 @@ import { runPreparedReply } from "./get-reply-run.js";
 import { finalizeInboundContext } from "./inbound-context.js";
 import { applyResetModelOverride } from "./session-reset-model.js";
 import { initSessionState } from "./session.js";
-import { routeMessage } from "./smart-routing.js";
+import { getSessionPin, pinSession, routeMessage } from "./smart-routing.js";
 import { stageSandboxMedia } from "./stage-sandbox-media.js";
 import { createTypingController } from "./typing.js";
 
@@ -248,16 +251,31 @@ export async function getReplyFromConfig(
     sessionState.sessionCtx.RawBody ??
     sessionState.sessionCtx.BodyStripped ??
     "";
-  const smartRoute = routeMessage({
-    message: promptText,
-    routing: agentCfg?.routing,
-    orchestrator: agentCfg?.orchestrator,
-  });
+
+  // S.2: Check existing session pin before routing. If the session is pinned
+  // from a previous message, re-use that model without re-classifying.
+  const routingEnabled = Boolean(agentCfg?.routing?.enabled);
+  const existingPin = routingEnabled && sessionKey ? getSessionPin(sessionKey) : undefined;
+
+  let smartRoute = existingPin
+    ? existingPin.routingResult
+    : routeMessage({
+        message: promptText,
+        routing: agentCfg?.routing,
+        orchestrator: agentCfg?.orchestrator,
+      });
+
   let smartRouted = false;
   if (smartRoute?.provider && smartRoute?.model) {
     provider = smartRoute.provider;
     model = smartRoute.model;
     smartRouted = true;
+
+    // S.2: Pin the session after first routing decision so subsequent messages
+    // reuse the same model for the duration of the conversation.
+    if (routingEnabled && sessionKey && !existingPin) {
+      pinSession(sessionKey, smartRoute);
+    }
   }
   if (smartRoute?.contextTokensCap) {
     contextTokens = Math.min(contextTokens, smartRoute.contextTokensCap);

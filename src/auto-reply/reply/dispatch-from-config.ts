@@ -4,6 +4,7 @@ import { loadSessionStore, resolveStorePath } from "../../config/sessions.js";
 import { logVerbose } from "../../globals.js";
 import { createInternalHookEvent, triggerInternalHook } from "../../hooks/internal-hooks.js";
 import { isDiagnosticsEnabled } from "../../infra/diagnostic-events.js";
+import { deriveTraceId, traceChatEvent, traceGatewayEvent } from "../../logging/chat-trace.js";
 import {
   logMessageProcessed,
   logMessageQueued,
@@ -119,6 +120,17 @@ export async function dispatchReplyFromConfig(params: {
   const effectiveCfg = sessionAgentId ? resolveAgentEffectiveTtsCfg(cfg, sessionAgentId) : cfg;
   const startTime = diagnosticsEnabled ? Date.now() : 0;
   const canTrackSession = diagnosticsEnabled && Boolean(sessionKey);
+  const traceId = deriveTraceId(messageId);
+
+  if (sessionAgentId) {
+    traceChatEvent({
+      agentId: sessionAgentId,
+      traceId,
+      level: "INFO",
+      stage: "DISPATCHED",
+      data: { sessionKey, channel },
+    });
+  }
 
   const recordProcessed = (
     outcome: "completed" | "skipped" | "error",
@@ -361,10 +373,41 @@ export async function dispatchReplyFromConfig(params: {
       return { ...payload, text: undefined };
     };
 
+    const outerOnModelSelected = params.replyOptions?.onModelSelected;
+    const outerOnToolStart = params.replyOptions?.onToolStart;
+
     const replyResult = await (params.replyResolver ?? getReplyFromConfig)(
       ctx,
       {
         ...params.replyOptions,
+        onModelSelected: (modelCtx) => {
+          if (sessionAgentId) {
+            traceChatEvent({
+              agentId: sessionAgentId,
+              traceId,
+              level: "INFO",
+              stage: "MODEL_SELECTED",
+              data: {
+                provider: modelCtx.provider,
+                model: modelCtx.model,
+                thinkLevel: modelCtx.thinkLevel,
+              },
+            });
+          }
+          outerOnModelSelected?.(modelCtx);
+        },
+        onToolStart: (payload) => {
+          if (sessionAgentId && payload.name) {
+            traceChatEvent({
+              agentId: sessionAgentId,
+              traceId,
+              level: "DEBUG",
+              stage: "TOOL_CALL",
+              data: { tool: payload.name, phase: payload.phase },
+            });
+          }
+          return outerOnToolStart?.(payload);
+        },
         onToolResult: (payload: ReplyPayload) => {
           const run = async () => {
             const ttsPayload = await maybeApplyTtsToPayload({
@@ -416,6 +459,20 @@ export async function dispatchReplyFromConfig(params: {
       },
       cfg,
     );
+
+    if (sessionAgentId) {
+      traceChatEvent({
+        agentId: sessionAgentId,
+        traceId,
+        level: "INFO",
+        stage: "LLM_RESULT",
+        data: {
+          status: "success",
+          durationMs: Date.now() - startTime,
+          replyCount: replyResult ? (Array.isArray(replyResult) ? replyResult.length : 1) : 0,
+        },
+      });
+    }
 
     const replies = replyResult ? (Array.isArray(replyResult) ? replyResult : [replyResult]) : [];
 
@@ -518,6 +575,22 @@ export async function dispatchReplyFromConfig(params: {
     markIdle("message_completed");
     return { queuedFinal, counts };
   } catch (err) {
+    const errorData = {
+      agentId: sessionAgentId,
+      error: err instanceof Error ? err.message : String(err),
+      errorClass: err instanceof Error ? err.constructor.name : typeof err,
+      durationMs: Date.now() - startTime,
+    };
+    if (sessionAgentId) {
+      traceChatEvent({
+        agentId: sessionAgentId,
+        traceId,
+        level: "ERROR",
+        stage: "LLM_ERROR",
+        data: errorData,
+      });
+    }
+    traceGatewayEvent({ traceId, level: "ERROR", stage: "LLM_ERROR", data: errorData });
     recordProcessed("error", { error: String(err) });
     markIdle("message_error");
     throw err;

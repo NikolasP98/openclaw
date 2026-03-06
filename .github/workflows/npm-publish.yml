@@ -44,7 +44,7 @@ jobs:
         run: |
           TIMESTAMP=$(date -u +%Y%m%d%H%M%S)
           BASE_VERSION=$(node -p "require('./package.json').version")
-          npm version "${BASE_VERSION}-dev.${TIMESTAMP}" --no-git-tag-version
+          npm version "${BASE_VERSION}.${TIMESTAMP}" --no-git-tag-version
 
       - name: Publish (main → latest)
         if: github.ref_name == 'main' && steps.version-check.outputs.skip != 'true'

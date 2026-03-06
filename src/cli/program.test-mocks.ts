@@ -74,5 +74,5 @@ export function installSmokeProgramMocks() {
     loadAndMaybeMigrateDoctorConfig,
   }));
   vi.mock("./program/config-guard.js", () => ({ ensureConfigReady }));
-  vi.mock("./preaction.js", () => ({ registerPreActionHooks: () => {} }));
+  vi.mock("./program/preaction.js", () => ({ registerPreActionHooks: () => {} }));
 }

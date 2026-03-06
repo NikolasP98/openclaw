@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { installEmbeddingManagerFixture } from "./embedding-manager.test-harness.js";
+import { installEmbeddingManagerFixture } from "./embedding/embedding-manager.test-harness.js";
 
 const fx = installEmbeddingManagerFixture({
   fixturePrefix: "openclaw-mem-",

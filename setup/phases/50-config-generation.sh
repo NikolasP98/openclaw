@@ -196,6 +196,7 @@ AUTHEOF
         # Batch all cp/chown/chmod into a single SSH call
         run_cmd --as root "
             mkdir -p '${agent_auth_dir}' &&
+            mkdir -p '${config_dir}/agents/main/KG' &&
             cp '$remote_tmp/minion.json' '${config_dir}/minion.json' &&
             cp '$remote_tmp/SOUL.md' '${workspace_dir}/SOUL.md' &&
             cp '$remote_tmp/minion-gateway.service' '${systemd_dir}/minion-gateway.service' &&
@@ -218,6 +219,7 @@ AUTHEOF
 
         local agent_auth_dir="${config_dir}/agents/main/agent"
         mkdir -p "${agent_auth_dir}"
+        mkdir -p "${config_dir}/agents/main/KG"
         cp "$temp_dir/auth-profiles.json" "${agent_auth_dir}/auth-profiles.json"
         chmod 600 "${agent_auth_dir}/auth-profiles.json"
     fi
@@ -234,8 +236,9 @@ AUTHEOF
     if [ "${EXEC_MODE:-local}" = "remote" ]; then
         run_cmd --as root "
             mkdir -p '${per_agent_config_dir}' &&
+            mkdir -p '${per_agent_config_dir}/KG' &&
             chmod 700 '${per_agent_config_dir}' &&
-            chown ${exec_user}:${exec_user} '${per_agent_config_dir}'
+            chown ${exec_user}:${exec_user} '${per_agent_config_dir}' '${per_agent_config_dir}/KG'
         "
         if ! run_cmd "test -f '${per_agent_config}'" 2>/dev/null; then
             run_cmd --as root "
@@ -249,6 +252,7 @@ AUTHEOF
         fi
     else
         mkdir -p "${per_agent_config_dir}"
+        mkdir -p "${per_agent_config_dir}/KG"
         chmod 700 "${per_agent_config_dir}"
         if [ ! -f "${per_agent_config}" ]; then
             printf '{\n  "id": "%s",\n  "name": "%s"\n}\n' "${agent_name}" "${agent_name}" > "${per_agent_config}"

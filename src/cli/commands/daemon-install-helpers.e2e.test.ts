@@ -8,17 +8,17 @@ const mocks = vi.hoisted(() => ({
   buildServiceEnvironment: vi.fn(),
 }));
 
-vi.mock("../daemon/runtime-paths.js", () => ({
+vi.mock("../../platform/daemon/runtime-paths.js", () => ({
   resolvePreferredNodePath: mocks.resolvePreferredNodePath,
   resolveSystemNodeInfo: mocks.resolveSystemNodeInfo,
   renderSystemNodeWarning: mocks.renderSystemNodeWarning,
 }));
 
-vi.mock("../daemon/program-args.js", () => ({
+vi.mock("../../platform/daemon/program-args.js", () => ({
   resolveGatewayProgramArguments: mocks.resolveGatewayProgramArguments,
 }));
 
-vi.mock("../daemon/service-env.js", () => ({
+vi.mock("../../platform/daemon/service-env.js", () => ({
   buildServiceEnvironment: mocks.buildServiceEnvironment,
 }));
 

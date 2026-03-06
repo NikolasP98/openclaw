@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -120,6 +120,47 @@ describe("npm-publish.yml", () => {
     it("never references @anthropic/minion", () => {
       expect(raw).not.toContain("@anthropic/minion");
     });
+  });
+
+  // ── Build entry point imports ───────────────────────────────────
+  describe("build entry imports resolve", () => {
+    // The publish step runs tsdown which bundles entry points.
+    // If any import in an entry file points to a nonexistent path, the build fails.
+    // This catches structural refactoring breakage (e.g. moved files with stale paths).
+    const entryFiles = [
+      "src/extensionAPI.ts",
+      "src/plugin-sdk/index.ts",
+      "src/index.ts",
+      "src/entry.ts",
+    ];
+
+    const importRe = /(?:from\s+["']|import\(["'])(\.\.?\/[^"']+?)(?:\.ts|\.js)["']/g;
+
+    for (const entry of entryFiles) {
+      it(`all imports in ${entry} resolve to existing files`, () => {
+        const fullPath = resolve(repoRoot, entry);
+        if (!existsSync(fullPath)) {
+          return; // skip if entry doesn't exist (optional entries)
+        }
+        const content = readFileSync(fullPath, "utf8");
+        const entryDir = resolve(fullPath, "..");
+        const broken: string[] = [];
+
+        for (const m of content.matchAll(importRe)) {
+          const rel = m[1];
+          const target = resolve(entryDir, rel);
+          const exists =
+            existsSync(target + ".ts") ||
+            existsSync(target + ".js") ||
+            (existsSync(target) && readdirSync(target).includes("index.ts"));
+          if (!exists) {
+            broken.push(rel);
+          }
+        }
+
+        expect(broken, `Broken imports in ${entry}: ${broken.join(", ")}`).toHaveLength(0);
+      });
+    }
   });
 
   // ── Publish command ──────────────────────────────────────────────

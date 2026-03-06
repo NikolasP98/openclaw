@@ -1,10 +1,14 @@
 /**
  * gog_auth_start tool - Start non-blocking Google OAuth flow
+ *
+ * Delegates URL building and scope resolution to GoogleAuthProvider.
+ * Tool name kept as "gog_auth_start" for backward compatibility.
  */
 
 import { Type } from "@sinclair/typebox";
+import { createGoogleAuthProvider } from "../../auth/google/google-auth-provider.js";
+import type { AuthProvider } from "../../auth/provider.js";
 import { updateSessionStore, resolveDefaultSessionStorePath } from "../../config/sessions.js";
-import { getGoogleClientId } from "../../hooks/gog-credentials.js";
 import {
   generateState,
   addPendingFlow,
@@ -12,47 +16,51 @@ import {
   getRedirectUri,
 } from "../../hooks/gog-oauth-server.js";
 import type { PendingOAuthFlow, OAuthStartResult } from "../../hooks/gog-oauth-types.js";
-import { getScopesForServices } from "../../hooks/gog-oauth-types.js";
 import type { AnyAgentTool } from "./common.js";
 import { jsonResult, readStringParam } from "./common.js";
-
-const GogAuthStartSchema = Type.Object({
-  email: Type.String({
-    description: "Google account email address",
-    minLength: 1,
-  }),
-  services: Type.Optional(
-    Type.Array(
-      Type.Union([
-        Type.Literal("gmail"),
-        Type.Literal("calendar"),
-        Type.Literal("drive"),
-        Type.Literal("contacts"),
-        Type.Literal("docs"),
-        Type.Literal("sheets"),
-      ]),
-      {
-        description: "Google services to authorize (default: gmail, calendar, drive)",
-      },
-    ),
-  ),
-});
 
 export function createGogAuthStartTool(opts?: {
   agentId?: string;
   agentDir?: string;
   sessionKey?: string;
 }): AnyAgentTool {
+  // Create provider once at tool creation time — used for both schema and execute
+  const provider: AuthProvider = createGoogleAuthProvider();
+
+  // Build service literals dynamically from provider
+  const serviceLiterals = provider.getSupportedServices().map((s) => Type.Literal(s));
+
+  const GogAuthStartSchema = Type.Object({
+    email: Type.String({
+      description: "Google account email address",
+      minLength: 1,
+    }),
+    services: Type.Optional(
+      Type.Array(Type.Union(serviceLiterals), {
+        description: "Google services to authorize (default: gmail, calendar, drive)",
+      }),
+    ),
+  });
+
   return {
     label: "Google Auth Start",
     name: "gog_auth_start",
     description:
-      "Start non-blocking Google OAuth flow for Gmail, Calendar, Drive, and other Google services. Returns an authorization URL for the user to visit. The agent remains responsive while waiting for authorization.",
+      "Start non-blocking Google OAuth flow for Gmail, Calendar, Drive, and other Google services. Returns an authorization URL for the user to visit. The agent remains responsive while waiting for authorization. " +
+      "IMPORTANT: Always use the default services (gmail, calendar, drive) unless the user explicitly requests only specific services. Do NOT narrow to a single service — users expect all Google services to work once authenticated.",
     parameters: GogAuthStartSchema,
     execute: async (_toolCallId, args) => {
       const params = args as Record<string, unknown>;
       const email = readStringParam(params, "email", { required: true });
-      const services = (params.services as string[] | undefined) || ["gmail", "calendar", "drive"];
+      let services = (params.services as string[] | undefined) || ["gmail", "calendar", "drive"];
+
+      // Merge with existing credential services so re-auth never loses previously granted scopes
+      if (opts?.agentId && opts?.sessionKey) {
+        const existing = await provider.loadCredentials(opts.agentId, opts.sessionKey, email);
+        if (existing?.services?.length) {
+          services = [...new Set([...existing.services, ...services])];
+        }
+      }
 
       // Validate email format
       if (!email.includes("@")) {
@@ -82,13 +90,11 @@ export function createGogAuthStartTool(opts?: {
       const now = Date.now();
       const expiresAt = now + 5 * 60 * 1000;
 
-      // Get OAuth scopes for requested services
-      const scopes = getScopesForServices(services);
-
-      // Build OAuth authorization URL
-      let clientId: string;
+      // Build OAuth authorization URL via provider
+      const redirectUri = getRedirectUri();
+      let authUrl: string;
       try {
-        clientId = getGoogleClientId();
+        authUrl = provider.buildAuthUrl({ email, services, redirectUri, state });
       } catch {
         return jsonResult({
           error:
@@ -99,17 +105,6 @@ export function createGogAuthStartTool(opts?: {
         });
       }
 
-      const redirectUri = getRedirectUri();
-      const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
-      authUrl.searchParams.set("client_id", clientId);
-      authUrl.searchParams.set("redirect_uri", redirectUri);
-      authUrl.searchParams.set("response_type", "code");
-      authUrl.searchParams.set("scope", scopes.join(" "));
-      authUrl.searchParams.set("state", state);
-      authUrl.searchParams.set("access_type", "offline");
-      authUrl.searchParams.set("prompt", "consent");
-      authUrl.searchParams.set("login_hint", email);
-
       // Create pending flow
       const flow: PendingOAuthFlow = {
         state,
@@ -119,7 +114,8 @@ export function createGogAuthStartTool(opts?: {
         services,
         requestedAt: now,
         expiresAt,
-        authUrl: authUrl.toString(),
+        authUrl,
+        providerId: provider.id,
       };
 
       // Store pending flow
@@ -143,10 +139,15 @@ export function createGogAuthStartTool(opts?: {
 
       // Return result
       const result: OAuthStartResult = {
-        authUrl: authUrl.toString(),
+        authUrl,
         state,
         expiresIn: 300, // 5 minutes in seconds
-        instructions: `Please visit the link above to authorize access to your Google account. I'll notify you when authentication is complete (or if it times out after 5 minutes).`,
+        instructions:
+          `IMPORTANT: You MUST paste the full authUrl as plain text in your response — do NOT wrap it in markdown link format like [text](url) or [url](url). ` +
+          `The messaging platform auto-links plain URLs; markdown formatting breaks the URL and causes auth errors. ` +
+          `Just paste the raw URL on its own line. ` +
+          `The user will visit this link to authorize access to their Google account (${services.join(", ")}). ` +
+          `You'll be notified when authentication completes (or if it times out after 5 minutes).`,
       };
 
       return jsonResult(result);

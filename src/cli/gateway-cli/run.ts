@@ -9,7 +9,7 @@ import {
   resolveStateDir,
   resolveGatewayPort,
 } from "../../config/config.js";
-import { resolveGatewayAuth } from "../../gateway/auth.js";
+import { resolveGatewayAuth } from "../../gateway/auth/auth.js";
 import { startGatewayServer } from "../../gateway/server.js";
 import type { GatewayWsLogStyle } from "../../gateway/ws-logging.js";
 import { setGatewayWsLogStyle } from "../../gateway/ws-logging.js";

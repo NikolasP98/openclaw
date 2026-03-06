@@ -1,5 +1,5 @@
 import { DEFAULT_PROVIDER } from "../../agents/defaults.js";
-import { buildModelAliasIndex, modelKey } from "../../agents/model-selection.js";
+import { buildModelAliasIndex, modelKey } from "../../agents/models/model-selection.js";
 import type { OpenClawConfig } from "../../config/config.js";
 import type { ModelProviderConfig } from "../../config/types.models.js";
 import type { RuntimeEnv } from "../../runtime.js";

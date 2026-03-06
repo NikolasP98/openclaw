@@ -7,8 +7,8 @@ import {
   parseAgentSessionKey,
 } from "../routing/session-key.js";
 import { resolveUserPath } from "../utils.js";
+import { resolveDefaultAgentWorkspaceDir } from "./identity/workspace.js";
 import { normalizeSkillFilter } from "./skills/filter.js";
-import { resolveDefaultAgentWorkspaceDir } from "./workspace.js";
 
 export { resolveAgentIdFromSessionKey } from "../routing/session-key.js";
 

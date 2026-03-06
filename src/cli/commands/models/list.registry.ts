@@ -6,15 +6,15 @@ import {
   getCustomProviderApiKey,
   resolveAwsSdkEnvVarName,
   resolveEnvApiKey,
-} from "../../../agents/model-auth.js";
+} from "../../../agents/models/model-auth.js";
 import {
   ANTIGRAVITY_OPUS_46_FORWARD_COMPAT_CANDIDATES,
   resolveForwardCompatModel,
-} from "../../../agents/model-forward-compat.js";
-import { ensureOpenClawModelsJson } from "../../../agents/models-config.js";
+} from "../../../agents/models/model-forward-compat.js";
+import { ensureOpenClawModelsJson } from "../../../agents/models/models-config.js";
+import type { ModelRegistry } from "../../../agents/models/pi-model-discovery.js";
+import { discoverAuthStorage, discoverModels } from "../../../agents/models/pi-model-discovery.js";
 import { ensurePiAuthJsonFromAuthProfiles } from "../../../agents/pi-auth-json.js";
-import type { ModelRegistry } from "../../../agents/pi-model-discovery.js";
-import { discoverAuthStorage, discoverModels } from "../../../agents/pi-model-discovery.js";
 import type { OpenClawConfig } from "../../../config/config.js";
 import {
   formatErrorWithStack,

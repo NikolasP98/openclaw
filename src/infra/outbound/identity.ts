@@ -1,5 +1,5 @@
-import { resolveAgentAvatar } from "../../agents/identity-avatar.js";
-import { resolveAgentIdentity } from "../../agents/identity.js";
+import { resolveAgentAvatar } from "../../agents/identity/identity-avatar.js";
+import { resolveAgentIdentity } from "../../agents/identity/identity.js";
 import type { OpenClawConfig } from "../../config/config.js";
 
 export type OutboundIdentity = {

@@ -1,9 +1,9 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { describe, expect, it, vi } from "vitest";
-import type { ResolvedGatewayAuth } from "./auth.js";
+import type { ResolvedGatewayAuth } from "./auth/auth.js";
 import { handleGatewayPostJsonEndpoint } from "./http-endpoint-helpers.js";
 
-vi.mock("./http-auth-helpers.js", () => {
+vi.mock("./auth/http-auth-helpers.js", () => {
   return {
     authorizeGatewayBearerRequestOrReply: vi.fn(),
   };
@@ -16,7 +16,7 @@ vi.mock("./http-common.js", () => {
   };
 });
 
-const { authorizeGatewayBearerRequestOrReply } = await import("./http-auth-helpers.js");
+const { authorizeGatewayBearerRequestOrReply } = await import("./auth/http-auth-helpers.js");
 const { readJsonBodyOrError, sendMethodNotAllowed } = await import("./http-common.js");
 
 describe("handleGatewayPostJsonEndpoint", () => {

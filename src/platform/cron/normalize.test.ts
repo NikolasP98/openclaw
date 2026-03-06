@@ -422,3 +422,102 @@ describe("normalizeCronJobPatch", () => {
     expect(schedule.staggerMs).toBe(30_000);
   });
 });
+
+// ── Cron expression 5-field validation (Sprint T.4) ──────────────────────────
+
+const VALID_CRON_BASE = {
+  name: "test",
+  enabled: true,
+  sessionTarget: "main" as const,
+  wakeMode: "next-heartbeat" as const,
+  payload: { kind: "systemEvent", text: "hi" },
+};
+
+describe("normalizeCronJobCreate — cron expression validation", () => {
+  it("accepts a valid 5-field cron expression", () => {
+    expect(() =>
+      normalizeCronJobCreate({
+        ...VALID_CRON_BASE,
+        schedule: { kind: "cron", expr: "30 9 * * 1-5" },
+      }),
+    ).not.toThrow();
+  });
+
+  it("accepts all-wildcard 5-field expression", () => {
+    expect(() =>
+      normalizeCronJobCreate({
+        ...VALID_CRON_BASE,
+        schedule: { kind: "cron", expr: "* * * * *" },
+      }),
+    ).not.toThrow();
+  });
+
+  it("accepts step/range expressions with exactly 5 fields", () => {
+    expect(() =>
+      normalizeCronJobCreate({
+        ...VALID_CRON_BASE,
+        schedule: { kind: "cron", expr: "*/5 * * * *" },
+      }),
+    ).not.toThrow();
+  });
+
+  it("rejects a 6-field Quartz-style expression", () => {
+    expect(() =>
+      normalizeCronJobCreate({
+        ...VALID_CRON_BASE,
+        schedule: { kind: "cron", expr: "0 30 9 * * 1-5" },
+      }),
+    ).toThrow(/expected 5 fields.*got 6/i);
+  });
+
+  it("rejects a 3-field shorthand expression", () => {
+    expect(() =>
+      normalizeCronJobCreate({
+        ...VALID_CRON_BASE,
+        schedule: { kind: "cron", expr: "9 * 1-5" },
+      }),
+    ).toThrow(/expected 5 fields.*got 3/i);
+  });
+
+  it("rejects a 4-field expression", () => {
+    expect(() =>
+      normalizeCronJobCreate({
+        ...VALID_CRON_BASE,
+        schedule: { kind: "cron", expr: "30 9 * *" },
+      }),
+    ).toThrow(/expected 5 fields.*got 4/i);
+  });
+
+  it("error message includes the invalid expression for debugging", () => {
+    let message = "";
+    try {
+      normalizeCronJobCreate({
+        ...VALID_CRON_BASE,
+        schedule: { kind: "cron", expr: "bad expr here with six words" },
+      });
+    } catch (e) {
+      message = e instanceof Error ? e.message : String(e);
+    }
+    expect(message).toContain("bad expr here with six words");
+    expect(message).toContain("5 fields");
+  });
+
+  it("allows empty expr (no validation applied, gateway will reject)", () => {
+    // Empty expr is a gateway concern — normalize only validates non-empty exprs
+    expect(() =>
+      normalizeCronJobCreate({
+        ...VALID_CRON_BASE,
+        schedule: { kind: "cron", expr: "" },
+      }),
+    ).not.toThrow();
+  });
+
+  it("handles extra whitespace in valid 5-field expr", () => {
+    expect(() =>
+      normalizeCronJobCreate({
+        ...VALID_CRON_BASE,
+        schedule: { kind: "cron", expr: "  30  9  *  *  1-5  " },
+      }),
+    ).not.toThrow();
+  });
+});

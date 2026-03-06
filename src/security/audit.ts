@@ -4,9 +4,9 @@ import { listChannelPlugins } from "../channels/plugins/index.js";
 import { formatCliCommand } from "../cli/command-format.js";
 import type { OpenClawConfig } from "../config/config.js";
 import { resolveConfigPath, resolveStateDir } from "../config/paths.js";
-import { resolveGatewayAuth } from "../gateway/auth.js";
+import { resolveGatewayAuth } from "../gateway/auth/auth.js";
+import { resolveGatewayProbeAuth } from "../gateway/auth/probe-auth.js";
 import { buildGatewayConnectionDetails } from "../gateway/call.js";
-import { resolveGatewayProbeAuth } from "../gateway/probe-auth.js";
 import { probeGateway } from "../gateway/probe.js";
 import { collectChannelSecurityFindings } from "./audit-channel.js";
 import {

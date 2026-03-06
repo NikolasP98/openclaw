@@ -34,7 +34,7 @@ vi.mock("../config/sessions.js", () => ({
   },
 }));
 
-vi.mock("./auth.js", () => ({
+vi.mock("./auth/auth.js", () => ({
   authorizeGatewayConnect: async () => ({ ok: true }),
 }));
 
@@ -111,7 +111,7 @@ vi.mock("../agents/openclaw-tools.js", () => {
   ];
 
   return {
-    createOpenClawTools: () => tools,
+    createOpenClawTools: async () => tools,
   };
 });
 

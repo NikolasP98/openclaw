@@ -5,7 +5,7 @@
  * like command processing, session lifecycle, etc.
  */
 
-import type { WorkspaceBootstrapFile } from "../agents/workspace.js";
+import type { WorkspaceBootstrapFile } from "../agents/identity/workspace.js";
 import type { CliDeps } from "../cli/deps.js";
 import type { MinionConfig } from "../config/config.js";
 
@@ -202,8 +202,7 @@ export async function triggerInternalHook(event: InternalHookEvent): Promise<voi
       await handler(event);
     } catch (err) {
       console.error(
-        `Hook error [${event.type}:${event.action}]:`,
-        err instanceof Error ? err.message : String(err),
+        `Hook error [${event.type}:${event.action}]: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
   }

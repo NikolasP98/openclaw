@@ -47,9 +47,9 @@ vi.mock("../../agents/agent-scope.js", () => ({
   resolveAgentWorkspaceDir: mocks.resolveAgentWorkspaceDir,
 }));
 
-vi.mock("../../agents/workspace.js", async () => {
-  const actual = await vi.importActual<typeof import("../../agents/workspace.js")>(
-    "../../agents/workspace.js",
+vi.mock("../../agents/identity/workspace.js", async () => {
+  const actual = await vi.importActual<typeof import("../../agents/identity/workspace.js")>(
+    "../../hooks/workspace.js",
   );
   return {
     ...actual,
@@ -69,7 +69,7 @@ vi.mock("../../utils.js", () => ({
   resolveUserPath: (p: string) => `/resolved${p.startsWith("/") ? "" : "/"}${p}`,
 }));
 
-vi.mock("../session-utils.js", () => ({
+vi.mock("../sessions/session-utils.js", () => ({
   listAgentsForGateway: mocks.listAgentsForGateway,
 }));
 

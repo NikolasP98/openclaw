@@ -16,12 +16,12 @@ vi.mock("./shared.js", () => ({
   ),
 }));
 
-vi.mock("../../channels/plugins/index.js", () => ({
+vi.mock("../../index.js", () => ({
   listChannelPlugins: vi.fn(),
   getChannelPlugin: vi.fn(),
 }));
 
-vi.mock("../../channels/impl/slack/scopes.js", () => ({
+vi.mock("../../../channels/impl/slack/scopes.js", () => ({
   fetchSlackScopes: vi.fn(),
 }));
 

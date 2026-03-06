@@ -10,7 +10,7 @@ import {
   DEFAULT_SOUL_FILENAME,
   DEFAULT_TOOLS_FILENAME,
   DEFAULT_USER_FILENAME,
-} from "./workspace.js";
+} from "./identity/workspace.js";
 
 describe("bootstrap file constants", () => {
   it("exports progress.txt filename constant", () => {

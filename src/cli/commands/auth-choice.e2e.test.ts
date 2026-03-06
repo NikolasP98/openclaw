@@ -18,7 +18,7 @@ import {
   setupAuthTestEnv,
 } from "./test-wizard-helpers.js";
 
-vi.mock("../providers/github-copilot-auth.js", () => ({
+vi.mock("../../providers/github-copilot-auth.js", () => ({
   githubCopilotLoginCommand: vi.fn(async () => {}),
 }));
 
@@ -28,7 +28,7 @@ vi.mock("./openai-codex-oauth.js", () => ({
 }));
 
 const resolvePluginProviders = vi.hoisted(() => vi.fn(() => []));
-vi.mock("../plugins/providers.js", () => ({
+vi.mock("../../plugins/providers.js", () => ({
   resolvePluginProviders,
 }));
 

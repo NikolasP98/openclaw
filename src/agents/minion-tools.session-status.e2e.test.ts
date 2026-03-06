@@ -38,7 +38,7 @@ vi.mock("../config/config.js", async (importOriginal) => {
   };
 });
 
-vi.mock("../agents/model-catalog.js", () => ({
+vi.mock("../agents/models/model-catalog.js", () => ({
   loadModelCatalog: async () => [
     {
       provider: "anthropic",
@@ -61,7 +61,7 @@ vi.mock("../agents/auth-profiles.js", () => ({
   resolveAuthProfileOrder: () => [],
 }));
 
-vi.mock("../agents/model-auth.js", () => ({
+vi.mock("../agents/models/model-auth.js", () => ({
   resolveEnvApiKey: () => null,
   getCustomProviderApiKey: () => null,
   resolveModelAuthMode: () => "api-key",
@@ -85,8 +85,8 @@ function resetSessionStore(store: Record<string, unknown>) {
   loadSessionStoreMock.mockReturnValue(store);
 }
 
-function getSessionStatusTool(agentSessionKey = "main") {
-  const tool = createOpenClawTools({ agentSessionKey }).find(
+async function getSessionStatusTool(agentSessionKey = "main") {
+  const tool = (await createOpenClawTools({ agentSessionKey })).find(
     (candidate) => candidate.name === "session_status",
   );
   expect(tool).toBeDefined();
@@ -105,7 +105,7 @@ describe("session_status tool", () => {
       },
     });
 
-    const tool = getSessionStatusTool();
+    const tool = await getSessionStatusTool();
 
     const result = await tool.execute("call1", {});
     const details = result.details as { ok?: boolean; statusText?: string };
@@ -120,7 +120,7 @@ describe("session_status tool", () => {
       main: { sessionId: "s1", updatedAt: 10 },
     });
 
-    const tool = getSessionStatusTool();
+    const tool = await getSessionStatusTool();
 
     await expect(tool.execute("call2", { sessionKey: "nope" })).rejects.toThrow(
       "Unknown sessionId",
@@ -137,7 +137,7 @@ describe("session_status tool", () => {
       },
     });
 
-    const tool = getSessionStatusTool();
+    const tool = await getSessionStatusTool();
 
     const result = await tool.execute("call3", { sessionKey: sessionId });
     const details = result.details as { ok?: boolean; sessionKey?: string };
@@ -153,7 +153,7 @@ describe("session_status tool", () => {
       },
     });
 
-    const tool = getSessionStatusTool();
+    const tool = await getSessionStatusTool();
 
     const result = await tool.execute("call4", { sessionKey: "temp:slug-generator" });
     const details = result.details as { ok?: boolean; sessionKey?: string };
@@ -169,7 +169,7 @@ describe("session_status tool", () => {
       },
     });
 
-    const tool = getSessionStatusTool("agent:main:main");
+    const tool = await getSessionStatusTool("agent:main:main");
 
     await expect(tool.execute("call5", { sessionKey: "agent:other:main" })).rejects.toThrow(
       "Agent-to-agent status is disabled",
@@ -205,7 +205,7 @@ describe("session_status tool", () => {
       },
     );
 
-    const tool = getSessionStatusTool("agent:support:main");
+    const tool = await getSessionStatusTool("agent:support:main");
 
     const result = await tool.execute("call6", { sessionKey: "main" });
     const details = result.details as { ok?: boolean; sessionKey?: string };
@@ -224,7 +224,7 @@ describe("session_status tool", () => {
       },
     });
 
-    const tool = getSessionStatusTool();
+    const tool = await getSessionStatusTool();
 
     await tool.execute("call3", { model: "default" });
     expect(updateSessionStoreMock).toHaveBeenCalled();

@@ -3,7 +3,7 @@ import {
   resolveApiKeyForProfile,
   resolveAuthProfileOrder,
 } from "../../../agents/auth-profiles.js";
-import { resolveEnvApiKey } from "../../../agents/model-auth.js";
+import { resolveEnvApiKey } from "../../../agents/models/model-auth.js";
 import type { OpenClawConfig } from "../../../config/config.js";
 import type { RuntimeEnv } from "../../../runtime.js";
 import { normalizeOptionalSecretInput } from "../../../shared/normalize-secret-input.js";

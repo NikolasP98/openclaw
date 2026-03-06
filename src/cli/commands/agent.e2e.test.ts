@@ -3,18 +3,18 @@ import path from "node:path";
 import { beforeEach, describe, expect, it, type MockInstance, vi } from "vitest";
 import { withTempHome as withTempHomeBase } from "../../../test/helpers/temp-home.js";
 
-vi.mock("../agents/pi-embedded.js", () => ({
+vi.mock("../../agents/pi-embedded.js", () => ({
   abortEmbeddedPiRun: vi.fn().mockReturnValue(false),
   runEmbeddedPiAgent: vi.fn(),
   resolveEmbeddedSessionLane: (key: string) => `session:${key.trim() || "main"}`,
 }));
-vi.mock("../agents/model-catalog.js", () => ({
+vi.mock("../../providers/model-catalog.js", () => ({
   loadModelCatalog: vi.fn(),
 }));
 
 import { telegramPlugin } from "../../../extensions/telegram/src/channel.js";
 import { setTelegramRuntime } from "../../../extensions/telegram/src/runtime.js";
-import { loadModelCatalog } from "../../agents/model-catalog.js";
+import { loadModelCatalog } from "../../agents/models/model-catalog.js";
 import { runEmbeddedPiAgent } from "../../agents/pi-embedded.js";
 import type { OpenClawConfig } from "../../config/config.js";
 import * as configModule from "../../config/config.js";

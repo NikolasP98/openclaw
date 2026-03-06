@@ -18,12 +18,26 @@ type ExtractedLevel<T> = {
   hasDirective: boolean;
 };
 
+// Cache compiled regexes keyed by the sorted names array — avoids re-creating
+// `new RegExp()` on every directive parse call.
+const directiveRegexCache = new Map<string, RegExp>();
+
+function getDirectiveRegex(names: string[], suffix: string): RegExp {
+  const cacheKey = `${names.join(",")}|${suffix}`;
+  let re = directiveRegexCache.get(cacheKey);
+  if (!re) {
+    const namePattern = names.map(escapeRegExp).join("|");
+    re = new RegExp(`(?:^|\\s)\\/(?:${namePattern})${suffix}`, "i");
+    directiveRegexCache.set(cacheKey, re);
+  }
+  return re;
+}
+
 const matchLevelDirective = (
   body: string,
   names: string[],
 ): { start: number; end: number; rawLevel?: string } | null => {
-  const namePattern = names.map(escapeRegExp).join("|");
-  const match = body.match(new RegExp(`(?:^|\\s)\\/(?:${namePattern})(?=$|\\s|:)`, "i"));
+  const match = body.match(getDirectiveRegex(names, "(?=$|\\s|:)"));
   if (!match || match.index === undefined) {
     return null;
   }
@@ -77,10 +91,7 @@ const extractSimpleDirective = (
   body: string,
   names: string[],
 ): { cleaned: string; hasDirective: boolean } => {
-  const namePattern = names.map(escapeRegExp).join("|");
-  const match = body.match(
-    new RegExp(`(?:^|\\s)\\/(?:${namePattern})(?=$|\\s|:)(?:\\s*:\\s*)?`, "i"),
-  );
+  const match = body.match(getDirectiveRegex(names, "(?=$|\\s|:)(?:\\s*:\\s*)?"));
   const cleaned = match ? body.replace(match[0], " ").replace(/\s+/g, " ").trim() : body.trim();
   return {
     cleaned,

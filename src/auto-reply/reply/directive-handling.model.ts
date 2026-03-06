@@ -5,7 +5,7 @@ import {
   normalizeProviderId,
   resolveConfiguredModelRef,
   resolveModelRefFromString,
-} from "../../agents/model-selection.js";
+} from "../../agents/models/model-selection.js";
 import { buildBrowseProvidersButton } from "../../channels/impl/telegram/model-buttons.js";
 import type { OpenClawConfig } from "../../config/config.js";
 import { shortenHomePath } from "../../utils.js";

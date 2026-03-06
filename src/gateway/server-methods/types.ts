@@ -1,4 +1,4 @@
-import type { ModelCatalogEntry } from "../../agents/model-catalog.js";
+import type { ModelCatalogEntry } from "../../agents/models/model-catalog.js";
 import type { HealthSummary } from "../../cli/commands/health.js";
 import type { createDefaultDeps } from "../../cli/deps.js";
 import type { createSubsystemLogger } from "../../logging/subsystem.js";
@@ -8,9 +8,12 @@ import type { ChatAbortControllerEntry } from "../chat-abort.js";
 import type { ExecApprovalManager } from "../exec-approval-manager.js";
 import type { NodeRegistry } from "../node-registry.js";
 import type { ConnectParams, ErrorShape, RequestFrame } from "../protocol/index.js";
-import type { GatewayBroadcastFn, GatewayBroadcastToConnIdsFn } from "../server-broadcast.js";
-import type { ChannelRuntimeSnapshot } from "../server-channels.js";
-import type { DedupeEntry } from "../server-shared.js";
+import type {
+  GatewayBroadcastFn,
+  GatewayBroadcastToConnIdsFn,
+} from "../server-core/server-broadcast.js";
+import type { ChannelRuntimeSnapshot } from "../server-core/server-channels.js";
+import type { DedupeEntry } from "../server-core/server-shared.js";
 
 type SubsystemLogger = ReturnType<typeof createSubsystemLogger>;
 

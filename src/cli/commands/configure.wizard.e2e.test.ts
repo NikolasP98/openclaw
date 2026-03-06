@@ -28,22 +28,22 @@ vi.mock("@clack/prompts", () => ({
   confirm: mocks.clackConfirm,
 }));
 
-vi.mock("../config/config.js", () => ({
+vi.mock("../../hooks/config.js", () => ({
   CONFIG_PATH: "~/.minion/minion.json",
   readConfigFileSnapshot: mocks.readConfigFileSnapshot,
   writeConfigFile: mocks.writeConfigFile,
   resolveGatewayPort: mocks.resolveGatewayPort,
 }));
 
-vi.mock("../infra/control-ui-assets.js", () => ({
+vi.mock("../../infra/control-ui-assets.js", () => ({
   ensureControlUiAssetsBuilt: mocks.ensureControlUiAssetsBuilt,
 }));
 
-vi.mock("../wizard/clack-prompter.js", () => ({
+vi.mock("../../wizard/clack-prompter.js", () => ({
   createClackPrompter: mocks.createClackPrompter,
 }));
 
-vi.mock("../terminal/note.js", () => ({
+vi.mock("../../terminal/note.js", () => ({
   note: mocks.note,
 }));
 

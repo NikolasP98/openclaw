@@ -8,7 +8,7 @@ import {
 } from "../hooks/internal-hooks.js";
 import { makeTempWorkspace } from "../test-support/workspace.js";
 import { resolveBootstrapContextForRun, resolveBootstrapFilesForRun } from "./bootstrap-files.js";
-import type { WorkspaceBootstrapFile } from "./workspace.js";
+import type { WorkspaceBootstrapFile } from "./identity/workspace.js";
 
 function registerExtraBootstrapFileHook() {
   registerInternalHook("agent:bootstrap", (event) => {

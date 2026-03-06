@@ -346,7 +346,7 @@ describe("image tool implicit imageModel config", () => {
       try {
         const cfg = createMinimaxImageConfig();
 
-        const tools = createOpenClawCodingTools({ config: cfg, agentDir });
+        const tools = await createOpenClawCodingTools({ config: cfg, agentDir });
         const tool = tools.find((candidate) => candidate.name === "image");
         expect(tool).not.toBeNull();
         if (!tool) {

@@ -6,13 +6,13 @@ import {
   resolveNodeCommandAllowlist,
 } from "./node-command-policy.js";
 import type { RequestFrame } from "./protocol/index.js";
-import { createGatewayBroadcaster } from "./server-broadcast.js";
-import { createChatRunRegistry } from "./server-chat.js";
+import { createGatewayBroadcaster } from "./server-core/server-broadcast.js";
+import { createChatRunRegistry } from "./server-core/server-chat.js";
+import { createNodeSubscriptionManager } from "./server-core/server-node-subscriptions.js";
+import { formatError, normalizeVoiceWakeTriggers } from "./server-core/server-utils.js";
 import { handleNodeInvokeResult } from "./server-methods/nodes.handlers.invoke-result.js";
 import type { GatewayClient as GatewayMethodClient } from "./server-methods/types.js";
 import type { GatewayRequestContext, RespondFn } from "./server-methods/types.js";
-import { createNodeSubscriptionManager } from "./server-node-subscriptions.js";
-import { formatError, normalizeVoiceWakeTriggers } from "./server-utils.js";
 import type { GatewayWsClient } from "./server/ws-types.js";
 
 const wsMockState = vi.hoisted(() => ({

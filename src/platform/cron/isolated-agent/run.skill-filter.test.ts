@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { runWithModelFallback } from "../../../agents/model-fallback.js";
+import { runWithModelFallback } from "../../../agents/models/model-fallback.js";
 
 // ---------- mocks ----------
 
@@ -7,7 +7,7 @@ const buildWorkspaceSkillSnapshotMock = vi.fn();
 const resolveAgentConfigMock = vi.fn();
 const resolveAgentSkillsFilterMock = vi.fn();
 
-vi.mock("../../agents/agent-scope.js", () => ({
+vi.mock("../../../agents/agent-scope.js", () => ({
   resolveAgentConfig: resolveAgentConfigMock,
   resolveAgentDir: vi.fn().mockReturnValue("/tmp/agent-dir"),
   resolveAgentModelFallbacksOverride: vi.fn().mockReturnValue(undefined),
@@ -16,23 +16,23 @@ vi.mock("../../agents/agent-scope.js", () => ({
   resolveAgentSkillsFilter: resolveAgentSkillsFilterMock,
 }));
 
-vi.mock("../../agents/skills.js", () => ({
+vi.mock("../../../agents/skills.js", () => ({
   buildWorkspaceSkillSnapshot: buildWorkspaceSkillSnapshotMock,
 }));
 
-vi.mock("../../agents/skills/refresh.js", () => ({
+vi.mock("../../../agents/skills/refresh.js", () => ({
   getSkillsSnapshotVersion: vi.fn().mockReturnValue(42),
 }));
 
-vi.mock("../../agents/workspace.js", () => ({
+vi.mock("../../../hooks/workspace.js", () => ({
   ensureAgentWorkspace: vi.fn().mockResolvedValue({ dir: "/tmp/workspace" }),
 }));
 
-vi.mock("../../agents/model-catalog.js", () => ({
+vi.mock("../../../providers/model-catalog.js", () => ({
   loadModelCatalog: vi.fn().mockResolvedValue({ models: [] }),
 }));
 
-vi.mock("../../agents/model-selection.js", () => ({
+vi.mock("../../../agents/models/model-selection.js", () => ({
   getModelRefStatus: vi.fn().mockReturnValue({ allowed: false }),
   isCliProvider: vi.fn().mockReturnValue(false),
   resolveAllowedModelRef: vi.fn().mockReturnValue({ ref: { provider: "openai", model: "gpt-4" } }),
@@ -41,7 +41,7 @@ vi.mock("../../agents/model-selection.js", () => ({
   resolveThinkingDefault: vi.fn().mockReturnValue(undefined),
 }));
 
-vi.mock("../../agents/model-fallback.js", () => ({
+vi.mock("../../../agents/models/model-fallback.js", () => ({
   runWithModelFallback: vi.fn().mockResolvedValue({
     result: {
       payloads: [{ text: "test output" }],
@@ -54,62 +54,62 @@ vi.mock("../../agents/model-fallback.js", () => ({
 
 const runWithModelFallbackMock = vi.mocked(runWithModelFallback);
 
-vi.mock("../../agents/pi-embedded.js", () => ({
+vi.mock("../../../agents/pi-embedded.js", () => ({
   runEmbeddedPiAgent: vi.fn().mockResolvedValue({
     payloads: [{ text: "test output" }],
     meta: { agentMeta: { usage: { input: 10, output: 20 } } },
   }),
 }));
 
-vi.mock("../../agents/context.js", () => ({
+vi.mock("../../../agents/context.js", () => ({
   lookupContextTokens: vi.fn().mockReturnValue(128000),
 }));
 
-vi.mock("../../agents/date-time.js", () => ({
+vi.mock("../../../agents/date-time.js", () => ({
   formatUserTime: vi.fn().mockReturnValue("2026-02-10 12:00"),
   resolveUserTimeFormat: vi.fn().mockReturnValue("24h"),
   resolveUserTimezone: vi.fn().mockReturnValue("UTC"),
 }));
 
-vi.mock("../../agents/timeout.js", () => ({
+vi.mock("../../../agents/timeout.js", () => ({
   resolveAgentTimeoutMs: vi.fn().mockReturnValue(60_000),
 }));
 
-vi.mock("../../agents/usage.js", () => ({
+vi.mock("../../../agents/usage.js", () => ({
   deriveSessionTotalTokens: vi.fn().mockReturnValue(30),
   hasNonzeroUsage: vi.fn().mockReturnValue(false),
 }));
 
-vi.mock("../../agents/subagent-announce.js", () => ({
+vi.mock("../../../agents/subagents/subagent-announce.js", () => ({
   runSubagentAnnounceFlow: vi.fn().mockResolvedValue(true),
 }));
 
-vi.mock("../../agents/cli-runner.js", () => ({
+vi.mock("../../../agents/cli-runner.js", () => ({
   runCliAgent: vi.fn(),
 }));
 
-vi.mock("../../agents/cli-session.js", () => ({
+vi.mock("../../../agents/cli-session.js", () => ({
   getCliSessionId: vi.fn().mockReturnValue(undefined),
   setCliSessionId: vi.fn(),
 }));
 
-vi.mock("../../auto-reply/thinking.js", () => ({
+vi.mock("../../../auto-reply/thinking.js", () => ({
   normalizeThinkLevel: vi.fn().mockReturnValue(undefined),
   normalizeVerboseLevel: vi.fn().mockReturnValue("off"),
   supportsXHighThinking: vi.fn().mockReturnValue(false),
 }));
 
-vi.mock("../../cli/outbound-send-deps.js", () => ({
+vi.mock("../../../cli/outbound-send-deps.js", () => ({
   createOutboundSendDeps: vi.fn().mockReturnValue({}),
 }));
 
-vi.mock("../../config/sessions.js", () => ({
+vi.mock("../../../config/sessions.js", () => ({
   resolveAgentMainSessionKey: vi.fn().mockReturnValue("main:default"),
   resolveSessionTranscriptPath: vi.fn().mockReturnValue("/tmp/transcript.jsonl"),
   updateSessionStore: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../../routing/session-key.js", async (importOriginal) => {
+vi.mock("../../../routing/session-key.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../routing/session-key.js")>();
   return {
     ...actual,
@@ -118,23 +118,23 @@ vi.mock("../../routing/session-key.js", async (importOriginal) => {
   };
 });
 
-vi.mock("../../infra/agent-events.js", () => ({
+vi.mock("../../../infra/agent-events.js", () => ({
   registerAgentRunContext: vi.fn(),
 }));
 
-vi.mock("../../infra/outbound/deliver.js", () => ({
+vi.mock("../../../infra/outbound/deliver.js", () => ({
   deliverOutboundPayloads: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../../infra/skills-remote.js", () => ({
+vi.mock("../../../infra/skills-remote.js", () => ({
   getRemoteSkillEligibility: vi.fn().mockReturnValue({}),
 }));
 
-vi.mock("../../logger.js", () => ({
+vi.mock("../../../logger.js", () => ({
   logWarn: vi.fn(),
 }));
 
-vi.mock("../../security/external-content.js", () => ({
+vi.mock("../../../security/external-content.js", () => ({
   buildSafeExternalPrompt: vi.fn().mockReturnValue("safe prompt"),
   detectSuspiciousPatterns: vi.fn().mockReturnValue([]),
   getHookType: vi.fn().mockReturnValue("unknown"),
@@ -168,7 +168,7 @@ vi.mock("./session.js", () => ({
   resolveCronSession: resolveCronSessionMock,
 }));
 
-vi.mock("../../agents/defaults.js", () => ({
+vi.mock("../../../agents/defaults.js", () => ({
   DEFAULT_CONTEXT_TOKENS: 128000,
   DEFAULT_MODEL: "gpt-4",
   DEFAULT_PROVIDER: "openai",

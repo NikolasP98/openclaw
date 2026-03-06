@@ -1,5 +1,6 @@
 import type { AgentBinding, AgentsConfig } from "./types.agents.js";
 import type { ApprovalsConfig } from "./types.approvals.js";
+import type { AuthProvidersConfig } from "./types.auth-providers.js";
 import type { AuthConfig } from "./types.auth.js";
 import type { DiagnosticsConfig, LoggingConfig, SessionConfig, WebConfig } from "./types.base.js";
 import type { BrowserConfig } from "./types.browser.js";
@@ -22,8 +23,8 @@ import type {
 import type { ModelsConfig } from "./types.models.js";
 import type { NodeHostConfig } from "./types.node-host.js";
 import type { PluginsConfig } from "./types.plugins.js";
-import type { SkillsConfig } from "./types.skills.js";
 import type { SecurityAutonomyConfig } from "./types.security.js";
+import type { SkillsConfig } from "./types.skills.js";
 import type { ToolsConfig } from "./types.tools.js";
 
 export type MinionConfig = {
@@ -40,6 +41,8 @@ export type MinionConfig = {
    */
   admins?: string[];
   auth?: AuthConfig;
+  /** OAuth provider configuration (Google, etc.) */
+  authProviders?: AuthProvidersConfig;
   env?: {
     /** Opt-in: import missing secrets from a login shell environment (exec `$SHELL -l -c 'env -0'`). */
     shellEnv?: {

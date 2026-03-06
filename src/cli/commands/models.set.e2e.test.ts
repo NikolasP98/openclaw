@@ -4,7 +4,7 @@ const readConfigFileSnapshot = vi.fn();
 const writeConfigFile = vi.fn().mockResolvedValue(undefined);
 const loadConfig = vi.fn().mockReturnValue({});
 
-vi.mock("../config/config.js", () => ({
+vi.mock("../../hooks/config.js", () => ({
   CONFIG_PATH: "/tmp/openclaw.json",
   readConfigFileSnapshot,
   writeConfigFile,

@@ -10,7 +10,7 @@ import { createTestRegistry } from "../../test-support/channel-plugins.js";
 const loadMessageCommand = async () => await import("./message.js");
 
 let testConfig: Record<string, unknown> = {};
-vi.mock("../config/config.js", async (importOriginal) => {
+vi.mock("../../hooks/config.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../config/config.js")>();
   return {
     ...actual,
@@ -19,33 +19,33 @@ vi.mock("../config/config.js", async (importOriginal) => {
 });
 
 const callGatewayMock = vi.fn();
-vi.mock("../gateway/call.js", () => ({
+vi.mock("../../gateway/call.js", () => ({
   callGateway: callGatewayMock,
   randomIdempotencyKey: () => "idem-1",
 }));
 
 const webAuthExists = vi.fn(async () => false);
-vi.mock("../web/session.js", () => ({
+vi.mock("./agent/session.js", () => ({
   webAuthExists,
 }));
 
 const handleDiscordAction = vi.fn(async (..._args: unknown[]) => ({ details: { ok: true } }));
-vi.mock("../agents/tools/discord-actions.js", () => ({
+vi.mock("../../agents/tools/discord-actions.js", () => ({
   handleDiscordAction,
 }));
 
 const handleSlackAction = vi.fn(async (..._args: unknown[]) => ({ details: { ok: true } }));
-vi.mock("../agents/tools/slack-actions.js", () => ({
+vi.mock("../../agents/tools/slack-actions.js", () => ({
   handleSlackAction,
 }));
 
 const handleTelegramAction = vi.fn(async (..._args: unknown[]) => ({ details: { ok: true } }));
-vi.mock("../agents/tools/telegram-actions.js", () => ({
+vi.mock("../../agents/tools/telegram-actions.js", () => ({
   handleTelegramAction,
 }));
 
 const handleWhatsAppAction = vi.fn(async (..._args: unknown[]) => ({ details: { ok: true } }));
-vi.mock("../agents/tools/whatsapp-actions.js", () => ({
+vi.mock("../../agents/tools/whatsapp-actions.js", () => ({
   handleWhatsAppAction,
 }));
 

@@ -10,7 +10,7 @@ import {
   DEFAULT_TOOLS_FILENAME,
   DEFAULT_USER_FILENAME,
   ensureAgentWorkspace,
-} from "../workspace.js";
+} from "../identity/workspace.js";
 
 export async function ensureSandboxWorkspace(
   workspaceDir: string,

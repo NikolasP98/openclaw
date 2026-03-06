@@ -1,35 +1,34 @@
 /**
  * OAuth callback server for non-blocking Google authentication
- * Handles localhost OAuth redirects and token exchange
+ * Handles localhost OAuth redirects and delegates token exchange
+ * and credential storage to the AuthProvider.
  */
 
 import crypto from "crypto";
 import http from "http";
 import { URL } from "url";
+import { createGoogleAuthProvider } from "../auth/google/google-auth-provider.js";
+import type { AuthProvider } from "../auth/provider.js";
 import { updateSessionStore, resolveDefaultSessionStorePath } from "../config/sessions.js";
 import { upsertSharedEnvVar } from "../infra/env-file.js";
 import { logAcceptedEnvOption } from "../infra/env.js";
+import { traceGatewayEvent } from "../logging/chat-trace.js";
+import { createSubsystemLogger } from "../logging/subsystem.js";
 import { runCommandWithTimeout } from "../platform/process/exec.js";
-import {
-  saveSessionCredentials,
-  getGoogleClientId,
-  getGoogleClientSecret,
-  getGoogleClientType,
-  setGoogleClientCredentialsFile,
-  syncToGogKeyring,
-} from "./gog-credentials.js";
+import { getGoogleClientType, setGoogleClientCredentialsFile } from "./gog-credentials.js";
 import {
   notifyAuthSuccess,
   notifyAuthError,
   notifyAuthTimeout,
 } from "./gog-oauth-notifications.js";
+import { getServicesFromScopes } from "./gog-oauth-types.js";
 import type {
   OAuthServerConfig,
   PendingOAuthFlow,
   OAuthCallbackParams,
-  TokenExchangeResponse,
-  GogCredentials,
 } from "./gog-oauth-types.js";
+
+const log = createSubsystemLogger("gog-oauth");
 
 /**
  * Default OAuth server configuration
@@ -60,7 +59,7 @@ let configuredExternalRedirectUri: string | undefined;
 
 /**
  * Get the redirect URI for OAuth flows.
- * Desktop ("installed") clients only support localhost redirects — Google rejects
+ * Desktop ("installed") clients only support localhost redirects -- Google rejects
  * external URIs with redirect_uri_mismatch. When a Desktop client is detected,
  * we always return the localhost URI regardless of env/config settings.
  * For "web" or "unknown" clients: env var > config > localhost fallback.
@@ -73,8 +72,8 @@ export function getRedirectUri(): string {
     const envUri = process.env.MINION_GOG_OAUTH_REDIRECT_URI;
     const externalUri = envUri || configuredExternalRedirectUri;
     if (externalUri) {
-      console.warn(
-        `[gog-oauth] Desktop client detected — ignoring external redirect URI "${externalUri}" ` +
+      log.warn(
+        `Desktop client detected — ignoring external redirect URI "${externalUri}" ` +
           `(installed clients only support localhost redirects). Using: ${localhostUri}`,
       );
     }
@@ -132,7 +131,7 @@ function cleanupExpiredFlows(): void {
 
       // Notify user of timeout
       notifyAuthTimeout(flow.sessionKey, flow.agentId, flow.email).catch((err) => {
-        console.error("Failed to send timeout notification:", err);
+        log.error(`Failed to send timeout notification: ${String(err)}`);
       });
     }
   }
@@ -143,35 +142,12 @@ function cleanupExpiredFlows(): void {
 }
 
 /**
- * Exchange authorization code for tokens
+ * Resolve the appropriate AuthProvider for a pending flow.
+ * Currently only Google is supported; future providers can be dispatched
+ * based on flow.providerId.
  */
-async function exchangeCodeForTokens(
-  code: string,
-  redirectUri: string,
-): Promise<TokenExchangeResponse> {
-  const clientId = getGoogleClientId();
-  const clientSecret = getGoogleClientSecret();
-
-  const response = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({
-      code,
-      client_id: clientId,
-      client_secret: clientSecret,
-      redirect_uri: redirectUri,
-      grant_type: "authorization_code",
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Token exchange failed: ${error}`);
-  }
-
-  return await response.json();
+function resolveProvider(_flow: PendingOAuthFlow): AuthProvider {
+  return createGoogleAuthProvider();
 }
 
 /**
@@ -179,8 +155,7 @@ async function exchangeCodeForTokens(
  */
 async function handleCallback(
   params: OAuthCallbackParams,
-  _agentDir: string,
-): Promise<{ status: number; message: string }> {
+): Promise<{ status: number; message: string; services?: string[] }> {
   // Check for error from Google
   if (params.error) {
     const state = params.state;
@@ -209,7 +184,7 @@ async function handleCallback(
   // Validate state (CSRF protection)
   const flow = getPendingFlow(params.state);
   if (!flow) {
-    console.warn(`[gog-oauth] Invalid or expired state token: ${params.state}`);
+    log.warn(`Invalid or expired state token: ${params.state}`);
     return {
       status: 400,
       message: "Invalid or expired authorization request",
@@ -230,27 +205,18 @@ async function handleCallback(
   removePendingFlow(params.state);
 
   try {
-    // Exchange code for tokens
+    // Delegate token exchange and credential storage to the provider
+    const provider = resolveProvider(flow);
     const redirectUri = getRedirectUri();
-    const tokens = await exchangeCodeForTokens(params.code, redirectUri);
+    const tokens = await provider.exchangeCode(params.code, redirectUri);
 
-    // Create credentials object
-    const credentials: GogCredentials = {
+    const credPath = await provider.storeCredentials({
+      tokens,
       email: flow.email,
-      accessToken: tokens.access_token,
-      refreshToken: tokens.refresh_token || "",
-      expiresAt: Date.now() + tokens.expires_in * 1000,
-      createdAt: Date.now(),
+      services: flow.services,
       sessionKey: flow.sessionKey,
       agentId: flow.agentId,
-      services: flow.services,
-    };
-
-    // Save credentials
-    const credPath = await saveSessionCredentials(credentials);
-
-    // Best-effort sync to gog CLI keyring — capture result for notification
-    const syncResult = await syncToGogKeyring(credentials);
+    });
 
     // Update session entry
     const storePath = resolveDefaultSessionStorePath(flow.agentId);
@@ -264,21 +230,29 @@ async function handleCallback(
       }
     });
 
-    // Notify user of success (include keyring sync warning if applicable)
-    await notifyAuthSuccess(
-      flow.sessionKey,
-      flow.agentId,
-      flow.email,
-      flow.services,
-      syncResult.success ? undefined : syncResult.error,
-    );
+    // Derive which services were actually granted (user may have deselected some)
+    const grantedServices = tokens.scope ? getServicesFromScopes(tokens.scope) : flow.services;
+
+    // Notify user of success
+    await notifyAuthSuccess(flow.sessionKey, flow.agentId, flow.email, grantedServices);
 
     return {
       status: 200,
       message: "Authentication successful! You can close this window.",
+      services: grantedServices,
     };
   } catch (error) {
-    console.error("[gog-oauth] Token exchange error:", error);
+    traceGatewayEvent({
+      traceId: "oauth_er",
+      level: "WARN",
+      stage: "OAUTH_TOKEN_ERROR",
+      data: {
+        email: flow.email,
+        agentId: flow.agentId,
+        error: (error instanceof Error ? error.message : String(error)).slice(0, 200),
+      },
+    });
+    log.error(`Token exchange error: ${error instanceof Error ? error.message : String(error)}`);
     await notifyAuthError(
       flow.sessionKey,
       flow.agentId,
@@ -293,6 +267,112 @@ async function handleCallback(
   }
 }
 
+type SupportedLocale = "en" | "es";
+
+const I18N: Record<
+  SupportedLocale,
+  {
+    title: string;
+    authenticated: string;
+    error: string;
+    successMessage: string;
+    errorMessage: string;
+  }
+> = {
+  en: {
+    title: "OAuth \u2013 Minion Hub",
+    authenticated: "Authenticated",
+    error: "Error",
+    successMessage: "Authentication successful! You can close this window.",
+    errorMessage: "Failed to complete authentication. Please try again.",
+  },
+  es: {
+    title: "OAuth \u2013 Minion Hub",
+    authenticated: "Autenticado",
+    error: "Error",
+    successMessage: "\u00a1Autenticaci\u00f3n exitosa! Puedes cerrar esta ventana.",
+    errorMessage: "No se pudo completar la autenticaci\u00f3n. Int\u00e9ntalo de nuevo.",
+  },
+};
+
+/** Parse Accept-Language header into a supported locale. */
+function parseLocale(header: string | undefined): SupportedLocale {
+  if (!header) {
+    return "en";
+  }
+  const supported = Object.keys(I18N) as SupportedLocale[];
+  for (const part of header.split(",")) {
+    const lang = part.split(";")[0].trim().toLowerCase().slice(0, 2);
+    if (supported.includes(lang as SupportedLocale)) {
+      return lang as SupportedLocale;
+    }
+  }
+  return "en";
+}
+
+/** Build the HTML response page shown to the user after the OAuth callback. */
+function buildCallbackHtml(
+  result: { status: number; message: string; services?: string[] },
+  locale: SupportedLocale = "en",
+): string {
+  const isSuccess = result.status === 200;
+  const t = I18N[locale];
+  const accent = isSuccess ? "#e8547a" : "#ef4444";
+  const heading = isSuccess ? t.authenticated : t.error;
+  const message = isSuccess ? t.successMessage : t.errorMessage;
+  const icon = isSuccess
+    ? `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`
+    : `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
+
+  const services = result.services ?? [];
+  const servicesBadges =
+    services.length > 0
+      ? `<div class="services">${services.map((s) => `<span class="svc">${s}</span>`).join("")}</div>`
+      : "";
+
+  return `<!DOCTYPE html><html lang="${locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${t.title}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+display:flex;align-items:center;justify-content:center;height:100vh;
+background:#09090b;color:#fafafa;overflow:hidden}
+body::before{content:"";position:fixed;inset:0;
+background:radial-gradient(ellipse 80% 60% at 50% 40%,rgba(232,84,122,.08),transparent 70%);
+pointer-events:none}
+.card{position:relative;background:#0c0c0e;border:1px solid #27272a;
+padding:2.5rem 2rem;text-align:center;max-width:380px;width:90%}
+.card::before{content:"";position:absolute;inset:-1px;
+background:linear-gradient(135deg,${accent}33,transparent 50%,${accent}11);
+z-index:-1;padding:1px;
+-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+-webkit-mask-composite:xor;mask-composite:exclude}
+.icon{margin:0 auto 1rem;width:48px;height:48px;display:flex;align-items:center;
+justify-content:center;background:${accent}15;border:1px solid ${accent}30;border-radius:50%}
+h1{font-size:1.125rem;font-weight:700;letter-spacing:-.01em;color:#fafafa;margin-bottom:.5rem}
+p{font-size:.8125rem;color:#a1a1aa;line-height:1.6}
+.services{display:flex;flex-wrap:wrap;justify-content:center;gap:.375rem;margin-top:.75rem}
+.svc{font-size:.6875rem;font-weight:600;padding:.25rem .625rem;
+background:${accent}12;border:1px solid ${accent}25;color:${accent};
+text-transform:capitalize;letter-spacing:.03em}
+.brand{margin-top:1.5rem;padding-top:1rem;border-top:1px solid #27272a;
+display:flex;align-items:center;justify-content:center;gap:.375rem}
+.brand-name{font-weight:900;font-size:.6875rem;letter-spacing:.06em;text-transform:uppercase;color:${accent}}
+.brand-sub{font-weight:600;font-size:.6875rem;color:#71717a}
+.pulse{animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+</style></head>
+<body>
+<div class="card">
+<div class="icon${isSuccess ? " pulse" : ""}">${icon}</div>
+<h1>${heading}</h1>
+<p>${message}</p>
+${servicesBadges}
+<div class="brand"><span class="brand-name">MINION</span><span class="brand-sub">hub</span></div>
+</div>
+</body></html>`;
+}
+
 /**
  * Handle HTTP request
  */
@@ -300,7 +380,6 @@ async function handleRequest(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   config: Required<Omit<OAuthServerConfig, "externalRedirectUri" | "googleClientCredentialsFile">>,
-  agentDir: string,
 ): Promise<void> {
   const url = new URL(req.url || "/", `http://${req.headers.host}`);
 
@@ -321,51 +400,12 @@ async function handleRequest(
       error_description: url.searchParams.get("error_description") || undefined,
     };
 
-    const result = await handleCallback(params, agentDir);
+    const result = await handleCallback(params);
+    const locale = parseLocale(req.headers["accept-language"]);
 
     res.statusCode = result.status;
     res.setHeader("Content-Type", "text/html");
-    res.end(`
-<!DOCTYPE html>
-<html>
-<head>
-	<title>Google OAuth - Minion</title>
-	<style>
-		body {
-			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			height: 100vh;
-			margin: 0;
-			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-		}
-		.container {
-			background: white;
-			padding: 2rem;
-			border-radius: 8px;
-			box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-			text-align: center;
-			max-width: 400px;
-		}
-		h1 {
-			color: ${result.status === 200 ? "#10b981" : "#ef4444"};
-			margin-top: 0;
-		}
-		p {
-			color: #6b7280;
-			line-height: 1.5;
-		}
-	</style>
-</head>
-<body>
-	<div class="container">
-		<h1>${result.status === 200 ? "✓ Success" : "✗ Error"}</h1>
-		<p>${result.message}</p>
-	</div>
-</body>
-</html>
-		`);
+    res.end(buildCallbackHtml(result, locale));
     return;
   }
 
@@ -382,12 +422,11 @@ function tryStartServer(
   port: number,
   bind: string,
   config: Required<Omit<OAuthServerConfig, "externalRedirectUri" | "googleClientCredentialsFile">>,
-  agentDir: string,
 ): Promise<http.Server> {
   return new Promise((resolve, reject) => {
     const srv = http.createServer((req, res) => {
-      handleRequest(req, res, config, agentDir).catch((err) => {
-        console.error("[gog-oauth] Request handler error:", err);
+      handleRequest(req, res, config).catch((err) => {
+        log.error(`Request handler error: ${err instanceof Error ? err.message : String(err)}`);
         res.statusCode = 500;
         res.end("Internal Server Error");
       });
@@ -409,35 +448,31 @@ function tryStartServer(
 
 /**
  * Register Google OAuth client credentials with the gog CLI keyring (best-effort).
- * Runs `gog auth credentials <file>` so subsequent `gog auth tokens import` calls succeed.
- * Skips silently if gog is not installed.
  */
 async function registerGogClientCredentials(credFile: string): Promise<void> {
   try {
     const gogCheck = await runCommandWithTimeout(["which", "gog"], { timeoutMs: 2_000 });
     if (gogCheck.code !== 0) {
-      return; // gog not installed — skip silently
+      return;
     }
     const result = await runCommandWithTimeout(["gog", "auth", "credentials", credFile], {
       timeoutMs: 10_000,
     });
     if (result.code === 0) {
-      console.log("[gog-oauth] Registered Google client credentials with gog CLI");
+      log.info("Registered Google client credentials with gog CLI");
     } else {
-      console.warn(
-        `[gog-oauth] gog auth credentials failed (code=${result.code}): ${result.stderr || result.stdout}`,
+      log.warn(
+        `gog auth credentials failed (code=${result.code}): ${result.stderr || result.stdout}`,
       );
     }
   } catch (err) {
-    console.warn(`[gog-oauth] Failed to register gog client credentials: ${String(err)}`);
+    log.warn(`Failed to register gog client credentials: ${String(err)}`);
   }
 }
 
 /**
  * Ensure GOG_KEYRING_BACKEND and GOG_KEYRING_PASSWORD are set in process.env
- * and persisted to ~/.minion/.env. Called once at gateway startup.
- * Self-healing: generates a secure random password on first run, then reuses it.
- * No-ops if variables are already present (from systemd Environment= or .env).
+ * and persisted to ~/.minion/.env.
  */
 function ensureGogKeyringEnv(): void {
   let dirty = false;
@@ -456,7 +491,7 @@ function ensureGogKeyringEnv(): void {
   }
 
   if (dirty) {
-    console.log("[gog-oauth] Initialized GOG keyring credentials and persisted to .env");
+    log.info("Initialized GOG keyring credentials and persisted to .env");
   }
 }
 
@@ -471,6 +506,9 @@ export async function startGogOAuthServer(
   stop: () => Promise<void>;
 }> {
   ensureGogKeyringEnv();
+
+  // agentDir kept in signature for backward compatibility but no longer passed to handlers
+  void agentDir;
 
   const { externalRedirectUri, googleClientCredentialsFile, ...rest } = config;
   const fullConfig: Required<
@@ -494,7 +532,6 @@ export async function startGogOAuthServer(
   }
   if (credFile) {
     setGoogleClientCredentialsFile(credFile);
-    // Register credentials with gog CLI so `gog auth tokens import` works (best-effort)
     void registerGogClientCredentials(credFile);
   }
 
@@ -508,9 +545,9 @@ export async function startGogOAuthServer(
 
   for (const port of ports) {
     try {
-      server = await tryStartServer(port, fullConfig.bind, fullConfig, agentDir);
+      server = await tryStartServer(port, fullConfig.bind, fullConfig);
       actualPort = port;
-      console.log(`[gog-oauth] Server listening on ${fullConfig.bind}:${port}`);
+      log.info(`Server listening on ${fullConfig.bind}:${port}`);
 
       // Start cleanup interval (every 60 seconds)
       cleanupInterval = setInterval(cleanupExpiredFlows, 60000);
@@ -539,7 +576,6 @@ export async function startGogOAuthServer(
       };
     } catch (error) {
       lastError = error as Error;
-      // Try next port
     }
   }
 

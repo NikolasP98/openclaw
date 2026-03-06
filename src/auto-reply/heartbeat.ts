@@ -59,6 +59,10 @@ export function resolveHeartbeatPrompt(raw?: string): string {
 
 export type StripHeartbeatMode = "heartbeat" | "message";
 
+// Hoisted constant regex — HEARTBEAT_TOKEN is a module-level constant so the
+// pattern never changes. Avoids re-creating `new RegExp()` on every call.
+const HEARTBEAT_TOKEN_END_RE = new RegExp(`${escapeRegExp(HEARTBEAT_TOKEN)}[^\\w]{0,4}$`);
+
 function stripTokenAtEdges(raw: string): { text: string; didStrip: boolean } {
   let text = raw.trim();
   if (!text) {
@@ -66,9 +70,7 @@ function stripTokenAtEdges(raw: string): { text: string; didStrip: boolean } {
   }
 
   const token = HEARTBEAT_TOKEN;
-  const tokenAtEndWithOptionalTrailingPunctuation = new RegExp(
-    `${escapeRegExp(token)}[^\\w]{0,4}$`,
-  );
+  const tokenAtEndWithOptionalTrailingPunctuation = HEARTBEAT_TOKEN_END_RE;
   if (!text.includes(token)) {
     return { text, didStrip: false };
   }

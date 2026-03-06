@@ -10,7 +10,7 @@ import "./test-runtime-mocks.js";
 const embedBatch = vi.fn(async (_texts: string[]) => [] as number[][]);
 const embedQuery = vi.fn(async () => [0.5, 0.5, 0.5]);
 
-vi.mock("./embeddings.js", () => ({
+vi.mock("./embedding/embeddings.js", () => ({
   createEmbeddingProvider: async () =>
     createOpenAIEmbeddingProviderMock({
       embedQuery,

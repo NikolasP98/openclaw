@@ -10,7 +10,7 @@ import {
   type SessionEntry,
   updateSessionStore,
 } from "../../config/sessions.js";
-import { loadCombinedSessionStoreForGateway } from "../../gateway/session-utils.js";
+import { loadCombinedSessionStoreForGateway } from "../../gateway/sessions/session-utils.js";
 import {
   formatUsageWindowSummary,
   loadProviderUsageSummary,
@@ -24,15 +24,15 @@ import {
 import { applyModelOverrideToSessionEntry } from "../../sessions/model-overrides.js";
 import { resolveAgentDir } from "../agent-scope.js";
 import { formatUserTime, resolveUserTimeFormat, resolveUserTimezone } from "../date-time.js";
-import { resolveModelAuthLabel } from "../model-auth-label.js";
-import { loadModelCatalog } from "../model-catalog.js";
+import { resolveModelAuthLabel } from "../models/model-auth-label.js";
+import { loadModelCatalog } from "../models/model-catalog.js";
 import {
   buildAllowedModelSet,
   buildModelAliasIndex,
   modelKey,
   resolveDefaultModelForAgent,
   resolveModelRefFromString,
-} from "../model-selection.js";
+} from "../models/model-selection.js";
 import type { AnyAgentTool } from "./common.js";
 import { readStringParam } from "./common.js";
 import {

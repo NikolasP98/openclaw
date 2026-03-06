@@ -1,5 +1,5 @@
 import type { OpenClawConfig } from "../../config/config.js";
-import { findNormalizedProviderValue, normalizeProviderId } from "../model-selection.js";
+import { findNormalizedProviderValue, normalizeProviderId } from "../models/model-selection.js";
 import { dedupeProfileIds, listProfilesForProvider } from "./profiles.js";
 import type { AuthProfileStore } from "./types.js";
 import {

@@ -3,16 +3,16 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Avoid pulling in globals/pairing/media dependencies; this suite only asserts
 // allowlist/groupPolicy gating and message-context wiring.
-vi.mock("../globals.js", () => ({
+vi.mock("../../../globals.js", () => ({
   danger: (text: string) => text,
   logVerbose: () => {},
 }));
 
-vi.mock("../pairing/pairing-labels.js", () => ({
+vi.mock("../../../pairing/pairing-labels.js", () => ({
   resolvePairingIdLabel: () => "lineUserId",
 }));
 
-vi.mock("../pairing/pairing-messages.js", () => ({
+vi.mock("../../../pairing/pairing-messages.js", () => ({
   buildPairingReply: () => "pairing-reply",
 }));
 
@@ -67,7 +67,7 @@ let handleLineWebhookEvents: typeof import("./bot-handlers.js").handleLineWebhoo
 
 const createRuntime = () => ({ log: vi.fn(), error: vi.fn(), exit: vi.fn() });
 
-vi.mock("../pairing/pairing-store.js", () => ({
+vi.mock("../../../pairing/pairing-store.js", () => ({
   readChannelAllowFromStore: readAllowFromStoreMock,
   upsertChannelPairingRequest: upsertPairingRequestMock,
 }));

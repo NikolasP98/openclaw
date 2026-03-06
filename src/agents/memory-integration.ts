@@ -362,3 +362,75 @@ export function getMemoryStats(): Record<string, number> {
   stats["total"] = Object.values(stats).reduce((a, b) => a + b, 0);
   return stats;
 }
+
+// ── DD.1: Strategy Memory — task success recording ────────────────────────────
+
+/**
+ * Detect whether an assistant response signals successful task completion.
+ *
+ * Looks for common completion phrases. Intentionally conservative to avoid
+ * false positives — only fires on unambiguous success language.
+ */
+export function detectTaskSuccess(assistantResponse: string): boolean {
+  if (!assistantResponse || assistantResponse.length < 10) {
+    return false;
+  }
+  const SUCCESS_PATTERNS: RegExp[] = [
+    /\b(?:all\s+)?done[.!]?\s*$/im,
+    /\b(?:task|implementation|feature|fix|refactor|migration)\s+(?:is\s+)?(?:complete|completed|finished|done)\b/i,
+    /\bsuccessfully\s+(?:implemented|created|refactored|migrated|updated|added|fixed)\b/i,
+    /\b(?:i've|i have)\s+(?:completed?|finished?|implemented?|created?|added?|fixed?)\b/i,
+    /\bhere(?:'s| is) the (?:complete|final|finished|updated)\b/i,
+  ];
+  return SUCCESS_PATTERNS.some((p) => p.test(assistantResponse));
+}
+
+/**
+ * Record a successful task as a `Skill` memory object in the knowledge graph.
+ *
+ * Called from the post-turn hook when a success signal is detected.
+ * Stores the task description, tool sequence, and outcome as a searchable
+ * `skill` memory object. Future tasks of the same type can retrieve this
+ * via `searchFacts({ query: taskType, type: "skill" })`.
+ *
+ * @param taskDescription  Short description of what was accomplished
+ * @param toolSequence     Ordered list of tool names used (can be empty)
+ * @param session          Active knowledge graph session
+ * @returns The id of the created memory object, or undefined on failure
+ */
+export function recordSkillSuccess(params: {
+  taskDescription: string;
+  toolSequence: string[];
+  session: KnowledgeGraphSession;
+}): string | undefined {
+  const { taskDescription, toolSequence, session } = params;
+
+  if (!taskDescription.trim()) {
+    return undefined;
+  }
+
+  // Derive a slug-style task type label for FTS5 retrieval
+  const taskType = taskDescription
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .trim()
+    .replace(/\s+/g, "-")
+    .slice(0, 60);
+
+  try {
+    const id = session.remember({
+      label: taskType,
+      type: "skill",
+      data: {
+        contextSummary: taskDescription.slice(0, 300),
+        toolSequence: toolSequence.slice(0, 20),
+        outcomeQuality: 0.8, // auto-scored confidence
+        recordedAt: new Date().toISOString(),
+      },
+    });
+    return id ?? undefined;
+  } catch {
+    // Never crash the agent loop on memory write failure
+    return undefined;
+  }
+}

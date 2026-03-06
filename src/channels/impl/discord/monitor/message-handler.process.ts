@@ -1,5 +1,8 @@
 import { ChannelType } from "@buape/carbon";
-import { resolveAckReaction, resolveHumanDelayConfig } from "../../../../agents/identity.js";
+import {
+  resolveAckReaction,
+  resolveHumanDelayConfig,
+} from "../../../../agents/identity/identity.js";
 import { resolveChunkMode } from "../../../../auto-reply/chunk.js";
 import { dispatchInboundMessage } from "../../../../auto-reply/dispatch.js";
 import {

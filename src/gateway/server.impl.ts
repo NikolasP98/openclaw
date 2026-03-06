@@ -2,7 +2,7 @@ import path from "node:path";
 import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "../agents/agent-scope.js";
 import { getActiveEmbeddedRunCount } from "../agents/pi-embedded-runner/runs.js";
 import { registerSkillsChangeListener } from "../agents/skills/refresh.js";
-import { initSubagentRegistry } from "../agents/subagent-registry.js";
+import { initSubagentRegistry } from "../agents/subagents/subagent-registry.js";
 import { getTotalPendingReplies } from "../auto-reply/reply/dispatcher-registry.js";
 import type { CanvasHostServer } from "../canvas-host/server.js";
 import { type ChannelId, listChannelPlugins } from "../channels/plugins/index.js";
@@ -47,38 +47,39 @@ import { createEmptyPluginRegistry } from "../plugins/registry.js";
 import type { PluginServicesHandle } from "../plugins/services.js";
 import type { RuntimeEnv } from "../runtime.js";
 import { runOnboardingWizard } from "../wizard/onboarding.js";
-import { createAuthRateLimiter, type AuthRateLimiter } from "./auth-rate-limit.js";
+import { createAuthRateLimiter, type AuthRateLimiter } from "./auth/auth-rate-limit.js";
+import { ensureGatewayStartupAuth } from "./auth/startup-auth.js";
 import { startChannelHealthMonitor } from "./channel-health-monitor.js";
 import { startGatewayConfigReloader } from "./config-reload.js";
 import type { ControlUiRootState } from "./control-ui.js";
 import { ExecApprovalManager } from "./exec-approval-manager.js";
-import { startHubMetricsPush } from "./hub-metrics-push.js";
+import { getHubMetricsPushClient, startHubMetricsPush } from "./hub-metrics-push.js";
 import { NodeRegistry } from "./node-registry.js";
-import type { startBrowserControlServerIfEnabled } from "./server-browser.js";
-import { createChannelManager } from "./server-channels.js";
-import { createAgentEventHandler } from "./server-chat.js";
-import { createGatewayCloseHandler } from "./server-close.js";
-import { buildGatewayCronService } from "./server-cron.js";
-import { startGatewayDiscovery } from "./server-discovery-runtime.js";
-import { applyGatewayLaneConcurrency } from "./server-lanes.js";
-import { startGatewayMaintenanceTimers } from "./server-maintenance.js";
-import { GATEWAY_EVENTS, listGatewayMethods } from "./server-methods-list.js";
-import { coreGatewayHandlers } from "./server-methods.js";
+import type { startBrowserControlServerIfEnabled } from "./server-core/server-browser.js";
+import { createChannelManager } from "./server-core/server-channels.js";
+import { createAgentEventHandler } from "./server-core/server-chat.js";
+import { createGatewayCloseHandler } from "./server-core/server-close.js";
+import { buildGatewayCronService } from "./server-core/server-cron.js";
+import { startGatewayDiscovery } from "./server-core/server-discovery-runtime.js";
+import { applyGatewayLaneConcurrency } from "./server-core/server-lanes.js";
+import { startGatewayMaintenanceTimers } from "./server-core/server-maintenance.js";
+import { GATEWAY_EVENTS, listGatewayMethods } from "./server-core/server-methods-list.js";
+import { coreGatewayHandlers } from "./server-core/server-methods.js";
+import { hasConnectedMobileNode } from "./server-core/server-mobile-nodes.js";
+import { loadGatewayModelCatalog } from "./server-core/server-model-catalog.js";
+import { createNodeSubscriptionManager } from "./server-core/server-node-subscriptions.js";
+import { loadGatewayPlugins } from "./server-core/server-plugins.js";
+import { createGatewayReloadHandlers } from "./server-core/server-reload-handlers.js";
+import { resolveGatewayRuntimeConfig } from "./server-core/server-runtime-config.js";
+import { createGatewayRuntimeState } from "./server-core/server-runtime-state.js";
+import { resolveSessionKeyForRun } from "./server-core/server-session-key.js";
+import { logGatewayStartup } from "./server-core/server-startup-log.js";
+import { startGatewaySidecars } from "./server-core/server-startup.js";
+import { startGatewayTailscaleExposure } from "./server-core/server-tailscale.js";
+import { createWizardSessionTracker } from "./server-core/server-wizard-sessions.js";
+import { attachGatewayWsHandlers } from "./server-core/server-ws-runtime.js";
 import { createExecApprovalHandlers } from "./server-methods/exec-approval.js";
 import { safeParseJson } from "./server-methods/nodes.helpers.js";
-import { hasConnectedMobileNode } from "./server-mobile-nodes.js";
-import { loadGatewayModelCatalog } from "./server-model-catalog.js";
-import { createNodeSubscriptionManager } from "./server-node-subscriptions.js";
-import { loadGatewayPlugins } from "./server-plugins.js";
-import { createGatewayReloadHandlers } from "./server-reload-handlers.js";
-import { resolveGatewayRuntimeConfig } from "./server-runtime-config.js";
-import { createGatewayRuntimeState } from "./server-runtime-state.js";
-import { resolveSessionKeyForRun } from "./server-session-key.js";
-import { logGatewayStartup } from "./server-startup-log.js";
-import { startGatewaySidecars } from "./server-startup.js";
-import { startGatewayTailscaleExposure } from "./server-tailscale.js";
-import { createWizardSessionTracker } from "./server-wizard-sessions.js";
-import { attachGatewayWsHandlers } from "./server-ws-runtime.js";
 import {
   getHealthCache,
   getHealthVersion,
@@ -87,9 +88,8 @@ import {
   refreshGatewayHealthSnapshot,
 } from "./server/health-state.js";
 import { loadGatewayTlsRuntime } from "./server/tls.js";
-import { ensureGatewayStartupAuth } from "./startup-auth.js";
 
-export { __resetModelCatalogCacheForTest } from "./server-model-catalog.js";
+export { __resetModelCatalogCacheForTest } from "./server-core/server-model-catalog.js";
 
 ensureMinionCliOnPath();
 
@@ -331,6 +331,10 @@ export async function startGatewayServer(
   let hooksConfig = runtimeConfig.hooksConfig;
   const canvasHostEnabled = runtimeConfig.canvasHostEnabled;
 
+  if (runtimeConfig.authTokenDivergenceWarning) {
+    log.warn(runtimeConfig.authTokenDivergenceWarning);
+  }
+
   // Create auth rate limiter only when explicitly configured.
   const rateLimitConfig = cfgAtStart.gateway?.auth?.rateLimit;
   const authRateLimiter: AuthRateLimiter | undefined = rateLimitConfig
@@ -459,6 +463,10 @@ export async function startGatewayServer(
   });
   const { getRuntimeSnapshot, startChannels, startChannel, stopChannel, markChannelLoggedOut } =
     channelManager;
+
+  // Wire channel snapshot into hub metrics heartbeat (push client may have been
+  // created before the channel manager).
+  getHubMetricsPushClient()?.setChannelSnapshotProvider(() => getRuntimeSnapshot());
 
   if (!minimalTestGateway) {
     const machineDisplayName = await getMachineDisplayName();

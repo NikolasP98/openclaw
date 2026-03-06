@@ -238,9 +238,9 @@ export const testIsNixMode = hoisted.testIsNixMode;
 export const sessionStoreSaveDelayMs = hoisted.sessionStoreSaveDelayMs;
 export const embeddedRunMock = hoisted.embeddedRunMock;
 
-vi.mock("../agents/pi-model-discovery.js", async () => {
-  const actual = await vi.importActual<typeof import("../agents/pi-model-discovery.js")>(
-    "../agents/pi-model-discovery.js",
+vi.mock("../agents/models/pi-model-discovery.js", async () => {
+  const actual = await vi.importActual<typeof import("../agents/models/pi-model-discovery.js")>(
+    "../agents/models/pi-model-discovery.js",
   );
 
   class MockModelRegistry extends actual.ModelRegistry {
@@ -260,7 +260,7 @@ vi.mock("../agents/pi-model-discovery.js", async () => {
   };
 });
 
-vi.mock("../cron/isolated-agent.js", () => ({
+vi.mock("../platform/cron/isolated-agent.js", () => ({
   runCronIsolatedAgentTurn: (...args: unknown[]) =>
     (cronIsolatedRun as (...args: unknown[]) => unknown)(...args),
 }));

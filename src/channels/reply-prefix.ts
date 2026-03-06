@@ -1,4 +1,7 @@
-import { resolveEffectiveMessagesConfig, resolveIdentityName } from "../agents/identity.js";
+import {
+  resolveEffectiveMessagesConfig,
+  resolveIdentityName,
+} from "../agents/identity/identity.js";
 import {
   extractShortModelName,
   type ResponsePrefixContext,

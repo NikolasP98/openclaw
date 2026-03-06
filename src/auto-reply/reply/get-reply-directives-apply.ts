@@ -3,6 +3,7 @@ import type { SessionEntry } from "../../config/sessions.js";
 import type { MsgContext } from "../templating.js";
 import type { ElevatedLevel } from "../thinking.js";
 import type { ReplyPayload } from "../types.js";
+import { unpinSession } from "./smart-routing.js";
 import { buildStatusReply } from "./commands.js";
 import {
   applyInlineDirectivesFastLane,
@@ -203,6 +204,12 @@ export async function applyInlineDirectiveOverrides(params: {
     directives.hasStatusDirective;
 
   if (hasAnyDirective && command.isAuthorizedSender) {
+    // S.3: When the user explicitly changes the model via /model command,
+    // clear the session pin so the next message is re-routed from scratch.
+    if (directives.hasModelDirective) {
+      unpinSession(sessionKey);
+    }
+
     const fastLane = await applyInlineDirectivesFastLane({
       directives,
       commandAuthorized: command.isAuthorizedSender,

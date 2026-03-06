@@ -1,0 +1,27 @@
+[      18ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/reliability:0
+[      52ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/favicon.ico:0
+[ 3261926ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/reliability:0
+[ 3261975ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/favicon.ico:0
+[ 3262700ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/reliability:0
+[ 3262726ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/favicon.ico:0
+[ 3263396ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/reliability:0
+[ 3263421ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/favicon.ico:0
+[ 3282617ms] RangeError: Invalid time value
+
+	in <unknown>
+	in IncidentTable.svelte
+	in +page.svelte
+	in +layout.svelte
+	in root.svelte
+	in undefined
+
+    at Date.toISOString (<anonymous>)
+    at formatFullDate (http://localhost:5173/src/lib/components/reliability/IncidentTable.svelte:119:30)
+    at http://localhost:5173/src/lib/components/reliability/IncidentTable.svelte:226:14
+    at update_reaction (http://localhost:5173/node_modules/.vite/deps/chunk-SBYIU5T2.js?v=3b6bcd10:3478:18)
+    at execute_derived (http://localhost:5173/node_modules/.vite/deps/chunk-SBYIU5T2.js?v=3b6bcd10:1868:15)
+    at update_derived (http://localhost:5173/node_modules/.vite/deps/chunk-SBYIU5T2.js?v=3b6bcd10:1887:15)
+    at get (http://localhost:5173/node_modules/.vite/deps/chunk-SBYIU5T2.js?v=3b6bcd10:3724:7)
+    at Array.map (<anonymous>)
+    at http://localhost:5173/node_modules/.vite/deps/chunk-SBYIU5T2.js?v=3b6bcd10:3113:53
+    at update_reaction (http://localhost:5173/node_modules/.vite/deps/chunk-SBYIU5T2.js?v=3b6bcd10:3478:18)

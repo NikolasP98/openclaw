@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { resolveStateDir } from "../../config/paths.js";
 import { createSubsystemLogger } from "../../logging/subsystem.js";
@@ -16,7 +17,7 @@ const log = createSubsystemLogger("auth/google-bridge");
  * at ~/.minion/agents/{agentId}/gog-credentials/) with the unified
  * auth-profiles store.
  */
-export function syncGoogleCredentialsToAuthStore(): number {
+export async function syncGoogleCredentialsToAuthStore(): Promise<number> {
   let synced = 0;
 
   try {
@@ -27,25 +28,37 @@ export function syncGoogleCredentialsToAuthStore(): number {
       return 0;
     }
 
-    const agentDirs = fs.readdirSync(agentsDir, { withFileTypes: true });
+    const agentDirs = await readdir(agentsDir, { withFileTypes: true });
 
     for (const agentEntry of agentDirs) {
       if (!agentEntry.isDirectory()) {
         continue;
       }
 
+      // Scan both new (auth-credentials/google/) and legacy (gog-credentials/) paths
+      const newDir = path.join(agentsDir, agentEntry.name, "auth-credentials", "google");
       const gogDir = path.join(agentsDir, agentEntry.name, "gog-credentials");
-      if (!fs.existsSync(gogDir)) {
+      const dirsToScan = [newDir, gogDir].filter((d) => fs.existsSync(d));
+      if (dirsToScan.length === 0) {
         continue;
       }
 
       try {
-        const files = fs.readdirSync(gogDir).filter((f) => f.endsWith(".json"));
+        const allFiles: string[] = [];
+        const seenFilenames = new Set<string>();
+        for (const dir of dirsToScan) {
+          for (const f of await readdir(dir)) {
+            if (f.endsWith(".json") && !seenFilenames.has(f)) {
+              seenFilenames.add(f);
+              allFiles.push(path.join(dir, f));
+            }
+          }
+        }
+        const files = allFiles;
 
-        for (const file of files) {
+        for (const credPath of files) {
           try {
-            const credPath = path.join(gogDir, file);
-            const raw = JSON.parse(fs.readFileSync(credPath, "utf-8"));
+            const raw = JSON.parse(await readFile(credPath, "utf-8"));
 
             if (!raw.accessToken || !raw.refreshToken || !raw.email) {
               continue;
@@ -80,14 +93,14 @@ export function syncGoogleCredentialsToAuthStore(): number {
             });
           } catch (err) {
             log.warn("failed to bridge Google credential file", {
-              file,
+              file: credPath,
               agentId: agentEntry.name,
               err: String(err),
             });
           }
         }
       } catch (err) {
-        log.warn("failed to scan gog-credentials dir", {
+        log.warn("failed to scan Google credentials dirs", {
           agentId: agentEntry.name,
           err: String(err),
         });

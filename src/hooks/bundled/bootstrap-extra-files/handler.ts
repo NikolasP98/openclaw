@@ -1,9 +1,12 @@
 import {
   filterBootstrapFilesForSession,
   loadExtraBootstrapFiles,
-} from "../../../agents/workspace.js";
+} from "../../../agents/identity/workspace.js";
+import { createSubsystemLogger } from "../../../logging/subsystem.js";
 import { resolveHookConfig } from "../../config.js";
 import { isAgentBootstrapEvent, type HookHandler } from "../../hooks.js";
+
+const log = createSubsystemLogger("hooks/bootstrap-extra-files");
 
 const HOOK_KEY = "bootstrap-extra-files";
 
@@ -52,7 +55,7 @@ const bootstrapExtraFilesHook: HookHandler = async (event) => {
       context.sessionKey,
     );
   } catch (err) {
-    console.warn(`[bootstrap-extra-files] failed: ${String(err)}`);
+    log.warn(`failed: ${String(err)}`);
   }
 };
 

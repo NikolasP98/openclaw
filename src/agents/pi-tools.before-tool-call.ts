@@ -6,9 +6,10 @@ import { getGlobalHookRunner } from "../plugins/hook-runner-global.js";
 import { checkCommandAutonomy } from "../security/autonomy-enforcement.js";
 import { isPlainObject } from "../utils.js";
 import type { ApprovalContext } from "./approval-gate.js";
-import { applyApprovalGate } from "./approval-gate.js";
+import { applyApprovalGate, classifyToolCategory } from "./approval-gate.js";
 import { normalizeToolName } from "./tool-policy.js";
 import type { AnyAgentTool } from "./tools/common.js";
+import { checkForObfuscation, extractCommandFromParams } from "./tools/obfuscated-command-guard.js";
 
 export type HookContext = {
   agentId?: string;
@@ -150,6 +151,27 @@ export async function runBeforeToolCallHook(args: {
   if (autonomyResult?.blocked) {
     log.warn(`[autonomy] Blocked ${toolName}: ${autonomyResult.reason}`);
     return { blocked: true, reason: autonomyResult.reason };
+  }
+
+  // ── Obfuscated command guard ────────────────────────────────────────────
+  // EE.1: Detect obfuscated shell commands before reaching the approval gate.
+  // When detected, block and require explicit user re-approval even in auto mode.
+  if (classifyToolCategory(toolName) === "shell") {
+    const command = extractCommandFromParams(args.params);
+    if (command) {
+      const obfuscationResult = checkForObfuscation(command);
+      if (obfuscationResult.obfuscated) {
+        log.warn(
+          `[obfuscation-guard] Blocked ${toolName}: command matches obfuscation pattern #${obfuscationResult.matchedPatternIndex}`,
+        );
+        return {
+          blocked: true,
+          reason:
+            "Command contains obfuscation patterns (base64-encoded payload, eval with dynamic code, or similar). " +
+            "Please review and run the decoded command directly if it is safe.",
+        };
+      }
+    }
   }
 
   // ── Approval gate ───────────────────────────────────────────────────────

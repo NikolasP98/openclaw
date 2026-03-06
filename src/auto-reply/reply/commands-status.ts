@@ -3,8 +3,8 @@ import {
   resolveDefaultAgentId,
   resolveSessionAgentId,
 } from "../../agents/agent-scope.js";
-import { resolveModelAuthLabel } from "../../agents/model-auth-label.js";
-import { listSubagentRunsForRequester } from "../../agents/subagent-registry.js";
+import { resolveModelAuthLabel } from "../../agents/models/model-auth-label.js";
+import { listSubagentRunsForRequester } from "../../agents/subagents/subagent-registry.js";
 import {
   resolveInternalSessionKey,
   resolveMainSessionAlias,
