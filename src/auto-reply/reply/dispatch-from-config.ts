@@ -126,6 +126,7 @@ export async function dispatchReplyFromConfig(params: {
     traceChatEvent({
       agentId: sessionAgentId,
       traceId,
+      level: "INFO",
       stage: "DISPATCHED",
       data: { sessionKey, channel },
     });
@@ -384,6 +385,7 @@ export async function dispatchReplyFromConfig(params: {
             traceChatEvent({
               agentId: sessionAgentId,
               traceId,
+              level: "INFO",
               stage: "MODEL_SELECTED",
               data: {
                 provider: modelCtx.provider,
@@ -399,6 +401,7 @@ export async function dispatchReplyFromConfig(params: {
             traceChatEvent({
               agentId: sessionAgentId,
               traceId,
+              level: "DEBUG",
               stage: "TOOL_CALL",
               data: { tool: payload.name, phase: payload.phase },
             });
@@ -461,6 +464,7 @@ export async function dispatchReplyFromConfig(params: {
       traceChatEvent({
         agentId: sessionAgentId,
         traceId,
+        level: "INFO",
         stage: "LLM_RESULT",
         data: {
           status: "success",
@@ -578,9 +582,15 @@ export async function dispatchReplyFromConfig(params: {
       durationMs: Date.now() - startTime,
     };
     if (sessionAgentId) {
-      traceChatEvent({ agentId: sessionAgentId, traceId, stage: "LLM_ERROR", data: errorData });
+      traceChatEvent({
+        agentId: sessionAgentId,
+        traceId,
+        level: "ERROR",
+        stage: "LLM_ERROR",
+        data: errorData,
+      });
     }
-    traceGatewayEvent({ traceId, stage: "LLM_ERROR", data: errorData });
+    traceGatewayEvent({ traceId, level: "ERROR", stage: "LLM_ERROR", data: errorData });
     recordProcessed("error", { error: String(err) });
     markIdle("message_error");
     throw err;

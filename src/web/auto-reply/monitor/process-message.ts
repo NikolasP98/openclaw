@@ -453,11 +453,13 @@ export async function processMessage(params: {
           traceChatEvent({
             agentId: params.route.agentId,
             traceId: deliveryTraceId,
+            level: "INFO",
             stage: "DELIVERED",
             data: deliveryData,
           });
           traceGatewayEvent({
             traceId: deliveryTraceId,
+            level: "INFO",
             stage: "DELIVERED",
             data: deliveryData,
           });

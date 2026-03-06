@@ -1,4 +1,5 @@
 import type { OpenClawConfig } from "../../config/config.js";
+import { traceGatewayEvent } from "../../logging/chat-trace.js";
 import { modelFitsContext, modelSupportsToolCalling } from "../../providers/model-catalog.js";
 import {
   ensureAuthProfileStore,
@@ -426,6 +427,18 @@ export async function runWithModelFallback<T>(params: {
         status: described.status,
         code: described.code,
       });
+      traceGatewayEvent({
+        traceId: `fb${String(i).padStart(6, "0")}`,
+        level: "WARN",
+        stage: "MODEL_FALLBACK",
+        data: {
+          failed: `${candidate.provider}/${candidate.model}`,
+          error: described.message,
+          reason: described.reason,
+          attempt: i + 1,
+          total: candidates.length,
+        },
+      });
       await params.onError?.({
         provider: candidate.provider,
         model: candidate.model,
@@ -435,6 +448,16 @@ export async function runWithModelFallback<T>(params: {
       });
     }
   }
+
+  traceGatewayEvent({
+    traceId: `fb${String(candidates.length).padStart(6, "0")}`,
+    level: "ERROR",
+    stage: "MODEL_FALLBACK_EXHAUSTED",
+    data: {
+      attempted: attempts.length,
+      candidates: candidates.map((c) => `${c.provider}/${c.model}`).join(", "),
+    },
+  });
 
   throwFallbackFailureSummary({
     attempts,

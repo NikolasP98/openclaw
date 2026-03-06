@@ -6,6 +6,27 @@ const TRACE_DIR_NAME = "traces";
 const GATEWAY_SCOPE = "_gateway";
 const MAX_AGE_DAYS = 7;
 
+// ── Log Levels ──────────────────────────────────────────────────────────────
+//
+// Trace log levels follow standard severity conventions:
+//
+//   ERROR  — Failures that break the message pipeline (model exhausted, delivery failed)
+//   WARN   — Degraded path taken (fallback triggered, session reset, cooldown skip)
+//   INFO   — Normal lifecycle milestones (ingested, routed, delivered, model selected)
+//   DEBUG  — Verbose internals (tool calls, queue ops, typing signals)
+//
+// The level is embedded in the log line as a prefix to the stage name:
+//   2026-03-06T05:10:01.123Z [a1b2c3d4] INFO:INGESTED channel=whatsapp ...
+//   2026-03-06T05:10:03.500Z [a1b2c3d4] WARN:MODEL_FALLBACK provider=openrouter ...
+//   2026-03-06T05:10:05.200Z [a1b2c3d4] ERROR:LLM_ERROR error="All models failed" ...
+//
+// Filter examples:
+//   grep "ERROR:" traces/_gateway/2026-03-06.txt     # only errors
+//   grep "WARN:\|ERROR:" traces/renzo_bot/*.txt      # warnings and errors
+//   grep "\[a1b2c3d4\]" traces/renzo_bot/*.txt       # single message trace
+
+export type TraceLevel = "ERROR" | "WARN" | "INFO" | "DEBUG";
+
 function resolveTraceDir(): string {
   return path.join(resolveStateDir(), "logs", TRACE_DIR_NAME);
 }
@@ -34,8 +55,13 @@ export function deriveTraceId(messageId?: string | null): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
-function formatTraceLine(traceId: string, stage: string, data?: Record<string, unknown>): string {
-  const parts = [`${new Date().toISOString()} [${traceId}] ${stage}`];
+function formatTraceLine(
+  traceId: string,
+  level: TraceLevel,
+  stage: string,
+  data?: Record<string, unknown>,
+): string {
+  const parts = [`${new Date().toISOString()} [${traceId}] ${level}:${stage}`];
   if (data) {
     for (const [key, value] of Object.entries(data)) {
       if (value !== undefined && value !== null && value !== "") {
@@ -60,11 +86,12 @@ function appendToScope(scope: string, line: string): void {
 export function traceChatEvent(params: {
   agentId: string;
   traceId: string;
+  level: TraceLevel;
   stage: string;
   data?: Record<string, unknown>;
 }): void {
   try {
-    const line = formatTraceLine(params.traceId, params.stage, params.data);
+    const line = formatTraceLine(params.traceId, params.level, params.stage, params.data);
     appendToScope(params.agentId, line);
   } catch {
     // best-effort — never block message processing
@@ -77,11 +104,12 @@ export function traceChatEvent(params: {
  */
 export function traceGatewayEvent(params: {
   traceId: string;
+  level: TraceLevel;
   stage: string;
   data?: Record<string, unknown>;
 }): void {
   try {
-    const line = formatTraceLine(params.traceId, params.stage, params.data);
+    const line = formatTraceLine(params.traceId, params.level, params.stage, params.data);
     appendToScope(GATEWAY_SCOPE, line);
   } catch {
     // best-effort

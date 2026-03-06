@@ -87,11 +87,23 @@ export function createWebOnMessageHandler(params: {
       matchedBy: route.matchedBy,
     };
     // Agent-scoped trace
-    traceChatEvent({ agentId: route.agentId, traceId, stage: "INGESTED", data: ingestData });
-    traceChatEvent({ agentId: route.agentId, traceId, stage: "ROUTED", data: routeData });
+    traceChatEvent({
+      agentId: route.agentId,
+      traceId,
+      level: "INFO",
+      stage: "INGESTED",
+      data: ingestData,
+    });
+    traceChatEvent({
+      agentId: route.agentId,
+      traceId,
+      level: "INFO",
+      stage: "ROUTED",
+      data: routeData,
+    });
     // Gateway-scoped trace (unified view)
-    traceGatewayEvent({ traceId, stage: "INGESTED", data: ingestData });
-    traceGatewayEvent({ traceId, stage: "ROUTED", data: routeData });
+    traceGatewayEvent({ traceId, level: "INFO", stage: "INGESTED", data: ingestData });
+    traceGatewayEvent({ traceId, level: "INFO", stage: "ROUTED", data: routeData });
 
     const groupHistoryKey =
       msg.chatType === "group"

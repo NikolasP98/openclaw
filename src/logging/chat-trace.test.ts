@@ -43,10 +43,11 @@ describe("chat-trace", () => {
   });
 
   describe("traceChatEvent", () => {
-    it("writes a trace line to the correct file", () => {
+    it("writes a trace line with level prefix", () => {
       traceChatEvent({
         agentId: testAgentId,
         traceId: "test1234",
+        level: "INFO",
         stage: "TEST_STAGE",
         data: { foo: "bar", num: 42 },
       });
@@ -57,15 +58,36 @@ describe("chat-trace", () => {
 
       expect(fs.existsSync(traceFile)).toBe(true);
       const content = fs.readFileSync(traceFile, "utf-8");
-      expect(content).toContain("[test1234] TEST_STAGE");
+      expect(content).toContain("[test1234] INFO:TEST_STAGE");
       expect(content).toContain("foo=bar");
       expect(content).toContain("num=42");
+    });
+
+    it("supports all log levels", () => {
+      for (const level of ["ERROR", "WARN", "INFO", "DEBUG"] as const) {
+        traceChatEvent({
+          agentId: testAgentId,
+          traceId: "lvl12345",
+          level,
+          stage: `${level}_TEST`,
+        });
+      }
+
+      const stateDir = process.env.OPENCLAW_STATE_DIR || path.join(os.homedir(), ".minion");
+      const today = new Date().toISOString().slice(0, 10);
+      const traceFile = path.join(stateDir, "logs", "traces", testAgentId, `${today}.txt`);
+      const content = fs.readFileSync(traceFile, "utf-8");
+      expect(content).toContain("ERROR:ERROR_TEST");
+      expect(content).toContain("WARN:WARN_TEST");
+      expect(content).toContain("INFO:INFO_TEST");
+      expect(content).toContain("DEBUG:DEBUG_TEST");
     });
 
     it("skips undefined/null/empty data values", () => {
       traceChatEvent({
         agentId: testAgentId,
         traceId: "test5678",
+        level: "DEBUG",
         stage: "SKIP_TEST",
         data: { present: "yes", missing: undefined, empty: "", nil: null },
       });
@@ -83,9 +105,10 @@ describe("chat-trace", () => {
   });
 
   describe("traceGatewayEvent", () => {
-    it("writes to the _gateway scope", () => {
+    it("writes to the _gateway scope with level", () => {
       traceGatewayEvent({
         traceId: "gw123456",
+        level: "INFO",
         stage: "INGESTED",
         data: { channel: "whatsapp", agentId: "renzo_bot" },
       });
@@ -96,9 +119,24 @@ describe("chat-trace", () => {
 
       expect(fs.existsSync(gwFile)).toBe(true);
       const content = fs.readFileSync(gwFile, "utf-8");
-      expect(content).toContain("[gw123456] INGESTED");
+      expect(content).toContain("[gw123456] INFO:INGESTED");
       expect(content).toContain("channel=whatsapp");
       expect(content).toContain("agentId=renzo_bot");
+    });
+
+    it("writes ERROR level for failures", () => {
+      traceGatewayEvent({
+        traceId: "gwerr123",
+        level: "ERROR",
+        stage: "LLM_ERROR",
+        data: { error: "all models failed" },
+      });
+
+      const stateDir = process.env.OPENCLAW_STATE_DIR || path.join(os.homedir(), ".minion");
+      const today = new Date().toISOString().slice(0, 10);
+      const gwFile = path.join(stateDir, "logs", "traces", gatewayScope, `${today}.txt`);
+      const content = fs.readFileSync(gwFile, "utf-8");
+      expect(content).toContain("ERROR:LLM_ERROR");
     });
   });
 
