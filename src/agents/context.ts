@@ -61,44 +61,53 @@ export function applyConfiguredContextWindows(params: {
 }
 
 const MODEL_CACHE = new Map<string, number>();
-const loadPromise = (async () => {
-  let cfg: ReturnType<typeof loadConfig> | undefined;
-  try {
-    cfg = loadConfig();
-  } catch {
-    // If config can't be loaded, leave cache empty.
-    return;
-  }
 
-  try {
-    await ensureOpenClawModelsJson(cfg);
-  } catch {
-    // Continue with best-effort discovery/overrides.
-  }
+// Deferred to avoid TDZ errors: the bundler may place this IIFE before
+// const declarations (e.g. ANTHROPIC_MODEL_ALIASES) that loadConfig's
+// call chain references. queueMicrotask ensures all module-level consts
+// are initialized before this runs.
+let loadPromise: Promise<void> | undefined;
+queueMicrotask(() => {
+  loadPromise = (async () => {
+    let cfg: ReturnType<typeof loadConfig> | undefined;
+    try {
+      cfg = loadConfig();
+    } catch {
+      // If config can't be loaded, leave cache empty.
+      return;
+    }
 
-  try {
-    const { discoverAuthStorage, discoverModels } = await import("./models/pi-model-discovery.js");
-    const agentDir = resolveOpenClawAgentDir();
-    const authStorage = discoverAuthStorage(agentDir);
-    const modelRegistry = discoverModels(authStorage, agentDir) as unknown as ModelRegistryLike;
-    const models =
-      typeof modelRegistry.getAvailable === "function"
-        ? modelRegistry.getAvailable()
-        : modelRegistry.getAll();
-    applyDiscoveredContextWindows({
+    try {
+      await ensureOpenClawModelsJson(cfg);
+    } catch {
+      // Continue with best-effort discovery/overrides.
+    }
+
+    try {
+      const { discoverAuthStorage, discoverModels } =
+        await import("./models/pi-model-discovery.js");
+      const agentDir = resolveOpenClawAgentDir();
+      const authStorage = discoverAuthStorage(agentDir);
+      const modelRegistry = discoverModels(authStorage, agentDir) as unknown as ModelRegistryLike;
+      const models =
+        typeof modelRegistry.getAvailable === "function"
+          ? modelRegistry.getAvailable()
+          : modelRegistry.getAll();
+      applyDiscoveredContextWindows({
+        cache: MODEL_CACHE,
+        models,
+      });
+    } catch {
+      // If model discovery fails, continue with config overrides only.
+    }
+
+    applyConfiguredContextWindows({
       cache: MODEL_CACHE,
-      models,
+      modelsConfig: cfg.models as ModelsConfig | undefined,
     });
-  } catch {
-    // If model discovery fails, continue with config overrides only.
-  }
-
-  applyConfiguredContextWindows({
-    cache: MODEL_CACHE,
-    modelsConfig: cfg.models as ModelsConfig | undefined,
+  })().catch(() => {
+    // Keep lookup best-effort.
   });
-})().catch(() => {
-  // Keep lookup best-effort.
 });
 
 export function lookupContextTokens(modelId?: string): number | undefined {
