@@ -353,20 +353,54 @@ The Gateway watches `~/.minion/minion.json` and applies changes automatically �
 
 Most fields hot-apply without downtime. In `hybrid` mode, restart-required changes are handled automatically.
 
-| Category            | Fields                                                               | Restart needed? |
-| ------------------- | -------------------------------------------------------------------- | --------------- |
-| Channels            | `channels.*`, `web` (WhatsApp) — all built-in and extension channels | No              |
-| Agent & models      | `agent`, `agents`, `models`, `routing`                               | No              |
-| Automation          | `hooks`, `cron`, `agent.heartbeat`                                   | No              |
-| Sessions & messages | `session`, `messages`                                                | No              |
-| Tools & media       | `tools`, `browser`, `skills`, `audio`, `talk`                        | No              |
-| UI & misc           | `ui`, `logging`, `identity`, `bindings`                              | No              |
-| Gateway server      | `gateway.*` (port, bind, auth, tailscale, TLS, HTTP)                 | **Yes**         |
-| Infrastructure      | `discovery`, `canvasHost`, `plugins`                                 | **Yes**         |
+#### No restart needed (WebSocket stays connected)
+
+These changes are applied immediately. The admin UI uses targeted RPCs for agent settings, so toggling tools, skills, or profiles never disconnects your session.
+
+| Category            | Fields                                                               |
+| ------------------- | -------------------------------------------------------------------- |
+| Channels            | `channels.*`, `web` — all built-in and extension channels            |
+| Agent settings      | `agents.list.*.tools`, `agents.list.*.skills`, `agents.list.*.model` |
+| Agent defaults      | `agents.defaults.*` (except `heartbeat` — see hot reload below)      |
+| Models & routing    | `models`, `routing`                                                  |
+| Sessions & messages | `session`, `messages`                                                |
+| Tools config        | `tools` (exec, profiles)                                             |
+| Skills              | `skills` (API keys, global settings)                                 |
+| Media & audio       | `audio`, `talk`                                                      |
+| UI & display        | `ui`, `identity`, `logging`, `bindings`                              |
+| Misc                | `meta`, `wizard`, `agent` (legacy)                                   |
+
+#### Hot reload (subsystem restarts, no gateway restart)
+
+These trigger a targeted subsystem restart. The WebSocket stays connected.
+
+| Config path                   | What restarts         |
+| ----------------------------- | --------------------- |
+| `hooks.*`                     | Hooks engine          |
+| `hooks.gmail.*`               | Gmail watcher + hooks |
+| `cron.*`                      | Cron scheduler        |
+| `browser.*`                   | Browser control       |
+| `agents.defaults.heartbeat.*` | Heartbeat timer       |
+
+#### Full gateway restart (WebSocket disconnects)
+
+These require the entire gateway process to restart. In `hybrid` mode this happens automatically; the admin UI reconnects within a few seconds.
+
+| Config path    | Examples                                         |
+| -------------- | ------------------------------------------------ |
+| `gateway.*`    | `port`, `bind`, `auth.token`, `tailscale`, `tls` |
+| `plugins.*`    | MCP servers, extensions                          |
+| `discovery.*`  | mDNS/Bonjour discovery port                      |
+| `canvasHost`   | Canvas host URL                                  |
+| _Unknown keys_ | Any unrecognized top-level field                 |
 
 <Note>
 `gateway.reload` and `gateway.remote` are exceptions — changing them does **not** trigger a restart.
 </Note>
+
+<Tip>
+**Admin UI best practice:** Use the Tools and Skills tabs to toggle agent settings — they auto-save via targeted RPCs and never cause a restart. Reserve the Config tab for gateway, plugins, and infrastructure changes where a restart is expected.
+</Tip>
 
 ## Config RPC (programmatic updates)
 
@@ -414,6 +448,58 @@ Most fields hot-apply without downtime. In `hybrid` mode, restart-required chang
     minion gateway call config.patch --params '{
       "raw": "{ channels: { telegram: { groups: { \"*\": { requireMention: false } } } } }",
       "baseHash": "<hash>"
+    }'
+    ```
+
+  </Accordion>
+
+  <Accordion title="tools.overrides.set (agent tool overrides)">
+    Sets an agent's tool profile, `alsoAllow`, and `deny` lists atomically. Only modifies `agents.*` paths — never triggers a gateway restart.
+
+    Params:
+
+    - `agentId` (string, required) — target agent ID
+    - `profile` (string | null, optional) — tool profile (`"minimal"`, `"coding"`, `"messaging"`, `"full"`, or `null` to inherit)
+    - `alsoAllow` (string[] | null, optional) — tools to enable beyond the profile
+    - `deny` (string[] | null, optional) — tools to disable
+
+    ```bash
+    # Switch agent to minimal profile
+    minion gateway call tools.overrides.set --params '{
+      "agentId": "main",
+      "profile": "minimal",
+      "alsoAllow": null,
+      "deny": null
+    }'
+
+    # Deny a single tool while keeping current profile
+    minion gateway call tools.overrides.set --params '{
+      "agentId": "main",
+      "deny": ["web_search"]
+    }'
+    ```
+
+  </Accordion>
+
+  <Accordion title="agents.skills.set (agent skill allowlist)">
+    Sets an agent's skill allowlist. Only modifies `agents.*` paths — never triggers a gateway restart.
+
+    Params:
+
+    - `agentId` (string, required) — target agent ID
+    - `skills` (string[] | null, required) — skill names to allow, `[]` to disable all, or `null` to remove the allowlist (enable all)
+
+    ```bash
+    # Enable only specific skills
+    minion gateway call agents.skills.set --params '{
+      "agentId": "main",
+      "skills": ["web-search", "code-review"]
+    }'
+
+    # Remove allowlist (enable all skills)
+    minion gateway call agents.skills.set --params '{
+      "agentId": "main",
+      "skills": null
     }'
     ```
 

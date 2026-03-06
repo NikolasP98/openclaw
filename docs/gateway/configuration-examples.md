@@ -130,7 +130,7 @@ Save to `~/.minion/minion.json` and you can DM the bot from that number.
     },
   },
 
-  // Tooling
+  // Tooling — no restart needed
   tools: {
     media: {
       audio: {
@@ -177,7 +177,7 @@ Save to `~/.minion/minion.json` and you can DM the bot from that number.
     },
   },
 
-  // Channels
+  // Channels — hot-reloaded per channel (no gateway restart)
   channels: {
     whatsapp: {
       dmPolicy: "pairing",
@@ -229,7 +229,7 @@ Save to `~/.minion/minion.json` and you can DM the bot from that number.
     },
   },
 
-  // Agent runtime
+  // Agent runtime — no restart needed (tools, skills, model changes are instant)
   agents: {
     defaults: {
       workspace: "~/.minion/workspace",
@@ -400,7 +400,7 @@ Save to `~/.minion/minion.json` and you can DM the bot from that number.
     },
   },
 
-  // Gateway + networking
+  // Gateway + networking — ⚠️ changes here restart the gateway (WebSocket disconnects briefly)
   gateway: {
     mode: "local",
     port: 18789,
