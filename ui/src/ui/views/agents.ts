@@ -71,8 +71,14 @@ export type AgentsProps = {
   onFileDraftChange: (name: string, content: string) => void;
   onFileReset: (name: string) => void;
   onFileSave: (name: string) => void;
-  onToolsProfileChange: (agentId: string, profile: string | null, clearAllow: boolean) => void;
-  onToolsOverridesChange: (agentId: string, alsoAllow: string[], deny: string[]) => void;
+  onToolsOverridesSave: (
+    agentId: string,
+    overrides: {
+      profile?: string | null;
+      alsoAllow?: string[] | null;
+      deny?: string[] | null;
+    },
+  ) => Promise<void>;
   onConfigReload: () => void;
   onConfigSave: () => void;
   onModelChange: (agentId: string, modelId: string | null) => void;
@@ -208,12 +214,8 @@ export function renderAgents(props: AgentsProps) {
                         agentId: selectedAgent.id,
                         configForm: props.configForm,
                         configLoading: props.configLoading,
-                        configSaving: props.configSaving,
-                        configDirty: props.configDirty,
-                        onProfileChange: props.onToolsProfileChange,
-                        onOverridesChange: props.onToolsOverridesChange,
+                        onOverridesSave: props.onToolsOverridesSave,
                         onConfigReload: props.onConfigReload,
-                        onConfigSave: props.onConfigSave,
                       })
                     : nothing
                 }
@@ -227,8 +229,6 @@ export function renderAgents(props: AgentsProps) {
                         activeAgentId: props.agentSkillsAgentId,
                         configForm: props.configForm,
                         configLoading: props.configLoading,
-                        configSaving: props.configSaving,
-                        configDirty: props.configDirty,
                         filter: props.skillsFilter,
                         onFilterChange: props.onSkillsFilterChange,
                         onRefresh: props.onSkillsRefresh,
@@ -236,7 +236,6 @@ export function renderAgents(props: AgentsProps) {
                         onClear: props.onAgentSkillsClear,
                         onDisableAll: props.onAgentSkillsDisableAll,
                         onConfigReload: props.onConfigReload,
-                        onConfigSave: props.onConfigSave,
                       })
                     : nothing
                 }

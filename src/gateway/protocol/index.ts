@@ -201,6 +201,8 @@ import {
   ToolsStatusParamsSchema,
   type ToolsUpdateParams,
   ToolsUpdateParamsSchema,
+  type ToolsOverridesSetParams,
+  ToolsOverridesSetParamsSchema,
   type ToolsReloadParams,
   ToolsReloadParamsSchema,
   type Snapshot,
@@ -347,6 +349,9 @@ export const validateAgentsSkillsSetParams = ajv.compile<AgentsSkillsSetParams>(
 );
 export const validateToolsStatusParams = ajv.compile<ToolsStatusParams>(ToolsStatusParamsSchema);
 export const validateToolsUpdateParams = ajv.compile<ToolsUpdateParams>(ToolsUpdateParamsSchema);
+export const validateToolsOverridesSetParams = ajv.compile<ToolsOverridesSetParams>(
+  ToolsOverridesSetParamsSchema,
+);
 export const validateToolsReloadParams = ajv.compile<ToolsReloadParams>(ToolsReloadParamsSchema);
 export const validateCronListParams = ajv.compile<CronListParams>(CronListParamsSchema);
 export const validateCronStatusParams = ajv.compile<CronStatusParams>(CronStatusParamsSchema);
@@ -546,6 +551,7 @@ export {
   MeshRetryParamsSchema,
   ToolsStatusParamsSchema,
   ToolsUpdateParamsSchema,
+  ToolsOverridesSetParamsSchema,
   ToolsReloadParamsSchema,
 };
 
@@ -658,5 +664,6 @@ export type {
   MeshWorkflowPlan,
   ToolsStatusParams,
   ToolsUpdateParams,
+  ToolsOverridesSetParams,
   ToolsReloadParams,
 };

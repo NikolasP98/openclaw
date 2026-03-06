@@ -1,5 +1,6 @@
 import { listAgentEntries, listAgentIds, resolveDefaultAgentId } from "../../agents/agent-scope.js";
 import type { ToolMeta } from "../../agents/tool-meta.js";
+import type { ToolProfileId } from "../../agents/tool-policy.js";
 import {
   TOOL_GROUPS,
   expandToolGroups,
@@ -15,6 +16,7 @@ import {
   formatValidationErrors,
   validateToolsStatusParams,
   validateToolsUpdateParams,
+  validateToolsOverridesSetParams,
 } from "../protocol/index.js";
 import type { GatewayRequestHandlers } from "./types.js";
 
@@ -196,6 +198,79 @@ export const toolsHandlers: GatewayRequestHandlers = {
     };
     await writeConfigFile(nextConfig);
     respond(true, { ok: true, toolId: p.toolId, enabled: p.enabled }, undefined);
+  },
+
+  "tools.overrides.set": async ({ params, respond }) => {
+    if (!validateToolsOverridesSetParams(params)) {
+      respond(
+        false,
+        undefined,
+        errorShape(
+          ErrorCodes.INVALID_REQUEST,
+          `invalid tools.overrides.set params: ${formatValidationErrors(validateToolsOverridesSetParams.errors)}`,
+        ),
+      );
+      return;
+    }
+    const p = params as {
+      agentId: string;
+      profile?: string | null;
+      alsoAllow?: string[] | null;
+      deny?: string[] | null;
+    };
+    const cfg = loadConfig();
+    const agentId = normalizeAgentId(p.agentId);
+    const agents = listAgentEntries(cfg);
+    const agentIndex = agents.findIndex((a) => normalizeAgentId(a.id) === agentId);
+    if (agentIndex < 0) {
+      respond(
+        false,
+        undefined,
+        errorShape(ErrorCodes.INVALID_REQUEST, `unknown agent id "${p.agentId}"`),
+      );
+      return;
+    }
+    const nextAgentsList = [...(cfg.agents?.list ?? [])];
+    const updatedEntry = { ...nextAgentsList[agentIndex] };
+    const agentTools = updatedEntry.tools ? { ...updatedEntry.tools } : {};
+
+    if (p.profile !== undefined) {
+      if (p.profile === null) {
+        delete agentTools.profile;
+      } else {
+        agentTools.profile = p.profile as ToolProfileId;
+      }
+    }
+    if (p.alsoAllow !== undefined) {
+      if (p.alsoAllow === null || p.alsoAllow.length === 0) {
+        delete agentTools.alsoAllow;
+      } else {
+        agentTools.alsoAllow = p.alsoAllow;
+      }
+    }
+    if (p.deny !== undefined) {
+      if (p.deny === null || p.deny.length === 0) {
+        delete agentTools.deny;
+      } else {
+        agentTools.deny = p.deny;
+      }
+    }
+
+    if (p.profile !== undefined) {
+      delete agentTools.allow;
+    }
+
+    updatedEntry.tools = Object.keys(agentTools).length > 0 ? agentTools : undefined;
+    nextAgentsList[agentIndex] = updatedEntry;
+    const nextConfig: OpenClawConfig = {
+      ...cfg,
+      agents: {
+        ...cfg.agents,
+        list: nextAgentsList,
+      },
+    };
+    await writeConfigFile(nextConfig);
+    respond(true, { ok: true, agentId }, undefined);
   },
 
   "tools.reload": ({ respond }) => {
