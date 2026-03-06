@@ -5,7 +5,7 @@ import { resolveRequiredHomeDir } from "../../infra/home-dir.js";
 import { runCommandWithTimeout } from "../../platform/process/exec.js";
 import { isCronSessionKey, isSubagentSessionKey } from "../../routing/session-key.js";
 import { resolveUserPath } from "../../utils.js";
-import { resolveWorkspaceTemplateDir } from "./workspace-templates.js";
+import { readWorkspaceTemplate, resolveWorkspaceTemplateDir } from "./workspace-templates.js";
 
 export function resolveDefaultAgentWorkspaceDir(
   env: NodeJS.ProcessEnv = process.env,
@@ -55,16 +55,17 @@ async function loadTemplate(name: string): Promise<string> {
   }
 
   const pending = (async () => {
+    // Try filesystem first (resolveWorkspaceTemplateDir), then embedded fallback
+    const content = await readWorkspaceTemplate(name);
+    if (content != null) {
+      return stripFrontMatter(content);
+    }
+    // Neither filesystem nor embedded template found
     const templateDir = await resolveWorkspaceTemplateDir();
     const templatePath = path.join(templateDir, name);
-    try {
-      const content = await fs.readFile(templatePath, "utf-8");
-      return stripFrontMatter(content);
-    } catch {
-      throw new Error(
-        `Missing workspace template: ${name} (${templatePath}). Ensure docs/reference/templates are packaged.`,
-      );
-    }
+    throw new Error(
+      `Missing workspace template: ${name} (${templatePath}). Ensure docs/reference/templates are packaged.`,
+    );
   })();
 
   workspaceTemplateCache.set(name, pending);
