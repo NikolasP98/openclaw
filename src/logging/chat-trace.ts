@@ -4,6 +4,7 @@ import { resolveStateDir } from "../config/paths.js";
 
 const TRACE_DIR_NAME = "traces";
 const GATEWAY_SCOPE = "_gateway";
+const CHANNELS_SCOPE = "_channels";
 const MAX_AGE_DAYS = 7;
 
 // ── Log Levels ──────────────────────────────────────────────────────────────
@@ -111,6 +112,24 @@ export function traceGatewayEvent(params: {
   try {
     const line = formatTraceLine(params.traceId, params.level, params.stage, params.data);
     appendToScope(GATEWAY_SCOPE, line);
+  } catch {
+    // best-effort
+  }
+}
+
+/**
+ * Append a trace event to the channels-level log (transport/delivery events).
+ * Best-effort, never throws or blocks.
+ */
+export function traceChannelEvent(params: {
+  traceId: string;
+  level: TraceLevel;
+  stage: string;
+  data?: Record<string, unknown>;
+}): void {
+  try {
+    const line = formatTraceLine(params.traceId, params.level, params.stage, params.data);
+    appendToScope(CHANNELS_SCOPE, line);
   } catch {
     // best-effort
   }

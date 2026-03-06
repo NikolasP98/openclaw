@@ -12,6 +12,7 @@ import type { AuthProvider } from "../auth/provider.js";
 import { updateSessionStore, resolveDefaultSessionStorePath } from "../config/sessions.js";
 import { upsertSharedEnvVar } from "../infra/env-file.js";
 import { logAcceptedEnvOption } from "../infra/env.js";
+import { traceGatewayEvent } from "../logging/chat-trace.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { runCommandWithTimeout } from "../platform/process/exec.js";
 import { getGoogleClientType, setGoogleClientCredentialsFile } from "./gog-credentials.js";
@@ -241,6 +242,16 @@ async function handleCallback(
       services: grantedServices,
     };
   } catch (error) {
+    traceGatewayEvent({
+      traceId: "oauth_er",
+      level: "WARN",
+      stage: "OAUTH_TOKEN_ERROR",
+      data: {
+        email: flow.email,
+        agentId: flow.agentId,
+        error: (error instanceof Error ? error.message : String(error)).slice(0, 200),
+      },
+    });
     log.error(`Token exchange error: ${error instanceof Error ? error.message : String(error)}`);
     await notifyAuthError(
       flow.sessionKey,

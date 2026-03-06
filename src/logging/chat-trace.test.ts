@@ -5,6 +5,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import {
   deriveTraceId,
   pruneOldTraceFiles,
+  traceChannelEvent,
   traceChatEvent,
   traceGatewayEvent,
 } from "./chat-trace.js";
@@ -12,10 +13,11 @@ import {
 describe("chat-trace", () => {
   const testAgentId = "__trace_test_agent__";
   const gatewayScope = "_gateway";
+  const channelsScope = "_channels";
 
   afterAll(() => {
     const stateDir = process.env.OPENCLAW_STATE_DIR || path.join(os.homedir(), ".minion");
-    for (const scope of [testAgentId, gatewayScope]) {
+    for (const scope of [testAgentId, gatewayScope, channelsScope]) {
       const dir = path.join(stateDir, "logs", "traces", scope);
       try {
         if (fs.existsSync(dir)) {
@@ -137,6 +139,27 @@ describe("chat-trace", () => {
       const gwFile = path.join(stateDir, "logs", "traces", gatewayScope, `${today}.txt`);
       const content = fs.readFileSync(gwFile, "utf-8");
       expect(content).toContain("ERROR:LLM_ERROR");
+    });
+  });
+
+  describe("traceChannelEvent", () => {
+    it("writes to the _channels scope", () => {
+      traceChannelEvent({
+        traceId: "ch123456",
+        level: "WARN",
+        stage: "CHANNEL_DISCONNECTED",
+        data: { channel: "whatsapp", statusCode: 401 },
+      });
+
+      const stateDir = process.env.OPENCLAW_STATE_DIR || path.join(os.homedir(), ".minion");
+      const today = new Date().toISOString().slice(0, 10);
+      const chFile = path.join(stateDir, "logs", "traces", channelsScope, `${today}.txt`);
+
+      expect(fs.existsSync(chFile)).toBe(true);
+      const content = fs.readFileSync(chFile, "utf-8");
+      expect(content).toContain("[ch123456] WARN:CHANNEL_DISCONNECTED");
+      expect(content).toContain("channel=whatsapp");
+      expect(content).toContain("statusCode=401");
     });
   });
 

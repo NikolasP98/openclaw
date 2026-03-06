@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { formatThinkingLevels, normalizeThinkLevel } from "../../auto-reply/thinking.js";
 import { loadConfig } from "../../config/config.js";
 import { callGateway } from "../../gateway/call.js";
+import { traceChatEvent } from "../../logging/chat-trace.js";
 import { normalizeAgentId, parseAgentSessionKey } from "../../routing/session-key.js";
 import { normalizeDeliveryContext } from "../../shared/delivery-context.js";
 import { resolveAgentConfig } from "../agent-scope.js";
@@ -106,9 +107,20 @@ export async function spawnSubagentDirect(
     mainKey,
   });
 
+  const requesterAgentId = normalizeAgentId(
+    ctx.requesterAgentIdOverride ?? parseAgentSessionKey(requesterInternalKey)?.agentId,
+  );
+
   const callerDepth = getSubagentDepthFromSessionStore(requesterInternalKey, { cfg });
   const maxSpawnDepth = cfg.agents?.defaults?.subagents?.maxSpawnDepth ?? 1;
   if (callerDepth >= maxSpawnDepth) {
+    traceChatEvent({
+      agentId: requesterAgentId,
+      traceId: (requesterInternalKey ?? "subagent").slice(0, 8),
+      level: "WARN",
+      stage: "SUBAGENT_REJECTED",
+      data: { reason: "max_depth", callerDepth, maxSpawnDepth },
+    });
     return {
       status: "forbidden",
       error: `sessions_spawn is not allowed at this depth (current depth: ${callerDepth}, max: ${maxSpawnDepth})`,
@@ -118,15 +130,19 @@ export async function spawnSubagentDirect(
   const maxChildren = cfg.agents?.defaults?.subagents?.maxChildrenPerAgent ?? 5;
   const activeChildren = countActiveRunsForSession(requesterInternalKey);
   if (activeChildren >= maxChildren) {
+    traceChatEvent({
+      agentId: requesterAgentId,
+      traceId: (requesterInternalKey ?? "subagent").slice(0, 8),
+      level: "WARN",
+      stage: "SUBAGENT_REJECTED",
+      data: { reason: "max_children", activeChildren, maxChildren },
+    });
     return {
       status: "forbidden",
       error: `sessions_spawn has reached max active children for this session (${activeChildren}/${maxChildren})`,
     };
   }
 
-  const requesterAgentId = normalizeAgentId(
-    ctx.requesterAgentIdOverride ?? parseAgentSessionKey(requesterInternalKey)?.agentId,
-  );
   const targetAgentId = requestedAgentId ? normalizeAgentId(requestedAgentId) : requesterAgentId;
   if (targetAgentId !== requesterAgentId) {
     const allowAgents = resolveAgentConfig(cfg, requesterAgentId)?.subagents?.allowAgents ?? [];
@@ -293,6 +309,20 @@ export async function spawnSubagentDirect(
     model: resolvedModel,
     runTimeoutSeconds,
     expectsCompletionMessage: params.expectsCompletionMessage === true,
+  });
+
+  traceChatEvent({
+    agentId: requesterAgentId,
+    traceId: (requesterInternalKey ?? "subagent").slice(0, 8),
+    level: "INFO",
+    stage: "SUBAGENT_SPAWNED",
+    data: {
+      childSessionKey,
+      targetAgentId,
+      depth: childDepth,
+      model: resolvedModel,
+      label: label || undefined,
+    },
   });
 
   return {

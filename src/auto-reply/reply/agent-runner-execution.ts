@@ -20,6 +20,7 @@ import {
 } from "../../config/sessions.js";
 import { logVerbose } from "../../globals.js";
 import { emitAgentEvent, registerAgentRunContext } from "../../infra/agent-events.js";
+import { traceChatEvent } from "../../logging/chat-trace.js";
 import { defaultRuntime } from "../../runtime.js";
 import {
   isMarkdownCapableMessageChannel,
@@ -334,6 +335,16 @@ export async function runAgentTurnWithFallback(params: {
                 const phase = typeof evt.data.phase === "string" ? evt.data.phase : "";
                 if (phase === "end") {
                   autoCompactionCompleted = true;
+                  const agentId = params.followupRun.run.agentId;
+                  if (agentId) {
+                    traceChatEvent({
+                      agentId,
+                      traceId: (params.sessionKey ?? runId).slice(0, 8),
+                      level: "INFO",
+                      stage: "COMPACTION_TRIGGERED",
+                      data: { sessionKey: params.sessionKey },
+                    });
+                  }
                 }
               }
             },
@@ -419,6 +430,16 @@ export async function runAgentTurnWithFallback(params: {
         (await params.resetSessionAfterCompactionFailure(embeddedError.message))
       ) {
         didResetAfterCompactionFailure = true;
+        const agentId = params.followupRun.run.agentId;
+        if (agentId) {
+          traceChatEvent({
+            agentId,
+            traceId: (params.sessionKey ?? runId).slice(0, 8),
+            level: "ERROR",
+            stage: "COMPACTION_FAILED",
+            data: { reason: "context_overflow", sessionKey: params.sessionKey },
+          });
+        }
         return {
           kind: "final",
           payload: {
@@ -453,6 +474,20 @@ export async function runAgentTurnWithFallback(params: {
         (await params.resetSessionAfterCompactionFailure(message))
       ) {
         didResetAfterCompactionFailure = true;
+        const agentId = params.followupRun.run.agentId;
+        if (agentId) {
+          traceChatEvent({
+            agentId,
+            traceId: (params.sessionKey ?? runId).slice(0, 8),
+            level: "ERROR",
+            stage: "COMPACTION_FAILED",
+            data: {
+              reason: "compaction_error",
+              error: message.slice(0, 200),
+              sessionKey: params.sessionKey,
+            },
+          });
+        }
         return {
           kind: "final",
           payload: {

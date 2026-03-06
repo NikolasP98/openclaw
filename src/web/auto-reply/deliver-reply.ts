@@ -2,7 +2,7 @@ import { chunkMarkdownTextWithMode, type ChunkMode } from "../../auto-reply/chun
 import type { ReplyPayload } from "../../auto-reply/types.js";
 import type { MarkdownTableMode } from "../../config/types.base.js";
 import { logVerbose, shouldLogVerbose } from "../../globals.js";
-import { traceGatewayEvent } from "../../logging/chat-trace.js";
+import { traceChannelEvent } from "../../logging/chat-trace.js";
 import { convertMarkdownTables } from "../../markdown/tables.js";
 import { markdownToWhatsApp } from "../../markdown/whatsapp.js";
 import { sleep } from "../../utils.js";
@@ -56,7 +56,7 @@ export async function deliverWebReply(params: {
           throw err;
         }
         const backoffMs = 500 * attempt;
-        traceGatewayEvent({
+        traceChannelEvent({
           traceId: (msg.id ?? msg.from ?? "").slice(0, 8),
           level: "WARN",
           stage: "DELIVERY_RETRY",
@@ -180,7 +180,7 @@ export async function deliverWebReply(params: {
         "auto-reply sent (media)",
       );
     } catch (err) {
-      traceGatewayEvent({
+      traceChannelEvent({
         traceId: (msg.id ?? msg.from ?? "").slice(0, 8),
         level: "ERROR",
         stage: "MEDIA_UPLOAD_FAILED",

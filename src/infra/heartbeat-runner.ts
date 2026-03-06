@@ -35,6 +35,7 @@ import {
   updateSessionStore,
 } from "../config/sessions.js";
 import type { AgentDefaultsConfig } from "../config/types.agent-defaults.js";
+import { traceGatewayEvent } from "../logging/chat-trace.js";
 import { writeHeartbeatLogEntry } from "../logging/heartbeat-log.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { getQueueSize } from "../platform/process/command-queue.js";
@@ -958,6 +959,12 @@ export async function runHeartbeatOnce(opts: {
       channel: delivery.channel !== "none" ? delivery.channel : undefined,
       accountId: delivery.accountId,
       indicatorType: visibility.useIndicator ? resolveIndicatorType("failed") : undefined,
+    });
+    traceGatewayEvent({
+      traceId: "hb_error",
+      level: "ERROR",
+      stage: "HEARTBEAT_FAILED",
+      data: { reason: reason.slice(0, 200) },
     });
     log.error(`heartbeat failed: ${reason}`, { error: reason });
     return { status: "failed", reason };

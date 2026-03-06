@@ -10,7 +10,7 @@ import {
 import qrcode from "qrcode-terminal";
 import { formatCliCommand } from "../cli/command-format.js";
 import { getChildLogger, toPinoLikeLogger } from "../logging.js";
-import { traceGatewayEvent } from "../logging/chat-trace.js";
+import { traceChannelEvent } from "../logging/chat-trace.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { ensureDir, resolveUserPath } from "../utils.js";
 import { VERSION } from "../version.js";
@@ -136,7 +136,7 @@ export async function createWaSocket(
         }
         if (connection === "close") {
           const status = getStatusCode(lastDisconnect?.error);
-          traceGatewayEvent({
+          traceChannelEvent({
             traceId: "wa_conn_",
             level: "WARN",
             stage: "CHANNEL_DISCONNECTED",
@@ -153,7 +153,7 @@ export async function createWaSocket(
           }
         }
         if (connection === "open") {
-          traceGatewayEvent({
+          traceChannelEvent({
             traceId: "wa_conn_",
             level: "INFO",
             stage: "CHANNEL_CONNECTED",

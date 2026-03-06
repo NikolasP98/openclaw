@@ -10,6 +10,7 @@ import {
 import { danger } from "../../../../globals.js";
 import { formatDurationSeconds } from "../../../../infra/format-time/format-duration.ts";
 import { enqueueSystemEvent } from "../../../../infra/system-events.js";
+import { traceChannelEvent } from "../../../../logging/chat-trace.js";
 import { createSubsystemLogger } from "../../../../logging/subsystem.js";
 import { resolveAgentRoute } from "../../../../routing/resolve-route.js";
 import {
@@ -90,6 +91,12 @@ export class DiscordMessageListener extends MessageCreateListener {
     void task
       .catch((err) => {
         const logger = this.logger ?? discordEventQueueLog;
+        traceChannelEvent({
+          traceId: "disc_err",
+          level: "WARN",
+          stage: "DISCORD_HANDLER_FAILED",
+          data: { listener: this.constructor.name, error: String(err).slice(0, 200) },
+        });
         logger.error(danger(`discord handler failed: ${String(err)}`));
       })
       .finally(() => {

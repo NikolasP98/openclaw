@@ -1,5 +1,6 @@
 import { normalizeToolName } from "../agents/tool-policy.js";
 import type { AnyAgentTool } from "../agents/tools/common.js";
+import { traceGatewayEvent } from "../logging/chat-trace.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { applyTestPluginDefaults, normalizePluginsConfig } from "./config-state.js";
 import { loadOpenClawPlugins } from "./loader.js";
@@ -88,6 +89,12 @@ export function resolvePluginTools(params: {
     try {
       resolved = entry.factory(params.context);
     } catch (err) {
+      traceGatewayEvent({
+        traceId: "plg_tool",
+        level: "WARN",
+        stage: "PLUGIN_TOOL_FAILED",
+        data: { pluginId: entry.pluginId, error: String(err).slice(0, 200) },
+      });
       log.error(`plugin tool failed (${entry.pluginId}): ${String(err)}`);
       continue;
     }
