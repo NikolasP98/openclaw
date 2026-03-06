@@ -91,7 +91,7 @@ async function enqueueOAuthNotification(notification: OAuthNotification): Promis
     const typing = createTypingController({});
     const runFollowup = createFollowupRunner({
       typing,
-      typingMode: "none",
+      typingMode: "never",
       sessionEntry,
       sessionStore,
       sessionKey: notification.sessionKey,
