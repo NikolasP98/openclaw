@@ -3,8 +3,11 @@
  */
 
 import { resolveAgentDir, resolveAgentWorkspaceDir } from "../agents/agent-scope.js";
+import { createFollowupRunner } from "../auto-reply/reply/followup-runner.js";
+import { scheduleFollowupDrain } from "../auto-reply/reply/queue/drain.js";
 import { enqueueFollowupRun } from "../auto-reply/reply/queue/enqueue.ts";
 import type { FollowupRun } from "../auto-reply/reply/queue/types.js";
+import { createTypingController } from "../auto-reply/reply/typing.js";
 import { loadConfig } from "../config/config.js";
 import { loadSessionStore, resolveDefaultSessionStorePath } from "../config/sessions.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
@@ -73,7 +76,7 @@ async function enqueueOAuthNotification(notification: OAuthNotification): Promis
   };
 
   // Enqueue the notification
-  enqueueFollowupRun(
+  const enqueued = enqueueFollowupRun(
     notification.sessionKey,
     followupRun,
     {
@@ -82,6 +85,21 @@ async function enqueueOAuthNotification(notification: OAuthNotification): Promis
     },
     "none", // No deduplication
   );
+
+  // Trigger drain so the notification is processed immediately
+  if (enqueued) {
+    const typing = createTypingController({});
+    const runFollowup = createFollowupRunner({
+      typing,
+      typingMode: "none",
+      sessionEntry,
+      sessionStore,
+      sessionKey: notification.sessionKey,
+      storePath,
+      defaultModel: sessionEntry.model || "claude-sonnet-4-5-20250929",
+    });
+    scheduleFollowupDrain(notification.sessionKey, runFollowup);
+  }
 }
 
 /**
